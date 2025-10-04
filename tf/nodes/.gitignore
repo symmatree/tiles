@@ -1,0 +1,18 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# Talos configuration files (contain secrets)
+controlplane.yaml
+worker.yaml
+talosconfig
+secrets.yaml
+
+# Temporary files
+*.tmp
+*.bak
