@@ -20,14 +20,37 @@ import {
 }
 
 resource "github_repository" "tiles" {
-  name        = "tiles"
-  description = "Infrastructure as Code for Tiles"
-  visibility  = "public"
-  has_issues = true
-  has_wiki = false
-  has_projects = false
+  name          = "tiles"
+  description   = "Infrastructure as Code for Tiles"
+  visibility    = "public"
+  has_issues    = true
+  has_wiki      = false
+  has_projects  = false
   has_downloads = false
-  
+}
+
+locals {
+  sa_mapping = {
+    "tiles" = {
+      sa_name   = google_service_account.tiles-tf.email
+      attribute = "attribute.repository/${var.github_owner}/${github_repository.tiles.name}"
+    }
+  }
+}
+
+# module "gh_oidc" {
+#   source      = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
+#   project_id  = var.gcp_project_id
+#   pool_id     = "tiles-pool"
+#   provider_id = "tiles-gh-provider"
+#   sa_mapping = local.sa_mapping
+# }
+
+
+resource "google_service_account_iam_member" "self_impersonate" {
+  service_account_id = google_service_account.tiles-tf.id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.tiles-tf.email}"
 }
 
 resource "github_actions_secret" "gcp_tiles_tf_sa_email" {

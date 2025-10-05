@@ -41,10 +41,10 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
   content_type = "iso"
   datastore_id = var.proxmox_storage_iso
   node_name    = var.proxmox_node_name
-  
+
   url = "https://factory.talos.dev/image/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515/v${var.talos_version}/metal-amd64.iso"
   file_name = "talos-${var.talos_version}-amd64.iso"
-  
+
   # Only download if file doesn't exist
   overwrite = false
 }
@@ -52,7 +52,7 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
 # # Control plane VMs
 # resource "proxmox_virtual_environment_vm" "talos_control" {
 #   count = var.control_plane_count
-  
+
 #   name        = "${var.cluster_name}-control-${count.index + 1}"
 #   description = "Talos Linux Control Plane Node ${count.index + 1}"
 #   node_name   = var.proxmox_node_name
@@ -111,7 +111,7 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
 #     dns {
 #       servers = var.dns_servers
 #     }
-    
+
 #     ip_config {
 #       ipv4 {
 #         address = "${var.control_plane_ips[count.index]}/${var.network_cidr_bits}"
@@ -131,7 +131,7 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
 # # Worker VMs
 # resource "proxmox_virtual_environment_vm" "talos_worker" {
 #   count = var.worker_count
-  
+
 #   name        = "${var.cluster_name}-worker-${count.index + 1}"
 #   description = "Talos Linux Worker Node ${count.index + 1}"
 #   node_name   = var.proxmox_node_name
@@ -190,7 +190,7 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
 #     dns {
 #       servers = var.dns_servers
 #     }
-    
+
 #     ip_config {
 #       ipv4 {
 #         address = "${var.worker_ips[count.index]}/${var.network_cidr_bits}"

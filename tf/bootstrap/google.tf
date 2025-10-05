@@ -51,3 +51,28 @@ output "gcp_tiles_tf_sa_email" {
   description = "The email of the Tiles TF service account."
   value       = google_service_account.tiles-tf.email
 }
+
+import {
+  id = "custodes-tf-state"
+  to = module.gcp_state_bucket.google_storage_bucket.bucket
+}
+
+module "gcp_state_bucket" {
+  source  = "terraform-google-modules/cloud-storage/google//modules/simple_bucket"
+  version = ">= 12.0"
+
+  name                     = "custodes-tf-state"
+  project_id               = var.gcp_project_id
+  location                 = var.gcp_region
+  public_access_prevention = "enforced"
+  iam_members = [
+    {
+      role   = "roles/storage.objectUser"
+      member = "serviceAccount:${google_service_account.tiles-tf.email}"
+    },
+    {
+      role   = "roles/storage.admin"
+      member = "user:${var.gcp_owner_email}"
+    },
+  ]
+}
