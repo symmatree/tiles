@@ -2,40 +2,42 @@
 # Copy this to terraform.tfvars and customize for your environment
 
 # Proxmox connection details
-proxmox_endpoint               = "https://nuc-g3p-1.local.symmatree.com:8006/"
-proxmox_username              = "root@pam"
-proxmox_ssh_private_key_path  = "~/.ssh/id_rsa"
-proxmox_node_name             = "pve"
-proxmox_storage_iso           = "local"
-proxmox_storage_vm            = "local-lvm"
-proxmox_network_bridge        = "vmbr0"
+proxmox_endpoint             = "https://nuc-g3p-1.local.symmatree.com:8006/"
+proxmox_username             = "root@pam"
+proxmox_ssh_private_key_path = "~/.ssh/id_rsa"
+proxmox_storage_iso          = "local"
+proxmox_storage_vm           = "local-lvm"
+proxmox_network_bridge       = "vmbr0"
 
 # Cluster configuration
-cluster_name = "talos"
-talos_version = "1.9.5"
+cluster_name    = "talos"
+talos_version   = "1.11.2"
+talos_variant   = "nocloud"
+talos_arch      = "amd64"
+talos_schematic = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
 
 # Network configuration
-network_gateway    = "10.0.1.1"
-network_cidr_bits  = 24
-dns_servers        = ["10.0.1.1", "1.1.1.1"]
+network_gateway   = "10.0.1.1"
+network_cidr_bits = 24
+# dns_servers       = ["10.0.1.1", "1.1.1.1"]
 
 # Control plane configuration
-control_plane_count       = 1
-control_plane_cpu_cores   = 2
-control_plane_memory_mb   = 4096
+control_plane_count        = 1
+control_plane_cpu_cores    = 2
+control_plane_memory_mb    = 4096
 control_plane_disk_size_gb = 50
-control_plane_vm_id_start = 100
-control_plane_ips         = ["10.0.1.50"]
+control_plane_vm_id_start  = 100
+control_plane_ips          = ["10.0.1.50"]
 # Optional: specify MAC addresses to ensure consistent IPs
 # control_plane_mac_addresses = ["02:00:00:00:01:50"]
 
 # Worker configuration
-worker_count       = 1
-worker_cpu_cores   = 4
-worker_memory_mb   = 8192
+worker_count        = 1
+worker_cpu_cores    = 4
+worker_memory_mb    = 8192
 worker_disk_size_gb = 100
-worker_vm_id_start = 200
-worker_ips         = ["10.0.1.51"]
+worker_vm_id_start  = 200
+worker_ips          = ["10.0.1.51"]
 # Optional: specify MAC addresses to ensure consistent IPs
 # worker_mac_addresses = ["02:00:00:00:01:51"]
 

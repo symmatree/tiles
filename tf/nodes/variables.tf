@@ -32,11 +32,6 @@ variable "proxmox_ssh_private_key_path" {
   type        = string
 }
 
-variable "proxmox_node_name" {
-  description = "Proxmox node name where VMs will be created"
-  type        = string
-}
-
 variable "proxmox_storage_iso" {
   description = "Proxmox storage for ISO files"
   type        = string
@@ -59,7 +54,20 @@ variable "proxmox_network_bridge" {
 variable "talos_version" {
   description = "Talos Linux version"
   type        = string
-  default     = "1.9.5"
+}
+variable "talos_variant" {
+  description = "The Talos variant to use (e.g., 'metal')."
+  type        = string
+}
+
+variable "talos_arch" {
+  description = "The Talos architecture to use (e.g., 'amd64' or 'arm64')."
+  type        = string
+  default     = "amd64"
+}
+variable "talos_schematic" {
+  description = "The Talos schematic hash to use for downloading the ISO."
+  type        = string
 }
 
 variable "cluster_name" {
@@ -79,12 +87,6 @@ variable "network_cidr_bits" {
   description = "Network CIDR bits (e.g., 24 for /24)"
   type        = number
   default     = 24
-}
-
-variable "dns_servers" {
-  description = "List of DNS servers"
-  type        = list(string)
-  default     = ["1.1.1.1", "8.8.8.8"]
 }
 
 # Control plane configuration

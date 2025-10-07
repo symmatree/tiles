@@ -46,10 +46,10 @@
 #   value       = var.control_plane_ips
 # }
 
-output "talos_iso_id" {
-  description = "ID of the uploaded Talos ISO"
-  value       = proxmox_virtual_environment_download_file.talos_iso.id
-}
+# output "talos_iso_id" {
+#   description = "ID of the uploaded Talos ISO"
+#   value       = proxmox_virtual_environment_download_file.talos_iso.id
+# }
 
 # Summary output for easy reference
 # output "cluster_summary" {

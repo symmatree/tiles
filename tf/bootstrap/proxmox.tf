@@ -38,8 +38,9 @@ resource "proxmox_virtual_environment_group" "admin_group" {
   comment  = "Managed by Terraform"
   group_id = "admin"
   acl {
-    path    = "/"
-    role_id = "Administrator"
+    path      = "/"
+    propagate = true
+    role_id   = "Administrator"
   }
 }
 
