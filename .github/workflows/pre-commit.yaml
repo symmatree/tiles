@@ -30,6 +30,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           echo "Capture diffs for PR."
+          mkdir -p "${{ runner.temp }}/txt-outputs/"
           git diff --color --word-diff=color | tee "${{ runner.temp }}/txt-outputs/pre-commit-diff.txt"
 
       - uses: actions/github-script@v8
