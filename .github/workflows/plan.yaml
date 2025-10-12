@@ -73,14 +73,16 @@ jobs:
       - name: Terraform init
         if: steps.tf-cache.outputs.cache-hit != 'true'
         run: |
+          set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           terraform init
 
       - name: Terraform plan nodes
         id: tf-plan
         run: |
+          set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
-          terraform plan
+          terraform plan -lock-timeout=5m -input=false
 
       - uses: actions/github-script@v8
         name: Attach outputs to PR
