@@ -50,6 +50,14 @@ jobs:
         with:
           terraform_version: "1.13.3"
 
+      - name: Authenticate to Google Cloud
+        run: |
+          set -euo pipefail
+          echo '${{ secrets.GCP_TILES_TF_SA_KEY }}' > /tmp/gcp-sa-key.json
+          gcloud auth activate-service-account '${{ secrets.GCP_TILES_TF_SA_EMAIL }}' --key-file=/tmp/gcp-sa-key.json
+          gcloud config set project ${{ secrets.PROJECT_ID }}
+          rm /tmp/gcp-sa-key.json
+
       - name: Terraform cache
         id: tf-cache
         uses: actions/cache@v4
