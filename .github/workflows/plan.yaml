@@ -27,6 +27,7 @@ env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }}
   TF_VAR_gh_token: ${{ secrets.TF_VAR_gh_token }}
   TF_IN_AUTOMATION: "true"
+  TF_VAR_unifi_password: ${{ secrets.UNIFI_PASSWORD }}
 
 jobs:
   run:
