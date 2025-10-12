@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main # Run post-commit to validate, also to update caches.
+      - sbox
+      - prod
   workflow_dispatch: {}
   schedule:
     - cron: "0 3 * * *" # Daily at 0300 UTC just to see if it's green.
