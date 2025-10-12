@@ -36,7 +36,24 @@ variable "ram_mb" {
   default     = 2048
 }
 
+variable "disk_size_gb" {
+  description = "Disk size in GB for the VM"
+  type        = number
+  default     = 32
+}
+
 variable "mac_address" {
   description = "MAC address for the VM network interface"
   type        = string
+}
+
+variable "ip_address" {
+  description = "Fixed IP address for the VM in the Unifi controller"
+  type        = string
+}
+
+variable "domain_name" {
+  description = "Domain name for the VM"
+  type        = string
+  default     = "local.symmatree.com."
 }

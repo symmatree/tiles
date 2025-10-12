@@ -26,33 +26,40 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
   datastore_id = var.proxmox_storage_iso
   node_name    = var.proxmox_node_name
 
-  url       = "https://factory.talos.dev/image/${var.talos_schematic}/v${var.talos_version}/${var.talos_variant}-${var.talos_arch}.iso"
-  file_name = "talos-${var.talos_version}-${var.talos_variant}-${var.talos_arch}.iso"
+  url       = "https://factory.talos.dev/image/${var.talos.schematic}/v${var.talos.version}/${var.talos.variant}-${var.talos.arch}.iso"
+  file_name = "talos-${var.talos.version}-${var.talos.variant}-${var.talos.arch}.iso"
   overwrite = false
+}
+
+locals {
+  ctrl = var.vm_config["control"]
+  wk   = var.vm_config["worker"]
 }
 
 module "control" {
   source = "../talos-vm"
 
   name        = "{{var.proxmox_node_name}}-tiles-cp"
-  description = "Control Plane {{var.proxmox_node_name}}"
+  description = "Control"
   node_name   = var.proxmox_node_name
-  vm_id       = var.control_vm_id
-  num_cores   = var.control_cores
-  ram_mb      = var.control_ram
-  mac_address = var.control_mac_address
+  vm_id       = local.ctrl.vm_id
+  num_cores   = local.ctrl.cores
+  ram_mb      = local.ctrl.ram_mb
+  mac_address = local.ctrl.mac_address
   iso_id      = proxmox_virtual_environment_download_file.talos_iso.id
+  ip_address  = local.ctrl.ip_address
 }
 
 module "worker" {
   source = "../talos-vm"
 
   name        = "{{var.proxmox_node_name}}-tiles-wk"
-  description = "Worker Node {{var.proxmox_node_name}}"
+  description = "Worker"
   node_name   = var.proxmox_node_name
-  vm_id       = var.worker_vm_id
-  num_cores   = var.worker_cores
-  ram_mb      = var.worker_ram
-  mac_address = var.worker_mac_address
+  vm_id       = local.wk.vm_id
+  num_cores   = local.wk.cores
+  ram_mb      = local.wk.ram_mb
+  mac_address = local.wk.mac_address
   iso_id      = proxmox_virtual_environment_download_file.talos_iso.id
+  ip_address  = local.wk.ip_address
 }

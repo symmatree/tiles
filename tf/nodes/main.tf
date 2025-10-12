@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/google"
       version = ">= 7.0"
     }
+    unifi = {
+      source  = "ubiquiti-community/unifi"
+      version = ">= 0.41.3"
+    }
   }
   backend "gcs" {
     bucket = "custodes-tf-state"
@@ -35,6 +39,12 @@ provider "proxmox" {
   # api_token = "${local.proxmox_tiles_tf_user_id}!provider=${local.proxmox_tiles_tf_token_value}"
   api_token = local.proxmox_tiles_tf_token_value
   insecure  = true
+}
+
+provider "unifi" {
+  username = "terraform"
+  password = var.unifi_password
+  api_url  = var.unifi_controller_url
 }
 
 data "proxmox_virtual_environment_nodes" "nodes" {}

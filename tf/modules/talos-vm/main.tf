@@ -9,14 +9,17 @@ terraform {
       source  = "hashicorp/google"
       version = ">= 7.0"
     }
+    unifi = {
+      source  = "ubiquiti-community/unifi"
+      version = ">= 0.41.3"
+    }
   }
 }
-
 
 resource "proxmox_virtual_environment_vm" "main" {
   acpi          = true
   bios          = "seabios"
-  description   = var.description
+  description   = "${var.description} - ${var.vm_id} - ${var.name} - ${var.ip_address}"
   name          = var.name
   node_name     = var.node_name
   on_boot       = null
@@ -44,8 +47,8 @@ resource "proxmox_virtual_environment_vm" "main" {
     file_format       = "raw"
     interface         = "scsi0"
     iothread          = true
-    path_in_datastore = "vm-8901-disk-0"
-    size              = 32
+    path_in_datastore = "vm-${var.vm_id}-disk-0"
+    size              = var.disk_size_gb
     ssd               = false
   }
   memory {
@@ -63,4 +66,12 @@ resource "proxmox_virtual_environment_vm" "main" {
   operating_system {
     type = "l26"
   }
+}
+
+resource "unifi_user" "vm_client" {
+  mac              = var.mac_address
+  name             = var.name
+  note             = "${var.description} - ${var.vm_id} - ${var.name}"
+  fixed_ip         = var.ip_address
+  local_dns_record = "${var.name}.${var.domain_name}"
 }
