@@ -54,10 +54,9 @@ jobs:
       - name: Authenticate to Google Cloud
         run: |
           set -euo pipefail
-          echo '${{ secrets.GCP_TILES_TF_SA_KEY }}' > /tmp/gcp-sa-key.json
-          gcloud auth activate-service-account '${{ secrets.GCP_TILES_TF_SA_EMAIL }}' --key-file=/tmp/gcp-sa-key.json
-          gcloud config set project ${{ secrets.PROJECT_ID }}
-          rm /tmp/gcp-sa-key.json
+          echo '${{ secrets.GCP_TILES_TF_SA_KEY }}' > "${RUNNER_TEMP}/gcp-sa-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json" >> "$GITHUB_ENV"
+          echo "GOOGLE_CLOUD_PROJECT=${{ secrets.PROJECT_ID }}" >> "$GITHUB_ENV"
 
       - name: Terraform cache
         id: tf-cache
