@@ -9,12 +9,6 @@ variable "proxmox_username" {
   type        = string
 }
 
-variable "proxmox_password" {
-  description = "Proxmox VE password"
-  type        = string
-  sensitive   = true
-}
-
 variable "proxmox_insecure" {
   description = "Skip TLS verification for Proxmox API"
   type        = bool
