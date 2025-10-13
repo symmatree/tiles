@@ -103,7 +103,9 @@ jobs:
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
-          terraform plan -lock-timeout=5m -input=false
+          mkdir -p "${{ runner.temp }}/txt-outputs"
+          terraform plan -lock-timeout=5m -input=false \
+            | tee "${{ runner.temp }}/txt-outputs/terraform-plan-nodes.txt"
 
       - name: De-wireguard
         if: always()
