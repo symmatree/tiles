@@ -77,6 +77,26 @@ jobs:
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           terraform init
+      - name: Wireguard
+        id: wireguard
+        env:
+          TILES_VPN_CONFIG: ${{ secrets.TILES_VPN_CONFIG }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TILES_VPN_CONFIG}" ]; then
+            echo "No Wireguard config provided"
+            exit 1
+          fi
+          echo "Setting up Wireguard..."
+          time sudo apt-get -y \
+           -qq -o Dpkg::Progress-Fancy="0" -o APT::Color="0" -o Dpkg::Use-Pty="0" \
+            install wireguard-tools
+          echo "${TILES_VPN_CONFIG}" > "$HOME/wg0.conf"
+          chmod 0600 "$HOME/wg0.conf"
+          echo "Connecting..."
+          time sudo wg-quick up "$HOME/wg0.conf"
+          echo "Connected"
+          echo "WIREGUARD=1" | tee -a "$GITHUB_OUTPUT"
 
       - name: Terraform plan nodes
         id: tf-plan
@@ -84,6 +104,18 @@ jobs:
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           terraform plan -lock-timeout=5m -input=false
+
+      - name: De-wireguard
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -z "${{ steps.wireguard.outputs.WIREGUARD }}" ]; then
+            echo "No Wireguard connection established, skipping disconnection."
+            exit 0
+          fi
+          echo "Disconnecting Wireguard..."
+          time sudo wg-quick down "$HOME/wg0.conf"
+          echo "Disconnected"
 
       - uses: actions/github-script@v8
         name: Attach outputs to PR

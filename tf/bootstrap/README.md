@@ -2,8 +2,7 @@
 
 Initial TF to create the runner account etc.
 
-Run this as yourself.
+Run this as yourself. Requires gcloud auth and gcloud application default.
 
-```
-export TF_VAR_github_token=
-```
+Manually created service account and wireguard config in Unifi, the Terraform
+provider doesn't cover that.

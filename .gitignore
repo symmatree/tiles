@@ -12,6 +12,8 @@ worker.yaml
 talosconfig
 secrets.yaml
 
+.secrets/
+
 # Temporary files
 *.tmp
 *.bak

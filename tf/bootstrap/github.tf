@@ -82,3 +82,9 @@ resource "github_actions_secret" "proxmox_tiles_tf_token_value" {
   secret_name     = "PROXMOX_TILES_TF_TOKEN_VALUE"
   plaintext_value = proxmox_virtual_environment_user_token.user_token.value
 }
+
+resource "github_actions_secret" "tiles_vpn_config" {
+  repository      = github_repository.tiles.name
+  secret_name     = "TILES_VPN_CONFIG"
+  plaintext_value = file(".secrets/GITHUB_VPN_CONFIG")
+}
