@@ -68,9 +68,11 @@ resource "proxmox_virtual_environment_vm" "main" {
 }
 
 resource "unifi_user" "vm_client" {
-  mac              = var.mac_address
-  name             = var.name
-  note             = "${var.description} - ${var.vm_id} - ${var.name}"
-  fixed_ip         = var.ip_address
-  local_dns_record = "${var.name}.${var.domain_name}"
+  mac                    = var.mac_address
+  name                   = var.name
+  note                   = "${var.description} - ${var.vm_id} - ${var.name}"
+  fixed_ip               = var.ip_address
+  local_dns_record       = "${var.name}.${var.domain_name}"
+  allow_existing         = true
+  skip_forget_on_destroy = true
 }

@@ -41,7 +41,7 @@ variable "proxmox_storage_vm" {
 variable "unifi_controller_url" {
   description = "Unifi Controller URL"
   type        = string
-  default     = "https://morpheus.local.symmatree.com:8443"
+  default     = "https://morpheus.local.symmatree.com:443"
 }
 
 variable "unifi_username" {
