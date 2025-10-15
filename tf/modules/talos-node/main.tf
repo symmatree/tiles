@@ -39,7 +39,7 @@ locals {
 module "control" {
   source = "../talos-vm"
 
-  name        = "tiles-cp-${var.proxmox_node_name}"
+  name        = "${local.ctrl.cluster_name}-cp-${var.proxmox_node_name}"
   description = "Control"
   node_name   = var.proxmox_node_name
   vm_id       = local.ctrl.vm_id
@@ -53,7 +53,7 @@ module "control" {
 module "worker" {
   source = "../talos-vm"
 
-  name        = "tiles-wk-${var.proxmox_node_name}"
+  name        = "${local.wk.cluster_name}-wk-${var.proxmox_node_name}"
   description = "Worker"
   node_name   = var.proxmox_node_name
   vm_id       = local.wk.vm_id

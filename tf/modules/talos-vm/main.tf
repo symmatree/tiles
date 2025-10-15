@@ -42,14 +42,13 @@ resource "proxmox_virtual_environment_vm" "main" {
     interface = "ide2"
   }
   disk {
-    backup            = true
-    cache             = "none"
-    file_format       = "raw"
-    interface         = "scsi0"
-    iothread          = true
-    path_in_datastore = "vm-${var.vm_id}-disk-0"
-    size              = var.disk_size_gb
-    ssd               = false
+    backup      = true
+    cache       = "none"
+    file_format = "raw"
+    interface   = "scsi0"
+    iothread    = true
+    size        = var.disk_size_gb
+    ssd         = false
   }
   memory {
     dedicated = var.ram_mb

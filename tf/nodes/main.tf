@@ -42,9 +42,10 @@ provider "proxmox" {
 }
 
 provider "unifi" {
-  username = "terraform"
-  password = var.unifi_password
-  api_url  = var.unifi_controller_url
+  username       = "terraform"
+  password       = var.unifi_password
+  api_url        = var.unifi_controller_url
+  allow_insecure = true
 }
 
 data "proxmox_virtual_environment_nodes" "nodes" {}
