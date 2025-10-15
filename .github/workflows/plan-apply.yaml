@@ -15,11 +15,10 @@
 name: "plan"
 on:
   workflow_dispatch: {}
-  pull_request:
+  pull_request: {}
+  push:
     branches:
       - "main"
-      - "sbox"
-      - "prod"
   schedule:
     - cron: "0 2 * * *" # Daily at 0200 UTC
 
@@ -105,8 +104,9 @@ jobs:
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           mkdir -p "${{ runner.temp }}/txt-outputs"
-          terraform plan -lock-timeout=5m -input=false \
-            | tee "${{ runner.temp }}/txt-outputs/terraform-plan-nodes.txt"
+          terraform plan -lock-timeout=5m -input=false -out="${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
+          terraform show -no-color "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin" \
+            > "${{ runner.temp }}/txt-outputs/plan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.txt"
 
       - name: De-wireguard
         if: always()
