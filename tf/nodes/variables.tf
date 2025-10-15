@@ -9,12 +9,6 @@ variable "proxmox_username" {
   type        = string
 }
 
-variable "proxmox_password" {
-  description = "Proxmox VE password"
-  type        = string
-  sensitive   = true
-}
-
 variable "proxmox_insecure" {
   description = "Skip TLS verification for Proxmox API"
   type        = bool
@@ -42,6 +36,24 @@ variable "proxmox_storage_vm" {
   description = "Proxmox storage for VM disks"
   type        = string
   default     = "local-lvm"
+}
+
+variable "unifi_controller_url" {
+  description = "Unifi Controller URL"
+  type        = string
+  default     = "https://morpheus.local.symmatree.com:8443"
+}
+
+variable "unifi_username" {
+  description = "Username for service account"
+  type        = string
+  default     = "terraform"
+}
+
+variable "unifi_password" {
+  description = "Unifi: Password for service account"
+  type        = string
+  sensitive   = true
 }
 
 variable "proxmox_network_bridge" {

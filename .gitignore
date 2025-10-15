@@ -3,7 +3,6 @@
 *.tfstate.*
 !*.tfvars.example
 .terraform/
-.terraform.lock.hcl
 crash.log
 crash.*.log
 
@@ -12,6 +11,8 @@ controlplane.yaml
 worker.yaml
 talosconfig
 secrets.yaml
+
+.secrets/
 
 # Temporary files
 *.tmp

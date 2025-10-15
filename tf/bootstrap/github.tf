@@ -65,6 +65,12 @@ resource "github_actions_secret" "gcp_tiles_tf_sa_key" {
   plaintext_value = base64decode(google_service_account_key.tiles-tf.private_key)
 }
 
+resource "github_actions_secret" "project_id" {
+  repository      = github_repository.tiles.name
+  secret_name     = "PROJECT_ID"
+  plaintext_value = var.gcp_project_id
+}
+
 resource "github_actions_secret" "proxmox_tiles_tf_token_id" {
   repository      = github_repository.tiles.name
   secret_name     = "PROXMOX_TILES_TF_TOKEN_ID"
@@ -75,4 +81,10 @@ resource "github_actions_secret" "proxmox_tiles_tf_token_value" {
   repository      = github_repository.tiles.name
   secret_name     = "PROXMOX_TILES_TF_TOKEN_VALUE"
   plaintext_value = proxmox_virtual_environment_user_token.user_token.value
+}
+
+resource "github_actions_secret" "tiles_vpn_config" {
+  repository      = github_repository.tiles.name
+  secret_name     = "TILES_VPN_CONFIG"
+  plaintext_value = file(".secrets/GITHUB_VPN_CONFIG")
 }

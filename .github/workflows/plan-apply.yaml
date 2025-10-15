@@ -14,8 +14,10 @@
 
 name: "plan"
 on:
+  workflow_dispatch: {}
   pull_request:
     branches:
+      - "main"
       - "sbox"
       - "prod"
   schedule:
@@ -25,6 +27,7 @@ env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }}
   TF_VAR_gh_token: ${{ secrets.TF_VAR_gh_token }}
   TF_IN_AUTOMATION: "true"
+  TF_VAR_unifi_password: ${{ secrets.UNIFI_PASSWORD }}
 
 jobs:
   run:
@@ -36,31 +39,32 @@ jobs:
       pull-requests: "write"
 
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: pre-commit/action@v3.0.1
-        name: pre-commit
-        env:
-          # `no-commit-to-branch` fails when run --all-files against main.
-          SKIP: "no-commit-to-branch"
-        with:
-          # Diff on failure is a default arg.
-          extra_args: "--all-files"
-      - name: Check pristine
-        if: ${{ ! inputs.skip_pristine }}
+      - name: DateAndTimeStamps
+        id: stamps
         run: |
-          echo "Ensure pre-commit made no changes."
-          git diff --exit-code --color --word-diff=color
-
+          set -euo pipefail
+          timestamp=$(date +'%Y%m%dT%H%M%S')
+          datestamp=$(date +'%Y%m%d')
+          echo "TIMESTAMP=${timestamp}" | tee -a "$GITHUB_OUTPUT"
+          echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
+      - uses: "actions/checkout@v4"
       - uses: "hashicorp/setup-terraform@v3"
         with:
           terraform_version: "1.13.3"
+
+      - name: Authenticate to Google Cloud
+        run: |
+          set -euo pipefail
+          echo '${{ secrets.GCP_TILES_TF_SA_KEY }}' > "${RUNNER_TEMP}/gcp-sa-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json" >> "$GITHUB_ENV"
+          echo "GOOGLE_CLOUD_PROJECT=${{ secrets.PROJECT_ID }}" >> "$GITHUB_ENV"
 
       - name: Terraform cache
         id: tf-cache
         uses: actions/cache@v4
         with:
           path: |
-            ${{ GITHUB_WORKSPACE }}/tf/nodes/.terraform
+            tf/nodes/.terraform
           # Use date so we refetch once a day no matter what.
           key: ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/**/.terraform.lock.hcl') }}
           restore-keys: |
@@ -70,16 +74,53 @@ jobs:
       - name: Terraform init
         if: steps.tf-cache.outputs.cache-hit != 'true'
         run: |
+          set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           terraform init
+
+      - name: Wireguard
+        id: wireguard
+        env:
+          TILES_VPN_CONFIG: ${{ secrets.TILES_VPN_CONFIG }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TILES_VPN_CONFIG}" ]; then
+            echo "No Wireguard config provided"
+            exit 1
+          fi
+          echo "Setting up Wireguard..."
+          time sudo apt-get -y \
+           -qq -o Dpkg::Progress-Fancy="0" -o APT::Color="0" -o Dpkg::Use-Pty="0" \
+            install wireguard-tools
+          echo "${TILES_VPN_CONFIG}" > "$HOME/wg0.conf"
+          chmod 0600 "$HOME/wg0.conf"
+          echo "Connecting..."
+          time sudo wg-quick up "$HOME/wg0.conf"
+          echo "Connected"
+          echo "WIREGUARD=1" | tee -a "$GITHUB_OUTPUT"
 
       - name: Terraform plan nodes
         id: tf-plan
         run: |
+          set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
-          terraform plan
+          mkdir -p "${{ runner.temp }}/txt-outputs"
+          terraform plan -lock-timeout=5m -input=false \
+            | tee "${{ runner.temp }}/txt-outputs/terraform-plan-nodes.txt"
 
-      - uses: actions/github-script@v6
+      - name: De-wireguard
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -z "${{ steps.wireguard.outputs.WIREGUARD }}" ]; then
+            echo "No Wireguard connection established, skipping disconnection."
+            exit 0
+          fi
+          echo "Disconnecting Wireguard..."
+          time sudo wg-quick down "$HOME/wg0.conf"
+          echo "Disconnected"
+
+      - uses: actions/github-script@v8
         name: Attach outputs to PR
         if: github.event_name == 'pull_request'
         with:
@@ -98,7 +139,7 @@ jobs:
               const contents = out_file.length > 65000 ? out_file.toString().substring(0, 65000) + " ..." : out_file
               const truncated_message = out_file.length > 65000 ? "Output is too long and was truncated. You can read full Plan in " + run_link + "<br /><br />" : ""
               const output = `
-              #### ${out_files[file]} 📖: \`${{ steps.pre-commit.outcome }}\`
+              #### ${out_files[file]} 📖: \`${{ steps.tf-plan.outcome }}\`
               <details><summary>Show Contents</summary>
 
               \`\`\`\n
