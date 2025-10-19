@@ -10,11 +10,10 @@ proxmox_storage_vm           = "local-lvm"
 proxmox_network_bridge       = "vmbr0"
 
 # Cluster configuration
-cluster_name    = "talos"
-talos_version   = "1.11.2"
-talos_variant   = "nocloud"
-talos_arch      = "amd64"
-talos_schematic = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
+cluster_name  = "talos"
+talos_version = "1.11.2"
+talos_variant = "nocloud"
+talos_arch    = "amd64"
 
 # Network configuration
 network_gateway   = "10.0.1.1"

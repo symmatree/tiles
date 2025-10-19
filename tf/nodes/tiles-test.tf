@@ -32,7 +32,7 @@ module "tiles-test-node" {
     version   = var.talos_version
     variant   = var.talos_variant
     arch      = var.talos_arch
-    schematic = var.talos_schematic
+    schematic = talos_image_factory_schematic.this.id
   }
   vm_config = local.tiles_test[each.value]
 }

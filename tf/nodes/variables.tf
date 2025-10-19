@@ -41,7 +41,7 @@ variable "proxmox_storage_vm" {
 variable "unifi_controller_url" {
   description = "Unifi Controller URL"
   type        = string
-  default     = "https://morpheus.local.symmatree.com:8443"
+  default     = "https://morpheus.local.symmatree.com:443"
 }
 
 variable "unifi_username" {
@@ -77,10 +77,10 @@ variable "talos_arch" {
   type        = string
   default     = "amd64"
 }
-variable "talos_schematic" {
-  description = "The Talos schematic hash to use for downloading the ISO."
-  type        = string
-}
+# variable "talos_schematic" {
+#   description = "The Talos schematic hash to use for downloading the ISO."
+#   type        = string
+# }
 
 variable "cluster_name" {
   description = "Name prefix for the Talos cluster"
