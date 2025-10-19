@@ -6,3 +6,5 @@ gcp_region      = "us-central1"
 gcp_owner_email = "seth.porter@gmail.com"
 
 github_owner = "symmatree"
+
+onepassword_vault_name = "tiles-secrets"

@@ -13,6 +13,10 @@ terraform {
       source  = "integrations/github"
       version = ">= 5.0"
     }
+    onepassword = {
+      source  = "1Password/onepassword"
+      version = ">= 2.1.2"
+    }
   }
   backend "gcs" {
     bucket = "custodes-tf-state"

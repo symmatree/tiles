@@ -47,7 +47,6 @@ variable "unifi_controller_url" {
 variable "unifi_username" {
   description = "Username for service account"
   type        = string
-  default     = "terraform"
 }
 
 variable "unifi_password" {
@@ -77,10 +76,6 @@ variable "talos_arch" {
   type        = string
   default     = "amd64"
 }
-# variable "talos_schematic" {
-#   description = "The Talos schematic hash to use for downloading the ISO."
-#   type        = string
-# }
 
 variable "cluster_name" {
   description = "Name prefix for the Talos cluster"
