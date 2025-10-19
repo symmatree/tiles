@@ -18,6 +18,46 @@ resource "github_repository" "tiles" {
   has_downloads = false
 }
 
+import {
+  id = "tiles:9017440"
+  to = github_repository_ruleset.tiles-main
+}
+
+resource "github_repository_ruleset" "tiles-main" {
+  enforcement = "active"
+  name        = "tiles-main"
+  repository  = github_repository.tiles.name
+  target      = "branch"
+  bypass_actors {
+    actor_id    = 5
+    actor_type  = "RepositoryRole"
+    bypass_mode = "pull_request"
+  }
+  conditions {
+    ref_name {
+      exclude = []
+      include = ["~DEFAULT_BRANCH"]
+    }
+  }
+  rules {
+    creation                = true
+    deletion                = true
+    non_fast_forward        = true
+    required_linear_history = true
+    pull_request {
+      required_approving_review_count = 0
+    }
+    required_status_checks {
+      required_check {
+        context = "plan"
+      }
+      required_check {
+        context = "precommit"
+      }
+    }
+  }
+}
+
 locals {
   sa_mapping = {
     "tiles" = {

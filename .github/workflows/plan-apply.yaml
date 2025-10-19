@@ -29,7 +29,7 @@ env:
   TF_VAR_unifi_password: ${{ secrets.UNIFI_PASSWORD }}
 
 jobs:
-  run:
+  plan:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
