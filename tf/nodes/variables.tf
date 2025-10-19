@@ -77,10 +77,10 @@ variable "talos_arch" {
   type        = string
   default     = "amd64"
 }
-variable "talos_schematic" {
-  description = "The Talos schematic hash to use for downloading the ISO."
-  type        = string
-}
+# variable "talos_schematic" {
+#   description = "The Talos schematic hash to use for downloading the ISO."
+#   type        = string
+# }
 
 variable "cluster_name" {
   description = "Name prefix for the Talos cluster"
