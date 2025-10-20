@@ -72,6 +72,14 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json" >> "$GITHUB_ENV"
           echo "GOOGLE_CLOUD_PROJECT=${{ secrets.PROJECT_ID }}" >> "$GITHUB_ENV"
 
+      - name: "Install 1Password CLI"
+        run: |
+          set -euxo pipefail
+          wget "https://cache.agilebits.com/dist/1P/op2/pkg/v2.32.0/op_linux_${ARCH}_v2.32.0.zip" -O "${RUNNER_TEMP}/op.zip"
+          unzip -d "${RUNNER_TEMP}/op" "${RUNNER_TEMP}/op.zip"
+          sudo mv "${RUNNER_TEMP}/op/op" /usr/local/bin/
+          rm -r "${RUNNER_TEMP}/op.zip" "${RUNNER_TEMP}/op"
+
       - name: Terraform cache
         id: tf-cache
         uses: actions/cache@v4
