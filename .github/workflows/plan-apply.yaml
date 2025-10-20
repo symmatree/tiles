@@ -24,6 +24,8 @@ on:
 
 env:
   TF_IN_AUTOMATION: "true"
+  TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+
 
 jobs:
   plan:
