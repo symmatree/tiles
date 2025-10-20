@@ -52,11 +52,6 @@ output "gcp_tiles_tf_sa_email" {
   value       = google_service_account.tiles-tf.email
 }
 
-import {
-  id = "custodes-tf-state"
-  to = module.gcp_state_bucket.google_storage_bucket.bucket
-}
-
 module "gcp_state_bucket" {
   source  = "terraform-google-modules/cloud-storage/google//modules/simple_bucket"
   version = ">= 12.0"

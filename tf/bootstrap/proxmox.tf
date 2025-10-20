@@ -28,12 +28,6 @@ resource "random_password" "proxmox_tiles_tf_password" {
   override_special = "_%@"
 }
 
-output "proxmox_tiles_tf_password" {
-  description = "The password for the Proxmox VE tiles-tf user. Store this securely!"
-  value       = random_password.proxmox_tiles_tf_password.result
-  sensitive   = true
-}
-
 resource "proxmox_virtual_environment_group" "admin_group" {
   comment  = "Managed by Terraform"
   group_id = "admin"

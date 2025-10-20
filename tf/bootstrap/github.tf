@@ -81,7 +81,7 @@ module "secret_tf_sa_key" {
   source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
   secret_name     = "GCP_TILES_TF_SA_KEY"
-  plaintext_value = google_service_account_key.tiles-tf.private_key
+  plaintext_value = base64decode(google_service_account_key.tiles-tf.private_key)
 }
 
 module "secret_project_id" {
