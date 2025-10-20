@@ -84,13 +84,6 @@ module "secret_tf_sa_key" {
   plaintext_value = base64decode(google_service_account_key.tiles-tf.private_key)
 }
 
-module "secret_project_id" {
-  source          = "../modules/github-secret"
-  repository      = github_repository.tiles.name
-  secret_name     = "GCP_TILES_PROJECT_ID"
-  plaintext_value = var.gcp_project_id
-}
-
 locals {
   # This is a messy blind fetch so we check some things below
   vpn_config = data.onepassword_item.github-vpn-config.section[0].field[0]
