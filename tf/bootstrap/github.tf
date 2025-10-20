@@ -18,11 +18,6 @@ resource "github_repository" "tiles" {
   has_downloads = false
 }
 
-import {
-  id = "tiles:9017440"
-  to = github_repository_ruleset.tiles-main
-}
-
 resource "github_repository_ruleset" "tiles-main" {
   enforcement = "active"
   name        = "tiles-main"
@@ -49,10 +44,12 @@ resource "github_repository_ruleset" "tiles-main" {
     }
     required_status_checks {
       required_check {
-        context = "plan"
+        context        = "plan"
+        integration_id = 15368
       }
       required_check {
-        context = "precommit"
+        context        = "precommit"
+        integration_id = 15368
       }
     }
   }
