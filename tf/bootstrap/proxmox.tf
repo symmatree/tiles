@@ -28,12 +28,6 @@ resource "random_password" "proxmox_tiles_tf_password" {
   override_special = "_%@"
 }
 
-output "proxmox_tiles_tf_password" {
-  description = "The password for the Proxmox VE tiles-tf user. Store this securely!"
-  value       = random_password.proxmox_tiles_tf_password.result
-  sensitive   = true
-}
-
 resource "proxmox_virtual_environment_group" "admin_group" {
   comment  = "Managed by Terraform"
   group_id = "admin"
@@ -60,18 +54,4 @@ resource "proxmox_virtual_environment_user_token" "user_token" {
   token_name            = "tiles_tf_token"
   user_id               = proxmox_virtual_environment_user.tiles_tf.user_id
   privileges_separation = false
-}
-
-output "proxmox_tiles_tf_user_id" {
-  description = "The Proxmox VE user ID for the tiles-tf user."
-  value       = proxmox_virtual_environment_user.tiles_tf.user_id
-}
-output "proxmox_tiles_tf_token_id" {
-  description = "The Proxmox VE token ID for the tiles-tf user."
-  value       = proxmox_virtual_environment_user_token.user_token.id
-}
-output "proxmox_tiles_tf_token_value" {
-  description = "The Proxmox VE token value for the tiles-tf user. Store this securely!"
-  value       = proxmox_virtual_environment_user_token.user_token.value
-  sensitive   = true
 }

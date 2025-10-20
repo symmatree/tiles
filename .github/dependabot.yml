@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "terraform"
+    directory: "/tf/bootstrap"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "terraform"
+    directory: "/tf/nodes"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "docker"
+    directory: "/charts"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "helm"
+    directory: "/charts"
+    schedule:
+      interval: "daily"

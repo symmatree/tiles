@@ -23,10 +23,9 @@ on:
     - cron: "0 2 * * *" # Daily at 0200 UTC
 
 env:
-  PROJECT_ID: ${{ secrets.PROJECT_ID }}
   TF_IN_AUTOMATION: "true"
-  TF_VAR_unifi_username: ${{ secrets.UNIFI_USERNAME }}
-  TF_VAR_unifi_password: ${{ secrets.UNIFI_PASSWORD }}
+  TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+
 
 jobs:
   plan:
@@ -51,12 +50,35 @@ jobs:
         with:
           terraform_version: "1.13.3"
 
+      - name: Check inputs
+        env:
+          GCP_TILES_TF_SA_EMAIL: ${{ secrets.GCP_TILES_TF_SA_EMAIL }}
+          GCP_TILES_TF_SA_KEY: ${{ secrets.GCP_TILES_TF_SA_KEY }}
+          ONEPASSWORD_SA_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          TILES_VPN_CONFIG: ${{ secrets.TILES_VPN_CONFIG }}
+        run: |
+          set -euo pipefail
+          for var in GCP_TILES_TF_SA_EMAIL GCP_TILES_TF_SA_KEY ONEPASSWORD_SA_TOKEN TILES_VPN_CONFIG; do
+            if [ -z "${!var}" ]; then
+              echo "${var} is not set"
+              exit 1
+            fi
+          done
+
       - name: Authenticate to Google Cloud
         run: |
           set -euo pipefail
           echo '${{ secrets.GCP_TILES_TF_SA_KEY }}' > "${RUNNER_TEMP}/gcp-sa-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json" >> "$GITHUB_ENV"
           echo "GOOGLE_CLOUD_PROJECT=${{ secrets.PROJECT_ID }}" >> "$GITHUB_ENV"
+
+      - name: "Install 1Password CLI"
+        run: |
+          set -euxo pipefail
+          wget "https://cache.agilebits.com/dist/1P/op2/pkg/v2.32.0/op_linux_amd64_v2.32.0.zip" -O "${RUNNER_TEMP}/op.zip"
+          unzip -d "${RUNNER_TEMP}/op" "${RUNNER_TEMP}/op.zip"
+          sudo mv "${RUNNER_TEMP}/op/op" /usr/local/bin/
+          rm -r "${RUNNER_TEMP}/op.zip" "${RUNNER_TEMP}/op"
 
       - name: Terraform cache
         id: tf-cache

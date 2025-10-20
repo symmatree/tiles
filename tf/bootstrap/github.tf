@@ -70,34 +70,18 @@ resource "google_service_account_iam_member" "self_impersonate" {
   member             = "serviceAccount:${google_service_account.tiles-tf.email}"
 }
 
-resource "github_actions_secret" "gcp_tiles_tf_sa_email" {
+module "secret_tf_sa_email" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
   secret_name     = "GCP_TILES_TF_SA_EMAIL"
   plaintext_value = google_service_account.tiles-tf.email
 }
 
-resource "github_actions_secret" "gcp_tiles_tf_sa_key" {
+module "secret_tf_sa_key" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
   secret_name     = "GCP_TILES_TF_SA_KEY"
   plaintext_value = base64decode(google_service_account_key.tiles-tf.private_key)
-}
-
-resource "github_actions_secret" "project_id" {
-  repository      = github_repository.tiles.name
-  secret_name     = "PROJECT_ID"
-  plaintext_value = var.gcp_project_id
-}
-
-resource "github_actions_secret" "proxmox_tiles_tf_token_id" {
-  repository      = github_repository.tiles.name
-  secret_name     = "PROXMOX_TILES_TF_TOKEN_ID"
-  plaintext_value = proxmox_virtual_environment_user_token.user_token.id
-}
-
-resource "github_actions_secret" "proxmox_tiles_tf_token_value" {
-  repository      = github_repository.tiles.name
-  secret_name     = "PROXMOX_TILES_TF_TOKEN_VALUE"
-  plaintext_value = proxmox_virtual_environment_user_token.user_token.value
 }
 
 locals {
@@ -113,20 +97,16 @@ check "vpn_config_not_empty" {
   }
 }
 
-resource "github_actions_secret" "tiles_vpn_config" {
+module "secret_vpn_config" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
   secret_name     = "TILES_VPN_CONFIG"
   plaintext_value = local.vpn_config.value
 }
 
-resource "github_actions_secret" "unifi_username" {
+module "secret_onepassword_sa_token" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
-  secret_name     = "UNIFI_USERNAME"
-  plaintext_value = data.onepassword_item.unifi_sa.username
-}
-
-resource "github_actions_secret" "unifi_password" {
-  repository      = github_repository.tiles.name
-  secret_name     = "UNIFI_PASSWORD"
-  plaintext_value = data.onepassword_item.unifi_sa.password
+  secret_name     = "ONEPASSWORD_SA_TOKEN"
+  plaintext_value = var.onepassword_sa_token
 }
