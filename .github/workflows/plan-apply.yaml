@@ -24,12 +24,12 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }}
-  TF_VAR_gh_token: ${{ secrets.TF_VAR_gh_token }}
   TF_IN_AUTOMATION: "true"
+  TF_VAR_unifi_username: ${{ secrets.UNIFI_USERNAME }}
   TF_VAR_unifi_password: ${{ secrets.UNIFI_PASSWORD }}
 
 jobs:
-  run:
+  plan:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
@@ -124,7 +124,6 @@ jobs:
         name: Attach outputs to PR
         if: github.event_name == 'pull_request'
         with:
-          # github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const run_url = process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID
             const run_link = '<a href="' + run_url + '">Actions</a>.'

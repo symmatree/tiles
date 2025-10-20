@@ -1,22 +1,11 @@
-variable "github_token" {
-  description = "GitHub token with appropriate permissions"
-  type        = string
-  sensitive   = true
-}
-
 variable "github_owner" {
   description = "GitHub owner (user or organization)"
   type        = string
 }
 
 provider "github" {
-  token = var.github_token
+  token = data.onepassword_item.github_token.password
   owner = var.github_owner
-}
-
-import {
-  id = "tiles"
-  to = github_repository.tiles
 }
 
 resource "github_repository" "tiles" {
@@ -29,6 +18,43 @@ resource "github_repository" "tiles" {
   has_downloads = false
 }
 
+resource "github_repository_ruleset" "tiles-main" {
+  enforcement = "active"
+  name        = "tiles-main"
+  repository  = github_repository.tiles.name
+  target      = "branch"
+  bypass_actors {
+    actor_id    = 5
+    actor_type  = "RepositoryRole"
+    bypass_mode = "pull_request"
+  }
+  conditions {
+    ref_name {
+      exclude = []
+      include = ["~DEFAULT_BRANCH"]
+    }
+  }
+  rules {
+    creation                = true
+    deletion                = true
+    non_fast_forward        = true
+    required_linear_history = true
+    pull_request {
+      required_approving_review_count = 0
+    }
+    required_status_checks {
+      required_check {
+        context        = "plan"
+        integration_id = 15368
+      }
+      required_check {
+        context        = "precommit"
+        integration_id = 15368
+      }
+    }
+  }
+}
+
 locals {
   sa_mapping = {
     "tiles" = {
@@ -37,15 +63,6 @@ locals {
     }
   }
 }
-
-# module "gh_oidc" {
-#   source      = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
-#   project_id  = var.gcp_project_id
-#   pool_id     = "tiles-pool"
-#   provider_id = "tiles-gh-provider"
-#   sa_mapping = local.sa_mapping
-# }
-
 
 resource "google_service_account_iam_member" "self_impersonate" {
   service_account_id = google_service_account.tiles-tf.id
@@ -83,8 +100,33 @@ resource "github_actions_secret" "proxmox_tiles_tf_token_value" {
   plaintext_value = proxmox_virtual_environment_user_token.user_token.value
 }
 
+locals {
+  # This is a messy blind fetch so we check some things below
+  vpn_config = data.onepassword_item.github-vpn-config.section[0].field[0]
+}
+
+# Validation to ensure VPN config is not empty
+check "vpn_config_not_empty" {
+  assert {
+    condition     = startswith(local.vpn_config.value, "[Interface]") && local.vpn_config.label == "wireguard-config"
+    error_message = "tiles_vpn_config must not be empty. Check your OnePassword item 'github-vpn-config'."
+  }
+}
+
 resource "github_actions_secret" "tiles_vpn_config" {
   repository      = github_repository.tiles.name
   secret_name     = "TILES_VPN_CONFIG"
-  plaintext_value = file(".secrets/GITHUB_VPN_CONFIG")
+  plaintext_value = local.vpn_config.value
+}
+
+resource "github_actions_secret" "unifi_username" {
+  repository      = github_repository.tiles.name
+  secret_name     = "UNIFI_USERNAME"
+  plaintext_value = data.onepassword_item.unifi_sa.username
+}
+
+resource "github_actions_secret" "unifi_password" {
+  repository      = github_repository.tiles.name
+  secret_name     = "UNIFI_PASSWORD"
+  plaintext_value = data.onepassword_item.unifi_sa.password
 }
