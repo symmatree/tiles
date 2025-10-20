@@ -70,21 +70,24 @@ resource "google_service_account_iam_member" "self_impersonate" {
   member             = "serviceAccount:${google_service_account.tiles-tf.email}"
 }
 
-resource "github_actions_secret" "gcp_tiles_tf_sa_email" {
+module "secret_tf_sa_email" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
   secret_name     = "GCP_TILES_TF_SA_EMAIL"
   plaintext_value = google_service_account.tiles-tf.email
 }
 
-resource "github_actions_secret" "gcp_tiles_tf_sa_key" {
+module "secret_tf_sa_key" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
   secret_name     = "GCP_TILES_TF_SA_KEY"
-  plaintext_value = base64decode(google_service_account_key.tiles-tf.private_key)
+  plaintext_value = google_service_account_key.tiles-tf.private_key
 }
 
-resource "github_actions_secret" "project_id" {
+module "secret_project_id" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
-  secret_name     = "PROJECT_ID"
+  secret_name     = "GCP_TILES_PROJECT_ID"
   plaintext_value = var.gcp_project_id
 }
 
@@ -101,8 +104,16 @@ check "vpn_config_not_empty" {
   }
 }
 
-resource "github_actions_secret" "tiles_vpn_config" {
+module "secret_vpn_config" {
+  source          = "../modules/github-secret"
   repository      = github_repository.tiles.name
   secret_name     = "TILES_VPN_CONFIG"
   plaintext_value = local.vpn_config.value
+}
+
+module "secret_onepassword_sa_token" {
+  source          = "../modules/github-secret"
+  repository      = github_repository.tiles.name
+  secret_name     = "ONEPASSWORD_SA_TOKEN"
+  plaintext_value = var.onepassword_sa_token
 }
