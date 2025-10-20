@@ -17,6 +17,10 @@ terraform {
       source  = "siderolabs/talos"
       version = ">= 0.9.0"
     }
+    onepassword = {
+      source  = "1Password/onepassword"
+      version = ">= 2.1.2"
+    }
   }
   backend "gcs" {
     bucket = "custodes-tf-state"
@@ -24,30 +28,44 @@ terraform {
   }
 }
 
-data "terraform_remote_state" "bootstrap" {
-  backend = "gcs"
-  config = {
-    bucket = "custodes-tf-state"
-    prefix = "terraform/tiles/bootstrap"
-  }
+variable "onepassword_sa_token" {
+  description = "1Password service account token"
+  type        = string
 }
 
-locals {
-  proxmox_tiles_tf_user_id     = data.terraform_remote_state.bootstrap.outputs.proxmox_tiles_tf_user_id
-  proxmox_tiles_tf_token_id    = data.terraform_remote_state.bootstrap.outputs.proxmox_tiles_tf_token_id
-  proxmox_tiles_tf_token_value = data.terraform_remote_state.bootstrap.outputs.proxmox_tiles_tf_token_value
+provider "onepassword" {
+  # url = "https://my.1password.com"
+  service_account_token = var.onepassword_sa_token
+}
+
+variable "onepassword_vault_name" {
+  type        = string
+  description = "The name of the 1Password vault to use for storing secrets."
+}
+
+data "onepassword_vault" "tf_secrets" {
+  name = var.onepassword_vault_name
+}
+
+data "onepassword_item" "proxmox_user_token" {
+  vault = data.onepassword_vault.tf_secrets.uuid
+  title = "proxmox_tiles_tf_token"
 }
 
 provider "proxmox" {
-  endpoint = var.proxmox_endpoint
-  # api_token = "${local.proxmox_tiles_tf_user_id}!provider=${local.proxmox_tiles_tf_token_value}"
-  api_token = local.proxmox_tiles_tf_token_value
+  endpoint  = var.proxmox_endpoint
+  api_token = data.onepassword_item.proxmox_user_token.password
   insecure  = true
 }
 
+data "onepassword_item" "unifi_sa" {
+  vault = data.onepassword_vault.tf_secrets.uuid
+  title = "morpheus-terraform"
+}
+
 provider "unifi" {
-  username       = "terraform"
-  password       = var.unifi_password
+  username       = data.onepassword_item.unifi_sa.username
+  password       = data.onepassword_item.unifi_sa.password
   api_url        = var.unifi_controller_url
   allow_insecure = true
 }

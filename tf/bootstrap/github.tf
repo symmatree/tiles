@@ -88,18 +88,6 @@ resource "github_actions_secret" "project_id" {
   plaintext_value = var.gcp_project_id
 }
 
-resource "github_actions_secret" "proxmox_tiles_tf_token_id" {
-  repository      = github_repository.tiles.name
-  secret_name     = "PROXMOX_TILES_TF_TOKEN_ID"
-  plaintext_value = proxmox_virtual_environment_user_token.user_token.id
-}
-
-resource "github_actions_secret" "proxmox_tiles_tf_token_value" {
-  repository      = github_repository.tiles.name
-  secret_name     = "PROXMOX_TILES_TF_TOKEN_VALUE"
-  plaintext_value = proxmox_virtual_environment_user_token.user_token.value
-}
-
 locals {
   # This is a messy blind fetch so we check some things below
   vpn_config = data.onepassword_item.github-vpn-config.section[0].field[0]
@@ -117,16 +105,4 @@ resource "github_actions_secret" "tiles_vpn_config" {
   repository      = github_repository.tiles.name
   secret_name     = "TILES_VPN_CONFIG"
   plaintext_value = local.vpn_config.value
-}
-
-resource "github_actions_secret" "unifi_username" {
-  repository      = github_repository.tiles.name
-  secret_name     = "UNIFI_USERNAME"
-  plaintext_value = data.onepassword_item.unifi_sa.username
-}
-
-resource "github_actions_secret" "unifi_password" {
-  repository      = github_repository.tiles.name
-  secret_name     = "UNIFI_PASSWORD"
-  plaintext_value = data.onepassword_item.unifi_sa.password
 }
