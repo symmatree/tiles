@@ -8,6 +8,11 @@ variable "proxmox_storage_iso" {
   default     = "local"
 }
 
+variable "cluster_name" {
+  description = "Talos cluster name"
+  type        = string
+}
+
 variable "talos" {
   description = "Talos configuration"
   type = object({
@@ -21,11 +26,10 @@ variable "talos" {
 variable "vm_config" {
   description = "Config for the VMs"
   type = map(object({
-    vm_id        = number
-    cores        = number
-    ram_mb       = number
-    mac_address  = string
-    ip_address   = string
-    cluster_name = string
+    vm_id       = number
+    cores       = number
+    ram_mb      = number
+    mac_address = string
+    ip_address  = string
   }))
 }

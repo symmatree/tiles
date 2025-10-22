@@ -12,14 +12,6 @@ terraform {
   }
 }
 
-data "terraform_remote_state" "bootstrap" {
-  backend = "gcs"
-  config = {
-    bucket = "custodes-tf-state"
-    prefix = "terraform/tiles/bootstrap"
-  }
-}
-
 # Upload Talos ISO to Proxmox
 resource "proxmox_virtual_environment_download_file" "talos_iso" {
   content_type = "iso"
@@ -39,7 +31,7 @@ locals {
 module "control" {
   source = "../talos-vm"
 
-  name        = "${local.ctrl.cluster_name}-cp-${var.proxmox_node_name}"
+  name        = "${var.cluster_name}-cp-${var.proxmox_node_name}"
   description = "Control"
   node_name   = var.proxmox_node_name
   vm_id       = local.ctrl.vm_id
@@ -53,7 +45,7 @@ module "control" {
 module "worker" {
   source = "../talos-vm"
 
-  name        = "${local.wk.cluster_name}-wk-${var.proxmox_node_name}"
+  name        = "${var.cluster_name}-wk-${var.proxmox_node_name}"
   description = "Worker"
   node_name   = var.proxmox_node_name
   vm_id       = local.wk.vm_id

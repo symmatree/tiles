@@ -13,6 +13,10 @@ terraform {
       source  = "integrations/github"
       version = ">= 5.0"
     }
+    unifi = {
+      source  = "ubiquiti-community/unifi"
+      version = ">= 0.41.3"
+    }
     onepassword = {
       source  = "1Password/onepassword"
       version = ">= 2.1.2"
@@ -22,4 +26,17 @@ terraform {
     bucket = "custodes-tf-state"
     prefix = "terraform/tiles/bootstrap"
   }
+}
+
+variable "unifi_controller_url" {
+  description = "Unifi Controller URL"
+  type        = string
+  default     = "https://morpheus.local.symmatree.com:443"
+}
+
+provider "unifi" {
+  username       = data.onepassword_item.unifi_sa.username
+  password       = data.onepassword_item.unifi_sa.password
+  api_url        = var.unifi_controller_url
+  allow_insecure = true
 }
