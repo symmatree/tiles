@@ -5,6 +5,10 @@ terraform {
       source  = "siderolabs/talos"
       version = ">= 0.9.0"
     }
+    proxmox = {
+      source  = "bpg/proxmox"
+      version = ">= 0.84"
+    }
     onepassword = {
       source  = "1Password/onepassword"
       version = ">= 2.1.2"
@@ -58,6 +62,12 @@ variable "control_plane_vip" {
   type        = string
 }
 
+variable "start_vms" {
+  description = "Whether to start the VMs after creation"
+  type        = bool
+  default     = false
+}
+
 # Load base configuration from YAML file
 locals {
   base_config_yaml = file("${path.module}/talos-patch-all.yaml")
@@ -81,6 +91,24 @@ locals {
       })
     })
   })
+
+  # Control plane specific configuration with VIP
+  control_plane_config = merge(local.cluster_config, {
+    machine = merge(local.cluster_config.machine, {
+      network = {
+        interfaces = [
+          {
+            deviceSelector = {
+              physical = true
+            }
+            vip = {
+              ip = var.control_plane_vip
+            }
+          }
+        ]
+      }
+    })
+  })
 }
 
 module "talos-node" {
@@ -91,6 +119,7 @@ module "talos-node" {
   proxmox_storage_iso = var.proxmox_storage_iso
   talos               = var.talos
   vm_config           = var.node_config[each.value]
+  start_vms           = var.start_vms
 }
 
 resource "talos_machine_secrets" "this" {}
@@ -107,7 +136,7 @@ data "talos_machine_configuration" "machineconfig_cp" {
   machine_type     = "controlplane"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
-    yamlencode(local.cluster_config)
+    yamlencode(local.control_plane_config)
   ]
 }
 
@@ -118,6 +147,67 @@ data "talos_machine_configuration" "machineconfig_worker" {
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
     yamlencode(local.cluster_config)
+  ]
+}
+
+# Start VMs and apply Talos configurations
+locals {
+  # Flatten node configurations for easier iteration
+  all_nodes = flatten([
+    for node_name, node_config in var.node_config : [
+      {
+        key        = "${node_name}-control"
+        node_name  = node_name
+        type       = "control"
+        ip_address = node_config.control.ip_address
+        vm_id      = node_config.control.vm_id
+      },
+      {
+        key        = "${node_name}-worker"
+        node_name  = node_name
+        type       = "worker"
+        ip_address = node_config.worker.ip_address
+        vm_id      = node_config.worker.vm_id
+      }
+    ]
+  ])
+  all_nodes_map = { for node in local.all_nodes : node.key => node }
+}
+
+# Apply Talos configuration to control plane nodes
+resource "talos_machine_configuration_apply" "control_plane" {
+  for_each = {
+    for k, v in local.all_nodes_map : k => v
+    if v.type == "control"
+  }
+
+  client_configuration        = talos_machine_secrets.this.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.machineconfig_cp.machine_configuration
+  node                        = each.value.ip_address
+
+  depends_on = [module.talos-node]
+}
+
+# Apply Talos configuration to worker nodes
+resource "talos_machine_configuration_apply" "worker" {
+  for_each = {
+    for k, v in local.all_nodes_map : k => v
+    if v.type == "worker"
+  }
+
+  client_configuration        = talos_machine_secrets.this.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.machineconfig_worker.machine_configuration
+  node                        = each.value.ip_address
+
+  depends_on = [module.talos-node]
+}# Bootstrap the first control plane node
+resource "talos_machine_bootstrap" "this" {
+  # Bootstrap the first control plane node (alphabetically first by key)
+  node                 = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
+  client_configuration = talos_machine_secrets.this.client_configuration
+
+  depends_on = [
+    talos_machine_configuration_apply.control_plane
   ]
 }
 
@@ -153,4 +243,14 @@ output "control_plane_ips" {
 output "control_plane_vip" {
   description = "Control plane VIP"
   value       = var.control_plane_vip
+}
+
+output "bootstrap_node" {
+  description = "Node that was bootstrapped"
+  value       = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
+}
+
+output "cluster_endpoint" {
+  description = "Cluster API endpoint"
+  value       = "https://${var.control_plane_vip}:6443"
 }

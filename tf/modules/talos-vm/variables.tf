@@ -57,3 +57,9 @@ variable "domain_name" {
   type        = string
   default     = "local.symmatree.com."
 }
+
+variable "started" {
+  description = "Whether the VM should be started after creation"
+  type        = bool
+  default     = false
+}

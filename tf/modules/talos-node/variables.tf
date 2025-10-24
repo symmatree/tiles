@@ -33,3 +33,9 @@ variable "vm_config" {
     ip_address  = string
   }))
 }
+
+variable "start_vms" {
+  description = "Whether to start the VMs after creation"
+  type        = bool
+  default     = false
+}
