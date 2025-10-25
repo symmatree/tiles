@@ -29,6 +29,7 @@ import 'timers';
 
 try {
   coreExports.info(`Disconnecting`);
+  const confDir = coreExports.getInput("conf_dir");
   await execExports.exec('sudo', ['wg-quick', 'down', `${confDir}/wg0.conf`]);
   coreExports.info(`Disconnected`);
 } catch (error) {
