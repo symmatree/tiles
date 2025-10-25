@@ -4,6 +4,7 @@ module "tiles-test" {
   proxmox_storage_iso = var.proxmox_storage_iso
   cluster_name        = "tiles-test"
   start_vms           = true # Start test VMs
+  onepassword_vault   = data.onepassword_vault.tf_secrets.uuid
   talos = {
     version   = var.talos_version
     variant   = var.talos_variant

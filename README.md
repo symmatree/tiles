@@ -24,3 +24,28 @@ Helm, Kubernetes, Terraform kinds of things
   * 10.0.106.0/24: LoadBalancer range (Cilium L2 announcements)
   * 10.0.107.0/24: Pods (ipv4NativeRoutingCIDR)
   * 10.0.108.0/24: Services
+
+## Talos client configuration (talosconfig)
+
+When a cluster's VMs are started (`start_vms = true`), this repo automatically stores the Talos client configuration in 1Password as a Login item titled:
+
+- `talosconfig-<cluster-name>` (e.g., `talosconfig-tiles-test`)
+
+The talosconfig YAML is stored in the password field of that item so it's easy to retrieve with the 1Password CLI and keep multiple clusters side-by-side.
+
+### Retrieve talosconfig with 1Password CLI
+
+Replace `<VAULT>` and `<CLUSTER>` below (e.g., `tiles-secrets` and `tiles-test`). This writes a per-cluster config file you can point Talos to.
+
+```bash
+# Write talosconfig to a file per cluster
+op item get "talosconfig-<CLUSTER>" --vault "<VAULT>" --fields password > ~/.talos/<CLUSTER>.yaml
+
+# Use it for talosctl interactions
+export TALOSCONFIG=~/.talos/<CLUSTER>.yaml
+talosctl version
+```
+
+Notes:
+- Production cluster uses `cluster_name = "tiles"`; test uses `"tiles-test"`.
+- Items are only created when VMs are started for that cluster.

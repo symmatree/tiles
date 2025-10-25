@@ -68,6 +68,11 @@ variable "start_vms" {
   default     = false
 }
 
+variable "onepassword_vault" {
+  description = "1Password vault UUID."
+  type        = string
+}
+
 # Load base configuration from YAML file
 locals {
   base_config_yaml = file("${path.module}/talos-patch-all.yaml")
@@ -128,6 +133,14 @@ data "talos_client_configuration" "talosconfig" {
   cluster_name         = var.cluster_name
   client_configuration = talos_machine_secrets.this.client_configuration
   endpoints            = local.control_ips
+}
+
+resource "onepassword_item" "talosconfig" {
+  count      = var.start_vms ? 1 : 0
+  vault      = var.onepassword_vault
+  title      = "${var.cluster_name}-talosconfig"
+  category   = "secure_note"
+  note_value = data.talos_client_configuration.talosconfig.talos_config
 }
 
 data "talos_machine_configuration" "machineconfig_cp" {
@@ -202,17 +215,37 @@ resource "talos_machine_configuration_apply" "worker" {
   depends_on = [module.talos-node]
 }
 
+locals {
+  # Bootstrap the first control plane node (alphabetically first by key)
+  bootstrap_node = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
+}
+
 # Bootstrap the first control plane node (only if VMs are started)
 resource "talos_machine_bootstrap" "this" {
   count = var.start_vms ? 1 : 0
 
-  # Bootstrap the first control plane node (alphabetically first by key)
-  node                 = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
+  node                 = local.bootstrap_node
   client_configuration = talos_machine_secrets.this.client_configuration
 
   depends_on = [
     talos_machine_configuration_apply.control_plane
   ]
+}
+
+data "talos_cluster_kubeconfig" "this" {
+  depends_on = [
+    talos_machine_bootstrap.this
+  ]
+  client_configuration = talos_machine_secrets.this.client_configuration
+  node                 = local.bootstrap_node
+}
+
+resource "onepassword_item" "kubeconfig" {
+  count      = var.start_vms ? 1 : 0
+  vault      = var.onepassword_vault
+  title      = "${var.cluster_name}-kubeconfig"
+  category   = "secure_note"
+  note_value = data.talos_cluster_kubeconfig.this.kubeconfig
 }
 
 # Outputs
@@ -251,7 +284,7 @@ output "control_plane_vip" {
 
 output "bootstrap_node" {
   description = "Node that was bootstrapped (only when VMs are started)"
-  value       = var.start_vms ? local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address : null
+  value       = var.start_vms ? local.bootstrap_node : null
 }
 
 output "cluster_endpoint" {
