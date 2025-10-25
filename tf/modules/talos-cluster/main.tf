@@ -245,7 +245,7 @@ resource "onepassword_item" "kubeconfig" {
   vault      = var.onepassword_vault
   title      = "${var.cluster_name}-kubeconfig"
   category   = "secure_note"
-  note_value = data.talos_cluster_kubeconfig.this.kubeconfig
+  note_value = data.talos_cluster_kubeconfig.this.kubeconfig_raw
 }
 
 # Outputs
