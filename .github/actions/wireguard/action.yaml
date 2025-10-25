@@ -1,54 +1,15 @@
-name: 'wireguard'
-description: 'Attach to a Wireguard VPN'
+name: Wireguard
+description: Attach to a Wireguard VPN
+
 inputs:
-  txt_output_dir:
-    description: 'Directory containing text output files to attach to the PR.'
+  vpn_config:
+    description: Wireguard configuration file CONTENTS
     required: true
-    default: '/tmp/txt-outputs'
-  outcome:
-    description: 'The outcome to display alongside the outputs.'
-    required: false
-    default: 'completed'
+  conf_dir:
+    description: "Directory to write the Wireguard config file to (suggested: runner.temp)"
+    required: true
+
 runs:
-  using: "composite"
-  steps:
-      - uses: actions/github-script@v8
-        name: Attach outputs to PR
-        if: github.event_name == 'pull_request'
-        with:
-          script: |
-            const run_url = process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID
-            const run_link = '<a href="' + run_url + '">Actions</a>.'
-            const fs = require('fs')
-
-            const outputs = '${{ inputs.txt_output_dir }}'
-            const outputs_files = fs.readdirSync(outputs)
-            const out_files = outputs_files.filter(file => file.match(new RegExp(`.*\.(.txt)$`, 'ig')))
-            for (const file in out_files) {
-              const out_file_path = outputs.concat('/', out_files[file])
-              const out_file = fs.readFileSync(out_file_path, 'utf8')
-              const contents = out_file.length > 65000 ? out_file.toString().substring(0, 65000) + " ..." : out_file
-              const truncated_message = out_file.length > 65000 ? "Output is too long and was truncated. You can read full Plan in " + run_link + "<br /><br />" : ""
-              if (contents.length == 0) {
-                continue;
-              }
-              const open_string = contents.length < 2000 ? 'open="true"' : ''
-              const output = `
-                #### ${out_files[file]} 📖: \`${{ inputs.outcome }}\`
-                <details ${open_string}><summary>Show Contents</summary>
-
-                \`\`\`\n
-                ${contents}
-                \`\`\`
-
-                </details>
-                ${truncated_message}
-                `;
-
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: output
-              })
-            }
+  using: node20
+  main: dist/connect.js
+  post: dist/disconnect.js
