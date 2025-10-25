@@ -174,12 +174,12 @@ locals {
   all_nodes_map = { for node in local.all_nodes : node.key => node }
 }
 
-# Apply Talos configuration to control plane nodes
+# Apply Talos configuration to control plane nodes (only if VMs are started)
 resource "talos_machine_configuration_apply" "control_plane" {
-  for_each = {
+  for_each = var.start_vms ? {
     for k, v in local.all_nodes_map : k => v
     if v.type == "control"
-  }
+  } : {}
 
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.machineconfig_cp.machine_configuration
@@ -188,20 +188,24 @@ resource "talos_machine_configuration_apply" "control_plane" {
   depends_on = [module.talos-node]
 }
 
-# Apply Talos configuration to worker nodes
+# Apply Talos configuration to worker nodes (only if VMs are started)
 resource "talos_machine_configuration_apply" "worker" {
-  for_each = {
+  for_each = var.start_vms ? {
     for k, v in local.all_nodes_map : k => v
     if v.type == "worker"
-  }
+  } : {}
 
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.machineconfig_worker.machine_configuration
   node                        = each.value.ip_address
 
   depends_on = [module.talos-node]
-}# Bootstrap the first control plane node
+}
+
+# Bootstrap the first control plane node (only if VMs are started)
 resource "talos_machine_bootstrap" "this" {
+  count = var.start_vms ? 1 : 0
+
   # Bootstrap the first control plane node (alphabetically first by key)
   node                 = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
   client_configuration = talos_machine_secrets.this.client_configuration
@@ -246,11 +250,16 @@ output "control_plane_vip" {
 }
 
 output "bootstrap_node" {
-  description = "Node that was bootstrapped"
-  value       = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
+  description = "Node that was bootstrapped (only when VMs are started)"
+  value       = var.start_vms ? local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address : null
 }
 
 output "cluster_endpoint" {
   description = "Cluster API endpoint"
   value       = "https://${var.control_plane_vip}:6443"
+}
+
+output "vms_started" {
+  description = "Whether VMs are started and cluster is operational"
+  value       = var.start_vms
 }

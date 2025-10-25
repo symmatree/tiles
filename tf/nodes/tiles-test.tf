@@ -3,7 +3,7 @@ module "tiles-test" {
   source              = "../modules/talos-cluster"
   proxmox_storage_iso = var.proxmox_storage_iso
   cluster_name        = "tiles-test"
-  start_vms           = true   # Start test VMs
+  start_vms           = true # Start test VMs
   talos = {
     version   = var.talos_version
     variant   = var.talos_variant

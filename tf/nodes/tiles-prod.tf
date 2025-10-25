@@ -3,7 +3,7 @@ module "tiles-prod" {
   source              = "../modules/talos-cluster"
   proxmox_storage_iso = var.proxmox_storage_iso
   cluster_name        = "tiles"
-  start_vms           = false  # Don't start prod VMs yet
+  start_vms           = false # Don't start prod VMs yet
   talos = {
     version   = var.talos_version
     variant   = var.talos_variant
