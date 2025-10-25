@@ -232,7 +232,8 @@ resource "talos_machine_bootstrap" "this" {
   ]
 }
 
-data "talos_cluster_kubeconfig" "this" {
+resource "talos_cluster_kubeconfig" "this" {
+  count = var.start_vms ? 1 : 0
   depends_on = [
     talos_machine_bootstrap.this
   ]
@@ -245,7 +246,7 @@ resource "onepassword_item" "kubeconfig" {
   vault      = var.onepassword_vault
   title      = "${var.cluster_name}-kubeconfig"
   category   = "secure_note"
-  note_value = data.talos_cluster_kubeconfig.this.kubeconfig_raw
+  note_value = resource.talos_cluster_kubeconfig.this[0].kubeconfig_raw
 }
 
 # Outputs
