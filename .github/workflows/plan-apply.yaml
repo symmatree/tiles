@@ -1,6 +1,11 @@
 name: "nodes-plan-apply"
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Whether to apply the plan after creating it'
+        required: false
+        default: 'false'
   pull_request: {}
   push:
     branches:
@@ -13,7 +18,7 @@ env:
   TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
 
 jobs:
-  plan:
+  plan-apply:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
@@ -90,49 +95,31 @@ jobs:
         with:
           vpn_config: ${{ secrets.TILES_VPN_CONFIG }}
           conf_dir: "${{ runner.temp }}/wg"
-      # - name: Wireguard
-      #   id: wireguard
-      #   env:
-      #     TILES_VPN_CONFIG: ${{ secrets.TILES_VPN_CONFIG }}
-      #   run: |
-      #     set -euo pipefail
-      #     if [ -z "${TILES_VPN_CONFIG}" ]; then
-      #       echo "No Wireguard config provided"
-      #       exit 1
-      #     fi
-      #     echo "Setting up Wireguard..."
-      #     time sudo apt-get -y \
-      #      -qq -o Dpkg::Progress-Fancy="0" -o APT::Color="0" -o Dpkg::Use-Pty="0" \
-      #       install wireguard-tools
-      #     echo "${TILES_VPN_CONFIG}" > "$HOME/wg0.conf"
-      #     chmod 0600 "$HOME/wg0.conf"
-      #     echo "Connecting..."
-      #     time sudo wg-quick up "$HOME/wg0.conf"
-      #     echo "Connected"
-      #     echo "WIREGUARD=1" | tee -a "$GITHUB_OUTPUT"
 
       - name: Terraform plan nodes
         id: tf-plan
+        env:
+          PLAN_FILE: "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
         shell: bash
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           mkdir -p "${{ runner.temp }}/txt-outputs"
-          terraform plan -lock-timeout=5m -input=false -out="${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
-          terraform show -no-color "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin" \
+          terraform plan -lock-timeout=5m -input=false -out="${PLAN_FILE}"
+          terraform show -no-color "${PLAN_FILE}" \
             > "${{ runner.temp }}/txt-outputs/plan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.txt"
 
-      # - name: De-wireguard
-      #   if: always()
-      #   run: |
-      #     set -euo pipefail
-      #     if [ -z "${{ steps.wireguard.outputs.WIREGUARD }}" ]; then
-      #       echo "No Wireguard connection established, skipping disconnection."
-      #       exit 0
-      #     fi
-      #     echo "Disconnecting Wireguard..."
-      #     time sudo wg-quick down "$HOME/wg0.conf"
-      #     echo "Disconnected"
+      - name: Terraform apply nodes
+        id: tf-apply
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event.inputs.apply == 'true')
+        env:
+          PLAN_FILE: "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}/tf/nodes"
+          echo "Applying plan"
+          terraform apply -lock-timeout=5m "${PLAN_FILE}"
 
       - uses: ./.github/actions/attach-outputs
         name: Attach outputs to PR

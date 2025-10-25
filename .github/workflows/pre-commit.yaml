@@ -1,4 +1,4 @@
-name: "precommit"
+name: "pre-commit"
 on:
   pull_request: {}
   push:
@@ -11,7 +11,7 @@ on:
     - cron: "0 3 * * *" # Daily at 0300 UTC just to see if it's green.
 
 jobs:
-  precommit:
+  pre-commit:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
