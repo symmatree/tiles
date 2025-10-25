@@ -3,6 +3,8 @@ module "tiles-prod" {
   source              = "../modules/talos-cluster"
   proxmox_storage_iso = var.proxmox_storage_iso
   cluster_name        = "tiles"
+  start_vms           = false # Don't start prod VMs yet
+  onepassword_vault   = data.onepassword_vault.tf_secrets.uuid
   talos = {
     version   = var.talos_version
     variant   = var.talos_variant

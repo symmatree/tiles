@@ -40,6 +40,7 @@ module "control" {
   mac_address = local.ctrl.mac_address
   iso_id      = proxmox_virtual_environment_download_file.talos_iso.id
   ip_address  = local.ctrl.ip_address
+  started     = var.start_vms
 }
 
 module "worker" {
@@ -54,4 +55,5 @@ module "worker" {
   mac_address = local.wk.mac_address
   iso_id      = proxmox_virtual_environment_download_file.talos_iso.id
   ip_address  = local.wk.ip_address
+  started     = var.start_vms
 }

@@ -44,11 +44,11 @@ resource "github_repository_ruleset" "tiles-main" {
     }
     required_status_checks {
       required_check {
-        context        = "plan"
+        context        = "plan-apply"
         integration_id = 15368
       }
       required_check {
-        context        = "precommit"
+        context        = "pre-commit"
         integration_id = 15368
       }
     }

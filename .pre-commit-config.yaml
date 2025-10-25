@@ -6,7 +6,9 @@ repos:
     hooks:
       # general text file...stuff.
       - id: trailing-whitespace
+        exclude: "^.*/dist/.*\\.js.*$"
       - id: end-of-file-fixer
+        exclude: "^.*/dist/.*\\.js.*$"
       - id: fix-byte-order-marker
       - id: mixed-line-ending
         args:
@@ -14,6 +16,7 @@ repos:
 
       # git repo defense
       - id: check-added-large-files
+        exclude: "^.*/dist/.*\\.js.*$"
       - id: check-merge-conflict
         args:
           - --assume-in-merge

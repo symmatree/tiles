@@ -1,4 +1,4 @@
-name: "precommit"
+name: "pre-commit"
 on:
   pull_request: {}
   push:
@@ -11,7 +11,7 @@ on:
     - cron: "0 3 * * *" # Daily at 0300 UTC just to see if it's green.
 
 jobs:
-  precommit:
+  pre-commit:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
@@ -19,6 +19,11 @@ jobs:
 
     steps:
       - uses: "actions/checkout@v4"
+      - shell: bash
+        name: "Make output directory"
+        run: |
+          mkdir -p "${{ runner.temp }}/txt-outputs/"
+
       - uses: pre-commit/action@v3.0.1
         name: pre-commit
         id: pre-commit
@@ -26,54 +31,21 @@ jobs:
           # `no-commit-to-branch` fails when run --all-files against main.
           SKIP: "no-commit-to-branch"
         with:
-          # Diff on failure is a default arg.
-          extra_args: "--all-files"
+          # What's a little script injection between friends?
+          extra_args: '--all-files | tee "${{ runner.temp }}/txt-outputs/pre-commit.txt"'
+
       - name: Capture diffs for PR
-        if: github.event_name == 'pull_request'
+        if: (success() || failure()) && github.event_name == 'pull_request'
+        shell: bash
         run: |
+          set -euo pipefail
           echo "Capture diffs for PR."
           mkdir -p "${{ runner.temp }}/txt-outputs/"
           git diff --color --word-diff=color | tee "${{ runner.temp }}/txt-outputs/pre-commit-diff.txt"
 
-      - uses: actions/github-script@v8
-        name: Attach outputs to PR
-        if: github.event_name == 'pull_request'
+      - uses: ./.github/actions/attach-outputs
+        name: Attach pre-commit outputs to PR
+        if: (success() || failure()) && github.event_name == 'pull_request'
         with:
-          # github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const run_url = process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID
-            const run_link = '<a href="' + run_url + '">Actions</a>.'
-            const fs = require('fs')
-
-            const outputs = '${{ runner.temp }}/txt-outputs'
-            const outputs_files = fs.readdirSync(outputs)
-            const out_files = outputs_files.filter(file => file.match(new RegExp(`.*\.(.txt)$`, 'ig')))
-            for (const file in out_files) {
-              const out_file_path = outputs.concat('/', out_files[file])
-              const out_file = fs.readFileSync(out_file_path, 'utf8')
-              const contents = out_file.length > 65000 ? out_file.toString().substring(0, 65000) + " ..." : out_file
-              const truncated_message = out_file.length > 65000 ? "Output is too long and was truncated. You can read full Plan in " + run_link + "<br /><br />" : ""
-              const output = `
-              #### ${out_files[file]} 📖: \`${{ steps.pre-commit.outcome }}\`
-              <details><summary>Show Contents</summary>
-
-              \`\`\`\n
-              ${contents}
-              \`\`\`
-
-              </details>
-              ${truncated_message}
-              `;
-
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: output
-              })
-            }
-
-      -  name: Check pristine
-         run: |
-          echo "Ensure pre-commit made no changes."
-          git diff --exit-code --color --word-diff=color
+          txt_output_dir: "${{ runner.temp }}/txt-outputs/"
+          outcome: ${{ steps.pre-commit.outcome }}

@@ -1,0 +1,15 @@
+name: Wireguard
+description: Attach to a Wireguard VPN
+
+inputs:
+  vpn_config:
+    description: Wireguard configuration file CONTENTS
+    required: true
+  conf_dir:
+    description: "Directory to write the Wireguard config file to (suggested: runner.temp)"
+    required: true
+
+runs:
+  using: node20
+  main: dist/connect.js
+  post: dist/disconnect.js

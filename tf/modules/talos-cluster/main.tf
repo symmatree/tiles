@@ -5,6 +5,10 @@ terraform {
       source  = "siderolabs/talos"
       version = ">= 0.9.0"
     }
+    proxmox = {
+      source  = "bpg/proxmox"
+      version = ">= 0.84"
+    }
     onepassword = {
       source  = "1Password/onepassword"
       version = ">= 2.1.2"
@@ -58,6 +62,17 @@ variable "control_plane_vip" {
   type        = string
 }
 
+variable "start_vms" {
+  description = "Whether to start the VMs after creation"
+  type        = bool
+  default     = false
+}
+
+variable "onepassword_vault" {
+  description = "1Password vault UUID."
+  type        = string
+}
+
 # Load base configuration from YAML file
 locals {
   base_config_yaml = file("${path.module}/talos-patch-all.yaml")
@@ -81,6 +96,24 @@ locals {
       })
     })
   })
+
+  # Control plane specific configuration with VIP
+  control_plane_config = merge(local.cluster_config, {
+    machine = merge(local.cluster_config.machine, {
+      network = {
+        interfaces = [
+          {
+            deviceSelector = {
+              physical = true
+            }
+            vip = {
+              ip = var.control_plane_vip
+            }
+          }
+        ]
+      }
+    })
+  })
 }
 
 module "talos-node" {
@@ -91,6 +124,7 @@ module "talos-node" {
   proxmox_storage_iso = var.proxmox_storage_iso
   talos               = var.talos
   vm_config           = var.node_config[each.value]
+  start_vms           = var.start_vms
 }
 
 resource "talos_machine_secrets" "this" {}
@@ -101,13 +135,21 @@ data "talos_client_configuration" "talosconfig" {
   endpoints            = local.control_ips
 }
 
+resource "onepassword_item" "talosconfig" {
+  count      = var.start_vms ? 1 : 0
+  vault      = var.onepassword_vault
+  title      = "${var.cluster_name}-talosconfig"
+  category   = "secure_note"
+  note_value = data.talos_client_configuration.talosconfig.talos_config
+}
+
 data "talos_machine_configuration" "machineconfig_cp" {
   cluster_name     = var.cluster_name
   cluster_endpoint = "https://${var.control_plane_vip}:6443"
   machine_type     = "controlplane"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
-    yamlencode(local.cluster_config)
+    yamlencode(local.control_plane_config)
   ]
 }
 
@@ -119,6 +161,92 @@ data "talos_machine_configuration" "machineconfig_worker" {
   config_patches = [
     yamlencode(local.cluster_config)
   ]
+}
+
+# Start VMs and apply Talos configurations
+locals {
+  # Flatten node configurations for easier iteration
+  all_nodes = flatten([
+    for node_name, node_config in var.node_config : [
+      {
+        key        = "${node_name}-control"
+        node_name  = node_name
+        type       = "control"
+        ip_address = node_config.control.ip_address
+        vm_id      = node_config.control.vm_id
+      },
+      {
+        key        = "${node_name}-worker"
+        node_name  = node_name
+        type       = "worker"
+        ip_address = node_config.worker.ip_address
+        vm_id      = node_config.worker.vm_id
+      }
+    ]
+  ])
+  all_nodes_map = { for node in local.all_nodes : node.key => node }
+}
+
+# Apply Talos configuration to control plane nodes (only if VMs are started)
+resource "talos_machine_configuration_apply" "control_plane" {
+  for_each = var.start_vms ? {
+    for k, v in local.all_nodes_map : k => v
+    if v.type == "control"
+  } : {}
+
+  client_configuration        = talos_machine_secrets.this.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.machineconfig_cp.machine_configuration
+  node                        = each.value.ip_address
+
+  depends_on = [module.talos-node]
+}
+
+# Apply Talos configuration to worker nodes (only if VMs are started)
+resource "talos_machine_configuration_apply" "worker" {
+  for_each = var.start_vms ? {
+    for k, v in local.all_nodes_map : k => v
+    if v.type == "worker"
+  } : {}
+
+  client_configuration        = talos_machine_secrets.this.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.machineconfig_worker.machine_configuration
+  node                        = each.value.ip_address
+
+  depends_on = [module.talos-node]
+}
+
+locals {
+  # Bootstrap the first control plane node (alphabetically first by key)
+  bootstrap_node = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
+}
+
+# Bootstrap the first control plane node (only if VMs are started)
+resource "talos_machine_bootstrap" "this" {
+  count = var.start_vms ? 1 : 0
+
+  node                 = local.bootstrap_node
+  client_configuration = talos_machine_secrets.this.client_configuration
+
+  depends_on = [
+    talos_machine_configuration_apply.control_plane
+  ]
+}
+
+resource "talos_cluster_kubeconfig" "this" {
+  count = var.start_vms ? 1 : 0
+  depends_on = [
+    talos_machine_bootstrap.this
+  ]
+  client_configuration = talos_machine_secrets.this.client_configuration
+  node                 = local.bootstrap_node
+}
+
+resource "onepassword_item" "kubeconfig" {
+  count      = var.start_vms ? 1 : 0
+  vault      = var.onepassword_vault
+  title      = "${var.cluster_name}-kubeconfig"
+  category   = "secure_note"
+  note_value = resource.talos_cluster_kubeconfig.this[0].kubeconfig_raw
 }
 
 # Outputs
@@ -153,4 +281,19 @@ output "control_plane_ips" {
 output "control_plane_vip" {
   description = "Control plane VIP"
   value       = var.control_plane_vip
+}
+
+output "bootstrap_node" {
+  description = "Node that was bootstrapped (only when VMs are started)"
+  value       = var.start_vms ? local.bootstrap_node : null
+}
+
+output "cluster_endpoint" {
+  description = "Cluster API endpoint"
+  value       = "https://${var.control_plane_vip}:6443"
+}
+
+output "vms_started" {
+  description = "Whether VMs are started and cluster is operational"
+  value       = var.start_vms
 }

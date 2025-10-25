@@ -1,20 +1,11 @@
-# Portions Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-name: "plan"
+name: "nodes-plan-apply"
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Whether to apply the plan after creating it'
+        required: false
+        default: 'false'
   pull_request: {}
   push:
     branches:
@@ -26,9 +17,8 @@ env:
   TF_IN_AUTOMATION: "true"
   TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
 
-
 jobs:
-  plan:
+  plan-apply:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
@@ -85,9 +75,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            tf/nodes/.terraform
+            **/.terraform
           # Use date so we refetch once a day no matter what.
-          key: ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/**/.terraform.lock.hcl') }}
+          key: ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('**/.terraform.lock.hcl') }}
           restore-keys: |
             ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-
             ${{ runner.os }}-tools-
@@ -99,82 +89,41 @@ jobs:
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           terraform init
 
-      - name: Wireguard
+      - uses: ./.github/actions/wireguard
+        name: Wireguard
         id: wireguard
-        env:
-          TILES_VPN_CONFIG: ${{ secrets.TILES_VPN_CONFIG }}
-        run: |
-          set -euo pipefail
-          if [ -z "${TILES_VPN_CONFIG}" ]; then
-            echo "No Wireguard config provided"
-            exit 1
-          fi
-          echo "Setting up Wireguard..."
-          time sudo apt-get -y \
-           -qq -o Dpkg::Progress-Fancy="0" -o APT::Color="0" -o Dpkg::Use-Pty="0" \
-            install wireguard-tools
-          echo "${TILES_VPN_CONFIG}" > "$HOME/wg0.conf"
-          chmod 0600 "$HOME/wg0.conf"
-          echo "Connecting..."
-          time sudo wg-quick up "$HOME/wg0.conf"
-          echo "Connected"
-          echo "WIREGUARD=1" | tee -a "$GITHUB_OUTPUT"
+        with:
+          vpn_config: ${{ secrets.TILES_VPN_CONFIG }}
+          conf_dir: "${{ runner.temp }}/wg"
 
       - name: Terraform plan nodes
         id: tf-plan
+        env:
+          PLAN_FILE: "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
+        shell: bash
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           mkdir -p "${{ runner.temp }}/txt-outputs"
-          terraform plan -lock-timeout=5m -input=false -out="${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
-          terraform show -no-color "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin" \
+          terraform plan -lock-timeout=5m -input=false -out="${PLAN_FILE}"
+          terraform show -no-color "${PLAN_FILE}" \
             > "${{ runner.temp }}/txt-outputs/plan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.txt"
 
-      - name: De-wireguard
-        if: always()
+      - name: Terraform apply nodes
+        id: tf-apply
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event.inputs.apply == 'true')
+        env:
+          PLAN_FILE: "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
+        shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${{ steps.wireguard.outputs.WIREGUARD }}" ]; then
-            echo "No Wireguard connection established, skipping disconnection."
-            exit 0
-          fi
-          echo "Disconnecting Wireguard..."
-          time sudo wg-quick down "$HOME/wg0.conf"
-          echo "Disconnected"
+          cd "${GITHUB_WORKSPACE}/tf/nodes"
+          echo "Applying plan"
+          terraform apply -lock-timeout=5m "${PLAN_FILE}"
 
-      - uses: actions/github-script@v8
+      - uses: ./.github/actions/attach-outputs
         name: Attach outputs to PR
-        if: github.event_name == 'pull_request'
+        if: (success() || failure()) && github.event_name == 'pull_request'
         with:
-          script: |
-            const run_url = process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID
-            const run_link = '<a href="' + run_url + '">Actions</a>.'
-            const fs = require('fs')
-
-            const outputs = '${{ runner.temp }}/txt-outputs'
-            const outputs_files = fs.readdirSync(outputs)
-            const out_files = outputs_files.filter(file => file.match(new RegExp(`.*\.(.txt)$`, 'ig')))
-            for (const file in out_files) {
-              const out_file_path = outputs.concat('/', out_files[file])
-              const out_file = fs.readFileSync(out_file_path, 'utf8')
-              const contents = out_file.length > 65000 ? out_file.toString().substring(0, 65000) + " ..." : out_file
-              const truncated_message = out_file.length > 65000 ? "Output is too long and was truncated. You can read full Plan in " + run_link + "<br /><br />" : ""
-              const output = `
-              #### ${out_files[file]} 📖: \`${{ steps.tf-plan.outcome }}\`
-              <details><summary>Show Contents</summary>
-
-              \`\`\`\n
-              ${contents}
-              \`\`\`
-
-              </details>
-              ${truncated_message}
-              `;
-
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: output
-              })
-            }
+          txt_output_dir: "${{ runner.temp }}/txt-outputs/"
+          outcome: ${{ steps.tf-plan.outcome }}

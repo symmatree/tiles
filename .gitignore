@@ -1,10 +1,5 @@
-# Terraform
-*.tfstate
-*.tfstate.*
-!*.tfvars.example
 .terraform/
-crash.log
-crash.*.log
+node_modules/
 
 # Talos configuration files (contain secrets)
 controlplane.yaml
