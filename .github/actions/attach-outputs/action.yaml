@@ -32,18 +32,18 @@ runs:
               if (contents.length == 0) {
                 continue;
               }
-              const open_string = contents.length < 2000 ? 'open="true"' : ''
+              const open_string = contents.length < 2000 ? ' open="true"' : ''
               const output = `
-                #### ${out_files[file]} 📖: \`${{ inputs.outcome }}\`
-                <details ${open_string}><summary>Show Contents</summary>
+              #### ${out_files[file]} 📖: \`${{ inputs.outcome }}\`
+              <details${open_string}><summary>Show Contents</summary>
 
-                \`\`\`\n
-                ${contents}
-                \`\`\`
+              \`\`\`\n
+              ${contents}
+              \`\`\`
 
-                </details>
-                ${truncated_message}
-                `;
+              </details>
+              ${truncated_message}
+              `;
 
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
