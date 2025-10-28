@@ -1,17 +1,9 @@
 # Following https://docs.cilium.io/en/v1.16/installation/k8s-install-helm/
 cluster:
-  # clusterName: tales
   network:
     # cilium will become our CNI.
     cni:
       name: none
-    # These two CIDRs are inside my router's 10.0.0.0/16 so they can
-    # just ARP appropriately and things will work.
-    # 10.0.8.0/24 is the "external" IP range in cilium/additional-manifests.yaml
-    # podSubnets:
-    #   - 10.0.4.0/23
-    # serviceSubnets:
-    #   - 10.0.6.0/23
   controllerManager:
     extraArgs:
       # Listen to more than localhost so we can scrape from Alloy.
@@ -49,8 +41,7 @@ machine:
       localEnabled: true
   install:
     wipe: true
-    # Includes qemu agent.
-    # image: factory.talos.dev/installer/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515:v1.9.5
     extraKernelArgs:
       # 1280x1024 for the dashboard:
       - vga=795
+      - -talos.halt_if_installed
