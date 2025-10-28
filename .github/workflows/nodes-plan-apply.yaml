@@ -18,7 +18,7 @@ env:
   TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
 
 jobs:
-  plan-apply:
+  nodes-plan-apply:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
