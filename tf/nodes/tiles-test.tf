@@ -36,3 +36,46 @@ module "tiles-test" {
     },
   }
 }
+
+output "test_talosconfig" {
+  description = "Talos client configuration"
+  value       = module.tiles-test.talosconfig
+  sensitive   = true
+}
+
+output "test_control_plane_config" {
+  description = "Control plane machine configuration"
+  value       = module.tiles-test.control_plane_config
+  sensitive   = true
+}
+
+output "test_worker_config" {
+  description = "Worker machine configuration"
+  value       = module.tiles-test.worker_config
+  sensitive   = true
+}
+
+output "test_control_plane_ips" {
+  description = "Control plane IP addresses"
+  value       = module.tiles-test.control_plane_ips
+}
+
+output "test_control_plane_vip" {
+  description = "Control plane VIP"
+  value       = module.tiles-test.control_plane_vip
+}
+
+output "test_bootstrap_node" {
+  description = "Node that was bootstrapped (only when VMs are started)"
+  value       = module.tiles-test.bootstrap_node
+}
+
+output "test_cluster_endpoint" {
+  description = "Cluster API endpoint"
+  value       = module.tiles-test.cluster_endpoint
+}
+
+output "test_vms_started" {
+  description = "Whether VMs are started and cluster is operational"
+  value       = module.tiles-test.vms_started
+}
