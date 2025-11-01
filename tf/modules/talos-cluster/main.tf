@@ -220,9 +220,15 @@ locals {
   bootstrap_node = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
 }
 
-# Bootstrap the first control plane node (only if VMs are started)
+variable "run_bootstrap" {
+  description = "Whether to run the bootstrap process"
+  type        = bool
+  default     = false
+}
+
+# # Bootstrap the first control plane node (only if VMs are started)
 resource "talos_machine_bootstrap" "this" {
-  count = var.start_vms ? 1 : 0
+  count = var.run_bootstrap ? 1 : 0
 
   node                 = local.bootstrap_node
   client_configuration = talos_machine_secrets.this.client_configuration
@@ -233,7 +239,7 @@ resource "talos_machine_bootstrap" "this" {
 }
 
 resource "talos_cluster_kubeconfig" "this" {
-  count = var.start_vms ? 1 : 0
+  count = var.run_bootstrap ? 1 : 0
   depends_on = [
     talos_machine_bootstrap.this
   ]
@@ -242,7 +248,7 @@ resource "talos_cluster_kubeconfig" "this" {
 }
 
 resource "onepassword_item" "kubeconfig" {
-  count      = var.start_vms ? 1 : 0
+  count      = var.run_bootstrap ? 1 : 0
   vault      = var.onepassword_vault
   title      = "${var.cluster_name}-kubeconfig"
   category   = "secure_note"
