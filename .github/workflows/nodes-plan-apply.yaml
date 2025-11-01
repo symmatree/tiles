@@ -35,7 +35,7 @@ jobs:
           datestamp=$(date +'%Y%m%d')
           echo "TIMESTAMP=${timestamp}" | tee -a "$GITHUB_OUTPUT"
           echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v5"
       - uses: "hashicorp/setup-terraform@v3"
         with:
           terraform_version: "1.13.3"
