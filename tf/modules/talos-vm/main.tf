@@ -13,6 +13,10 @@ terraform {
       source  = "ubiquiti-community/unifi"
       version = ">= 0.41.3"
     }
+    talos = {
+      source  = "siderolabs/talos"
+      version = ">= 0.9.0"
+    }
   }
 }
 
@@ -75,4 +79,20 @@ resource "unifi_user" "vm_client" {
   local_dns_record       = "${var.name}.${var.domain_name}"
   allow_existing         = true
   skip_forget_on_destroy = true
+}
+
+resource "talos_machine_configuration_apply" "this" {
+  count = var.apply_config ? 1 : 0
+
+  client_configuration        = var.client_configuration
+  machine_configuration_input = var.machine_configuration
+  node                        = var.ip_address
+
+  depends_on = [proxmox_virtual_environment_vm.main]
+
+  lifecycle {
+    replace_triggered_by = [
+      proxmox_virtual_environment_vm.main
+    ]
+  }
 }

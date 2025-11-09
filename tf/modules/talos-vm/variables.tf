@@ -63,3 +63,27 @@ variable "started" {
   type        = bool
   default     = false
 }
+
+variable "apply_config" {
+  description = "Whether to apply Talos machine configuration"
+  type        = bool
+  default     = false
+}
+
+variable "client_configuration" {
+  description = "Talos client configuration for applying machine config"
+  type = object({
+    ca_certificate     = string
+    client_certificate = string
+    client_key         = string
+  })
+  default   = null
+  sensitive = true
+}
+
+variable "machine_configuration" {
+  description = "Talos machine configuration to apply"
+  type        = string
+  default     = null
+  sensitive   = true
+}

@@ -17,14 +17,25 @@ terraform {
 }
 
 variable "node_config" {
-  description = "Node names to control/worker to config"
-  type = map(map(object({
-    vm_id       = number
-    cores       = number
-    ram_mb      = number
-    mac_address = string
-    ip_address  = string
-  })))
+  description = "Map of Proxmox nodes to their VMs configuration"
+  type = map(object({
+    control_planes = list(object({
+      vm_id       = number
+      cores       = number
+      ram_mb      = number
+      mac_address = string
+      ip_address  = string
+      name_suffix = optional(string, "")
+    }))
+    workers = list(object({
+      vm_id       = number
+      cores       = number
+      ram_mb      = number
+      mac_address = string
+      ip_address  = string
+      name_suffix = optional(string, "")
+    }))
+  }))
 }
 
 variable "cluster_name" {
@@ -78,8 +89,11 @@ locals {
   base_config_yaml = file("${path.module}/talos-patch-all.yaml")
   base_config      = yamldecode(local.base_config_yaml)
 
-  # Build control plane IPs list
-  control_ips = [for node_name in keys(var.node_config) : var.node_config[node_name]["control"].ip_address]
+  # Build control plane IPs list from all control plane VMs
+  control_ips = [
+    for vm in local.all_vms : vm.ip_address
+    if vm.type == "control"
+  ]
 
   # Override configuration with cluster-specific values
   cluster_config = merge(local.base_config, {
@@ -116,18 +130,90 @@ locals {
   })
 }
 
+# Download Talos ISOs to each Proxmox node
 module "talos-node" {
   source              = "../talos-node"
   for_each            = toset(keys(var.node_config))
-  cluster_name        = var.cluster_name
   proxmox_node_name   = each.value
   proxmox_storage_iso = var.proxmox_storage_iso
-  talos               = var.talos
-  vm_config           = var.node_config[each.value]
-  start_vms           = var.start_vms
+  talos_configs       = [var.talos]
+}
+
+# Create a flat list of all VMs with their configurations
+locals {
+  all_vms = flatten([
+    for node_name, node in var.node_config : concat(
+      [
+        for idx, cp in node.control_planes : {
+          key            = "${node_name}-cp-${idx}"
+          node_name      = node_name
+          type           = "control"
+          name           = "${var.cluster_name}-cp-${node_name}${cp.name_suffix}"
+          vm_id          = cp.vm_id
+          cores          = cp.cores
+          ram_mb         = cp.ram_mb
+          mac_address    = cp.mac_address
+          ip_address     = cp.ip_address
+          machine_config = data.talos_machine_configuration.machineconfig_cp.machine_configuration
+        }
+      ],
+      [
+        for idx, wk in node.workers : {
+          key            = "${node_name}-wk-${idx}"
+          node_name      = node_name
+          type           = "worker"
+          name           = "${var.cluster_name}-wk-${node_name}${wk.name_suffix}"
+          vm_id          = wk.vm_id
+          cores          = wk.cores
+          ram_mb         = wk.ram_mb
+          mac_address    = wk.mac_address
+          ip_address     = wk.ip_address
+          machine_config = data.talos_machine_configuration.machineconfig_worker.machine_configuration
+        }
+      ]
+    )
+  ])
+  all_vms_map = { for vm in local.all_vms : vm.key => vm }
+
+  # ISO key format
+  iso_key = "${var.talos.version}-${var.talos.variant}-${var.talos.arch}"
+}
+
+# Create all VMs
+module "talos-vm" {
+  source   = "../talos-vm"
+  for_each = local.all_vms_map
+
+  name        = each.value.name
+  description = each.value.type == "control" ? "Control" : "Worker"
+  node_name   = each.value.node_name
+  vm_id       = each.value.vm_id
+  num_cores   = each.value.cores
+  ram_mb      = each.value.ram_mb
+  mac_address = each.value.mac_address
+  iso_id      = module.talos-node[each.value.node_name].iso_ids[local.iso_key]
+  ip_address  = each.value.ip_address
+  started     = var.start_vms
+
+  apply_config          = var.start_vms
+  client_configuration  = talos_machine_secrets.this.client_configuration
+  machine_configuration = each.value.machine_config
 }
 
 resource "talos_machine_secrets" "this" {}
+
+locals {
+  machine_secrets = yamlencode(talos_machine_secrets.this.machine_secrets)
+}
+
+resource "onepassword_item" "machine_secrets" {
+  count      = var.start_vms ? 1 : 0
+  vault      = var.onepassword_vault
+  title      = "${var.cluster_name}-machine-secrets"
+  category   = "secure_note"
+  note_value = local.machine_secrets
+}
+
 
 data "talos_client_configuration" "talosconfig" {
   cluster_name         = var.cluster_name
@@ -163,61 +249,11 @@ data "talos_machine_configuration" "machineconfig_worker" {
   ]
 }
 
-# Start VMs and apply Talos configurations
-locals {
-  # Flatten node configurations for easier iteration
-  all_nodes = flatten([
-    for node_name, node_config in var.node_config : [
-      {
-        key        = "${node_name}-control"
-        node_name  = node_name
-        type       = "control"
-        ip_address = node_config.control.ip_address
-        vm_id      = node_config.control.vm_id
-      },
-      {
-        key        = "${node_name}-worker"
-        node_name  = node_name
-        type       = "worker"
-        ip_address = node_config.worker.ip_address
-        vm_id      = node_config.worker.vm_id
-      }
-    ]
-  ])
-  all_nodes_map = { for node in local.all_nodes : node.key => node }
-}
-
-# Apply Talos configuration to control plane nodes (only if VMs are started)
-resource "talos_machine_configuration_apply" "control_plane" {
-  for_each = var.start_vms ? {
-    for k, v in local.all_nodes_map : k => v
-    if v.type == "control"
-  } : {}
-
-  client_configuration        = talos_machine_secrets.this.client_configuration
-  machine_configuration_input = data.talos_machine_configuration.machineconfig_cp.machine_configuration
-  node                        = each.value.ip_address
-
-  depends_on = [module.talos-node]
-}
-
-# Apply Talos configuration to worker nodes (only if VMs are started)
-resource "talos_machine_configuration_apply" "worker" {
-  for_each = var.start_vms ? {
-    for k, v in local.all_nodes_map : k => v
-    if v.type == "worker"
-  } : {}
-
-  client_configuration        = talos_machine_secrets.this.client_configuration
-  machine_configuration_input = data.talos_machine_configuration.machineconfig_worker.machine_configuration
-  node                        = each.value.ip_address
-
-  depends_on = [module.talos-node]
-}
-
+# Bootstrap setup
 locals {
   # Bootstrap the first control plane node (alphabetically first by key)
-  bootstrap_node = local.all_nodes_map[keys({ for k, v in local.all_nodes_map : k => v if v.type == "control" })[0]].ip_address
+  control_vms    = { for k, v in local.all_vms_map : k => v if v.type == "control" }
+  bootstrap_node = local.control_vms[keys(local.control_vms)[0]].ip_address
 }
 
 variable "run_bootstrap" {
@@ -234,7 +270,7 @@ resource "talos_machine_bootstrap" "this" {
   client_configuration = talos_machine_secrets.this.client_configuration
 
   depends_on = [
-    talos_machine_configuration_apply.control_plane
+    module.talos-vm
   ]
 }
 
@@ -256,6 +292,12 @@ resource "onepassword_item" "kubeconfig" {
 }
 
 # Outputs
+output "machine_secrets" {
+  description = "Talos machine secrets"
+  value       = local.machine_secrets
+  sensitive   = true
+}
+
 output "talosconfig" {
   description = "Talos client configuration"
   value       = data.talos_client_configuration.talosconfig.talos_config
@@ -302,4 +344,9 @@ output "cluster_endpoint" {
 output "vms_started" {
   description = "Whether VMs are started and cluster is operational"
   value       = var.start_vms
+}
+
+output "all_vms" {
+  description = "Map of all VMs in the cluster"
+  value       = local.all_vms_map
 }
