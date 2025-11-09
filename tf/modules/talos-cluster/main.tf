@@ -79,6 +79,12 @@ variable "start_vms" {
   default     = false
 }
 
+
+variable "apply_configs" {
+  description = "Whether to apply Talos machine configuration"
+  type        = bool
+}
+
 variable "onepassword_vault" {
   description = "1Password vault UUID."
   type        = string
@@ -195,7 +201,7 @@ module "talos-vm" {
   ip_address  = each.value.ip_address
   started     = var.start_vms
 
-  apply_config          = var.start_vms
+  apply_config          = var.apply_configs
   client_configuration  = talos_machine_secrets.this.client_configuration
   machine_configuration = each.value.machine_config
 }
