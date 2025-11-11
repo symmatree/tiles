@@ -13,5 +13,5 @@ fi
 helm template argocd "${SAVE_DIR}" --namespace argocd >"${SAVE_DIR}/manifest.yaml"
 # Close to what argo itself will do.
 kubens argocd
-kubectl apply -f "${SAVE_DIR}/manifest.yaml" -n argocd --server-side
+kubectl apply -f "${SAVE_DIR}/manifest.yaml" --context "admin@tiles-test" -n argocd --server-side
 rm "${SAVE_DIR}/manifest.yaml"

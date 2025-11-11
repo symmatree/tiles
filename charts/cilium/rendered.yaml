@@ -13,28 +13,28 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: "cilium"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-envoy/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: "cilium-envoy"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-operator/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: "cilium-operator"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/hubble-relay/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: "hubble-relay"
-  namespace: default
+  namespace: cilium
 automountServiceAccountToken: false
 ---
 # Source: cilium/charts/cilium/templates/hubble-ui/serviceaccount.yaml
@@ -42,14 +42,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: "hubble-ui"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cilium-config
-  namespace: default
+  namespace: cilium
 data:
 
   # Identity allocation mode selects how identities are shared between cilium
@@ -375,7 +375,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cilium-envoy-config
-  namespace: default
+  namespace: cilium
 data:
   # Keep the key name as bootstrap-config.json to avoid breaking changes
   bootstrap-config.json: |
@@ -386,22 +386,22 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: hubble-relay-config
-  namespace: default
+  namespace: cilium
 data:
   config.yaml: |
     cluster-name: tales
-    peer-service: "hubble-peer.default.svc.cluster.local.:443"
+    peer-service: "hubble-peer.cilium.svc.cluster.local.:443"
     listen-address: :4245
     gops: true
     gops-port: "9893"
     metrics-listen-address: ":9966"
-    retry-timeout:
-    sort-buffer-len-max:
-    sort-buffer-drain-timeout:
+    retry-timeout: 
+    sort-buffer-len-max: 
+    sort-buffer-drain-timeout: 
     tls-hubble-client-cert-file: /var/lib/hubble-relay/tls/client.crt
     tls-hubble-client-key-file: /var/lib/hubble-relay/tls/client.key
     tls-hubble-server-ca-files: /var/lib/hubble-relay/tls/hubble-server-ca.crt
-
+    
     disable-server-tls: true
 ---
 # Source: cilium/charts/cilium/templates/hubble-ui/configmap.yaml
@@ -409,7 +409,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: hubble-ui-nginx
-  namespace: default
+  namespace: cilium
 data:
   nginx.conf: "server {\n    listen       8081;\n    listen       [::]:8081;\n    server_name  localhost;\n    root /app;\n    index index.html;\n    client_max_body_size 1G;\n\n    location / {\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n\n        location /api {\n            proxy_http_version 1.1;\n            proxy_pass_request_headers on;\n            proxy_pass http://127.0.0.1:8090;\n        }\n        location / {\n            if ($http_user_agent ~* \"kube-probe\") { access_log off; }\n            # double `/index.html` is required here\n            try_files $uri $uri/ /index.html /index.html;\n        }\n\n        # Liveness probe\n        location /healthz {\n            access_log off;\n            add_header Content-Type text/plain;\n            return 200 'ok';\n        }\n    }\n}"
 ---
@@ -909,7 +909,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-operator/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -925,7 +925,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/hubble-ui/clusterrolebinding.yaml
 kind: ClusterRoleBinding
@@ -942,14 +942,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "hubble-ui"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-agent/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: cilium-config-agent
-  namespace: default
+  namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
 rules:
@@ -1096,7 +1096,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: cilium-config-agent
-  namespace: default
+  namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
 roleRef:
@@ -1106,7 +1106,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: "cilium"
-    namespace: default
+    namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-agent/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1123,7 +1123,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: "cilium"
-    namespace: default
+    namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-agent/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1140,7 +1140,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-agent/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1157,7 +1157,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-agent/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1174,7 +1174,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-operator/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1191,7 +1191,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-operator/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1208,7 +1208,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-operator/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1225,14 +1225,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
-  namespace: default
+  namespace: cilium
 ---
 # Source: cilium/charts/cilium/templates/cilium-agent/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: cilium-agent
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: cilium
     app.kubernetes.io/name: cilium-agent
@@ -1253,7 +1253,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: cilium-envoy
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: cilium-envoy
     app.kubernetes.io/name: cilium-envoy
@@ -1275,7 +1275,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: cilium-ingress
-  namespace: default
+  namespace: cilium
   labels:
     cilium.io/ingress: "true"
     app.kubernetes.io/part-of: cilium
@@ -1284,11 +1284,11 @@ spec:
   - name: http
     port: 80
     protocol: TCP
-    nodePort:
+    nodePort: 
   - name: https
     port: 443
     protocol: TCP
-    nodePort:
+    nodePort: 
   type: LoadBalancer
   allocateLoadBalancerNodePorts: false
   externalTrafficPolicy: Cluster
@@ -1298,7 +1298,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: cilium-operator
-  namespace: default
+  namespace: cilium
   labels:
     io.cilium/app: operator
     name: cilium-operator
@@ -1322,7 +1322,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: hubble-relay-metrics
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: hubble-relay
 
@@ -1342,7 +1342,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: hubble-relay
-  namespace: default
+  namespace: cilium
   annotations:
   labels:
     k8s-app: hubble-relay
@@ -1363,7 +1363,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: hubble-ui
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: hubble-ui
     app.kubernetes.io/name: hubble-ui
@@ -1383,7 +1383,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hubble-metrics
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: hubble
     app.kubernetes.io/name: hubble
@@ -1406,7 +1406,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hubble-peer
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: cilium
     app.kubernetes.io/part-of: cilium
@@ -1427,7 +1427,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: cilium
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: cilium
     app.kubernetes.io/part-of: cilium
@@ -1444,7 +1444,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "a39950d000940fdc4a99972580238bc061f28ff106eae5157b0374029109dd3a"
+        cilium.io/cilium-configmap-checksum: "364840cb4839a2d84adace3b44fc10a01cfec382e23e30c2dbff3f588ed68472"
         kubectl.kubernetes.io/default-container: cilium-agent
       labels:
         k8s-app: cilium
@@ -1541,7 +1541,7 @@ spec:
                     set -o errexit
                     set -o pipefail
                     set -o nounset
-
+                    
                     # When running in AWS ENI mode, it's likely that 'aws-node' has
                     # had a chance to install SNAT iptables rules. These can result
                     # in dropped traffic, so we should attempt to remove them.
@@ -1557,7 +1557,7 @@ spec:
                         iptables-save | grep -E -v 'AWS-SNAT-CHAIN|AWS-CONNMARK-CHAIN' | iptables-restore
                     fi
                     echo 'Done!'
-
+                    
           preStop:
             exec:
               command:
@@ -1638,7 +1638,7 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
-
+        
       initContainers:
       - name: config
         image: "quay.io/cilium/cilium:v1.18.1@sha256:65ab17c052d8758b2ad157ce766285e04173722df59bdee1ea6d5fda7149f0e9"
@@ -1925,7 +1925,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: cilium-envoy
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: cilium-envoy
     app.kubernetes.io/part-of: cilium
@@ -1943,7 +1943,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-envoy-configmap-checksum: "9f06ff217874d1d6bfeed11c480dbb2de913ebbc4f95f5d8ad3b0ac5f525e460"
+        cilium.io/cilium-envoy-configmap-checksum: "050d90a85058864126bf447f3ebe5f8d80aea953ebc787bc734be3141df98fa8"
       labels:
         k8s-app: cilium-envoy
         name: cilium-envoy
@@ -2098,7 +2098,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cilium-operator
-  namespace: default
+  namespace: cilium
   labels:
     io.cilium/app: operator
     name: cilium-operator
@@ -2125,7 +2125,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "a39950d000940fdc4a99972580238bc061f28ff106eae5157b0374029109dd3a"
+        cilium.io/cilium-configmap-checksum: "364840cb4839a2d84adace3b44fc10a01cfec382e23e30c2dbff3f588ed68472"
       labels:
         io.cilium/app: operator
         name: cilium-operator
@@ -2224,7 +2224,7 @@ spec:
           operator: Exists
         - key: node.cilium.io/agent-not-ready
           operator: Exists
-
+      
       volumes:
         # To read the configuration from the config map
       - name: cilium-config-path
@@ -2236,7 +2236,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hubble-relay
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: hubble-relay
     app.kubernetes.io/name: hubble-relay
@@ -2255,7 +2255,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/hubble-relay-configmap-checksum: "3d93b074008642294d3bdfeb3e24f44fd77a882c1893ff4d42d98d7e1ee734c0"
+        cilium.io/hubble-relay-configmap-checksum: "a6f094123d5837b3559bcdf2f79e823d7083f9625cfc481d2e8841a32d7cdc30"
       labels:
         k8s-app: hubble-relay
         app.kubernetes.io/name: hubble-relay
@@ -2329,9 +2329,9 @@ spec:
             mountPath: /var/lib/hubble-relay/tls
             readOnly: true
           terminationMessagePolicy: FallbackToLogsOnError
-
+        
       restartPolicy: Always
-      priorityClassName:
+      priorityClassName: 
       serviceAccountName: "hubble-relay"
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 1
@@ -2376,7 +2376,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: hubble-ui
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: hubble-ui
     app.kubernetes.io/name: hubble-ui
@@ -2394,7 +2394,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/hubble-ui-nginx-configmap-checksum: "6c2f14314d03ee39f1c6e985b3a28ebd1de49ee181aee42fac60a526c5c0a8e8"
+        cilium.io/hubble-ui-nginx-configmap-checksum: "2642968e817f21dbae603e9b2491094b56cf195190fe6ad2c86d3db867555f96"
       labels:
         k8s-app: hubble-ui
         app.kubernetes.io/name: hubble-ui
@@ -2404,7 +2404,7 @@ spec:
         fsGroup: 1001
         runAsGroup: 1001
         runAsUser: 1001
-      priorityClassName:
+      priorityClassName: 
       serviceAccountName: "hubble-ui"
       automountServiceAccountToken: true
       containers:
@@ -2476,7 +2476,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: hubble-ui
-  namespace: default
+  namespace: cilium
   labels:
     k8s-app: hubble-ui
     app.kubernetes.io/name: hubble-ui
@@ -2506,7 +2506,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: hubble-relay-client-certs
-  namespace: default
+  namespace: cilium
 spec:
   issuerRef:
     group: cert-manager.io
@@ -2530,7 +2530,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: hubble-server-certs
-  namespace: default
+  namespace: cilium
 spec:
   issuerRef:
     group: cert-manager.io
@@ -2554,7 +2554,7 @@ spec:
 apiVersion: cilium.io/v2alpha1
 kind: CiliumL2AnnouncementPolicy
 metadata:
-  namespace: "default"
+  namespace: "cilium"
   name: announce-everything
 spec:
   # No serviceSelector, apply to all.
@@ -2570,7 +2570,7 @@ spec:
 apiVersion: cilium.io/v2alpha1
 kind: CiliumLoadBalancerIPPool
 metadata:
-  namespace: "default"
+  namespace: "cilium"
   name: lb-externalip-pool
 spec:
   blocks:
@@ -2583,7 +2583,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: cilium-ingress
-  namespace: default
+  namespace: cilium
   labels:
 subsets:
 - addresses:
@@ -2596,7 +2596,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: cilium-agent
-  namespace: default
+  namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
 spec:
@@ -2605,7 +2605,7 @@ spec:
       app.kubernetes.io/name: cilium-agent
   namespaceSelector:
     matchNames:
-    - default
+    - cilium
   endpoints:
   - port: metrics
     interval: "10s"
@@ -2621,7 +2621,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: cilium-envoy
-  namespace: default
+  namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
     app.kubernetes.io/name: cilium-envoy
@@ -2631,7 +2631,7 @@ spec:
       k8s-app: cilium-envoy
   namespaceSelector:
     matchNames:
-    - default
+    - cilium
   endpoints:
   - port: envoy-metrics
     interval: "10s"
@@ -2645,7 +2645,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: cilium-operator
-  namespace: default
+  namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
     app.kubernetes.io/name: cilium-operator
@@ -2656,7 +2656,7 @@ spec:
       name: cilium-operator
   namespaceSelector:
     matchNames:
-    - default
+    - cilium
   endpoints:
   - port: metrics
     interval: "10s"
@@ -2670,7 +2670,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: hubble-relay
-  namespace: default
+  namespace: cilium
   labels:
     suppress-diff: "true"
 spec:
@@ -2679,7 +2679,7 @@ spec:
       k8s-app: hubble-relay
   namespaceSelector:
     matchNames:
-    - default
+    - cilium
   endpoints:
   - port: metrics
     interval: "10s"
@@ -2690,7 +2690,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: hubble
-  namespace: default
+  namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
 spec:
@@ -2699,7 +2699,7 @@ spec:
       k8s-app: hubble
   namespaceSelector:
     matchNames:
-    - default
+    - cilium
   endpoints:
   - port: hubble-metrics
     interval: "10s"
