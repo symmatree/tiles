@@ -11,7 +11,7 @@ variable "proxmox_storage_iso" {
 
 variable "talos_configs" {
   description = "List of Talos configurations to download ISOs for"
-  type = list(object({
+  type = map(object({
     version   = string
     variant   = string
     arch      = string

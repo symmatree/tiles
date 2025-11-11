@@ -1,3 +1,4 @@
+# This is modified with dynamic values in main.tf
 # Following https://docs.cilium.io/en/v1.16/installation/k8s-install-helm/
 cluster:
   network:
@@ -40,8 +41,8 @@ machine:
     imageCache:
       localEnabled: true
   install:
-    wipe: true
+    # wipe: true
     extraKernelArgs:
-      # 1280x1024 for the dashboard:
-      - vga=795
+      # 1024x768 for the dashboard:
+      - vga=792
       - -talos.halt_if_installed
