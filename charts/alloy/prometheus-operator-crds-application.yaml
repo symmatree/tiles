@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-operator-crds
+  namespace: kube-system
+  labels:
+    name: prometheus-operator-crds
+spec:
+  project: tiles-crd
+  source:
+    repoURL: prometheus-community.github.io/helm-charts
+    targetRevision: 24.0.1
+  helm: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

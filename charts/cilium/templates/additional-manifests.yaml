@@ -1,0 +1,25 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  namespace: "{{ .Release.Namespace }}"
+  name: lb-externalip-pool
+spec:
+  blocks:
+    # 10.0.4.0/23 and 10.0.6.0/23 are the internal Pod and Service ranges in
+    # talos/talos-patch-all.yaml
+    - cidr: 10.0.8.0/24
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  namespace: "{{ .Release.Namespace }}"
+  name: announce-everything
+spec:
+  # No serviceSelector, apply to all.
+  # No nodeSelector, many of these run on the control plane anyway.
+  # nodeSelector:
+  #   matchExpressions:
+  #     - key: node-role.kubernetes.io/control-plane
+  #       operator: DoesNotExist
+  externalIPs: true
+  loadBalancerIPs: true

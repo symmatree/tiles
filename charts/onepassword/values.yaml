@@ -1,0 +1,42 @@
+# https://raw.githubusercontent.com/1Password/connect-helm-charts/refs/tags/connect-1.17.0/charts/connect/values.yaml
+# with values removed unless overriding.
+
+connect:
+  # This section of values is for 1Password Connect API and Sync Configuration
+  connect:
+    # The 1Password Connect API Specific Values
+    api:
+      serviceMonitor:
+        enabled: true
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: ""
+    # Ingress allows ingress services to be created to allow external access
+    # from Kubernetes to access 1Password Connect pods.
+    # In order to expose the service, use the route section below
+    ingress:
+      # Until we have a use case, reduce surface area.
+      enabled: false
+      annotations:
+        cert-manager.io/issuer: real-cert
+      ingressClassName: cilium
+      hosts:
+        - host: connect.local.symmatree.com
+      tls:
+        - secretName: op-connect-tls
+          hosts:
+            - connect.local.symmatree.com
+  operator:
+    # Denotes whether the 1Password Operator will be deployed
+    create: true
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: ""

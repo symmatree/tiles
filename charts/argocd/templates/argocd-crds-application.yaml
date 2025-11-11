@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-crds
+  namespace: kube-system
+  labels:
+    name: argocd-crds
+spec:
+  project: tiles-crd
+  source:
+    repoURL: https://github.com/argoproj/argo-cd.git
+    targetRevision: v3.2.0
+    path: manifests/crds
+    kustomize: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
