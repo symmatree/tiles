@@ -14,6 +14,11 @@ resource "talos_image_factory_schematic" "this" {
         systemExtensions = {
           officialExtensions = data.talos_image_factory_extensions_versions.this.extensions_info.*.name
         }
+        extraKernelArgs = [
+          # 1024x768 for the dashboard:
+          "vga=792",
+          "-talos.halt_if_installed"
+        ]
       }
     }
   )

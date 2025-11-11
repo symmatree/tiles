@@ -69,6 +69,7 @@ resource "proxmox_virtual_environment_vm" "main" {
   operating_system {
     type = "l26"
   }
+  depends_on = [unifi_user.vm_client]
 }
 
 resource "unifi_user" "vm_client" {
@@ -78,7 +79,7 @@ resource "unifi_user" "vm_client" {
   fixed_ip               = var.ip_address
   local_dns_record       = "${var.name}.${var.domain_name}"
   allow_existing         = true
-  skip_forget_on_destroy = true
+  skip_forget_on_destroy = false
 }
 
 resource "talos_machine_configuration_apply" "this" {

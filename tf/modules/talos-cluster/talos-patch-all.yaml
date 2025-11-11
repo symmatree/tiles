@@ -40,8 +40,8 @@ machine:
     imageCache:
       localEnabled: true
   install:
-    wipe: true
+    # wipe: true
     extraKernelArgs:
-      # 1280x1024 for the dashboard:
-      - vga=795
+      # 1024x768 for the dashboard:
+      - vga=792
       - -talos.halt_if_installed

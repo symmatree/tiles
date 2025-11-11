@@ -102,6 +102,7 @@ locals {
   ]
 
   # Override configuration with cluster-specific values
+  # TODO: Yaml-encode this as a second patch, rather than load-and-edit.
   cluster_config = merge(local.base_config, {
     cluster = merge(local.base_config.cluster, {
       clusterName = var.cluster_name
@@ -126,6 +127,7 @@ locals {
             deviceSelector = {
               physical = true
             }
+            dhcp = true
             vip = {
               ip = var.control_plane_vip
             }
@@ -182,7 +184,7 @@ locals {
   all_vms_map = { for vm in local.all_vms : vm.key => vm }
 
   # ISO key format
-  iso_key = "${var.talos.version}-${var.talos.variant}-${var.talos.arch}"
+  iso_key = "${var.talos.version}-${var.talos.variant}-${var.talos.arch}-${var.talos.schematic}"
 }
 
 # Create all VMs
