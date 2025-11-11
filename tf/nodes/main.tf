@@ -71,3 +71,83 @@ provider "unifi" {
 }
 
 data "proxmox_virtual_environment_nodes" "nodes" {}
+
+locals {
+  test_vms = {
+    "tiles-test-cp" : {
+      type              = "control"
+      proxmox_node_name = "nuc-g3p-2"
+      vm_id             = 7320
+      cores             = 1
+      ram_mb            = 3000
+      mac_address       = "BC:24:11:D0:73:20"
+      ip_address        = "10.0.105.32"
+    }
+    "tiles-test-wk" : {
+      type              = "worker"
+      proxmox_node_name = "nuc-g3p-2"
+      vm_id             = 8320
+      cores             = 3
+      ram_mb            = 11000
+      mac_address       = "BC:24:11:D0:83:20"
+      ip_address        = "10.0.105.52"
+    }
+  }
+
+  prod_vms = {
+    "tiles-cp-1" : {
+      type              = "control"
+      proxmox_node_name = "nuc-g2p-1"
+      vm_id             = 7210
+      cores             = 1
+      ram_mb            = 3000
+      mac_address       = "BC:24:11:D0:72:10"
+      ip_address        = "10.0.101.21"
+    }
+    "tiles-cp-2" : {
+      type              = "control"
+      proxmox_node_name = "nuc-g2p-2"
+      vm_id             = 7220
+      cores             = 1
+      ram_mb            = 3000
+      mac_address       = "BC:24:11:D0:72:20"
+      ip_address        = "10.0.101.22"
+    }
+    "tiles-cp-3" : {
+      type              = "control"
+      proxmox_node_name = "nuc-g3p-1"
+      vm_id             = 7310
+      cores             = 1
+      ram_mb            = 3000
+      mac_address       = "BC:24:11:D0:73:10"
+      ip_address        = "10.0.101.31"
+    }
+    "tiles-wk-1" : {
+      type              = "worker"
+      proxmox_node_name = "nuc-g2p-1"
+      vm_id             = 8210
+      cores             = 3
+      ram_mb            = 7000
+      mac_address       = "BC:24:11:D0:82:10"
+      ip_address        = "10.0.101.41"
+    }
+    "tiles-wk-2" : {
+      type              = "worker"
+      proxmox_node_name = "nuc-g2p-2"
+      vm_id             = 8220
+      cores             = 3
+      ram_mb            = 7000
+      mac_address       = "BC:24:11:D0:82:20"
+      ip_address        = "10.0.101.42"
+    }
+    "tiles-wk-3" : {
+      type              = "worker"
+      proxmox_node_name = "nuc-g3p-1"
+      vm_id             = 8310
+      cores             = 3
+      ram_mb            = 11000
+      mac_address       = "BC:24:11:D0:83:10"
+      ip_address        = "10.0.101.51"
+    }
+  }
+}

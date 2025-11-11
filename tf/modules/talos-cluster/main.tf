@@ -130,7 +130,7 @@ module "talos-vm" {
   num_cores            = each.value.cores
   ram_mb               = each.value.ram_mb
   mac_address          = each.value.mac_address
-  iso_id               = var.nodes_to_iso_ids[each.value.node_name]
+  iso_id               = var.nodes_to_iso_ids[each.value.proxmox_node_name]
   ip_address           = each.value.ip_address
   started              = var.start_vms
   apply_config         = var.apply_configs
