@@ -7,7 +7,7 @@ global:
       key: node-role.kubernetes.io/control-plane
       operator: Exists
     - effect: NoSchedule
-      key: node.kubernetes.io/not-ready:NoSchedule
+      key: node.kubernetes.io/not-ready
       operator: Exists
   nodeSelector:
     kubernetes.io/os: linux

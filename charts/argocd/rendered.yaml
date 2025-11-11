@@ -1553,7 +1553,7 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       volumes:
         - name: ssh-known-hosts
@@ -1713,7 +1713,7 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       volumes:
         - name: tls-certs
@@ -2142,7 +2142,7 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       volumes:
       - configMap:
@@ -2605,7 +2605,7 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       volumes:
       - name: plugins-home
@@ -2795,7 +2795,7 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       volumes:
       - name: static-files
@@ -2893,7 +2893,7 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       affinity:
         podAntiAffinity:
@@ -3291,7 +3291,7 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       volumes:
       - name: argocd-home
@@ -3647,6 +3647,6 @@ spec:
           key: node-role.kubernetes.io/control-plane
           operator: Exists
         - effect: NoSchedule
-          key: node.kubernetes.io/not-ready:NoSchedule
+          key: node.kubernetes.io/not-ready
           operator: Exists
       serviceAccountName: argocd-redis-secret-init
