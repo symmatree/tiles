@@ -198,10 +198,10 @@ data:
   preallocate-bpf-maps: "false"
 
   # Name of the cluster. Only relevant when building a mesh of clusters.
-  cluster-name: "placeholder"
+  cluster-name: "tales"
   # Unique ID of the cluster. Must be unique across all conneted clusters and
   # in the range of 1 and 255. Only relevant when building a mesh of clusters.
-  cluster-id: "666"
+  cluster-id: "1"
 
   # Encapsulation mode for communication between nodes
   # Possible values:
@@ -211,8 +211,10 @@ data:
 
   routing-mode: "native"
   tunnel-protocol: "vxlan"
+  tunnel-port: "0"
   tunnel-source-port-range: "0-0"
   service-no-backend-response: "reject"
+  mtu: "0"
 
 
   # Enables L7 proxy for L7 policy enforcement and visibility
@@ -237,7 +239,7 @@ data:
   enable-bbr-hostns-only: "false"
 
 
-  ipv4-native-routing-cidr: placeholder-native-routing-cidr
+  ipv4-native-routing-cidr: 10.0.4.0/24
 
   kube-proxy-replacement: "true"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
@@ -328,6 +330,8 @@ data:
   tofqdns-endpoint-max-ip-per-hostname: "1000"
   tofqdns-idle-connection-grace-period: "0s"
   tofqdns-max-deferred-connection-deletes: "10000"
+  tofqdns-min-ttl: "0"
+  tofqdns-proxy-port: "0"
   tofqdns-proxy-response-max-delay: "100ms"
   tofqdns-preallocate-identities:  "true"
   agent-not-ready-taint-key: "node.cilium.io/agent-not-ready"
@@ -346,7 +350,6 @@ data:
   proxy-idle-timeout-seconds: "60"
   proxy-max-concurrent-retries: "128"
   http-retry-count: "3"
-  http-stream-idle-timeout: "300"
 
   external-envoy-proxy: "true"
   envoy-base-id: "0"
@@ -386,19 +389,19 @@ metadata:
   namespace: cilium
 data:
   config.yaml: |
-    cluster-name: placeholder
+    cluster-name: tales
     peer-service: "hubble-peer.cilium.svc.cluster.local.:443"
     listen-address: :4245
     gops: true
     gops-port: "9893"
     metrics-listen-address: ":9966"
-    retry-timeout: 
-    sort-buffer-len-max: 
-    sort-buffer-drain-timeout: 
+    retry-timeout:
+    sort-buffer-len-max:
+    sort-buffer-drain-timeout:
     tls-hubble-client-cert-file: /var/lib/hubble-relay/tls/client.crt
     tls-hubble-client-key-file: /var/lib/hubble-relay/tls/client.key
     tls-hubble-server-ca-files: /var/lib/hubble-relay/tls/hubble-server-ca.crt
-    
+
     disable-server-tls: true
 ---
 # Source: cilium/charts/cilium/templates/hubble-ui/configmap.yaml
@@ -1281,9 +1284,11 @@ spec:
   - name: http
     port: 80
     protocol: TCP
+    nodePort:
   - name: https
     port: 443
     protocol: TCP
+    nodePort:
   type: LoadBalancer
   allocateLoadBalancerNodePorts: false
   externalTrafficPolicy: Cluster
@@ -1439,7 +1444,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "940eb4c781afcd33af3110d4d761f0faefea31be51dd927408ac6043180a1749"
+        cilium.io/cilium-configmap-checksum: "364840cb4839a2d84adace3b44fc10a01cfec382e23e30c2dbff3f588ed68472"
         kubectl.kubernetes.io/default-container: cilium-agent
       labels:
         k8s-app: cilium
@@ -1453,7 +1458,7 @@ spec:
           type: Unconfined
       containers:
       - name: cilium-agent
-        image: "quay.io/cilium/cilium:v1.18.4@sha256:49d87af187eeeb9e9e3ec2bc6bd372261a0b5cb2d845659463ba7cc10fe9e45f"
+        image: "quay.io/cilium/cilium:v1.18.1@sha256:65ab17c052d8758b2ad157ce766285e04173722df59bdee1ea6d5fda7149f0e9"
         imagePullPolicy: IfNotPresent
         command:
         - cilium-agent
@@ -1536,7 +1541,7 @@ spec:
                     set -o errexit
                     set -o pipefail
                     set -o nounset
-                    
+
                     # When running in AWS ENI mode, it's likely that 'aws-node' has
                     # had a chance to install SNAT iptables rules. These can result
                     # in dropped traffic, so we should attempt to remove them.
@@ -1552,7 +1557,7 @@ spec:
                         iptables-save | grep -E -v 'AWS-SNAT-CHAIN|AWS-CONNMARK-CHAIN' | iptables-restore
                     fi
                     echo 'Done!'
-                    
+
           preStop:
             exec:
               command:
@@ -1633,10 +1638,10 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
-        
+
       initContainers:
       - name: config
-        image: "quay.io/cilium/cilium:v1.18.4@sha256:49d87af187eeeb9e9e3ec2bc6bd372261a0b5cb2d845659463ba7cc10fe9e45f"
+        image: "quay.io/cilium/cilium:v1.18.1@sha256:65ab17c052d8758b2ad157ce766285e04173722df59bdee1ea6d5fda7149f0e9"
         imagePullPolicy: IfNotPresent
         command:
         - cilium-dbg
@@ -1661,7 +1666,7 @@ spec:
           mountPath: /tmp
         terminationMessagePolicy: FallbackToLogsOnError
       - name: apply-sysctl-overwrites
-        image: "quay.io/cilium/cilium:v1.18.4@sha256:49d87af187eeeb9e9e3ec2bc6bd372261a0b5cb2d845659463ba7cc10fe9e45f"
+        image: "quay.io/cilium/cilium:v1.18.1@sha256:65ab17c052d8758b2ad157ce766285e04173722df59bdee1ea6d5fda7149f0e9"
         imagePullPolicy: IfNotPresent
         env:
         - name: BIN_PATH
@@ -1699,7 +1704,7 @@ spec:
       # from a privileged container because the mount propagation bidirectional
       # only works from privileged containers.
       - name: mount-bpf-fs
-        image: "quay.io/cilium/cilium:v1.18.4@sha256:49d87af187eeeb9e9e3ec2bc6bd372261a0b5cb2d845659463ba7cc10fe9e45f"
+        image: "quay.io/cilium/cilium:v1.18.1@sha256:65ab17c052d8758b2ad157ce766285e04173722df59bdee1ea6d5fda7149f0e9"
         imagePullPolicy: IfNotPresent
         args:
         - 'mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf /sys/fs/bpf'
@@ -1715,7 +1720,7 @@ spec:
           mountPath: /sys/fs/bpf
           mountPropagation: Bidirectional
       - name: clean-cilium-state
-        image: "quay.io/cilium/cilium:v1.18.4@sha256:49d87af187eeeb9e9e3ec2bc6bd372261a0b5cb2d845659463ba7cc10fe9e45f"
+        image: "quay.io/cilium/cilium:v1.18.1@sha256:65ab17c052d8758b2ad157ce766285e04173722df59bdee1ea6d5fda7149f0e9"
         imagePullPolicy: IfNotPresent
         command:
         - /init-container.sh
@@ -1765,7 +1770,7 @@ spec:
           mountPath: /var/run/cilium # wait-for-kube-proxy
       # Install the CNI binaries in an InitContainer so we don't have a writable host mount in the agent
       - name: install-cni-binaries
-        image: "quay.io/cilium/cilium:v1.18.4@sha256:49d87af187eeeb9e9e3ec2bc6bd372261a0b5cb2d845659463ba7cc10fe9e45f"
+        image: "quay.io/cilium/cilium:v1.18.1@sha256:65ab17c052d8758b2ad157ce766285e04173722df59bdee1ea6d5fda7149f0e9"
         imagePullPolicy: IfNotPresent
         command:
           - "/install-plugin.sh"
@@ -1790,7 +1795,6 @@ spec:
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 1
       hostNetwork: true
-      
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -1951,7 +1955,7 @@ spec:
           type: Unconfined
       containers:
       - name: cilium-envoy
-        image: "quay.io/cilium/cilium-envoy:v1.34.10-1762597008-ff7ae7d623be00078865cff1b0672cc5d9bfc6d5@sha256:1deb6709afcb5523579bf1abbc3255adf9e354565a88c4a9162c8d9cb1d77ab5"
+        image: "quay.io/cilium/cilium-envoy:v1.34.4-1754895458-68cffdfa568b6b226d70a7ef81fc65dda3b890bf@sha256:247e908700012f7ef56f75908f8c965215c26a27762f296068645eb55450bda2"
         imagePullPolicy: IfNotPresent
         command:
         - /usr/bin/cilium-envoy-starter
@@ -2121,7 +2125,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "940eb4c781afcd33af3110d4d761f0faefea31be51dd927408ac6043180a1749"
+        cilium.io/cilium-configmap-checksum: "364840cb4839a2d84adace3b44fc10a01cfec382e23e30c2dbff3f588ed68472"
       labels:
         io.cilium/app: operator
         name: cilium-operator
@@ -2133,7 +2137,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: cilium-operator
-        image: "quay.io/cilium/operator-generic:v1.18.4@sha256:1b22b9ff28affdf574378a70dade4ef835b00b080c2ee2418530809dd62c3012"
+        image: "quay.io/cilium/operator-generic:v1.18.1@sha256:97f4553afa443465bdfbc1cc4927c93f16ac5d78e4dd2706736e7395382201bc"
         imagePullPolicy: IfNotPresent
         command:
         - cilium-operator-generic
@@ -2218,11 +2222,9 @@ spec:
           operator: Exists
         - key: node.kubernetes.io/not-ready
           operator: Exists
-        - key: node.cloudprovider.kubernetes.io/uninitialized
-          operator: Exists
         - key: node.cilium.io/agent-not-ready
           operator: Exists
-      
+
       volumes:
         # To read the configuration from the config map
       - name: cilium-config-path
@@ -2253,7 +2255,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/hubble-relay-configmap-checksum: "04fa6788eb15e569e990422cbca3a956d694de86e95830a49632041f2966a491"
+        cilium.io/hubble-relay-configmap-checksum: "a6f094123d5837b3559bcdf2f79e823d7083f9625cfc481d2e8841a32d7cdc30"
       labels:
         k8s-app: hubble-relay
         app.kubernetes.io/name: hubble-relay
@@ -2275,7 +2277,7 @@ spec:
             runAsUser: 65532
             seccompProfile:
               type: RuntimeDefault
-          image: "quay.io/cilium/hubble-relay:v1.18.4@sha256:6d350cb1c84b847adb152173debef1f774126c69de21a5921a1e6a23b8779723"
+          image: "quay.io/cilium/hubble-relay:v1.18.1@sha256:7e2fd4877387c7e112689db7c2b153a4d5c77d125b8d50d472dbe81fc1b139b0"
           imagePullPolicy: IfNotPresent
           command:
             - hubble-relay
@@ -2327,9 +2329,9 @@ spec:
             mountPath: /var/lib/hubble-relay/tls
             readOnly: true
           terminationMessagePolicy: FallbackToLogsOnError
-        
+
       restartPolicy: Always
-      priorityClassName: 
+      priorityClassName:
       serviceAccountName: "hubble-relay"
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 1
@@ -2402,12 +2404,12 @@ spec:
         fsGroup: 1001
         runAsGroup: 1001
         runAsUser: 1001
-      priorityClassName: 
+      priorityClassName:
       serviceAccountName: "hubble-ui"
       automountServiceAccountToken: true
       containers:
       - name: frontend
-        image: "quay.io/cilium/hubble-ui:v0.13.3@sha256:661d5de7050182d495c6497ff0b007a7a1e379648e60830dd68c4d78ae21761d"
+        image: "quay.io/cilium/hubble-ui:v0.13.2@sha256:9e37c1296b802830834cc87342a9182ccbb71ffebb711971e849221bd9d59392"
         imagePullPolicy: IfNotPresent
         ports:
         - name: http
@@ -2430,7 +2432,7 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
       - name: backend
-        image: "quay.io/cilium/hubble-ui-backend:v0.13.3@sha256:db1454e45dc39ca41fbf7cad31eec95d99e5b9949c39daaad0fa81ef29d56953"
+        image: "quay.io/cilium/hubble-ui-backend:v0.13.2@sha256:a034b7e98e6ea796ed26df8f4e71f83fc16465a19d166eff67a03b822c0bfa15"
         imagePullPolicy: IfNotPresent
         env:
         - name: EVENTS_SERVER_PORT
@@ -2485,10 +2487,10 @@ spec:
   ingressClassName: cilium
   tls:
     - hosts:
-      - placeholder
+      - hubble.local.symmatree.com
       secretName: hubble-ui-tls
   rules:
-    - host: placeholder
+    - host: hubble.local.symmatree.com
       http:
         paths:
           - path: "/"
@@ -2509,7 +2511,7 @@ spec:
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
-    name: '{{ .Values.cluster_name }}-ca-issuer'
+    name: tales-ca-issuer
   secretName: hubble-relay-client-certs
   commonName: "*.hubble-relay.cilium.io"
   dnsNames:
@@ -2533,11 +2535,11 @@ spec:
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
-    name: '{{ .Values.cluster_name }}-ca-issuer'
+    name: tales-ca-issuer
   secretName: hubble-server-certs
-  commonName: "*.placeholder.hubble-grpc.cilium.io"
+  commonName: "*.tales.hubble-grpc.cilium.io"
   dnsNames:
-  - "*.placeholder.hubble-grpc.cilium.io"
+  - "*.tales.hubble-grpc.cilium.io"
   duration: 8760h0m0s
   privateKey:
     rotationPolicy: Always
@@ -2597,7 +2599,6 @@ metadata:
   namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
-    app.kubernetes.io/name: cilium-agent
 spec:
   selector:
     matchLabels:
@@ -2671,8 +2672,6 @@ metadata:
   name: hubble-relay
   namespace: cilium
   labels:
-    app.kubernetes.io/part-of: cilium
-    app.kubernetes.io/name: hubble-relay
     suppress-diff: "true"
 spec:
   selector:
@@ -2694,7 +2693,6 @@ metadata:
   namespace: cilium
   labels:
     app.kubernetes.io/part-of: cilium
-    app.kubernetes.io/name: hubble
 spec:
   selector:
     matchLabels:
