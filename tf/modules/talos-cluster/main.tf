@@ -152,6 +152,17 @@ resource "onepassword_item" "machine_secrets" {
   title      = "${var.cluster_name}-machine-secrets"
   category   = "secure_note"
   note_value = local.machine_secrets
+  section {
+    label = "metadata"
+    field {
+      label = "managed_by"
+      value = "terraform"
+    }
+    field {
+      label = "workspace"
+      value = terraform.workspace
+    }
+  }
 }
 
 locals {
@@ -171,6 +182,17 @@ resource "onepassword_item" "talosconfig" {
   title      = "${var.cluster_name}-talosconfig"
   category   = "secure_note"
   note_value = data.talos_client_configuration.talosconfig.talos_config
+  section {
+    label = "metadata"
+    field {
+      label = "managed_by"
+      value = "terraform"
+    }
+    field {
+      label = "workspace"
+      value = terraform.workspace
+    }
+  }
 }
 
 data "talos_machine_configuration" "machineconfig_cp" {

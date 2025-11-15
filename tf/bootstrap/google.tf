@@ -35,6 +35,12 @@ resource "google_service_account_key" "tiles-tf" {
   private_key_type   = "TYPE_GOOGLE_CREDENTIALS_FILE"
 }
 
+resource "google_service_account_iam_member" "self_impersonate" {
+  service_account_id = google_service_account.tiles-tf.id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.tiles-tf.email}"
+}
+
 resource "google_project_iam_member" "tiles_tf_editor" {
   project = var.gcp_project_id
   role    = "roles/editor"
