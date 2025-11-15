@@ -66,6 +66,8 @@ resource "onepassword_item" "proxmox_user_token" {
   category = "login"
   username = proxmox_virtual_environment_user_token.user_token.id
   password = proxmox_virtual_environment_user_token.user_token.value
+  # Pass along url so the downstream doesn't need the root user secret.
+  url = data.onepassword_item.proxmox_root_user.url
   section {
     label = "metadata"
     field {

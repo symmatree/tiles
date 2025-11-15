@@ -2,13 +2,13 @@
 locals {
   talos_configs = {
     "test" : {
-      version   = "1.11.5"
+      version   = var.talos_version
       variant   = "nocloud"
       arch      = "amd64"
       schematic = talos_image_factory_schematic.this.id
     }
     "prod" : {
-      version   = "1.11.5"
+      version   = var.talos_version
       variant   = "nocloud"
       arch      = "amd64"
       schematic = talos_image_factory_schematic.this.id

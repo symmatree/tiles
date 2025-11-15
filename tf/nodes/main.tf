@@ -53,7 +53,7 @@ data "onepassword_item" "proxmox_user_token" {
 }
 
 provider "proxmox" {
-  endpoint  = var.proxmox_endpoint
+  endpoint  = data.onepassword_item.proxmox_user_token.url
   api_token = data.onepassword_item.proxmox_user_token.password
   insecure  = true
 }
@@ -80,7 +80,7 @@ locals {
       vm_id             = 7320
       cores             = 1
       ram_mb            = 3000
-      mac_address       = "BC:24:11:D0:73:20"
+      mac_address       = "bc:24:11:d0:73:20"
       ip_address        = "10.0.105.32"
     }
     "tiles-test-wk" : {
@@ -89,7 +89,7 @@ locals {
       vm_id             = 8320
       cores             = 3
       ram_mb            = 11000
-      mac_address       = "BC:24:11:D0:83:20"
+      mac_address       = "bc:24:11:d0:83:20"
       ip_address        = "10.0.105.52"
     }
   }
@@ -101,7 +101,7 @@ locals {
       vm_id             = 7210
       cores             = 1
       ram_mb            = 3000
-      mac_address       = "BC:24:11:D0:72:10"
+      mac_address       = "bc:24:11:d0:72:10"
       ip_address        = "10.0.101.21"
     }
     "tiles-cp-2" : {
@@ -110,7 +110,7 @@ locals {
       vm_id             = 7220
       cores             = 1
       ram_mb            = 3000
-      mac_address       = "BC:24:11:D0:72:20"
+      mac_address       = "bc:24:11:d0:72:20"
       ip_address        = "10.0.101.22"
     }
     "tiles-cp-3" : {
@@ -119,7 +119,7 @@ locals {
       vm_id             = 7310
       cores             = 1
       ram_mb            = 3000
-      mac_address       = "BC:24:11:D0:73:10"
+      mac_address       = "bc:24:11:d0:73:10"
       ip_address        = "10.0.101.31"
     }
     "tiles-wk-1" : {
@@ -128,7 +128,7 @@ locals {
       vm_id             = 8210
       cores             = 3
       ram_mb            = 7000
-      mac_address       = "BC:24:11:D0:82:10"
+      mac_address       = "bc:24:11:d0:82:10"
       ip_address        = "10.0.101.41"
     }
     "tiles-wk-2" : {
@@ -137,7 +137,7 @@ locals {
       vm_id             = 8220
       cores             = 3
       ram_mb            = 7000
-      mac_address       = "BC:24:11:D0:82:20"
+      mac_address       = "bc:24:11:d0:82:20"
       ip_address        = "10.0.101.42"
     }
     "tiles-wk-3" : {
@@ -146,7 +146,7 @@ locals {
       vm_id             = 8310
       cores             = 3
       ram_mb            = 11000
-      mac_address       = "BC:24:11:D0:83:10"
+      mac_address       = "bc:24:11:d0:83:10"
       ip_address        = "10.0.101.51"
     }
   }
