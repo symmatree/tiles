@@ -1,17 +1,6 @@
-name: "nodes-plan-apply"
+name: "bootstrap-cluster"
 on:
-  workflow_dispatch:
-    inputs:
-      apply:
-        description: 'Whether to apply the plan after creating it'
-        required: false
-        default: 'false'
-  pull_request: {}
-  push:
-    branches:
-      - "main"
-  schedule:
-    - cron: "0 2 * * *" # Daily at 0200 UTC
+  workflow_dispatch: {}
 
 env:
   TF_IN_AUTOMATION: "true"
@@ -19,14 +8,13 @@ env:
 concurrency:
   group: ${{ github.repository }}
   cancel-in-progress: false
+
 jobs:
-  nodes-plan-apply:
+  bootstrap-cluster:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
       id-token: "write"
-      issues: "write"
-      pull-requests: "write"
 
     steps:
       - name: DateAndTimeStamps
@@ -84,34 +72,11 @@ jobs:
           vpn_config: ${{ steps.load_secrets.outputs.VPN_CONFIG }}
           conf_dir: "${{ runner.temp }}/wg"
 
-      - name: Terraform plan nodes
-        id: tf-plan
-        env:
-          PLAN_FILE: "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
+      - name: Bootstrap cluster
+        id: bootstrap-cluster
         shell: bash
         run: |
-          set -euo pipefail
-          cd "${GITHUB_WORKSPACE}/tf/nodes"
-          mkdir -p "${{ runner.temp }}/txt-outputs"
-          terraform plan -lock-timeout=5m -input=false -out="${PLAN_FILE}"
-          terraform show -no-color "${PLAN_FILE}" \
-            > "${{ runner.temp }}/txt-outputs/plan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.txt"
-
-      - name: Terraform apply nodes
-        id: tf-apply
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event.inputs.apply == 'true')
-        env:
-          PLAN_FILE: "${{ runner.temp }}/tfplan-nodes-${{ steps.stamps.outputs.TIMESTAMP }}.bin"
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "${GITHUB_WORKSPACE}/tf/nodes"
-          echo "Applying plan"
-          terraform apply -lock-timeout=5m "${PLAN_FILE}"
-
-      - uses: ./.github/actions/attach-outputs
-        name: Attach outputs to PR
-        if: (success() || failure()) && github.event_name == 'pull_request'
-        with:
-          txt_output_dir: "${{ runner.temp }}/txt-outputs/"
-          outcome: ${{ steps.tf-plan.outcome }}
+          set -euxo pipefail
+          cd "${GITHUB_WORKSPACE}/charts"
+          ./install-crds.sh
+          ./bootstrap-cluster.sh

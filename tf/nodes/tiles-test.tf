@@ -14,6 +14,7 @@ module "tiles-test" {
     node_name => local.nodes_to_iso_ids[node_name]["test"]
   }
 
+  external_ip_cidr  = "10.0.106.0/24"
   pod_cidr          = "10.0.107.0/24"
   service_cidr      = "10.0.108.0/24"
   control_plane_vip = "10.0.105.10"

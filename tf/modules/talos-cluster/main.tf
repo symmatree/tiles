@@ -69,6 +69,11 @@ variable "control_plane_vip" {
   type        = string
 }
 
+variable "external_ip_cidr" {
+  description = "External IP CIDR for the cluster"
+  type        = string
+}
+
 variable "start_vms" {
   description = "Whether to start the VMs after creation"
   type        = bool
@@ -155,12 +160,16 @@ resource "onepassword_item" "machine_secrets" {
   section {
     label = "metadata"
     field {
-      label = "managed_by"
-      value = "terraform"
+      label = "source"
+      value = "managed by terraform"
     }
     field {
-      label = "workspace"
-      value = terraform.workspace
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
     }
   }
 }
@@ -185,12 +194,61 @@ resource "onepassword_item" "talosconfig" {
   section {
     label = "metadata"
     field {
-      label = "managed_by"
-      value = "terraform"
+      label = "source"
+      value = "managed by terraform"
     }
     field {
-      label = "workspace"
-      value = terraform.workspace
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
+    }
+  }
+}
+
+resource "onepassword_item" "misc_config" {
+  count      = var.start_vms ? 1 : 0
+  vault      = var.onepassword_vault
+  title      = "${var.cluster_name}-misc-config"
+  category   = "secure_note"
+  section {
+    label = "config"
+    field {
+      label = "pod_cidr"
+      value = var.pod_cidr
+    }
+    field {
+      label = "targetRevision"
+      value = "main"
+    }
+    field {
+      label = "cluster_name"
+      value = var.cluster_name
+    }
+    field {
+      label = "cluster_id"
+      value = 2
+    }
+    field {
+      label = "external_ip_cidr"
+      value = var.external_ip_cidr
+    }
+  }
+  section {
+    label = "metadata"
+    field {
+      label = "source"
+      value = "managed by terraform"
+    }
+    field {
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
     }
   }
 }
@@ -251,6 +309,22 @@ resource "onepassword_item" "kubeconfig" {
   title      = "${var.cluster_name}-kubeconfig"
   category   = "secure_note"
   note_value = resource.talos_cluster_kubeconfig.this[0].kubeconfig_raw
+
+  section {
+    label = "metadata"
+    field {
+      label = "source"
+      value = "managed by terraform"
+    }
+    field {
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
+    }
+  }
 }
 
 # Outputs

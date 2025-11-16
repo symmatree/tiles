@@ -50,12 +50,16 @@ resource "onepassword_item" "gcp_tiles_tf_sa" {
   section {
     label = "metadata"
     field {
-      label = "managed_by"
-      value = "terraform"
+      label = "source"
+      value = "managed by terraform"
     }
     field {
-      label = "workspace"
-      value = terraform.workspace
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
     }
   }
 }
@@ -71,12 +75,16 @@ resource "onepassword_item" "proxmox_user_token" {
   section {
     label = "metadata"
     field {
-      label = "managed_by"
-      value = "terraform"
+      label = "source"
+      value = "managed by terraform"
     }
     field {
-      label = "workspace"
-      value = terraform.workspace
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
     }
   }
 }

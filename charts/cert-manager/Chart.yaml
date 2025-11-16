@@ -1,0 +1,21 @@
+apiVersion: v2
+name: cert-manager
+description: cert-manager
+# From https://github.com/cert-manager/cert-manager/blob/master/deploy/charts/cert-manager/Chart.template.yaml
+icon: https://raw.githubusercontent.com/cert-manager/community/4d35a69437d21b76322157e6284be4cd64e6d2b7/logo/logo-small.png
+type: application
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.1
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+appVersion: "1.17"
+dependencies:
+  - name: cert-manager
+    version: 1.18.2
+    repository: https://charts.jetstack.io
+  - name: trust-manager
+    version: 0.19.0
+    repository: https://charts.jetstack.io
