@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-applications
+  namespace: argocd
+  labels:
+    name: argocd-applications
+spec:
+  project: tiles
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "{{ .Values.targetRevision }}"
+    path: charts/argocd-applications
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        # Propagate to other application.yaml files
+        targetRevision: "{{ .Values.targetRevision }}"
+        pod_cidr: "{{ .Values.pod_cidr }}"
+        cluster_name: "{{ .Values.cluster_name }}"
+        cluster_id: "{{ .Values.cluster_id }}"
+        external_ip_cidr: "{{ .Values.external_ip_cidr }}"
+        vault_name: "{{ .Values.vault_name }}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - FailOnSharedResource=true

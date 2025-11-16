@@ -5,8 +5,8 @@ module "tiles-test" {
   proxmox_storage_iso = var.proxmox_storage_iso
   cluster_name        = "tiles-test"
   start_vms           = true
-  run_bootstrap       = false
-  apply_configs       = false
+  apply_configs       = true
+  run_bootstrap       = true
   onepassword_vault   = data.onepassword_vault.tf_secrets.uuid
   talos               = local.talos_configs["test"]
   nodes_to_iso_ids = {
@@ -14,6 +14,7 @@ module "tiles-test" {
     node_name => local.nodes_to_iso_ids[node_name]["test"]
   }
 
+  external_ip_cidr  = "10.0.106.0/24"
   pod_cidr          = "10.0.107.0/24"
   service_cidr      = "10.0.108.0/24"
   control_plane_vip = "10.0.105.10"

@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium-config
+  namespace: argocd
+  labels:
+    name: cilium-config
+spec:
+  project: "{{ .Values.cluster_name }}"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "{{ .Values.targetRevision }}"
+    path: charts/cilium-config
+    helm:
+      # Inject values from Terraform or that vary by environment.
+      valuesObject:
+        external_ip_cidr: "{{ .Values.external_ip_cidr }}"
+        targetRevision: "{{ .Values.targetRevision }}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cilium
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged

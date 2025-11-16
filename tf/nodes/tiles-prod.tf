@@ -7,12 +7,11 @@
 #   onepassword_vault   = data.onepassword_vault.tf_secrets.uuid
 #   talos = {
 #     version   = var.talos_version
-#     variant   = var.talos_variant
-#     arch      = var.talos_arch
 #     schematic = talos_image_factory_schematic.this.id
 #   }
 
 #   # Network configuration for tiles cluster (10.0.101.0/22 block)
+#   external_ip_cidr  = "10.0.102.0/24"
 #   pod_cidr          = "10.0.103.0/24"
 #   service_cidr      = "10.0.104.0/24"
 #   control_plane_vip = "10.0.101.10"

@@ -1,0 +1,40 @@
+name: build-test
+on:
+  pull_request: {}
+  push:
+    branches:
+      # Run post-commit to validate, also to update caches.
+      - main
+  workflow_dispatch: {}
+  schedule:
+    - cron: 0 8 * * *
+jobs:
+  build-test:
+    name: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: DateAndTimeStamps
+        id: stamps
+        run: |
+          set -euo pipefail
+          echo "DATESTAMP=$(date +'%Y%m%d')" | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/helm-setup
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          cd "${{ github.workspace }}"
+          ./build.sh
+
+      # - name: Test
+      #   run: |
+      #     set -euo pipefail
+      #     cd "${{ github.workspace }}"
+      #     ./test.sh
+
+      - name: Ensure no git changes
+        run: |
+          set -euo pipefail
+          cd "${{ github.workspace }}"
+          git diff --exit-code

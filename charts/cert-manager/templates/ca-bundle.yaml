@@ -1,0 +1,18 @@
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  # The bundle name will also be used for the target
+  name: trust-bundle
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  sources:
+    - useDefaultCAs: true
+    - secret:
+        name: "{{ .Values.cluster_name }}-ca-tls"
+        key: ca.crt
+  target:
+    configMap:
+      key: ca-certificates.crt
+    namespaceSelector:
+      matchLabels:
+        trust-bundle: enabled

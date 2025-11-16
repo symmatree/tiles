@@ -1,21 +1,32 @@
 # tf/bootstrap
 
-Initial TF to create the runner account etc.
-This module creates 1Password values and Github Secrets.
+Initial block of terraform that is run as "yourself" interactively, except
+for a few cases where that became too much of a pain.
 
-Run this as yourself. Requires gcloud auth and gcloud application default. That and op login will bootstrap
-the rest.
+## Pre-work
 
-Create some bootstrap accounts and put in 1password:
+* Create a 1password vault for the repo
 
-* Create OnePassword SA
-* Create SA and VPN configs in Unifi
+### 1Password Service Account
+
+There are two related things that 1password kinds of conflates.
+
+Go to [1password's service account site](https://my.1password.com/developer-tools/active/service-accounts)
+
+
+* Create a 1password service account token, will be used as
+  `var.onepassword_sa_token`. (Note: The 1password terraform provider
+  doesn't expose the service-account or Connect-token APIs, and
+  it was more trouble than it was worth when I tried to use
+  environment variables to use personal creds.)
+* Create SA and VPN cilent config (allowing Github to connect to Wireguard) in Unifi
 * Create ProxMox root login (this module will create a service account for downstream use)
 * Create Github fine-grained PAT
+* Be logged into GCP both directly and as application-default
+
 
 ```
 cd tf/bootstrap
 export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential) \
-  && export TF_VAR_proxmox_password=$(op read op://tiles-secrets/proxmox-root/password) \
   && terraform init -upgrade && terraform plan
  ```

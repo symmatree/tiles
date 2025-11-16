@@ -34,12 +34,34 @@ data "onepassword_item" "unifi_sa" {
   title = "morpheus-terraform"
 }
 
+data "onepassword_item" "proxmox_root_user" {
+  vault = data.onepassword_vault.tf_secrets.uuid
+  title = "proxmox-root"
+}
+
+# Secrets we create
+
 resource "onepassword_item" "gcp_tiles_tf_sa" {
   vault    = data.onepassword_vault.tf_secrets.uuid
   title    = "gcp_tiles_tf_sa"
   category = "login"
   username = google_service_account.tiles-tf.email
   password = base64decode(google_service_account_key.tiles-tf.private_key)
+  section {
+    label = "metadata"
+    field {
+      label = "source"
+      value = "managed by terraform"
+    }
+    field {
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
+    }
+  }
 }
 
 resource "onepassword_item" "proxmox_user_token" {
@@ -48,4 +70,21 @@ resource "onepassword_item" "proxmox_user_token" {
   category = "login"
   username = proxmox_virtual_environment_user_token.user_token.id
   password = proxmox_virtual_environment_user_token.user_token.value
+  # Pass along url so the downstream doesn't need the root user secret.
+  url = data.onepassword_item.proxmox_root_user.url
+  section {
+    label = "metadata"
+    field {
+      label = "source"
+      value = "managed by terraform"
+    }
+    field {
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
+    }
+  }
 }

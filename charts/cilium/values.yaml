@@ -1,0 +1,293 @@
+# Initialized from
+# https://raw.githubusercontent.com/cilium/cilium/refs/heads/main/install/kubernetes/cilium/values.yaml
+# Deleted all values I'm not changing.
+cilium:
+  k8sServiceHost: localhost
+  k8sServicePort: 7445
+  k8sClientRateLimit:
+    qps: 30
+    burst: 60
+  cluster:
+    name: placeholder
+    # Also a placeholder:
+    id: 666
+  serviceAccounts:
+    nodeinit:
+      enabled: true
+  # -- Roll out cilium agent pods automatically when configmap is updated.
+  rollOutCiliumPods: true
+  securityContext:
+    capabilities:
+      # -- Capabilities for the `cilium-agent` container
+      ciliumAgent:
+        - CHOWN
+        - KILL
+        - NET_ADMIN
+        - NET_RAW
+        - IPC_LOCK
+        # SHP: Disabled due to Talos.
+        # - SYS_MODULE
+        - SYS_ADMIN
+        - SYS_RESOURCE
+        - DAC_OVERRIDE
+        - FOWNER
+        - SETGID
+        - SETUID
+      # -- Capabilities for the `clean-cilium-state` init container
+      cleanCiliumState:
+        - NET_ADMIN
+        # SHP: Disabled due to Talos.
+        # - SYS_MODULE
+        - SYS_ADMIN
+        - SYS_RESOURCE
+  autoDirectNodeRoutes: true
+  directRoutingSkipUnreachable: true
+  # -- Enable bandwidth manager to optimize TCP and UDP workloads and allow
+  # for rate-limiting traffic from individual Pods with EDT (Earliest Departure
+  # Time) through the "kubernetes.io/egress-bandwidth" Pod annotation.
+  # https://cilium.io/blog/2020/11/10/cilium-19/#bwmanager
+  bandwidthManager:
+    # -- Enable bandwidth manager infrastructure (also prerequirement for BBR)
+    enabled: true
+    # -- Activate BBR TCP congestion control for Pods
+    bbr: true
+  # -- Configure L2 announcements
+  l2announcements:
+    # -- Enable L2 announcements
+    enabled: true
+    # -- If a lease is not renewed for X duration, the current leader is considered dead, a new leader is picked
+    leaseDuration: 10s
+    # -- The interval at which the leader will renew the lease
+    leaseRenewDeadline: 7s
+    # -- The timeout between retries if renewal fails
+    leaseRetryPeriod: 1s
+  # -- Configure L2 pod announcements
+  l2podAnnouncements:
+    # -- Enable L2 pod announcements
+    # Not so we can talk to them but to help routing.
+    enabled: true
+    # -- Interface used for sending Gratuitous ARP pod announcements
+    interface: enp3s0
+  pmtuDiscovery:
+    # -- Enable path MTU discovery to send ICMP fragmentation-needed replies to
+    # the client.
+    enabled: true
+  bpf:
+    hostLegacyRouting: false
+    # -- (bool) Enable native IP masquerade support in eBPF
+    masquerade: true
+    # -- (string) Mode for Pod devices for the core datapath (veth, netkit, netkit-l2)
+    # @default -- `veth`
+    datapathMode: netkit
+  # -- Enable BPF clock source probing for more efficient tick retrieval.
+  bpfClockProbe: true
+  envoyConfig:
+    # -- Enable CiliumEnvoyConfig CRD
+    # CiliumEnvoyConfig CRD can also be implicitly enabled by other options.
+    enabled: true
+  ingressController:
+    # -- Enable cilium ingress controller
+    # This will automatically set enable-envoy-config as well.
+    enabled: true
+    # -- Set cilium ingress controller to be the default ingress controller
+    # This will let cilium ingress controller route entries without ingress class set
+    default: true
+    service:
+      allocateLoadBalancerNodePorts: false
+  gatewayAPI:
+    # -- Enable support for Gateway API in cilium
+    # This will automatically set enable-envoy-config as well.
+    enabled: true
+    # -- Enable Backend Protocol selection support (GEP-1911) for Gateway API via appProtocol.
+    enableAppProtocol: true
+    # -- Enable ALPN for all listeners configured with Gateway API. ALPN will attempt HTTP/2, then HTTP 1.1.
+    # Note that this will also enable `appProtocol` support, and services that wish to use HTTP/2 will need to indicate that via their `appProtocol`.
+    enableAlpn: true
+    # Host Network related configuration
+    hostNetwork:
+      # -- Configure whether the Envoy listeners should be exposed on the host network.
+      enabled: true
+      # Specify the nodes where the Ingress listeners should be exposed
+  externalIPs:
+    # -- Enable ExternalIPs service support.
+    enabled: true
+  hubble:
+    # -- Hubble metrics configuration.
+    # See https://docs.cilium.io/en/stable/observability/metrics/#hubble-metrics
+    # for more comprehensive documentation about Hubble metrics.
+    metrics:
+      enabled:
+        - dns:query;ignoreAAAA
+        - drop
+        - tcp
+        - flow
+        - icmp
+        - httpV2
+      # -- Enables exporting hubble metrics in OpenMetrics format.
+      enableOpenMetrics: true
+      serviceMonitor:
+        enabled: true
+        relabelings: []
+      dashboards:
+        enabled: false
+        annotations:
+          k8s-sidecar-target-directory: /tmp/Cilium
+    # -- TLS configuration for Hubble
+    tls:
+      # -- Enable mutual TLS for listenAddress. Setting this value to false is
+      # highly discouraged as the Hubble API provides access to potentially
+      # sensitive network flow metadata and is exposed on the host network.
+      enabled: true
+      # -- Configure automatic TLS certificates generation.
+      auto:
+        enabled: true
+        method: certmanager
+        certValidityDuration: 365
+        certManagerIssuerRef:
+          group: cert-manager.io
+          kind: ClusterIssuer
+          name: "{{ .Values.cluster_name }}-ca-issuer"
+    relay:
+      # -- Enable Hubble Relay (requires hubble.enabled=true)
+      enabled: true
+      # -- Roll out Hubble Relay pods automatically when configmap is updated.
+      rollOutPods: true
+      # Keep more core infra on the control plane.
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ""
+      # -- Enable prometheus metrics for hubble-relay on the configured port at
+      # /metrics
+      prometheus:
+        enabled: true
+        port: 9966
+        serviceMonitor:
+          relabelings: []
+          trustCRDsExist: true
+          enabled: true
+          labels:
+            suppress-diff: "true"
+    ui:
+      # -- Whether to enable the Hubble UI.
+      enabled: true
+      # -- Roll out Hubble-ui pods automatically when configmap is updated.
+      rollOutPods: true
+      backend:
+        livenessProbe:
+          # -- Enable liveness probe for Hubble-ui backend (requires Hubble-ui 0.12+)
+          # Fails and prevents any error message from showing up.
+          enabled: false
+        readinessProbe:
+          # -- Enable readiness probe for Hubble-ui backend (requires Hubble-ui 0.12+)
+          enabled: false
+      # Keep more core infra on the control plane.
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ""
+      ingress:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: real-cert
+        className: cilium
+        hosts:
+          - placeholder
+        tls:
+          - secretName: hubble-ui-tls
+            hosts:
+              - placeholder
+  ipam:
+    # -- Configure IP Address Management mode.
+    # ref: https://docs.cilium.io/en/stable/network/concepts/ipam/
+    mode: kubernetes
+  # -- Configure Kubernetes specific configuration
+  k8s:
+    # -- requireIPv4PodCIDR enables waiting for Kubernetes to provide the PodCIDR
+    # range via the Kubernetes node resource
+    requireIPv4PodCIDR: true
+  kubeProxyReplacement: "true"
+  # -- healthz server bind address for the kube-proxy replacement.
+  # To enable set the value to '0.0.0.0:10256' for all ipv4
+  # addresses and this '[::]:10256' for all ipv6 addresses.
+  # By default it is disabled.
+  kubeProxyReplacementHealthzBindAddr: 0.0.0.0:10256
+  # -- Enable Local Redirect Policy.
+  localRedirectPolicy: false
+  # -- Enables IPv4 BIG TCP support which increases maximum IPv4 GSO/GRO limits for nodes and pods
+  # TODO(symmetry): Make this work. Fails with
+  # "Could not modify IPv4 gro_max_size and gso_max_size, disabling BIG TCP"
+  enableIPv4BIGTCP: false
+  # ipv4NativeRoutingCIDR is setting the auto-direct-node-routes flag.
+  # Must agree with podCidr in the talos config.
+  ipv4NativeRoutingCIDR: placeholder-native-routing-cidr
+  # -- Configure service load balancing
+  loadBalancer:
+    # https://github.com/cilium/cilium/discussions/36829
+    acceleration: best-effort
+    # -- L7 LoadBalancer
+    l7:
+      backend: envoy
+  # -- Configure N-S k8s service loadbalancing
+  nodePort:
+    # -- Enable the Cilium NodePort service implementation.
+    enabled: true
+  # -- Configure prometheus metrics on the configured port at /metrics
+  prometheus:
+    metricsService: true
+    enabled: true
+    serviceMonitor:
+      trustCRDsExist: true
+      relabelings: []
+      enabled: true
+  dashboards:
+    enabled: false
+    annotations:
+      k8s-sidecar-target-directory: /tmp/Cilium
+  # Configure Cilium Envoy options.
+  envoy:
+    enabled: true
+    # -- Roll out cilium envoy pods automatically when configmap is updated.
+    rollOutPods: true
+    # -- Configure Cilium Envoy Prometheus options.
+    # Note that some of these apply to either cilium-agent or cilium-envoy.
+    prometheus:
+      # -- Enable prometheus metrics for cilium-envoy
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        relabelings: []
+        trustCRDsExist: true
+  # -- Configure TLS configuration in the agent.
+  tls:
+    readSecretsOnlyFromSecretsNamespace: true
+  routingMode: native
+  operator:
+    # -- Roll out cilium-operator pods automatically when configmap is updated.
+    rollOutPods: true
+    # -- Number of replicas to run for the cilium-operator deployment
+    replicas: 1
+    prometheus:
+      metricsService: true
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        trustCRDsExist: true
+        relabelings: []
+
+    dashboards:
+      enabled: false
+      annotations:
+        k8s-sidecar-target-directory: /tmp/Cilium
+  # -- Configure cgroup related configuration
+  cgroup:
+    # Talos provides this mount.
+    autoMount:
+      enabled: false
+    hostRoot: /sys/fs/cgroup

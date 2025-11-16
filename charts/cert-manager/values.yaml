@@ -1,0 +1,57 @@
+# From
+# https://raw.githubusercontent.com/cert-manager/cert-manager/refs/tags/v1.17.1/deploy/charts/cert-manager/values.yaml
+# keeping only values we override (or want to).
+cluster_name: placeholder-cluster-name
+
+cert-manager:
+  global:
+    # The number of old ReplicaSets to retain to allow rollback (if not set, the default Kubernetes value is set to 10).
+    # +docs:property
+    revisionHistoryLimit: 1
+  tolerations:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/control-plane
+      operator: Exists
+  nodeSelector:
+    kubernetes.io/os: linux
+    node-role.kubernetes.io/control-plane: ""
+  crds:
+    enabled: false
+    keep: true
+  # When this flag is enabled, secrets will be automatically removed when the certificate resource is deleted.
+  enableCertificateOwnerRef: true
+  config:
+    enableGatewayAPI: true
+  prometheus:
+    servicemonitor:
+      # Create a ServiceMonitor to add cert-manager to Prometheus.
+      enabled: true
+  webhook:
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: ""
+  cainjector:
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: ""
+  startupapicheck:
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: ""
+trust-manager:
+  secretTargets:
+    enabled: true
+    authorizedSecrets:
+      - "{{ .Values.cluster_name }}-ca-tls"
