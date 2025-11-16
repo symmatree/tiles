@@ -8,6 +8,7 @@ Helm, Kubernetes, Terraform kinds of things
 * 10.0.0.0/24: UniFi infrastructure
 * 10.0.1.0/24: Physical Proxmox hosts + old Tales cluster nodes
   * Tales legacy: 10.0.4.0/24 (pods) - to be reclaimed
+  * 10.0.8.0/24 (Tales external)
 * 10.0.98.0/24: Client machines (laptops, workstations)
 * 10.0.99.0/24: Servers, IoT services, cameras
 
@@ -24,6 +25,25 @@ Helm, Kubernetes, Terraform kinds of things
   * 10.0.106.0/24: LoadBalancer range (Cilium L2 announcements)
   * 10.0.107.0/24: Pods (ipv4NativeRoutingCIDR)
   * 10.0.108.0/24: Services
+
+## Recreating cluster
+
+Edit `tiles-test.tf` and set
+
+```
+  run_bootstrap       = false
+  apply_configs       = false
+```
+
+and then run
+
+```
+cd tiles/tf/nodes
+terraform destroy -target \
+   'module.tiles-test.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
+terraform destroy -target \
+   'module.tiles-test.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
+```
 
 ## Talos client configuration (talosconfig)
 

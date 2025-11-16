@@ -1,0 +1,265 @@
+# https://raw.githubusercontent.com/argoproj/argo-helm/refs/tags/argo-cd-7.8.23/charts/argo-cd/values.yaml
+# then deleted values we do not override.
+
+# Placeholders for the values that will be set by the bootstrap script.
+pod_cidr: placeholder
+cluster_name: placeholder
+cluster_id: 666
+external_ip_cidr: placeholder
+vault_name: placeholder
+
+targetRevision: main
+
+global:
+  tolerations:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/control-plane
+      operator: Exists
+  nodeSelector:
+    kubernetes.io/os: linux
+    node-role.kubernetes.io/control-plane: ""
+argo-cd:
+  ## Argo CD configuration
+  ## Ref: https://github.com/argoproj/argo-cd
+  ##
+  # -- Create aggregated roles that extend existing cluster roles to interact with argo-cd resources
+  ## Ref: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
+  createAggregateRoles: false
+  # -- Create cluster roles for cluster-wide installation.
+  ## Used when you manage applications in the same cluster where Argo CD runs
+  createClusterRoles: true
+  ## Custom resource configuration
+  crds:
+    keep: true
+    install: false
+    # annotations:
+    #   prevent-trivial-diff: please
+  ## Globally shared configuration
+  global:
+    # -- Default domain used by all components
+    ## Used for ingresses, certificates, SSO, notifications, etc.
+    domain: argocd.placeholder.symmatree.com
+  ## Argo Configs
+  configs:
+    # General Argo CD configuration. Any values you put under `.configs.cm` are passed to argocd-cm ConfigMap.
+    ## Ref: https://github.com/argoproj/argo-cd/blob/master/docs/operator-manual/argocd-cm.yaml
+    cm:
+      # -- Create the argocd-cm configmap for [declarative setup]
+      create: true
+      # -- Enable exec feature in Argo UI
+      ## Ref: https://argo-cd.readthedocs.io/en/latest/operator-manual/rbac/#exec-resource
+      exec.enabled: true
+      # -- Enable local admin user
+      ## Ref: https://argo-cd.readthedocs.io/en/latest/faq/#how-to-disable-admin-user
+      admin.enabled: true
+      # -- Enable Status Badge
+      ## Ref: https://argo-cd.readthedocs.io/en/stable/user-guide/status-badge/
+      statusbadge.enabled: true
+      dex.config: |
+        connectors:
+          - type: oidc
+            id: google
+            name: Google
+            config:
+              issuer: https://accounts.google.com
+              # Connector config values starting with a "$" will read from the environment.
+              clientID: $OAUTH_CLIENT_ID
+              clientSecret: $OAUTH_CLIENT_SECRET
+      # Override this whole value just to remove Endpoints (needed for Cilium)
+      resource.exclusions: |
+        ### Network resources created by the Kubernetes control plane and excluded to reduce the number of watched events and UI clutter
+        - apiGroups:
+          - ''
+          - discovery.k8s.io
+          kinds:
+          - EndpointSlice
+        ### Internal Kubernetes resources excluded reduce the number of watched events
+        - apiGroups:
+          - coordination.k8s.io
+          kinds:
+          - Lease
+        ### Internal Kubernetes Authz/Authn resources excluded reduce the number of watched events
+        - apiGroups:
+          - authentication.k8s.io
+          - authorization.k8s.io
+          kinds:
+          - SelfSubjectReview
+          - TokenReview
+          - LocalSubjectAccessReview
+          - SelfSubjectAccessReview
+          - SelfSubjectRulesReview
+          - SubjectAccessReview
+        ### Intermediate Certificate Request excluded reduce the number of watched events
+        - apiGroups:
+          - certificates.k8s.io
+          kinds:
+          - CertificateSigningRequest
+        - apiGroups:
+          - cert-manager.io
+          kinds:
+          - CertificateRequest
+        ### Cilium internal resources excluded reduce the number of watched events and UI Clutter
+        - apiGroups:
+          - cilium.io
+          kinds:
+          - CiliumIdentity
+          - CiliumEndpoint
+          - CiliumEndpointSlice
+        ### Kyverno intermediate and reporting resources excluded reduce the number of watched events and improve performance
+        - apiGroups:
+          - kyverno.io
+          - reports.kyverno.io
+          - wgpolicyk8s.io
+          kinds:
+          - PolicyReport
+          - ClusterPolicyReport
+          - EphemeralReport
+          - ClusterEphemeralReport
+          - AdmissionReport
+          - ClusterAdmissionReport
+          - BackgroundScanReport
+          - ClusterBackgroundScanReport
+          - UpdateRequest
+
+    rbac:
+      policy.default: role:admin
+    # Argo CD configuration parameters
+    ## Ref: https://github.com/argoproj/argo-cd/blob/master/docs/operator-manual/argocd-cmd-params-cm.yaml
+    params:
+      ## Generic parameters
+      # -- Open-Telemetry collector address: (e.g. "otel-collector:4317")
+      otlp.address: ""
+      server.insecure: true
+
+  ## Application controller
+  controller:
+    ## Application controller metrics configuration
+    metrics:
+      # -- Deploy metrics service
+      enabled: true
+      serviceMonitor:
+        # -- Enable a prometheus ServiceMonitor
+        enabled: true
+      rules:
+        enabled: true
+        # Alerts from comment in upstream values.yaml.
+        # TODO: Replace with mixin once I get a nice jsonnet
+        # dependency-management story (https://github.com/argoproj/argo-cd/issues/3688)
+        spec:
+          - alert: ArgoAppMissing
+            expr: |
+              absent(argocd_app_info) == 1
+            for: 15m
+            labels:
+              severity: critical
+            annotations:
+              summary: '[Argo CD] No reported applications'
+              description: |
+                Argo CD has not reported any applications data for the past 15 minutes which means that it must be down or not functioning properly.  This needs to be resolved for this cloud to continue to maintain state.
+          - alert: ArgoAppNotSynced
+            expr: |
+              argocd_app_info{sync_status!="Synced"} == 1
+            for: 12h
+            labels:
+              severity: warning
+            annotations:
+              summary: '[{{`{{$labels.name}}`}}] Application not synchronized'
+              description: |
+                The application [{{`{{$labels.name}}`}} has not been synchronized for over 12 hours which means that the state of this cloud has drifted away from the state inside Git.
+  ## Dex
+  dex:
+    enabled: true
+    envFrom:
+      - secretRef:
+          name: google-oauth-secret
+    metrics:
+      # -- Deploy metrics service
+      enabled: true
+      serviceMonitor:
+        # -- Enable a prometheus ServiceMonitor
+        enabled: true
+  ## Server
+  server:
+    ## Server metrics service configuration
+    metrics:
+      # -- Deploy metrics service
+      enabled: true
+      serviceMonitor:
+        # -- Enable a prometheus ServiceMonitor
+        enabled: true
+    # Argo CD server ingress configuration
+    ingress:
+      # -- Enable an ingress resource for the Argo CD server
+      enabled: true
+      # -- Specific implementation for ingress controller. One of `generic`, `aws` or `gke`
+      ## Additional configuration might be required in related configuration sections
+      controller: generic
+      annotations:
+        cert-manager.io/cluster-issuer: real-cert
+      ingressClassName: cilium
+      # -- Enable TLS configuration for the hostname defined at `server.ingress.hostname`
+      ## TLS certificate will be retrieved from a TLS secret `argocd-server-tls`
+      ## You can create this secret via `certificate` or `certificateSecret` option
+      tls: true
+    # Dedicated gRPC ingress for ingress controllers that supports only single backend protocol per Ingress resource
+    # Ref: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-2-multiple-ingress-objects-and-hosts
+    ingressGrpc:
+      # -- Enable an ingress resource for the Argo CD server for dedicated [gRPC-ingress]
+      # Disabled until needed; argocd command line seems to work without this.
+      enabled: false
+      annotations:
+        cert-manager.io/cluster-issuer: real-cert
+      ingressClassName: cilium
+      hostname: grpc-argocd.placeholder.symmatree.com
+      tls: true
+  ## Notifications controller
+  notifications:
+    # -- Enable notifications controller
+    enabled: true
+    secret:
+      # -- notifications controller Secret name
+      name: argocd-notifications-secret
+      # -- Generic key:value pairs to be inserted into the secret
+      ## Can be used for templates, notification services etc. Some examples given below.
+      ## For more information: https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/overview/
+      items: {}
+      # slack-token:
+      #   # For more information: https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/slack/
+  # grafana-apiKey:
+  #   # For more information: https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/grafana/
+
+  # webhooks-github-token:
+
+  # email-username:
+  # email-password:
+  # For more information: https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/email/
+  repoServer:
+    # Following https://raynix.info/archives/4565
+    extraContainers:
+      - name: tanka
+        image: curlimages/curl:latest
+        # install jb and tk then start the argocd-cmp-server
+        command:
+          - sh
+          - -c
+          - |
+            cd /home/argocd/cmp-server/plugins && \
+            curl -Lo jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.6.0/jb-linux-amd64" && \
+            curl -Lo tk "https://github.com/grafana/tanka/releases/download/v0.32.0/tk-linux-amd64" && \
+            chmod +x jb tk && \
+            /var/run/argocd/argocd-cmp-server
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+        volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+            subPath: plugin.yaml
+            name: cmp-tanka
+    volumes:
+      - name: cmp-tanka
+        configMap:
+          name: cmp-tanka

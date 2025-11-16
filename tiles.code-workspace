@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../tales"
+		},
+		{
+			"path": "../gcp-control"
+		}
+	]
+}

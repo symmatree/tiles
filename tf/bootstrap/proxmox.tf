@@ -1,25 +1,10 @@
 
-variable "proxmox_endpoint" {
-  description = "Proxmox VE API endpoint"
-  type        = string
-}
-
-variable "proxmox_username" {
-  description = "Proxmox VE username"
-  type        = string
-}
-
-variable "proxmox_password" {
-  description = "Proxmox VE password"
-  type        = string
-  sensitive   = true
-}
-
 provider "proxmox" {
-  endpoint = var.proxmox_endpoint
-  username = var.proxmox_username
-  password = var.proxmox_password
-  insecure = true
+  endpoint = data.onepassword_item.proxmox_root_user.url
+  # Assume the root user is in the PAM realm.
+  username = "${data.onepassword_item.proxmox_root_user.username}@pam"
+  password = data.onepassword_item.proxmox_root_user.password
+  insecure = true  # Invalid cert
 }
 
 resource "random_password" "proxmox_tiles_tf_password" {

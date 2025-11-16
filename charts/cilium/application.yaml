@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  namespace: argocd
+  labels:
+    name: cilium
+spec:
+  project: "{{ .Values.cluster_name }}"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: main
+    path: cilium
+    helm:
+      valueFiles:
+        - values.yaml
+      # Inject values from Terraform or that vary by environment.
+      valuesObject:
+        external_ip_cidr: "{{ .Values.external_ip_cidr }}"
+        cilium:
+          ipv4NativeRoutingCIDR: "{{ .Values.pod_cidr }}"
+          cluster:
+            name: "{{ .Values.cluster_name }}"
+            id: "{{ .Values.cluster_id }}"
+          hubble:
+            ui:
+              ingress:
+                hosts:
+                  - "hubble.{{ .Values.cluster_name }}.symmatree.com"
+                tls:
+                  - secretName: hubble-ui-tls
+                    hosts:
+                      - "hubble.{{ .Values.cluster_name }}.symmatree.com"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cilium
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged

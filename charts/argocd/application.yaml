@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  labels:
+    name: argocd
+spec:
+  project: tiles
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetReargocd.tiles.symmatree.comvision: main
+    path: argocd
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        # Propagate to other application.yaml files
+        targetRevision: "{{ .Values.targetRevision }}"
+        pod_cidr: "{{ .Values.pod_cidr }}"
+        cluster_name: "{{ .Values.cluster_name }}"
+        cluster_id: "{{ .Values.cluster_id }}"
+        external_ip_cidr: "{{ .Values.external_ip_cidr }}"
+        vault_name: "{{ .Values.vault_name }}"
+
+        argo-cd:
+          global:
+            domain: "argocd.{{ .Values.cluster_name }}.symmatree.com"
+          server:
+            ingressGrpc:
+              hostname: "grpc-argocd.{{ .Values.cluster_name }}.symmatree.com"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - FailOnSharedResource=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
