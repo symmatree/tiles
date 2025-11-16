@@ -50,7 +50,10 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
           GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
-          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-config/wireguard-config"
+          # TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-config/wireguard-config"
+          TILES_VPN_PRIVATE_KEY: "op://tiles-secrets/github-vpn-client/private-key"
+          TILES_VPN_PUBLIC_KEY: "op://tiles-secrets/github-vpn-client/public-key"
+          TILES_VPN_ENDPOINT: "op://tiles-secrets/github-vpn-client/endpoint"
 
       - name: Authenticate to Google Cloud
         run: |
@@ -82,8 +85,14 @@ jobs:
         name: Wireguard
         id: wireguard
         with:
-          vpn_config: ${{ steps.load_secrets.outputs.VPN_CONFIG }}
+          # vpn_config: ${{ steps.load_secrets.outputs.VPN_CONFIG }}
           conf_dir: "${{ runner.temp }}/wg"
+          private_key: ${{ steps.load_secrets.outputs.VPN_PRIVATE_KEY }}
+          public_key: ${{ steps.load_secrets.outputs.VPN_PUBLIC_KEY }}
+          endpoint: ${{ steps.load_secrets.outputs.VPN_ENDPOINT }}
+          allowed_ips: 0.0.0.0/0
+          client_ip: 10.1.0.4
+          gateway_ip: 10.1.0.1
 
       - name: DNS debug
         run: |
