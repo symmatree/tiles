@@ -51,9 +51,9 @@ jobs:
           GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
           GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
           # TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-config/wireguard-config"
-          TILES_VPN_PRIVATE_KEY: "op://tiles-secrets/github-vpn-client/private-key"
-          TILES_VPN_PUBLIC_KEY: "op://tiles-secrets/github-vpn-client/public-key"
-          TILES_VPN_ENDPOINT: "op://tiles-secrets/github-vpn-client/endpoint"
+          VPN_PRIVATE_KEY: "op://tiles-secrets/github-vpn-client/private-key"
+          VPN_PUBLIC_KEY: "op://tiles-secrets/github-vpn-client/public-key"
+          VPN_ENDPOINT: "op://tiles-secrets/github-vpn-client/endpoint"
 
       - name: Authenticate to Google Cloud
         run: |
