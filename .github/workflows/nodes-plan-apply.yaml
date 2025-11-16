@@ -96,24 +96,20 @@ jobs:
           resolvectl status
           echo "=== manual nslookup ==="
           echo "Default dns"
-          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com || true
-          echo "Force 10.0.0.1"
-          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com 10.0.0.1 || true
-          echo "Force 10.1.0.1"
-          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com 10.1.0.1 || true
+          nslookup nuc-g3p-1.local.symmatree.com || true
+          echo "Force 10.0.99.1"
+          nslookup nuc-g3p-1.local.symmatree.com 10.0.99.1 || true
 
-          echo "Setting DNS to 10.0.0.1"
-          sudo resolvectl dns 10.0.0.1
+          echo "Setting DNS to 10.0.99.1"
+          sudo resolvectl dns 10.0.99.1
 
           echo "=== resolvectl status ==="
           resolvectl status
           echo "=== manual nslookup ==="
           echo "Default dns"
-          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com || true
-          echo "Force 10.0.0.1"
-          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com 10.0.0.1 || true
-          echo "Force 10.1.0.1"
-          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com 10.1.0.1 || true
+          nslookup nuc-g3p-1.local.symmatree.com || true
+          echo "Force 10.0.99.1"
+          nslookup nuc-g3p-1.local.symmatree.com 10.0.99.1 || true
 
 
       - name: Terraform plan nodes
