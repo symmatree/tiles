@@ -101,7 +101,9 @@ jobs:
           nslookup nuc-g3p-1.local.symmatree.com 10.0.99.1 || true
 
           echo "Setting DNS to 10.0.99.1"
-          sudo resolvectl dns 10.0.99.1
+          sudo resolvectl dns wg0 10.0.99.1%wg0
+          sudo resolvectl domain wg0 symmatree.com
+          sudo resolvectl default-route wg0 true
 
           echo "=== resolvectl status ==="
           resolvectl status
