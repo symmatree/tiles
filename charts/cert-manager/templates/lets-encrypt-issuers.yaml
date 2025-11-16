@@ -17,8 +17,10 @@ spec:
           cloudDNS:
             project: "{{ .Values.project_id }}"
             serviceAccountSecretRef:
-              name: misc-config
-              key: cert_manager_clouddns_sa
+              # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
+              name: cert-manager-dns01-sa-key
+              # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
+              key: private_key.json
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -38,5 +40,7 @@ spec:
           cloudDNS:
             project: "{{ .Values.project_id }}"
             serviceAccountSecretRef:
-              name: misc-config
-              key: cert_manager_clouddns_sa
+              # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
+              name: cert-manager-dns01-sa-key
+              # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
+              key: private_key.json

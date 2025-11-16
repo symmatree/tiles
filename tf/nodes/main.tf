@@ -51,6 +51,11 @@ variable "onepassword_vault_name" {
   description = "The name of the 1Password vault to use for storing secrets."
 }
 
+variable "project_id" {
+  type        = string
+  description = "Google Cloud project ID"
+}
+
 data "onepassword_vault" "tf_secrets" {
   name = var.onepassword_vault_name
 }
