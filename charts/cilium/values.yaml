@@ -226,7 +226,7 @@ cilium:
   enableIPv4BIGTCP: false
   # ipv4NativeRoutingCIDR is setting the auto-direct-node-routes flag.
   # Must agree with podCidr in the talos config.
-  ipv4NativeRoutingCIDR: placeholder
+  ipv4NativeRoutingCIDR: placeholder-native-routing-cidr
   # -- Configure service load balancing
   loadBalancer:
     # https://github.com/cilium/cilium/discussions/36829

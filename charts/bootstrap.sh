@@ -21,21 +21,40 @@ for var in "${required_vars[@]}"; do
 	helm_args+=("--set" "${var}=${!var}")
 done
 
-for chart in cilium argocd; do
-	if ! kubectl get namespace ${chart}; then
-		kubectl create namespace ${chart}
-		kubectl label namespace ${chart} "pod-security.kubernetes.io/warn=baseline" --overwrite
-		kubectl label namespace ${chart} "pod-security.kubernetes.io/enforce=privileged" --overwrite
-		kubectl label namespace ${chart} "trust-bundle=enabled" --overwrite
-	fi
-	pushd charts/${chart}
-	# Some charts have default-namespace problems.
-	set -x
-	kubens ${chart}
-	helm template ${chart} . --namespace ${chart} \
-		--skip-crds \
-		"${helm_args[@]}" |
-		kubectl apply --server-side -f-
-	set +x
-	popd
-done
+if ! kubectl get namespace cilium; then
+	kubectl create namespace cilium
+	kubectl label namespace cilium "pod-security.kubernetes.io/warn=baseline" --overwrite
+	kubectl label namespace cilium "pod-security.kubernetes.io/enforce=privileged" --overwrite
+fi
+
+pushd charts/cilium
+set -x
+kubens cilium
+helm template cilium . --namespace cilium \
+	--skip-crds \
+	"${helm_args[@]}" \
+	--set "cilium.ipv4NativeRoutingCIDR=${pod_cidr:?}" \
+	--set "cilium.cluster.name=${cluster_name:?}" \
+	--set "cilium.cluster.id=${cluster_id:?}" \
+	--set "cilium.hubble.ui.ingress.hosts[0]=hubble.${cluster_name:?}.symmatree.com" \
+	--set "cilium.hubble.ui.ingress.tls[0].secretName=hubble-ui-tls" \
+	--set "cilium.hubble.ui.ingress.tls[0].hosts[0]=hubble.${cluster_name:?}.symmatree.com" |
+	kubectl apply --server-side -f-
+set +x
+popd
+if ! kubectl get namespace argocd; then
+	kubectl create namespace argocd
+	kubectl label namespace argocd "pod-security.kubernetes.io/warn=baseline" --overwrite
+	kubectl label namespace argocd "pod-security.kubernetes.io/enforce=privileged" --overwrite
+	kubectl label namespace argocd "trust-bundle=enabled" --overwrite
+fi
+pushd charts/argocd
+set -x
+kubens argocd
+helm template argocd . --namespace argocd \
+	--skip-crds \
+	"${helm_args[@]}" \
+	--set "argo-cd.global.domain=argocd.${cluster_name:?}.symmatree.com" \
+	--set "argo-cd.server.ingressGrpc.hostname=grpc-argocd.${cluster_name:?}.symmatree.com" |
+	kubectl apply --server-side -f-
+set +x
