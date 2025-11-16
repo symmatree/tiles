@@ -21,7 +21,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   nodes-plan-apply:
-    runs-on: "ubuntu-latest"
+    # runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-22.04"
     permissions:
       contents: "read"
       id-token: "write"
@@ -103,10 +104,10 @@ jobs:
           echo "Force 10.0.99.1"
           nslookup nuc-g3p-1.local.symmatree.com 10.0.99.1 || true
 
-          echo "Setting DNS to 10.0.99.1"
-          sudo resolvectl dns wg0 10.0.99.1%wg0
-          sudo resolvectl domain wg0 symmatree.com
-          sudo resolvectl default-route wg0 true
+          # echo "Setting DNS to 10.0.99.1"
+          # sudo resolvectl dns wg0 10.0.99.1%wg0
+          # sudo resolvectl domain wg0 symmatree.com
+          # sudo resolvectl default-route wg0 true
 
           echo "=== resolvectl status ==="
           resolvectl status
