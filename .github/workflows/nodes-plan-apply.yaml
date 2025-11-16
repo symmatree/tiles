@@ -84,6 +84,28 @@ jobs:
           vpn_config: ${{ steps.load_secrets.outputs.VPN_CONFIG }}
           conf_dir: "${{ runner.temp }}/wg"
 
+      - name: DNS debug
+        run: |
+          set -euxo pipefail
+          echo "=== network interfaces ==="
+          cat /etc/network/interfaces || true
+          echo "=== resolv.conf ==="
+          cat /etc/resolv.conf || true
+          echo "=== iptables ==="
+          iptables -L
+          echo "=== ip addr ==="
+          ip addr
+          echo "=== ip route ==="
+          ip route
+          echo "=== manual nslookup ==="
+          echo "Default dns"
+          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com
+          echo "Force 10.0.0.1"
+          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com 10.0.0.1
+          echo "Force 10.1.0.1"
+          nslookup -retry=1 -timeout=1 nuc-g3p-1.local.symmatree.com 10.1.0.1
+
+
       - name: Terraform plan nodes
         id: tf-plan
         env:
