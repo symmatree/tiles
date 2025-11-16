@@ -1,4 +1,4 @@
-import { c as coreExports, e as execExports } from './exec-CWafDCaz.js';
+import { c as coreExports, e as execExports } from './exec-nEg6paeE.js';
 import 'os';
 import 'crypto';
 import 'fs';
@@ -30,7 +30,8 @@ import 'timers';
 try {
   coreExports.info(`Disconnecting`);
   const confDir = coreExports.getInput("conf_dir");
-  await execExports.exec('sudo', ['wg-quick', 'down', `${confDir}/wg0.conf`]);
+  // await exec.exec('sudo', ['wg-quick', 'down', `${confDir}/wg0.conf`]);
+  await execExports.exec('sudo', ['ip', 'link', 'delete', 'dev', 'wg0']);
   coreExports.info(`Disconnected`);
 } catch (error) {
   coreExports.setFailed(error.message);
