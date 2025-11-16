@@ -6,7 +6,7 @@ metadata:
   labels:
     name: argocd-applications
 spec:
-  project: tiles
+  project: "{{ .Values.cluster_name }}"
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: "{{ .Values.targetRevision }}"

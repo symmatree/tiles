@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: tiles
+  name: "{{ .Values.cluster_name }}"
   namespace: argocd
 spec:
-  description: Tiles Project
+  description: "{{ .Values.cluster_name }} Project"
   sourceRepos:
     - https://github.com/symmatree/tiles.git
   destinations:

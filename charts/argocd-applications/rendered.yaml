@@ -3,10 +3,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: tiles
+  name: "placeholder"
   namespace: argocd
 spec:
-  description: Tiles Project
+  description: "placeholder Project"
   sourceRepos:
     - https://github.com/symmatree/tiles.git
   destinations:
@@ -30,7 +30,7 @@ metadata:
   labels:
     name: argocd-applications
 spec:
-  project: tiles
+  project: "placeholder"
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: "main"
@@ -44,7 +44,7 @@ spec:
         pod_cidr: "placeholder"
         cluster_name: "placeholder"
         cluster_id: "666"
-        external_ip_cidr: ""
+        external_ip_cidr: "placeholder-external-ip-cidr"
         vault_name: "placeholder"
   destination:
     server: https://kubernetes.default.svc
@@ -66,7 +66,7 @@ metadata:
   labels:
     name: argocd-applications
 spec:
-  project: tiles
+  project: "placeholder"
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: "main"
@@ -80,7 +80,7 @@ spec:
         pod_cidr: "placeholder"
         cluster_name: "placeholder"
         cluster_id: "666"
-        external_ip_cidr: ""
+        external_ip_cidr: "placeholder-external-ip-cidr"
         vault_name: "placeholder"
   destination:
     server: https://kubernetes.default.svc
@@ -112,7 +112,7 @@ spec:
         - values.yaml
       # Inject values from Terraform or that vary by environment.
       valuesObject:
-        external_ip_cidr: ""
+        external_ip_cidr: "placeholder-external-ip-cidr"
         cilium:
           ipv4NativeRoutingCIDR: "placeholder"
           cluster:
@@ -159,7 +159,7 @@ spec:
     helm:
       # Inject values from Terraform or that vary by environment.
       valuesObject:
-        external_ip_cidr: ""
+        external_ip_cidr: "placeholder-external-ip-cidr"
         targetRevision: "main"
   destination:
     server: https://kubernetes.default.svc
