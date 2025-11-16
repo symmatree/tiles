@@ -1,0 +1,177 @@
+---
+# Source: argocd-applications/templates/tiles-appproject.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: tiles
+  namespace: argocd
+spec:
+  description: Tiles Project
+  sourceRepos:
+    - https://github.com/symmatree/tiles.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: '*'
+  # Allow creating all types of cluster-scoped resources...
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  # ...except CRDs because then cert-manager tries to nuke them.
+  clusterResourceBlacklist:
+  - group: 'apiextensions.k8s.io/v1'
+    kind: 'CustomResourceDefinition'
+---
+# Source: argocd-applications/templates/argocd-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-applications
+  namespace: argocd
+  labels:
+    name: argocd-applications
+spec:
+  project: tiles
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/argocd-applications
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        # Propagate to other application.yaml files
+        targetRevision: "main"
+        pod_cidr: "placeholder"
+        cluster_name: "placeholder"
+        cluster_id: "666"
+        external_ip_cidr: ""
+        vault_name: "placeholder"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - FailOnSharedResource=true
+---
+# Source: argocd-applications/templates/argocd-applications-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-applications
+  namespace: argocd
+  labels:
+    name: argocd-applications
+spec:
+  project: tiles
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/argocd-applications
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        # Propagate to other application.yaml files
+        targetRevision: "main"
+        pod_cidr: "placeholder"
+        cluster_name: "placeholder"
+        cluster_id: "666"
+        external_ip_cidr: ""
+        vault_name: "placeholder"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - FailOnSharedResource=true
+---
+# Source: argocd-applications/templates/cilium-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  namespace: argocd
+  labels:
+    name: cilium
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: main
+    path: cilium
+    helm:
+      valueFiles:
+        - values.yaml
+      # Inject values from Terraform or that vary by environment.
+      valuesObject:
+        external_ip_cidr: ""
+        cilium:
+          ipv4NativeRoutingCIDR: "placeholder"
+          cluster:
+            name: "placeholder"
+            id: "666"
+          hubble:
+            ui:
+              ingress:
+                hosts:
+                  - "hubble.placeholder.symmatree.com"
+                tls:
+                  - secretName: hubble-ui-tls
+                    hosts:
+                      - "hubble.placeholder.symmatree.com"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cilium
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+---
+# Source: argocd-applications/templates/cilium-config-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium-config
+  namespace: argocd
+  labels:
+    name: cilium-config
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/cilium-config
+    helm:
+      # Inject values from Terraform or that vary by environment.
+      valuesObject:
+        external_ip_cidr: ""
+        targetRevision: "main"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cilium
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged

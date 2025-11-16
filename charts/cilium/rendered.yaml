@@ -237,7 +237,7 @@ data:
   enable-bbr-hostns-only: "false"
 
 
-  ipv4-native-routing-cidr: placeholder
+  ipv4-native-routing-cidr: placeholder-native-routing-cidr
 
   kube-proxy-replacement: "true"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
@@ -1439,7 +1439,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "26eff633eba58a3a581aa0fefd50b4852d872ce744c43f49530b2841d56ed4fe"
+        cilium.io/cilium-configmap-checksum: "940eb4c781afcd33af3110d4d761f0faefea31be51dd927408ac6043180a1749"
         kubectl.kubernetes.io/default-container: cilium-agent
       labels:
         k8s-app: cilium
@@ -2121,7 +2121,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "26eff633eba58a3a581aa0fefd50b4852d872ce744c43f49530b2841d56ed4fe"
+        cilium.io/cilium-configmap-checksum: "940eb4c781afcd33af3110d4d761f0faefea31be51dd927408ac6043180a1749"
       labels:
         io.cilium/app: operator
         name: cilium-operator
@@ -2547,32 +2547,6 @@ spec:
     - key encipherment
     - server auth
     - client auth
----
-# Source: cilium/templates/additional-manifests.yaml
-apiVersion: cilium.io/v2alpha1
-kind: CiliumL2AnnouncementPolicy
-metadata:
-  namespace: "cilium"
-  name: announce-everything
-spec:
-  # No serviceSelector, apply to all.
-  # No nodeSelector, many of these run on the control plane anyway.
-  # nodeSelector:
-  #   matchExpressions:
-  #     - key: node-role.kubernetes.io/control-plane
-  #       operator: DoesNotExist
-  externalIPs: true
-  loadBalancerIPs: true
----
-# Source: cilium/templates/additional-manifests.yaml
-apiVersion: cilium.io/v2alpha1
-kind: CiliumLoadBalancerIPPool
-metadata:
-  namespace: "cilium"
-  name: lb-externalip-pool
-spec:
-  blocks:
-    - cidr: ""
 ---
 # Source: cilium/charts/cilium/templates/cilium-ingress-service.yaml
 apiVersion: v1
