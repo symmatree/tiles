@@ -1,0 +1,8 @@
+apiVersion: v2
+name: cilium-config
+description: Cilium config objects
+# From https://github.com/cilium/cilium/blob/v1.17.6/install/kubernetes/cilium/Chart.yaml
+icon: https://cdn.jsdelivr.net/gh/cilium/cilium@main/Documentation/images/logo-solo.svg
+type: application
+version: 0.1.0
+appVersion: 0.1.0
