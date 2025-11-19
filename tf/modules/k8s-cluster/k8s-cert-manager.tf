@@ -1,5 +1,5 @@
 resource "google_service_account" "cert_manager_dns01" {
-  account_id   = "sa-${var.cluster_name}-cert-manager-dns01"
+  account_id   = "sa-${var.cluster_name}-cert-manager"
   display_name = "${var.cluster_name} cert-manager DNS01 Solver"
   description  = "Service account for ${var.cluster_name} cert-manager to perform DNS01 ACME challenges"
   project      = var.project_id
