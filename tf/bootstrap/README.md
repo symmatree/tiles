@@ -24,9 +24,12 @@ Go to [1password's service account site](https://my.1password.com/developer-tool
 * Create Github fine-grained PAT
 * Be logged into GCP both directly and as application-default
 
+For some reason, the Terraform github extension cannot reliably use the password directly
+from a 1password provider, but we can stage it through an environment var:
 
 ```
 cd tf/bootstrap
-export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential) \
-  && terraform init -upgrade && terraform plan
+export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential)
+export TF_VAR_github_token=$(op read op://tiles-secrets/github-tiles-tf-bootstrap/password)
+terraform plan
  ```

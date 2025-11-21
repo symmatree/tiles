@@ -33,14 +33,5 @@ runs:
       if: steps.helm-cache.outputs.cache-hit != 'true'
       # cache-hit is only true for an exact match, including the date.
       run: |
-        set -euxo pipefail
-
-        for chart in charts/*; do
-          if [[ ! -f "$chart/Chart.yaml" ]]; then
-            continue
-          fi
-          name=$(basename "$chart")
-          pushd "$chart"
-          helm dep update
-          popd
-        done
+        set -euo pipefail
+        "${GITHUB_WORKSPACE}/ci-tools/helm-update-all.sh"
