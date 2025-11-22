@@ -71,6 +71,15 @@ jobs:
           wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
           conf_dir: "$HOME"
 
+      - name: Bootstrap cluster
+        id: bootstrap-cluster
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "${GITHUB_WORKSPACE}/charts"
+          ./install-crds.sh
+          ./bootstrap-cluster.sh
+
       - name: De-wireguard
         if: always()
         run: |
@@ -82,12 +91,3 @@ jobs:
           echo "Disconnecting Wireguard..."
           time sudo wg-quick down "$HOME/wg0.conf" || true
           echo "Disconnected"
-
-      - name: Bootstrap cluster
-        id: bootstrap-cluster
-        shell: bash
-        run: |
-          set -euxo pipefail
-          cd "${GITHUB_WORKSPACE}/charts"
-          ./install-crds.sh
-          ./bootstrap-cluster.sh

@@ -1,10 +1,10 @@
-name: 'helm-setup'
-description: 'Install Helm and cache state'
+name: "helm-setup"
+description: "Install Helm and cache state"
 inputs:
   helm_version:
-    description: 'Helm version to install'
+    description: "Helm version to install"
     required: true
-    default: 'v3.18.4'
+    default: "v4.0.0"
 runs:
   using: "composite"
   steps:
@@ -27,11 +27,12 @@ runs:
     - name: Install helm
       uses: azure/setup-helm@v4.3.1
       with:
-        version: '${{ inputs.helm_version }}'
+        version: "${{ inputs.helm_version }}"
     - name: Install Helm dependencies
       shell: bash
       if: steps.helm-cache.outputs.cache-hit != 'true'
       # cache-hit is only true for an exact match, including the date.
       run: |
         set -euo pipefail
+        "${GITHUB_WORKSPACE}/ci-tools/helm-add-repos.sh"
         "${GITHUB_WORKSPACE}/ci-tools/helm-update-all.sh"
