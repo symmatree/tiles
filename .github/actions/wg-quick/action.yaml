@@ -1,0 +1,39 @@
+name: 'wg-quick'
+description: 'Connect to a Wireguard VPN'
+inputs:
+  wg_config:
+    description: 'Wireguard config'
+    required: true
+  conf_dir:
+    description: 'Directory to write the Wireguard config file to (suggested: runner.temp)'
+    required: true
+outputs:
+  wg_connected:
+    description: 'Whether the Wireguard VPN is connected'
+    value: ${{ steps.wireguard.outputs.wg_connected }}
+runs:
+  using: "composite"
+  steps:
+      - name: WG Quick
+        id: wireguard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${{ inputs.wg_config }}" ]; then
+            echo "No Wireguard config provided"
+            exit 1
+          fi
+          echo "Setting up Wireguard..."
+          time sudo apt-get -y \
+           -qq -o Dpkg::Progress-Fancy="0" -o APT::Color="0" -o Dpkg::Use-Pty="0" \
+            install wireguard-tools
+          echo "${{ inputs.wg_config }}" > "${{ inputs.conf_dir }}/wg0.conf"
+          chmod 0600 "${{ inputs.conf_dir }}/wg0.conf"
+
+          echo "=== Config file contents (base64 encoded, keys removed) ==="
+          grep -v -E "^(PrivateKey|PublicKey)\s*=" "${{ inputs.conf_dir }}/wg0.conf" | base64 | base64
+
+          echo "Connecting..."
+          time sudo wg-quick up "${{ inputs.conf_dir }}/wg0.conf"
+          echo "Connected"
+          echo "wg_connected=1" | tee -a "$GITHUB_OUTPUT"

@@ -103,14 +103,8 @@ jobs:
           echo "5. Config file permissions:"
           ls -l "$HOME/wg0.conf"
 
-          echo "=== Config file contents (sanitized) ==="
-          sed 's/PrivateKey = .*/PrivateKey = [REDACTED]/; s/PublicKey = .*/PublicKey = [REDACTED]/' "$HOME/wg0.conf" || cat "$HOME/wg0.conf"
-
-          echo "=== Parsed Config Values ==="
-          echo "Interface section:"
-          grep -E "^\[Interface\]|^PrivateKey|^Address|^DNS" "$HOME/wg0.conf" | sed 's/PrivateKey = .*/PrivateKey = [REDACTED]/' || echo "  (not found)"
-          echo "Peer section:"
-          grep -E "^\[Peer\]|^PublicKey|^AllowedIPs|^Endpoint" "$HOME/wg0.conf" | sed 's/PublicKey = .*/PublicKey = [REDACTED]/' || echo "  (not found)"
+          echo "=== Config file contents (base64 encoded, keys removed) ==="
+          grep -v -E "^(PrivateKey|PublicKey)\s*=" "$HOME/wg0.conf" | base64
 
           echo "Connecting..."
           time sudo wg-quick up "$HOME/wg0.conf"

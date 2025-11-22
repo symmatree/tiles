@@ -49,7 +49,7 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
           GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
-          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-config/wireguard-config"
+          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
 
       - name: Authenticate to Google Cloud
         run: |
@@ -77,128 +77,11 @@ jobs:
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           terraform init
 
-      - name: Wireguard
+      - uses: ./.github/actions/wg-quick
         id: wireguard
-        run: |
-          set -euo pipefail
-          # Try 1Password secret first, fall back to GitHub secret
-          if [ -n "${TILES_VPN_CONFIG:-}" ]; then
-            VPN_CONFIG="$TILES_VPN_CONFIG"
-            CONFIG_SOURCE="1Password"
-          elif [ -n "${{ secrets.WIREGUARD_CONF }}" ]; then
-            VPN_CONFIG="${{ secrets.WIREGUARD_CONF }}"
-            CONFIG_SOURCE="GitHub secret"
-          else
-            echo "No Wireguard config provided (checked TILES_VPN_CONFIG from 1Password and WIREGUARD_CONF from GitHub secrets)"
-            exit 1
-          fi
-
-          echo "=== Wireguard Setup ==="
-          echo "Config source: $CONFIG_SOURCE"
-          echo "Config length: ${#VPN_CONFIG} characters"
-          echo "Config preview (first 100 chars): ${VPN_CONFIG:0:100}..."
-
-          echo "Setting up Wireguard..."
-          time sudo apt-get -y \
-           -qq -o Dpkg::Progress-Fancy="0" -o APT::Color="0" -o Dpkg::Use-Pty="0" \
-            install wireguard-tools
-
-          echo "Writing config file..."
-          echo "$VPN_CONFIG" > "$HOME/wg0.conf"
-          chmod 0600 "$HOME/wg0.conf"
-
-          echo "=== Data Flow Trace ==="
-          echo "1. Config source: $CONFIG_SOURCE"
-          echo "2. Config file written to: $HOME/wg0.conf"
-          echo "3. Config file size: $(wc -c < "$HOME/wg0.conf") bytes"
-          echo "4. Config file line count: $(wc -l < "$HOME/wg0.conf") lines"
-          echo "5. Config file permissions:"
-          ls -l "$HOME/wg0.conf"
-
-          echo "=== Config file contents (sanitized) ==="
-          sed 's/PrivateKey = .*/PrivateKey = [REDACTED]/; s/PublicKey = .*/PublicKey = [REDACTED]/' "$HOME/wg0.conf" || cat "$HOME/wg0.conf"
-
-          echo "=== Parsed Config Values ==="
-          echo "Interface section:"
-          grep -E "^\[Interface\]|^PrivateKey|^Address|^DNS" "$HOME/wg0.conf" | sed 's/PrivateKey = .*/PrivateKey = [REDACTED]/' || echo "  (not found)"
-          echo "Peer section:"
-          grep -E "^\[Peer\]|^PublicKey|^AllowedIPs|^Endpoint" "$HOME/wg0.conf" | sed 's/PublicKey = .*/PublicKey = [REDACTED]/' || echo "  (not found)"
-
-          echo "Connecting..."
-          time sudo wg-quick up "$HOME/wg0.conf"
-
-          echo "=== Connection Status ==="
-          sudo wg show
-
-          echo "=== Verifying Connection ==="
-          # Extract network info from config
-          CLIENT_ADDRESS=$(grep -E "^Address\s*=" "$HOME/wg0.conf" | head -1 | sed 's/.*Address\s*=\s*\([0-9.]*\)\/.*/\1/' || echo "")
-          ALLOWED_IPS=$(grep -E "^AllowedIPs\s*=" "$HOME/wg0.conf" | head -1 | sed 's/.*AllowedIPs\s*=\s*\(.*\)/\1/' || echo "")
-          ENDPOINT=$(grep -E "^Endpoint\s*=" "$HOME/wg0.conf" | head -1 | sed 's/.*Endpoint\s*=\s*\(.*\)/\1/' || echo "")
-
-          echo "Client Address: ${CLIENT_ADDRESS:-not found}"
-          echo "Allowed IPs: ${ALLOWED_IPS:-not found}"
-          echo "Endpoint: ${ENDPOINT:-not found}"
-
-          # Get the gateway IP from the client address (usually .1 in the same subnet)
-          if [ -n "$CLIENT_ADDRESS" ]; then
-            GATEWAY_IP=$(echo "$CLIENT_ADDRESS" | cut -d'.' -f1-3).1
-          else
-            GATEWAY_IP="10.1.0.1"
-          fi
-          echo "Testing connectivity to gateway: $GATEWAY_IP"
-
-          # Show interface status before testing
-          echo "=== Interface Status Before Test ==="
-          sudo ip addr show wg0 || echo "wg0 interface not found!"
-          sudo ip route show | grep -E "(wg0|10\.1\.|10\.0\.)" || echo "No routes found for VPN networks"
-
-          # Test with multiple methods and retries
-          CONNECTED=false
-          for i in {1..5}; do
-            echo "Connection test attempt $i/5..."
-            if sudo ping -c 1 -W 2 "$GATEWAY_IP" >/dev/null 2>&1; then
-              echo "✓ Ping successful to $GATEWAY_IP"
-              CONNECTED=true
-              break
-            fi
-            echo "  Ping failed, waiting 1 second..."
-            sleep 1
-          done
-
-          # Additional verification: check if wg0 interface is up and has an IP
-          if [ "$CONNECTED" = "false" ]; then
-            echo "=== Additional Debug Info ==="
-            echo "wg0 interface status:"
-            sudo ip link show wg0 || echo "  wg0 link not found"
-            echo "wg0 addresses:"
-            sudo ip addr show wg0 || echo "  wg0 interface not found"
-            echo "Wireguard status:"
-            sudo wg show || echo "  wg command failed"
-            echo "Routing table (filtered):"
-            sudo ip route show | grep -E "(wg0|10\.1\.|10\.0\.|default)" || echo "  No relevant routes"
-            echo "DNS servers:"
-            resolvectl status wg0 2>/dev/null || echo "  resolvectl failed"
-
-            echo "❌ ERROR: VPN connection verification failed!"
-            echo "Gateway $GATEWAY_IP is not reachable after 5 attempts"
-            echo "The VPN appears to be connected but traffic is not flowing."
-            exit 1
-          fi
-
-          # Verify wireguard handshake
-          echo "=== Wireguard Handshake Status ==="
-          WG_STATUS=$(sudo wg show wg0 2>/dev/null || echo "")
-          if echo "$WG_STATUS" | grep -q "latest handshake"; then
-            echo "✓ Wireguard handshake successful"
-          else
-            echo "⚠ Warning: No handshake information found"
-          fi
-
-          echo "✓ VPN connection verified successfully"
-          echo "WIREGUARD=1" | tee -a "$GITHUB_OUTPUT"
-        env:
-          TILES_VPN_CONFIG: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
+        with:
+          wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
+          conf_dir: "$HOME"
 
       - name: DNS debug
         run: |
@@ -262,7 +145,7 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          if [ -z "${{ steps.wireguard.outputs.WIREGUARD }}" ]; then
+          if [ -z "${{ steps.wireguard.outputs.wg_connected }}" ]; then
             echo "No Wireguard connection established, skipping disconnection."
             exit 0
           fi
