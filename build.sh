@@ -19,7 +19,7 @@ for chart in charts/*; do
 	# We do NOT dep update here because we might have cached it.
 	ls -lR
 	set -x
-	helm lint --strict
+	helm lint --strict .
 
 	helm template "${name}" . --namespace "${name}" \
 		--skip-crds \
