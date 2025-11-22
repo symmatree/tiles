@@ -1,17 +1,17 @@
 locals {
-    fqdn = "${var.cluster_name}.symmatree.com"
+  fqdn = "${var.cluster_name}.symmatree.com"
 }
 
 module "dns-public-zone" {
   source  = "terraform-google-modules/cloud-dns/google"
   version = "~> 6.0"
 
-  project_id                         = var.project_id
-  type                               = "public"
-  name                               = local.fqdn
-  domain                             = "${local.fqdn}."
-  labels                             = {
-    name = var.cluster_name
+  project_id = var.project_id
+  type       = "public"
+  name       = var.cluster_name
+  domain     = "${local.fqdn}."
+  labels = {
+    name    = var.cluster_name
     cluster = var.cluster_name
   }
 
