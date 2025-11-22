@@ -18,17 +18,6 @@ data "onepassword_vault" "tf_secrets" {
   name = var.onepassword_vault_name
 }
 
-# VPN Config created manually in Unifi UI.
-data "onepassword_item" "github-vpn-config" {
-  vault = data.onepassword_vault.tf_secrets.uuid
-  title = "github-vpn-config"
-}
-
-data "onepassword_item" "github_token" {
-  vault = data.onepassword_vault.tf_secrets.uuid
-  title = "github-tiles-tf-bootstrap"
-}
-
 data "onepassword_item" "unifi_sa" {
   vault = data.onepassword_vault.tf_secrets.uuid
   title = "morpheus-terraform"

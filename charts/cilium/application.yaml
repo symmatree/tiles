@@ -9,8 +9,8 @@ spec:
   project: "{{ .Values.cluster_name }}"
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
-    path: cilium
+    targetRevision: "{{ .Values.targetRevision }}"
+    path: charts/cilium
     helm:
       valueFiles:
         - values.yaml

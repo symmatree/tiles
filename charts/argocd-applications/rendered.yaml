@@ -25,37 +25,42 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argocd-applications
+  name: argocd
   namespace: argocd
   labels:
-    name: argocd-applications
+    name: argocd
 spec:
   project: "placeholder"
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: "main"
-    path: charts/argocd-applications
+    path: charts/argocd
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        # Propagate to other application.yaml files
         targetRevision: "main"
-        pod_cidr: "placeholder"
-        cluster_name: "placeholder"
-        cluster_id: "666"
-        external_ip_cidr: "placeholder-external-ip-cidr"
-        vault_name: "placeholder"
+
+        argo-cd:
+          global:
+            domain: "argocd.placeholder.symmatree.com"
+          server:
+            ingressGrpc:
+              hostname: "grpc-argocd.placeholder.symmatree.com"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
   syncPolicy:
-    # automated:
-    #   prune: true
-    #   selfHeal: true
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
+      - CreateNamespace=true
       - ServerSideApply=true
       - FailOnSharedResource=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
 ---
 # Source: argocd-applications/templates/argocd-applications-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -93,6 +98,42 @@ spec:
       - ServerSideApply=true
       - FailOnSharedResource=true
 ---
+# Source: argocd-applications/templates/cert-manager-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  labels:
+    name: cert-manager
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/cert-manager
+    helm:
+      skipCrds: true
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: "placeholder"
+        project_id: ""
+        vault_name: "placeholder"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+---
 # Source: argocd-applications/templates/cilium-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -105,8 +146,8 @@ spec:
   project: "placeholder"
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
-    path: cilium
+    targetRevision: "main"
+    path: charts/cilium
     helm:
       valueFiles:
         - values.yaml
@@ -165,9 +206,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: cilium
   syncPolicy:
-    # automated:
-    #   prune: true
-    #   selfHeal: true
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

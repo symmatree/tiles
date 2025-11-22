@@ -22,10 +22,10 @@ provider "github" {
 #   }
 # }
 
-output "github_token" {
-  sensitive = true
-  value = yamlencode(data.onepassword_item.github_token)
-}
+# output "github_token_debug" {
+#   sensitive = true
+#   value = yamlencode(data.onepassword_item.github_token)
+# }
 
 resource "github_repository" "tiles" {
   name          = "tiles"

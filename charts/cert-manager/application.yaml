@@ -9,7 +9,7 @@ spec:
   project: "{{ .Values.cluster_name }}"
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: "{{ .Values.targetRevision }}"
     path: charts/cert-manager
     helm:
       skipCrds: true
