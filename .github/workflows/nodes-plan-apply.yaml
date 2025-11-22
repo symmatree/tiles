@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       apply:
-        description: 'Whether to apply the plan after creating it'
+        description: "Whether to apply the plan after creating it"
         required: false
-        default: 'false'
+        default: "false"
   pull_request: {}
   push:
     branches:
@@ -83,39 +83,6 @@ jobs:
           wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
           conf_dir: "$HOME"
 
-      - name: DNS debug
-        run: |
-          set -euxo pipefail
-          echo "=== network interfaces ==="
-          cat /etc/network/interfaces || true
-          echo "=== resolv.conf ==="
-          cat /etc/resolv.conf || true
-
-          echo "=== ip route show ==="
-          sudo ip route show
-
-          echo "=== resolvectl status ==="
-          resolvectl status
-          echo "=== manual nslookup ==="
-          echo "Default dns"
-          nslookup nuc-g3p-1.local.symmatree.com || true
-          echo "Force 10.0.99.1"
-          nslookup nuc-g3p-1.local.symmatree.com 10.0.99.1 || true
-
-          # echo "Setting DNS to 10.0.99.1"
-          # sudo resolvectl dns wg0 10.0.99.1%wg0
-          # sudo resolvectl domain wg0 symmatree.com
-          # sudo resolvectl default-route wg0 true
-
-          echo "=== resolvectl status ==="
-          resolvectl status
-          echo "=== manual nslookup ==="
-          echo "Default dns"
-          nslookup nuc-g3p-1.local.symmatree.com || true
-          echo "Force 10.0.99.1"
-          nslookup nuc-g3p-1.local.symmatree.com 10.0.99.1 || true
-
-
       - name: Terraform plan nodes
         id: tf-plan
         env:
@@ -123,6 +90,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "::notice title=Terraform::$(terraform version)"
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           mkdir -p "${{ runner.temp }}/txt-outputs"
           terraform plan -lock-timeout=5m -input=false -out="${PLAN_FILE}"
