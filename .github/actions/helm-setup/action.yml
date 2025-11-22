@@ -34,5 +34,5 @@ runs:
       # cache-hit is only true for an exact match, including the date.
       run: |
         set -euo pipefail
-        helm repo update
+        "${GITHUB_WORKSPACE}/ci-tools/helm-add-repos.sh"
         "${GITHUB_WORKSPACE}/ci-tools/helm-update-all.sh"
