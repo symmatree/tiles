@@ -28,6 +28,7 @@ if ! kubectl get namespace cilium; then
 fi
 
 set -x
+kubectl config set-context --current --namespace=cilium
 helm template cilium charts/cilium --namespace cilium \
 	--skip-crds \
 	"${helm_args[@]}" \
@@ -46,7 +47,7 @@ if ! kubectl get namespace argocd; then
 	kubectl label namespace argocd "trust-bundle=enabled" --overwrite
 fi
 set -x
-kubens argocd
+kubectl config set-context --current --namespace=argocd
 helm template argocd charts/argocd --namespace argocd \
 	--skip-crds \
 	"${helm_args[@]}" \
