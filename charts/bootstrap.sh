@@ -61,5 +61,5 @@ set -x
 helm template argocd-applications charts/argocd-applications --namespace argocd \
 	--skip-crds \
 	"${helm_args[@]}" |
-	kubectl apply --server-side -f-
+	kubectl apply --server-side --force-conflicts -f-
 set +x
