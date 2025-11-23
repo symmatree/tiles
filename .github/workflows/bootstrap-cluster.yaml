@@ -118,9 +118,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          cd "${GITHUB_WORKSPACE}/charts"
-          ./install-crds.sh
-          ./bootstrap.sh
+          ./charts/install-crds.sh
+          ./charts/bootstrap.sh
 
       - name: De-wireguard
         if: always()
