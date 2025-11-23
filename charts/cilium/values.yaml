@@ -12,8 +12,6 @@ cilium:
     burst: 60
   cluster:
     name: placeholder
-    # Also a placeholder:
-    id: 666
   serviceAccounts:
     nodeinit:
       enabled: true

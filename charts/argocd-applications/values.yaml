@@ -1,6 +1,5 @@
 targetRevision: placeholder-revision
 pod_cidr: "placeholder-pod-cidr"
 cluster_name: "placeholder-cluster-name"
-cluster_id: "placeholder-cluster-id"
 external_ip_cidr: "placeholder-external-ip-cidr"
 vault_name: "placeholder-vault-name"

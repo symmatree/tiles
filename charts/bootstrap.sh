@@ -33,7 +33,6 @@ helm template cilium charts/cilium --namespace cilium \
 	"${helm_args[@]}" \
 	--set "cilium.ipv4NativeRoutingCIDR=${pod_cidr:?}" \
 	--set "cilium.cluster.name=${cluster_name:?}" \
-	--set "cilium.cluster.id=${cluster_id:?}" \
 	--set "cilium.hubble.ui.ingress.hosts[0]=hubble.${cluster_name:?}.symmatree.com" \
 	--set "cilium.hubble.ui.ingress.tls[0].secretName=hubble-ui-tls" \
 	--set "cilium.hubble.ui.ingress.tls[0].hosts[0]=hubble.${cluster_name:?}.symmatree.com" |

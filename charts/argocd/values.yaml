@@ -1,15 +1,6 @@
 # https://raw.githubusercontent.com/argoproj/argo-helm/refs/tags/argo-cd-7.8.23/charts/argo-cd/values.yaml
 # then deleted values we do not override.
 
-# Placeholders for the values that will be set by the bootstrap script.
-pod_cidr: placeholder
-cluster_name: placeholder
-cluster_id: 666
-external_ip_cidr: placeholder
-vault_name: placeholder
-
-targetRevision: main
-
 global:
   tolerations:
     - effect: NoSchedule
@@ -153,7 +144,7 @@ argo-cd:
             labels:
               severity: critical
             annotations:
-              summary: '[Argo CD] No reported applications'
+              summary: "[Argo CD] No reported applications"
               description: |
                 Argo CD has not reported any applications data for the past 15 minutes which means that it must be down or not functioning properly.  This needs to be resolved for this cloud to continue to maintain state.
           - alert: ArgoAppNotSynced
@@ -163,7 +154,7 @@ argo-cd:
             labels:
               severity: warning
             annotations:
-              summary: '[{{`{{$labels.name}}`}}] Application not synchronized'
+              summary: "[{{`{{$labels.name}}`}}] Application not synchronized"
               description: |
                 The application [{{`{{$labels.name}}`}} has not been synchronized for over 12 hours which means that the state of this cloud has drifted away from the state inside Git.
   ## Dex
