@@ -51,6 +51,14 @@ cert-manager:
       kubernetes.io/os: linux
       node-role.kubernetes.io/control-plane: ""
 trust-manager:
+  # The trust-manager has a webhook so really useful to have it on control plane.
+  tolerations:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/control-plane
+      operator: Exists
+  nodeSelector:
+    kubernetes.io/os: linux
+    node-role.kubernetes.io/control-plane: ""
   secretTargets:
     enabled: true
     authorizedSecrets:
