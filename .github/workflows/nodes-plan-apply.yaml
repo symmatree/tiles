@@ -4,8 +4,8 @@ on:
     inputs:
       apply:
         description: "Whether to apply the plan after creating it"
-        required: false
-        default: "false"
+        type: boolean
+        default: false
   pull_request: {}
   push:
     branches:

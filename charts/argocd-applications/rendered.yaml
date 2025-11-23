@@ -84,7 +84,7 @@ spec:
         targetRevision: "main"
         pod_cidr: "placeholder"
         cluster_name: "placeholder"
-        cluster_id: "666"
+        cluster_id: ""
         external_ip_cidr: "placeholder-external-ip-cidr"
         vault_name: "placeholder"
   destination:
@@ -158,7 +158,6 @@ spec:
           ipv4NativeRoutingCIDR: "placeholder"
           cluster:
             name: "placeholder"
-            id: "666"
           hubble:
             ui:
               ingress:

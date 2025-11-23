@@ -201,7 +201,7 @@ data:
   cluster-name: "placeholder"
   # Unique ID of the cluster. Must be unique across all conneted clusters and
   # in the range of 1 and 255. Only relevant when building a mesh of clusters.
-  cluster-id: "666"
+  cluster-id: "0"
 
   # Encapsulation mode for communication between nodes
   # Possible values:
@@ -1439,7 +1439,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "940eb4c781afcd33af3110d4d761f0faefea31be51dd927408ac6043180a1749"
+        cilium.io/cilium-configmap-checksum: "1c1cee072a3d2664c48a5ba647ae32462bd02752af99cfd7122330158a41e30f"
         # Set app AppArmor's profile to "unconfined". The value of this annotation
         # can be modified as long users know which profiles they have available
         # in AppArmor.
@@ -2125,7 +2125,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "940eb4c781afcd33af3110d4d761f0faefea31be51dd927408ac6043180a1749"
+        cilium.io/cilium-configmap-checksum: "1c1cee072a3d2664c48a5ba647ae32462bd02752af99cfd7122330158a41e30f"
       labels:
         io.cilium/app: operator
         name: cilium-operator

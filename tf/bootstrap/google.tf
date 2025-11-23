@@ -59,6 +59,18 @@ resource "google_project_iam_member" "tiles_tf_dns_admin" {
   member  = "serviceAccount:${google_service_account.tiles-tf.email}"
 }
 
+resource "google_project_iam_member" "tiles_tf_project_iam_admin" {
+  project = var.gcp_project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${google_service_account.tiles-tf.email}"
+}
+
+resource "google_project_iam_member" "tiles_tf_iam_security_admin" {
+  project = var.gcp_project_id
+  role    = "roles/iam.securityAdmin"
+  member  = "serviceAccount:${google_service_account.tiles-tf.email}"
+}
+
 output "gcp_tiles_tf_sa_email" {
   description = "The email of the Tiles TF service account."
   value       = google_service_account.tiles-tf.email
