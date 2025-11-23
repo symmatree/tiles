@@ -34,10 +34,6 @@ jobs:
           echo "TIMESTAMP=${timestamp}" | tee -a "$GITHUB_OUTPUT"
           echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
       - uses: "actions/checkout@v6"
-      - uses: "hashicorp/setup-terraform@v3"
-        with:
-          terraform_version: "1.13.3"
-
       - name: Determine kubeconfig secret
         id: kubeconfig_secret
         run: |
@@ -68,25 +64,7 @@ jobs:
             echo "project_id=${PROJECT_ID}";
           }>> "$GITHUB_ENV";
 
-      - name: Terraform cache
-        id: tf-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            **/.terraform
-          # Use date so we refetch once a day no matter what.
-          key: ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('**/.terraform.lock.hcl') }}
-          restore-keys: |
-            ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-
-            ${{ runner.os }}-tools-
-
-      - name: Terraform init
-        if: steps.tf-cache.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          cd "${GITHUB_WORKSPACE}/tf/nodes"
-          terraform init
-
+      - uses: ./.github/actions/helm-setup
       - uses: ./.github/actions/wg-quick
         id: wireguard
         with:
