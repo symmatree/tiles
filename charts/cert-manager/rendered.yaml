@@ -2260,13 +2260,13 @@ metadata:
   namespace: cert-manager
 spec:
   isCA: true
-  commonName: "placeholder-ca"
+  commonName: "placeholder"
   subject:
     organizations:
       - "placeholder"
     organizationalUnits:
       - "placeholder"
-  secretName: tales-ca-tls
+  secretName: "placeholder-ca-tls"
   privateKey:
     algorithm: ECDSA
     size: 256
@@ -2329,7 +2329,6 @@ apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: "placeholder-selfsigned-root"
-  namespace: "cert-manager"
 spec:
   selfSigned: {}
 ---

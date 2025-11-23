@@ -2,7 +2,6 @@ apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: "{{ .Values.cluster_name }}-selfsigned-root"
-  namespace: "{{ .Release.Namespace }}"
 spec:
   selfSigned: {}
 ---
@@ -13,13 +12,13 @@ metadata:
   namespace: cert-manager
 spec:
   isCA: true
-  commonName: "{{ .Values.cluster_name }}-ca"
+  commonName: "{{ .Values.cluster_name }}"
   subject:
     organizations:
       - "{{ .Values.cluster_name }}"
     organizationalUnits:
       - "{{ .Values.cluster_name }}"
-  secretName: tales-ca-tls
+  secretName: "{{ .Values.cluster_name }}-ca-tls"
   privateKey:
     algorithm: ECDSA
     size: 256
