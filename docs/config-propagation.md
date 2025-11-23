@@ -65,8 +65,9 @@ Terraform collects cluster configuration values from its variables and outputs, 
 - `cluster_name` - Name of the Kubernetes cluster
 - `pod_cidr` - CIDR range for pod IPs
 - `external_ip_cidr` - CIDR range for external IPs
+- `vault_name` - 1Password vault name (e.g., `tiles-secrets`)
 
-**Note:** `vault_name` is the 1Password vault name itself (currently `tiles-secrets`) and is hardcoded in the workflow. `project_id` is currently stored as a GitHub secret but can be migrated to misc-config in the future.
+**Note:** `project_id` is stored as a GitHub secret because it's required to run Terraform (for GCP authentication and resource creation). Since Terraform needs it to create the misc-config item, it cannot be stored in misc-config itself - that would create a circular dependency.
 
 **Benefits of this approach:**
 - **No environment variables required**: Humans can run `terraform plan` or `terraform apply` without providing a large number of environment variables - Terraform reads from its own variables and writes to 1Password
@@ -79,9 +80,8 @@ The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) pe
 
 1. **Loads sensitive secrets from 1Password** - Retrieves kubeconfig, GCP service account credentials, and VPN config
 2. **Loads cluster config from 1Password** - Uses the `1password/load-secrets-action` with `export-env: true` to retrieve all fields from the `{cluster_name}-misc-config` item's `config` section (which was previously written by Terraform) and export them directly as environment variables:
-   - Values from misc-config (targetRevision, pod_cidr, cluster_name, external_ip_cidr)
-   - `vault_name` (hardcoded to "tiles-secrets")
-   - `project_id` (from GitHub secret `PROJECT_ID`, can be migrated to misc-config)
+   - Values from misc-config (targetRevision, pod_cidr, cluster_name, external_ip_cidr, vault_name)
+   - `project_id` (from GitHub secret `PROJECT_ID` - required for Terraform to run, so cannot be in misc-config)
 3. **Calls bootstrap.sh** - The script reads environment variables, validates they are set, and converts them to Helm `--set` arguments
 
 ### 3. Bootstrap Script
@@ -364,9 +364,11 @@ This approach:
 ### 3. Environment-Specific Static Values
 
 **Source**: Environment configuration (not from Terraform)
-**Storage**: 1Password misc-config or GitHub secrets
+**Storage**: GitHub secrets or other external sources
 **Propagation**: Via bootstrap.sh → argocd-applications
-**Examples**: `vault_name`, `project_id` (currently GitHub secret, can migrate to misc-config)
+**Examples**: `project_id` (GitHub secret - required for Terraform to run, so cannot be in misc-config)
+
+Note: `vault_name` is now stored in misc-config and managed by Terraform, so it flows through the standard propagation mechanism. Values that are required to run Terraform (like `project_id` for GCP authentication) must remain external to avoid circular dependencies.
 
 These are typically hardcoded per-environment or stored separately from Terraform-managed values.
 
@@ -449,14 +451,15 @@ Document common patterns:
 - **Template expansion**: `domain: "{{ .Values.service }}.{{ .Values.cluster }}.domain.com"` - construct from multiple values
 - **Nested structures**: How to pass nested Helm values (like `argo-cd.global.domain`)
 
-### 6. Consider Migrating project_id to misc-config
+### 6. External Prerequisites Must Stay External
 
-Currently `project_id` is a GitHub secret. Consider:
-- Adding it to Terraform's misc_config
-- Updating the workflow to load it from 1Password
-- Removing the GitHub secret dependency
+Values that are required to run Terraform (like `project_id` for GCP authentication) cannot be stored in misc-config because Terraform needs them to create misc-config in the first place. This creates a circular dependency:
 
-This would make all non-secret config flow through the same mechanism.
+- Terraform needs `project_id` to authenticate to GCP
+- Terraform needs to run to create misc-config
+- Therefore, `project_id` cannot be in misc-config
+
+These values must remain in external sources (GitHub secrets, environment variables, etc.) that are available before Terraform runs. This is a design constraint, not a limitation to work around.
 
 ### Why Environment Variables?
 
@@ -464,9 +467,6 @@ This would make all non-secret config flow through the same mechanism.
 - **Standard Practice**: Common pattern for passing config to scripts
 - **Validation**: `bootstrap.sh` validates all required variables are set before proceeding
 
-### Future Migration Path
+### Why project_id Stays External
 
-Currently, `project_id` is stored as a GitHub secret. It can be migrated to misc-config by:
-1. Adding `project_id` field to Terraform's `misc_config` resource
-2. Updating the workflow to load it from 1Password instead of GitHub secrets
-3. Removing the GitHub secret reference
+`project_id` must remain as a GitHub secret (or other external source) because it's required for Terraform to authenticate to GCP and create resources. Since Terraform needs `project_id` to run, and Terraform creates misc-config, storing `project_id` in misc-config would create a circular dependency. This is an intentional design constraint.
