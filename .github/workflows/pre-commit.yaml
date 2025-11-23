@@ -32,7 +32,7 @@ jobs:
           SKIP: "no-commit-to-branch"
         with:
           # What's a little script injection between friends?
-          extra_args: '--all-files | tee "${{ runner.temp }}/txt-outputs/pre-commit.txt"'
+          extra_args: '--color=never --all-files | tee "${{ runner.temp }}/txt-outputs/pre-commit.txt"'
 
       - name: Capture diffs for PR
         if: (success() || failure()) && github.event_name == 'pull_request'
