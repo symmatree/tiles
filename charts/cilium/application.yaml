@@ -21,7 +21,6 @@ spec:
           ipv4NativeRoutingCIDR: "{{ .Values.pod_cidr }}"
           cluster:
             name: "{{ .Values.cluster_name }}"
-            id: "{{ .Values.cluster_id }}"
           hubble:
             ui:
               ingress:
