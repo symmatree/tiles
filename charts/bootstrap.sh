@@ -25,39 +25,41 @@ if ! kubectl get namespace cilium; then
 	kubectl create namespace cilium
 	kubectl label namespace cilium "pod-security.kubernetes.io/warn=baseline" --overwrite
 	kubectl label namespace cilium "pod-security.kubernetes.io/enforce=privileged" --overwrite
-fi
 
-set -x
-kubectl config set-context --current --namespace=cilium
-helm template cilium charts/cilium --namespace cilium \
-	--skip-crds \
-	"${helm_args[@]}" \
-	--set "cilium.ipv4NativeRoutingCIDR=${pod_cidr:?}" \
-	--set "cilium.cluster.name=${cluster_name:?}" \
-	--set "cilium.hubble.ui.ingress.hosts[0]=hubble.${cluster_name:?}.symmatree.com" \
-	--set "cilium.hubble.ui.ingress.tls[0].secretName=hubble-ui-tls" \
-	--set "cilium.hubble.ui.ingress.tls[0].hosts[0]=hubble.${cluster_name:?}.symmatree.com" |
-	kubectl apply --server-side -f-
-set +x
+	set -x
+	kubectl config set-context --current --namespace=cilium
+	helm template cilium charts/cilium --namespace cilium \
+		--skip-crds \
+		"${helm_args[@]}" \
+		--set "cilium.ipv4NativeRoutingCIDR=${pod_cidr:?}" \
+		--set "cilium.cluster.name=${cluster_name:?}" \
+		--set "cilium.hubble.ui.ingress.hosts[0]=hubble.${cluster_name:?}.symmatree.com" \
+		--set "cilium.hubble.ui.ingress.tls[0].secretName=hubble-ui-tls" \
+		--set "cilium.hubble.ui.ingress.tls[0].hosts[0]=hubble.${cluster_name:?}.symmatree.com" |
+		kubectl apply --server-side -f-
+	set +x
+fi
 
 if ! kubectl get namespace argocd; then
 	kubectl create namespace argocd
 	kubectl label namespace argocd "pod-security.kubernetes.io/warn=baseline" --overwrite
 	kubectl label namespace argocd "pod-security.kubernetes.io/enforce=privileged" --overwrite
 	kubectl label namespace argocd "trust-bundle=enabled" --overwrite
-fi
-set -x
-kubectl config set-context --current --namespace=argocd
-helm template argocd charts/argocd --namespace argocd \
-	--skip-crds \
-	"${helm_args[@]}" \
-	--set "argo-cd.global.domain=argocd.${cluster_name:?}.symmatree.com" \
-	--set "argo-cd.server.ingressGrpc.hostname=grpc-argocd.${cluster_name:?}.symmatree.com" |
-	kubectl apply --server-side -f-
+	set -x
+	kubectl config set-context --current --namespace=argocd
 
+	helm template argocd charts/argocd --namespace argocd \
+		--skip-crds \
+		"${helm_args[@]}" \
+		--set "argo-cd.global.domain=argocd.${cluster_name:?}.symmatree.com" \
+		--set "argo-cd.server.ingressGrpc.hostname=grpc-argocd.${cluster_name:?}.symmatree.com" |
+		kubectl apply --server-side -f-
+	set +x
+fi
+
+set -x
 helm template argocd-applications charts/argocd-applications --namespace argocd \
 	--skip-crds \
 	"${helm_args[@]}" |
 	kubectl apply --server-side -f-
-
 set +x
