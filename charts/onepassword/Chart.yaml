@@ -1,0 +1,10 @@
+apiVersion: v2
+name: onepassword
+description: 1Password Connect Server and Operator
+type: application
+version: 0.1.1
+appVersion: "2.0.5"
+dependencies:
+  - name: connect
+    version: 2.0.5
+    repository: https://1password.github.io/connect-helm-charts/

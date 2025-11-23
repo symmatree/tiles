@@ -8,6 +8,8 @@ required_vars=(
 	"external_ip_cidr"
 	"vault_name"
 	"project_id"
+	"onepassword_operator_token"
+	"onepassword_connect_credentials"
 )
 
 # Build helm args array
@@ -56,6 +58,8 @@ if ! kubectl get namespace argocd; then
 		kubectl apply --server-side -f-
 	set +x
 fi
+
+charts/onepassword/make-secrets.sh
 
 set -x
 helm template argocd-applications charts/argocd-applications --namespace argocd \

@@ -1,0 +1,31 @@
+# https://raw.githubusercontent.com/1Password/connect-helm-charts/refs/tags/connect-1.17.0/charts/connect/values.yaml
+# with values removed unless overriding.
+
+connect:
+  # This section of values is for 1Password Connect API and Sync Configuration
+  connect:
+    # The 1Password Connect API Specific Values
+    api:
+      serviceMonitor:
+        enabled: true
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: ""
+    ingress:
+      # Until we have a use case, reduce surface area.
+      enabled: false
+  operator:
+    # Denotes whether the 1Password Operator will be deployed
+    create: true
+    # Useful to have it run even when the workers are shut down.
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+    nodeSelector:
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: ""
