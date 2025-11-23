@@ -107,7 +107,7 @@ jobs:
           pod_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/pod_cidr"
           cluster_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_name"
           external_ip_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/external_ip_cidr"
-          vault_name: "tiles-secrets"
+          vault_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/vault_name"
           project_id: ${{ secrets.PROJECT_ID }}
 
       - name: Bootstrap cluster

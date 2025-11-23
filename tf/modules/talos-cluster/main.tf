@@ -209,10 +209,10 @@ resource "onepassword_item" "talosconfig" {
 }
 
 resource "onepassword_item" "misc_config" {
-  count      = var.start_vms ? 1 : 0
-  vault      = var.onepassword_vault
-  title      = "${var.cluster_name}-misc-config"
-  category   = "secure_note"
+  count    = var.start_vms ? 1 : 0
+  vault    = var.onepassword_vault
+  title    = "${var.cluster_name}-misc-config"
+  category = "secure_note"
   section {
     label = "config"
     field {
@@ -230,6 +230,10 @@ resource "onepassword_item" "misc_config" {
     field {
       label = "external_ip_cidr"
       value = var.external_ip_cidr
+    }
+    field {
+      label = "vault_name"
+      value = var.onepassword_vault
     }
   }
   section {
