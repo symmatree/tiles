@@ -61,8 +61,12 @@ jobs:
         run: |
           set -euo pipefail
           echo '${{ steps.load_secrets.outputs.GCP_TILES_TF_SA_KEY }}' > "${RUNNER_TEMP}/gcp-sa-key.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json" >> "$GITHUB_ENV"
-          echo "GOOGLE_CLOUD_PROJECT=${{ secrets.PROJECT_ID }}" >> "$GITHUB_ENV"
+          PROJECT_ID=$(jq -r '.project_id' "${RUNNER_TEMP}/gcp-sa-key.json")
+          {
+            echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json";
+            echo "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}";
+            echo "project_id=${PROJECT_ID}";
+          }>> "$GITHUB_ENV";
 
       - name: Terraform cache
         id: tf-cache
@@ -112,8 +116,6 @@ jobs:
       - name: Bootstrap cluster
         id: bootstrap-cluster
         shell: bash
-        env:
-          project_id: ${{ secrets.PROJECT_ID }}
         run: |
           set -euxo pipefail
           cd "${GITHUB_WORKSPACE}/charts"
