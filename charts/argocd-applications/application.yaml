@@ -19,9 +19,9 @@ spec:
         targetRevision: "{{ .Values.targetRevision }}"
         pod_cidr: "{{ .Values.pod_cidr }}"
         cluster_name: "{{ .Values.cluster_name }}"
-        cluster_id: "{{ .Values.cluster_id }}"
         external_ip_cidr: "{{ .Values.external_ip_cidr }}"
         vault_name: "{{ .Values.vault_name }}"
+        project_id: "{{ .Values.project_id }}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

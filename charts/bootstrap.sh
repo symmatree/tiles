@@ -3,11 +3,11 @@ set -euo pipefail
 
 required_vars=(
 	"targetRevision"
-	"cluster_name"
-	"cluster_id"
 	"pod_cidr"
-	"vault_name"
+	"cluster_name"
 	"external_ip_cidr"
+	"vault_name"
+	"project_id"
 )
 
 # Build helm args array

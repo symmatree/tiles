@@ -97,6 +97,19 @@ jobs:
           chmod 600 "${kubeconfig_path}"
           echo "KUBECONFIG=${kubeconfig_path}" >> "$GITHUB_ENV"
 
+      - name: Load cluster config from 1Password
+        uses: 1password/load-secrets-action@v3
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          targetRevision: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/targetRevision"
+          pod_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/pod_cidr"
+          cluster_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_name"
+          external_ip_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/external_ip_cidr"
+          vault_name: "tiles-secrets"
+          project_id: ${{ secrets.PROJECT_ID }}
+
       - name: Bootstrap cluster
         id: bootstrap-cluster
         shell: bash
@@ -104,7 +117,7 @@ jobs:
           set -euxo pipefail
           cd "${GITHUB_WORKSPACE}/charts"
           ./install-crds.sh
-          ./bootstrap-cluster.sh
+          ./bootstrap.sh
 
       - name: De-wireguard
         if: always()

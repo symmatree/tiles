@@ -40,7 +40,6 @@ spec:
         - values.yaml
       valuesObject:
         targetRevision: "main"
-
         argo-cd:
           global:
             domain: "argocd.placeholder.symmatree.com"
@@ -84,9 +83,9 @@ spec:
         targetRevision: "main"
         pod_cidr: "placeholder"
         cluster_name: "placeholder"
-        cluster_id: ""
         external_ip_cidr: "placeholder-external-ip-cidr"
         vault_name: "placeholder"
+        project_id: "placeholder-project-id"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -118,7 +117,7 @@ spec:
         - values.yaml
       valuesObject:
         cluster_name: "placeholder"
-        project_id: ""
+        project_id: "placeholder-project-id"
         vault_name: "placeholder"
   destination:
     server: https://kubernetes.default.svc

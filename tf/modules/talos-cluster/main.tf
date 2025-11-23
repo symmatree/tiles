@@ -228,10 +228,6 @@ resource "onepassword_item" "misc_config" {
       value = var.cluster_name
     }
     field {
-      label = "cluster_id"
-      value = 2
-    }
-    field {
       label = "external_ip_cidr"
       value = var.external_ip_cidr
     }

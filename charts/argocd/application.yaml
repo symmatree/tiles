@@ -16,7 +16,6 @@ spec:
         - values.yaml
       valuesObject:
         targetRevision: "{{ .Values.targetRevision }}"
-
         argo-cd:
           global:
             domain: "argocd.{{ .Values.cluster_name }}.symmatree.com"
