@@ -1,14 +1,15 @@
 
 
 module "tiles-test" {
-  source              = "../modules/talos-cluster"
-  proxmox_storage_iso = var.proxmox_storage_iso
-  cluster_name        = "tiles-test"
-  start_vms           = true
-  apply_configs       = true
-  run_bootstrap       = true
-  onepassword_vault   = data.onepassword_vault.tf_secrets.uuid
-  talos               = local.talos_configs["test"]
+  source                 = "../modules/talos-cluster"
+  proxmox_storage_iso    = var.proxmox_storage_iso
+  cluster_name           = "tiles-test"
+  start_vms              = true
+  apply_configs          = true
+  run_bootstrap          = true
+  onepassword_vault      = data.onepassword_vault.tf_secrets.uuid
+  onepassword_vault_name = data.onepassword_vault.tf_secrets.name
+  talos                  = local.talos_configs["test"]
   nodes_to_iso_ids = {
     for node_name in data.proxmox_virtual_environment_nodes.nodes.names :
     node_name => local.nodes_to_iso_ids[node_name]["test"]

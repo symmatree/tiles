@@ -91,6 +91,11 @@ variable "onepassword_vault" {
   type        = string
 }
 
+variable "onepassword_vault_name" {
+  description = "1Password vault name (e.g., 'tiles-secrets')."
+  type        = string
+}
+
 # Load base configuration from YAML file
 locals {
   base_config_yaml = file("${path.module}/talos-config.yaml")
@@ -233,7 +238,7 @@ resource "onepassword_item" "misc_config" {
     }
     field {
       label = "vault_name"
-      value = var.onepassword_vault
+      value = var.onepassword_vault_name
     }
   }
   section {
