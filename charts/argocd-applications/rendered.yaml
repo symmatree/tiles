@@ -215,6 +215,48 @@ spec:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
 ---
+# Source: argocd-applications/templates/external-dns-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+  labels:
+    name: external-dns
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/external-dns
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: "placeholder"
+        project_id: "placeholder-project-id"
+        vault_name: "placeholder"
+        external-dns:
+          txtOwnerId: "placeholder"
+          domainFilters:
+            - "placeholder.symmatree.com"
+            - 0.10.in-addr.arpa
+          extraArgs:
+            - --google-project="placeholder-project-id"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+---
 # Source: argocd-applications/templates/onepassword-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
