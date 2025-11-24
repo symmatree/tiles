@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
 # We have to create ourselves for the initial secrets.
 if ! kubectl get namespace onepassword; then
@@ -19,8 +19,9 @@ if ! kubectl get secret op-credentials -n onepassword; then
 	# where the plaintext is base64 encoded before being put in the secret (probably due to misunderstanding).
 
 	# Read in separate assignment so we bail on errors.
-	JSON=${onepassword_connect_credentials:?}
+	JSON=$(echo "${onepassword_connect_credentials:?}" | base64)
+	echo "::add-mask::${JSON}"
 	kubectl create secret generic -n onepassword \
 		op-credentials \
-		"--from-literal=1password-credentials.json=$(echo "$JSON" | base64)"
+		"--from-literal=1password-credentials.json=${JSON}"
 fi
