@@ -1,5 +1,26 @@
 
-
+locals {
+  test_vms = {
+    "tiles-test-cp" : {
+      type              = "control"
+      proxmox_node_name = "nuc-g3p-2"
+      vm_id             = 7411
+      cores             = 1
+      ram_mb            = 3000
+      mac_address       = "bc:24:11:d0:74:11"
+      ip_address        = "10.0.192.11"
+    }
+    "tiles-test-wk" : {
+      type              = "worker"
+      proxmox_node_name = "nuc-g3p-2"
+      vm_id             = 7421
+      cores             = 3
+      ram_mb            = 11000
+      mac_address       = "bc:24:11:d0:74:21"
+      ip_address        = "10.0.192.21"
+    }
+  }
+}
 module "tiles-test" {
   source                 = "../modules/talos-cluster"
   proxmox_storage_iso    = var.proxmox_storage_iso
@@ -15,10 +36,10 @@ module "tiles-test" {
     node_name => local.nodes_to_iso_ids[node_name]["test"]
   }
 
-  external_ip_cidr  = "10.0.106.0/24"
-  pod_cidr          = "10.0.107.0/24"
-  service_cidr      = "10.0.108.0/24"
-  control_plane_vip = "10.0.105.10"
+  external_ip_cidr  = "10.0.193.0/24"
+  pod_cidr          = "10.0.208.0/20"
+  service_cidr      = "10.0.200.0/21"
+  control_plane_vip = "10.0.192.10"
   vms               = local.test_vms
 }
 

@@ -1,6 +1,3 @@
-targetRevision: placeholder-revision
-external_ip_cidr: placeholder-external-ip-cidr
-
 # Initialized from
 # https://raw.githubusercontent.com/cilium/cilium/refs/heads/main/install/kubernetes/cilium/values.yaml
 # Deleted all values I'm not changing.

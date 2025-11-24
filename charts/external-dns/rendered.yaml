@@ -84,51 +84,6 @@ spec:
       targetPort: http
       protocol: TCP
 ---
-# Source: external-dns/templates/static-hosts.yaml
-kind: Service
-apiVersion: v1
-metadata:
-  name: raconteur
-  namespace: "external-dns"
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: raconteur.ad.local.symmatree.com
-spec:
-  type: ExternalName
-  externalName: 10.0.99.1
----
-# Source: external-dns/templates/static-hosts.yaml
-kind: Service
-apiVersion: v1
-metadata:
-  name: cam
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: cam.local.symmatree.com
-spec:
-  type: ExternalName
-  externalName: raconteur.ad.local.symmatree.com
----
-# Source: external-dns/templates/static-hosts.yaml
-kind: Service
-apiVersion: v1
-metadata:
-  name: photos
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: photos.local.symmatree.com
-spec:
-  type: ExternalName
-  externalName: raconteur.ad.local.symmatree.com
----
-# Source: external-dns/templates/static-hosts.yaml
-kind: Service
-apiVersion: v1
-metadata:
-  name: morpheus
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: morpheus.local.symmatree.com
-spec:
-  type: ExternalName
-  externalName: 10.0.0.1
----
 # Source: external-dns/charts/external-dns/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
