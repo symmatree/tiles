@@ -16,7 +16,6 @@ spec:
         - values.yaml
       # Inject values from Terraform or that vary by environment.
       valuesObject:
-        external_ip_cidr: "{{ .Values.external_ip_cidr }}"
         cilium:
           ipv4NativeRoutingCIDR: "{{ .Values.pod_cidr }}"
           cluster:

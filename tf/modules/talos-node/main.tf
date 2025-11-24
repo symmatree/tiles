@@ -1,12 +1,3 @@
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    proxmox = {
-      source  = "bpg/proxmox"
-      version = ">= 0.84"
-    }
-  }
-}
 
 # Upload Talos ISOs to Proxmox node
 resource "proxmox_virtual_environment_download_file" "talos_iso" {
