@@ -21,6 +21,10 @@ spec:
           cluster:
             name: "{{ .Values.cluster_name }}"
           hubble:
+            tls:
+              auto:
+                certManagerIssuerRef:
+                  name: "{{ .Values.cluster_name }}-ca-issuer"
             ui:
               ingress:
                 hosts:

@@ -144,7 +144,7 @@ cilium:
         certManagerIssuerRef:
           group: cert-manager.io
           kind: ClusterIssuer
-          name: "{{ .Values.cluster_name }}-ca-issuer"
+          name: "placeholder-ca-issuer"
     relay:
       # -- Enable Hubble Relay (requires hubble.enabled=true)
       enabled: true

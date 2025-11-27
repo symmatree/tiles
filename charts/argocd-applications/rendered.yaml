@@ -157,6 +157,10 @@ spec:
           cluster:
             name: "placeholder"
           hubble:
+            tls:
+              auto:
+                certManagerIssuerRef:
+                  name: "placeholder-ca-issuer"
             ui:
               ingress:
                 hosts:
