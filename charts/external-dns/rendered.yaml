@@ -146,7 +146,7 @@ spec:
             - --domain-filter=placeholder-cluster-name.symmatree.com
             - --domain-filter=0.10.in-addr.arpa
             - --provider=google
-            - --google-project="placeholder-project-id"
+            - --google-project=placeholder-project-id
           ports:
             - name: http
               protocol: TCP

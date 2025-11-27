@@ -24,7 +24,7 @@ spec:
             - "{{ .Values.cluster_name }}.symmatree.com"
             - 0.10.in-addr.arpa
           extraArgs:
-            - --google-project="{{ .Values.project_id }}"
+            - "--google-project={{ .Values.project_id }}"
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns
