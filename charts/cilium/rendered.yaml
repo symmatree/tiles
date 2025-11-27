@@ -2513,7 +2513,7 @@ spec:
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
-    name: '{{ .Values.cluster_name }}-ca-issuer'
+    name: placeholder-ca-issuer
   secretName: hubble-relay-client-certs
   commonName: "*.hubble-relay.cilium.io"
   dnsNames:
@@ -2537,7 +2537,7 @@ spec:
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
-    name: '{{ .Values.cluster_name }}-ca-issuer'
+    name: placeholder-ca-issuer
   secretName: hubble-server-certs
   commonName: "*.placeholder.hubble-grpc.cilium.io"
   dnsNames:
