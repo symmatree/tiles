@@ -5,6 +5,14 @@ resource "google_service_account" "external_dns" {
   project      = var.project_id
 }
 
+# Grant project-level permission to list zones (required for external-dns to discover zones)
+resource "google_project_iam_member" "external_dns_dns_reader" {
+  project = var.project_id
+  role    = "roles/dns.reader"
+  member  = "serviceAccount:${google_service_account.external_dns.email}"
+}
+
+# Grant zone-level permission to manage records in the public zone
 resource "google_dns_managed_zone_iam_member" "external_dns_public" {
   project      = var.project_id
   managed_zone = module.dns-public-zone.name

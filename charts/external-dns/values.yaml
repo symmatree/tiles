@@ -28,7 +28,7 @@ external-dns:
   provider:
     name: google
   extraArgs:
-    - --google-project="placeholder-project-id"
+    - --google-project=placeholder-project-id
   env:
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: /etc/secrets/service-account/credential.json
