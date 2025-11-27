@@ -45,7 +45,9 @@ module "dns-public-zone" {
 
 # Get the Cloudflare zone for symmatree.com
 data "cloudflare_zone" "parent_zone" {
-  name = "symmatree.com"
+  filter = {
+    name = "symmatree.com"
+  }
 }
 
 # Create NS records in Cloudflare to delegate the subdomain to Google Cloud DNS
