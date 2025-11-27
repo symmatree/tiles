@@ -46,4 +46,13 @@ provider "unifi" {
   allow_insecure = true
 }
 
+data "onepassword_item" "cloudflare_api_token" {
+  vault = data.onepassword_vault.tf_secrets.uuid
+  title = "cloudflare-api-token"
+}
+
+provider "cloudflare" {
+  api_token = data.onepassword_item.cloudflare_api_token.password
+}
+
 data "proxmox_virtual_environment_nodes" "nodes" {}

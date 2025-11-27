@@ -42,3 +42,19 @@ module "dns-public-zone" {
     }
   ]
 }
+
+# Get the Cloudflare zone for symmatree.com
+data "cloudflare_zone" "parent_zone" {
+  name = "symmatree.com"
+}
+
+# Create NS records in Cloudflare to delegate the subdomain to Google Cloud DNS
+resource "cloudflare_record" "delegation" {
+  count = length(module.dns-public-zone.name_servers)
+
+  zone_id = data.cloudflare_zone.parent_zone.id
+  name    = var.cluster_name
+  type    = "NS"
+  ttl     = 300
+  value   = module.dns-public-zone.name_servers[count.index]
+}
