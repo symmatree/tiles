@@ -25,16 +25,16 @@ resource "google_service_account_key" "external_dns_sa_key" {
 }
 
 resource "onepassword_item" "external_dns_clouddns_sa_key" {
-  vault      = var.onepassword_vault
-  title      = "${var.cluster_name}-external-dns-clouddns-sa-key"
-  category   = "secure_note"
+  vault    = var.onepassword_vault
+  title    = "${var.cluster_name}-external-dns-clouddns-sa-key"
+  category = "secure_note"
   section {
     label = "credentials"
     field {
       # This label is referenced in charts/external-dns/templates/clouddns-sa-secret.yaml
       label = "credential.json"
       value = base64decode(google_service_account_key.external_dns_sa_key.private_key)
-      type = "CONCEALED"
+      type  = "CONCEALED"
     }
   }
   section {
@@ -55,6 +55,6 @@ resource "onepassword_item" "external_dns_clouddns_sa_key" {
 }
 
 output "external_dns_clouddns_sa_key" {
-  value = google_service_account_key.external_dns_sa_key.private_key
+  value     = google_service_account_key.external_dns_sa_key.private_key
   sensitive = true
 }

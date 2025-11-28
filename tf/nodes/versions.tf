@@ -29,6 +29,10 @@ terraform {
       source  = "hashicorp/helm"
       version = ">= 2.7.0"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = ">= 4.0"
+    }
   }
   backend "gcs" {
     bucket = "custodes-tf-state"
