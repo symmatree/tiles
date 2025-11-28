@@ -58,6 +58,6 @@ resource "cloudflare_dns_record" "delegation" {
   name    = var.cluster_name
   type    = "NS"
   ttl     = 300
-  content = module.dns-public-zone.name_servers[count.index]
+  content = trimsuffix(module.dns-public-zone.name_servers[count.index], ".")
   comment = "Managed by Terraform"
 }
