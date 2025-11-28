@@ -1028,7 +1028,7 @@ rules:
   - "secrets"
   verbs: ["create", "patch", "delete"]
   resourceNames: 
-  - '{{ .Values.cluster_name }}-ca-tls'
+  - placeholder-authorized-secret
 ---
 # Source: cert-manager/charts/cert-manager/templates/cainjector-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1

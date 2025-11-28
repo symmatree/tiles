@@ -119,6 +119,10 @@ spec:
         cluster_name: "placeholder"
         project_id: "placeholder-project-id"
         vault_name: "placeholder"
+        trust-manager:
+          secretTargets:
+            authorizedSecrets:
+              - "placeholder-ca-tls"
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
