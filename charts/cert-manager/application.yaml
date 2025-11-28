@@ -19,6 +19,10 @@ spec:
         cluster_name: "{{ .Values.cluster_name }}"
         project_id: "{{ .Values.project_id }}"
         vault_name: "{{ .Values.vault_name }}"
+        trust-manager:
+          secretTargets:
+            authorizedSecrets:
+              - "{{ .Values.cluster_name }}-ca-tls"
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager

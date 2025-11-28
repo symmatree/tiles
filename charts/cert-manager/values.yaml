@@ -1,8 +1,10 @@
+# Values for templates/
+cluster_name: placeholder-cluster-name
+vault_name: placeholder-vault-name
+
 # From
 # https://raw.githubusercontent.com/cert-manager/cert-manager/refs/tags/v1.17.1/deploy/charts/cert-manager/values.yaml
 # keeping only values we override (or want to).
-cluster_name: placeholder-cluster-name
-
 cert-manager:
   global:
     # The number of old ReplicaSets to retain to allow rollback (if not set, the default Kubernetes value is set to 10).
@@ -62,4 +64,4 @@ trust-manager:
   secretTargets:
     enabled: true
     authorizedSecrets:
-      - "{{ .Values.cluster_name }}-ca-tls"
+      - "placeholder-authorized-secret"
