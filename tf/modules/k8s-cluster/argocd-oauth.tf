@@ -23,7 +23,7 @@ resource "google_iam_oauth_client" "argocd" {
   location              = "global"
   oauth_client_id       = "${var.cluster_name}-argocd-oauth"
   display_name          = "${var.cluster_name}-argocd-oauth"
-  allowed_grant_types   = ["AUTHORIZATION_CODE"]
+  allowed_grant_types   = ["AUTHORIZATION_CODE_GRANT"]
   allowed_scopes        = ["openid", "email"]
   allowed_redirect_uris = ["${var.argocd_url}/api/dex/callback"]
 }
