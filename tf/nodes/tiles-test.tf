@@ -48,9 +48,6 @@ module "k8s-test" {
   project_id        = var.project_id
   cluster_name      = "tiles-test"
   onepassword_vault = data.onepassword_vault.tf_secrets.uuid
-
-  # OAuth configuration for ArgoCD
-  argocd_url = "https://argocd.tiles-test.symmatree.com"
 }
 
 output "test_machine_secrets" {

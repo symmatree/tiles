@@ -153,9 +153,10 @@ data:
         name: Google
         config:
           issuer: https://accounts.google.com
-          # Connector config values starting with a "$" will read from the environment.
-          clientID: $OAUTH_CLIENT_ID
-          clientSecret: $OAUTH_CLIENT_SECRET
+          # Connector config values starting with "$" reference Kubernetes secrets.
+          # Format: $<secret-name>:<key>
+          clientID: $google-oauth-secret:OAUTH_CLIENT_ID
+          clientSecret: $google-oauth-secret:OAUTH_CLIENT_SECRET
   exec.enabled: "true"
   resource.customizations.ignoreResourceUpdates.ConfigMap: |
     jqPathExpressions:
@@ -1750,7 +1751,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 36c312ea6311a58f56dbec296bc68e7e67af663770ed76ca2bb46b7b6860dec5
-        checksum/cm: 5f71442c8a2cd79e017d4333cfbcf60904a6f7dcc583a5ed55a7ed987031aa40
+        checksum/cm: 19bad523f5398af90f985a2e413d79aeea0505ec8241eec0353ea599d6afd744
       labels:
         helm.sh/chart: argo-cd-9.1.1
         app.kubernetes.io/name: argocd-repo-server
@@ -2195,7 +2196,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 36c312ea6311a58f56dbec296bc68e7e67af663770ed76ca2bb46b7b6860dec5
-        checksum/cm: 5f71442c8a2cd79e017d4333cfbcf60904a6f7dcc583a5ed55a7ed987031aa40
+        checksum/cm: 19bad523f5398af90f985a2e413d79aeea0505ec8241eec0353ea599d6afd744
       labels:
         helm.sh/chart: argo-cd-9.1.1
         app.kubernetes.io/name: argocd-server
@@ -2663,7 +2664,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 36c312ea6311a58f56dbec296bc68e7e67af663770ed76ca2bb46b7b6860dec5
-        checksum/cm: 5f71442c8a2cd79e017d4333cfbcf60904a6f7dcc583a5ed55a7ed987031aa40
+        checksum/cm: 19bad523f5398af90f985a2e413d79aeea0505ec8241eec0353ea599d6afd744
       labels:
         helm.sh/chart: argo-cd-9.1.1
         app.kubernetes.io/name: argocd-dex-server
@@ -2709,9 +2710,6 @@ spec:
                 name: argocd-cmd-params-cm
                 key: dexserver.disable.tls
                 optional: true
-        envFrom:
-          - secretRef:
-              name: google-oauth-secret
         ports:
         - name: http
           containerPort: 5556
@@ -2918,7 +2916,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 36c312ea6311a58f56dbec296bc68e7e67af663770ed76ca2bb46b7b6860dec5
-        checksum/cm: 5f71442c8a2cd79e017d4333cfbcf60904a6f7dcc583a5ed55a7ed987031aa40
+        checksum/cm: 19bad523f5398af90f985a2e413d79aeea0505ec8241eec0353ea599d6afd744
       labels:
         helm.sh/chart: argo-cd-9.1.1
         app.kubernetes.io/name: argocd-application-controller

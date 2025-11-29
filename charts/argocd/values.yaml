@@ -53,9 +53,10 @@ argo-cd:
             name: Google
             config:
               issuer: https://accounts.google.com
-              # Connector config values starting with a "$" will read from the environment.
-              clientID: $OAUTH_CLIENT_ID
-              clientSecret: $OAUTH_CLIENT_SECRET
+              # Connector config values starting with "$" reference Kubernetes secrets.
+              # Format: $<secret-name>:<key>
+              clientID: $google-oauth-secret:OAUTH_CLIENT_ID
+              clientSecret: $google-oauth-secret:OAUTH_CLIENT_SECRET
       # Override this whole value just to remove Endpoints (needed for Cilium)
       resource.exclusions: |
         ### Network resources created by the Kubernetes control plane and excluded to reduce the number of watched events and UI clutter
@@ -160,9 +161,6 @@ argo-cd:
   ## Dex
   dex:
     enabled: true
-    envFrom:
-      - secretRef:
-          name: google-oauth-secret
     metrics:
       # -- Deploy metrics service
       enabled: true
