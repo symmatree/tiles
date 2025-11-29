@@ -36,7 +36,7 @@ resource "google_iam_oauth_client_credential" "argocd" {
   project                    = google_iam_oauth_client.argocd.project
   location                   = google_iam_oauth_client.argocd.location
   oauthclient                = google_iam_oauth_client.argocd.oauth_client_id
-  oauth_client_credential_id = "${var.cluster_name}-argocd-oauth-credential"
+  oauth_client_credential_id = "${var.cluster_name}-argocd"
 }
 
 # Store credentials in 1Password
