@@ -3338,7 +3338,7 @@ metadata:
   namespace: "argocd"
 type: Opaque
 spec:
-  itemPath: vaults/tales-secrets/items/argocd-google-oauth
+  itemPath: vaults/tiles-secrets/items/argocd-google-oauth
 ---
 # Source: argocd/charts/argo-cd/templates/redis-secret-init/serviceaccount.yaml
 apiVersion: v1
