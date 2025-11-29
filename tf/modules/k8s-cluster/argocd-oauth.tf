@@ -33,9 +33,9 @@ resource "google_iam_oauth_client" "argocd" {
 # Create OAuth client credential to get the client secret
 # Reference: https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/iam_oauth_client_credential
 resource "google_iam_oauth_client_credential" "argocd" {
-  project                    = var.project_id
-  location                   = "global"
-  oauthclient                = google_iam_oauth_client.argocd.name
+  project                    = google_iam_oauth_client.argocd.project
+  location                   = google_iam_oauth_client.argocd.location
+  oauthclient                = google_iam_oauth_client.argocd.oauth_client_id
   oauth_client_credential_id = "${var.cluster_name}-argocd-oauth-credential"
 }
 
