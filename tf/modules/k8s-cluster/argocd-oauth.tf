@@ -16,19 +16,9 @@ variable "argocd_url" {
   type        = string
 }
 
-# Get the current identity (service account) being used by Terraform
-data "google_client_openid_userinfo" "current" {}
-
-# Grant the Terraform service account permission to create OAuth clients
-# The service account has roles/resourcemanager.projectIamAdmin so it can grant itself this permission
-resource "google_project_iam_member" "terraform_oauth_client_admin" {
-  project = var.project_id
-  role    = "roles/iam.securityAdmin"
-  member  = "serviceAccount:${data.google_client_openid_userinfo.current.email}"
-}
-
 # Create OAuth client using google_iam_oauth_client resource
 # Reference: https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/iam_oauth_client
+# Note: The bootstrap grants roles/iam.oauthClientAdmin to the Terraform service account
 resource "google_iam_oauth_client" "argocd" {
   project               = var.project_id
   location              = "global"
@@ -37,8 +27,6 @@ resource "google_iam_oauth_client" "argocd" {
   allowed_grant_types   = ["AUTHORIZATION_CODE_GRANT"]
   allowed_scopes        = ["openid", "email"]
   allowed_redirect_uris = ["${var.argocd_url}/api/dex/callback"]
-
-  depends_on = [google_project_iam_member.terraform_oauth_client_admin]
 }
 
 # Create OAuth client credential to get the client secret
