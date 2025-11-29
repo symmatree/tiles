@@ -26,9 +26,9 @@ cert-manager:
     enableGatewayAPI: true
   # Configure DNS-01 challenge propagation checks to use external DNS servers
   # instead of localhost (127.0.0.1:53) which isn't available in Cilium/Talos setups
-  extraArgs:
-    - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
-    - --dns01-recursive-nameservers-only
+  # extraArgs:
+  #   - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
+  #   - --dns01-recursive-nameservers-only
   prometheus:
     servicemonitor:
       # Create a ServiceMonitor to add cert-manager to Prometheus.
