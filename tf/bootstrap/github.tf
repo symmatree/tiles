@@ -15,26 +15,30 @@ provider "github" {
   owner = var.github_owner
 }
 
-# check "github_token_not_empty" {
-#   assert {
-#     condition     = data.onepassword_item.github_token.password != "" && data.onepassword_item.github_token.password != null
-#     error_message = "github_token must not be empty. Check your OnePassword item 'github-tiles-tf-bootstrap'."
-#   }
-# }
-
-# output "github_token_debug" {
-#   sensitive = true
-#   value = yamlencode(data.onepassword_item.github_token)
-# }
 
 resource "github_repository" "tiles" {
-  name          = "tiles"
-  description   = "Infrastructure as Code for Tiles"
-  visibility    = "public"
-  has_issues    = true
-  has_wiki      = false
-  has_projects  = false
-  has_downloads = false
+  name                   = "tiles"
+  description            = "Infrastructure as Code for Tiles"
+  visibility             = "public"
+  has_issues             = true
+  has_wiki               = false
+  has_projects           = false
+  has_downloads          = false
+  allow_merge_commit     = false
+  allow_auto_merge       = true
+  allow_rebase_merge     = false
+  allow_squash_merge     = true
+  delete_branch_on_merge = true
+  vulnerability_alerts   = true
+  allow_update_branch    = true
+  security_and_analysis {
+    secret_scanning {
+      status = "enabled"
+    }
+    secret_scanning_push_protection {
+      status = "enabled"
+    }
+  }
 }
 
 resource "github_repository_ruleset" "tiles-main" {
