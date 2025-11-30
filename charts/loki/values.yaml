@@ -1,3 +1,6 @@
+vault_name: placeholder
+cluster_name: placeholder
+
 loki:
   global:
     extraArgs:
