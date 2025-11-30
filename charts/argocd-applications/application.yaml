@@ -22,6 +22,9 @@ spec:
         external_ip_cidr: "{{ .Values.external_ip_cidr }}"
         vault_name: "{{ .Values.vault_name }}"
         project_id: "{{ .Values.project_id }}"
+        loki_bucket_chunks: "{{ .Values.loki_bucket_chunks }}"
+        loki_bucket_ruler: "{{ .Values.loki_bucket_ruler }}"
+        loki_bucket_admin: "{{ .Values.loki_bucket_admin }}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

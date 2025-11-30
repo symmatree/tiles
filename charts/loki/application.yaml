@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  labels:
+    name: loki
+spec:
+  project: "{{ .Values.cluster_name }}"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "{{ .Values.targetRevision }}"
+    path: charts/loki
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        loki:
+          loki:
+            storage:
+              bucketNames:
+                chunks: "{{ .Values.loki_bucket_chunks }}"
+                ruler: "{{ .Values.loki_bucket_ruler }}"
+                admin: "{{ .Values.loki_bucket_admin }}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: loki
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
