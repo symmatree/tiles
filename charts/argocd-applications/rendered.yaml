@@ -267,6 +267,37 @@ spec:
       labels:
         pod-security.kubernetes.io/warn: baseline
 ---
+# Source: argocd-applications/templates/local-path-provisioner-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-path-provisioner
+  namespace: argocd
+  labels:
+    name: local-path-provisioner
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/local-path-provisioner
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: local-path-storage
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+---
 # Source: argocd-applications/templates/loki-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
