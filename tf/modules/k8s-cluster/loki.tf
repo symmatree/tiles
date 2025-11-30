@@ -90,6 +90,12 @@ data "google_storage_project_service_account" "gcs_account" {
   project = var.project_id
 }
 
+data "google_client_openid_userinfo" "terraform" {}
+
+locals {
+  terraform_identity = endswith(data.google_client_openid_userinfo.terraform.email, ".iam.gserviceaccount.com") ? "serviceAccount:${data.google_client_openid_userinfo.terraform.email}" : "user:${data.google_client_openid_userinfo.terraform.email}"
+}
+
 module "loki_encryption_key" {
   source     = "terraform-google-modules/kms/google"
   version    = ">= 4.0"
@@ -100,6 +106,7 @@ module "loki_encryption_key" {
   keys               = ["loki-storage"]
   set_decrypters_for = ["loki-storage"]
   set_encrypters_for = ["loki-storage"]
+  set_owners_for     = ["loki-storage"]
   decrypters = [
     "serviceAccount:${google_service_account.loki.email}",
     "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
@@ -107,6 +114,9 @@ module "loki_encryption_key" {
   encrypters = [
     "serviceAccount:${google_service_account.loki.email}",
     "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
+  ]
+  owners = [
+    local.terraform_identity
   ]
 }
 
