@@ -285,6 +285,8 @@ spec:
       valueFiles:
         - values.yaml
       valuesObject:
+        vault_name: "placeholder"
+        cluster_name: "placeholder"
         loki:
           loki:
             storage:

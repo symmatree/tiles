@@ -15,6 +15,8 @@ spec:
       valueFiles:
         - values.yaml
       valuesObject:
+        vault_name: "{{ .Values.vault_name }}"
+        cluster_name: "{{ .Values.cluster_name }}"
         loki:
           loki:
             storage:
