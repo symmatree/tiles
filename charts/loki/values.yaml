@@ -68,12 +68,54 @@ loki:
   deploymentMode: SimpleScalable
   backend:
     replicas: 2
+    affinity:
+      podAntiAffinity:
+        # Overridden to change from required to preferred
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: backend
+                  app.kubernetes.io/name: loki
+                  app.kubernetes.io/instance: loki
+              topologyKey: kubernetes.io/hostname
+        requiredDuringSchedulingIgnoredDuringExecution: []
   read:
     replicas: 2
     enableStatefulSetAutoDeletePVC: true
+    affinity:
+      podAntiAffinity:
+        # Overridden to change from required to preferred
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: read
+                  app.kubernetes.io/name: loki
+                  app.kubernetes.io/instance: loki
+              topologyKey: kubernetes.io/hostname
+        requiredDuringSchedulingIgnoredDuringExecution: []
   write:
     replicas: 3
     enableStatefulSetAutoDeletePVC: true
+    affinity:
+      podAntiAffinity:
+        # Overridden to change from required to preferred
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: write
+                  app.kubernetes.io/name: loki
+                  app.kubernetes.io/instance: loki
+              topologyKey: kubernetes.io/hostname
+        requiredDuringSchedulingIgnoredDuringExecution: []
+  chunksCache:
+    # Down from default of 8GB
+    allocatedMemory: 1024
   monitoring:
     dashboards:
       enabled: true
