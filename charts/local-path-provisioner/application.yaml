@@ -16,7 +16,7 @@ spec:
         - values.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: local-path-storage
+    namespace: local-path-provisioner
   syncPolicy:
     automated:
       prune: true
