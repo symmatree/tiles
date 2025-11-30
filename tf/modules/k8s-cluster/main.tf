@@ -18,3 +18,9 @@ variable "onepassword_vault" {
   description = "1Password vault UUID."
   type        = string
 }
+
+data "google_storage_project_service_account" "gcs_account" {
+  project = var.project_id
+}
+
+data "google_client_openid_userinfo" "terraform" {}

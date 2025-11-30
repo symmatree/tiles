@@ -1,54 +1,98 @@
-name: 'attach-outputs'
-description: 'Attach outputs to a pull request. Needs pr write access.'
+name: "attach-outputs"
+description: "Attach outputs to a pull request. Needs pr write access."
 inputs:
   txt_output_dir:
-    description: 'Directory containing text output files to attach to the PR.'
+    description: "Directory containing text output files to attach to the PR."
     required: true
-    default: '/tmp/txt-outputs'
+    default: "/tmp/txt-outputs"
   outcome:
-    description: 'The outcome to display alongside the outputs.'
+    description: "The outcome to display alongside the outputs."
     required: false
-    default: 'completed'
+    default: "completed"
 runs:
   using: "composite"
   steps:
-      - uses: actions/github-script@v8
-        name: Attach outputs to PR
-        if: github.event_name == 'pull_request'
-        with:
-          script: |
-            const run_url = process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID
-            const run_link = '<a href="' + run_url + '">Actions</a>.'
-            const fs = require('fs')
+    - uses: actions/github-script@v8
+      name: Attach outputs to PR
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          const run_url = process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID
+          const run_link = '<a href="' + run_url + '">Actions</a>.'
+          const fs = require('fs')
 
-            const outputs = '${{ inputs.txt_output_dir }}'
-            const outputs_files = fs.readdirSync(outputs)
-            const out_files = outputs_files.filter(file => file.match(new RegExp(`.*\.(.txt)$`, 'ig')))
-            for (const file in out_files) {
-              const out_file_path = outputs.concat('/', out_files[file])
-              const out_file = fs.readFileSync(out_file_path, 'utf8')
-              const contents = out_file.length > 65000 ? out_file.toString().substring(0, 65000) + " ..." : out_file
-              const truncated_message = out_file.length > 65000 ? "Output is too long and was truncated. You can read full Plan in " + run_link + "<br /><br />" : ""
-              if (contents.length == 0) {
-                continue;
-              }
-              const open_string = contents.length < 2000 ? ' open="true"' : ''
-              const output = `
-              #### ${out_files[file]} 📖: \`${{ inputs.outcome }}\`
-              <details${open_string}><summary>Show Contents</summary>
+          const outputs = '${{ inputs.txt_output_dir }}'
+          const outputs_files = fs.readdirSync(outputs)
+          const out_files = outputs_files.filter(file => file.match(new RegExp(`.*\.(.txt)$`, 'ig')))
 
-              \`\`\`\n
-              ${contents}
-              \`\`\`
+          // Get existing comments on the PR
+          const existingComments = await github.rest.issues.listComments({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo
+          })
 
-              </details>
-              ${truncated_message}
-              `;
+          const now = new Date().toISOString()
+          const lastUpdated = new Date(now).toLocaleString('en-US', {
+            timeZone: 'UTC',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZoneName: 'short'
+          })
 
-              github.rest.issues.createComment({
+          for (const file in out_files) {
+            const fileName = out_files[file]
+            const out_file_path = outputs.concat('/', fileName)
+            const out_file = fs.readFileSync(out_file_path, 'utf8')
+            const contents = out_file.length > 65000 ? out_file.toString().substring(0, 65000) + " ..." : out_file
+            const truncated_message = out_file.length > 65000 ? "Output is too long and was truncated. You can read full Plan in " + run_link + "<br /><br />" : ""
+            if (contents.length == 0) {
+              continue;
+            }
+            const open_string = contents.length < 2000 ? ' open="true"' : ''
+
+            // Create a marker to identify comments for this output file
+            const commentMarker = `<!-- attach-outputs:${fileName} -->`
+
+            const output = `${commentMarker}
+            <!-- Output: ${fileName} -->
+            #### ${fileName} 📖: \`${{ inputs.outcome }}\`
+
+            **Last updated:** ${lastUpdated}
+
+            <details${open_string}><summary>Show Contents</summary>
+
+            \`\`\`\n
+            ${contents}
+            \`\`\`
+
+            </details>
+            ${truncated_message}
+            `;
+
+            // Find existing comment for this output file
+            const existingComment = existingComments.data.find(comment =>
+              comment.body.includes(`<!-- attach-outputs:${fileName} -->`)
+            )
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                comment_id: existingComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 body: output
               })
             }
+          }
