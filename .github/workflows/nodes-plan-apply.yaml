@@ -11,7 +11,7 @@ on:
     branches:
       - "main"
   schedule:
-    - cron: "0 2 * * *" # Daily at 0200 UTC
+    - cron: "0 8 * * *" # Daily at 0800 UTC
 
 env:
   TF_IN_AUTOMATION: "true"
@@ -69,10 +69,9 @@ jobs:
           path: |
             **/.terraform
           # Use date so we refetch once a day no matter what.
-          key: ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          key: ${{ runner.os }}-tf-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('**/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
           restore-keys: |
-            ${{ runner.os }}-tools-${{ steps.stamps.outputs.DATESTAMP }}-
-            ${{ runner.os }}-tools-
+            ${{ runner.os }}-tf-${{ steps.stamps.outputs.DATESTAMP }}-
 
       - name: Terraform init
         if: steps.tf-cache.outputs.cache-hit != 'true'
