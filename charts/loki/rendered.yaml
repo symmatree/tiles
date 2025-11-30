@@ -1105,11 +1105,16 @@ spec:
             {}
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app.kubernetes.io/component: read
-            topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: read
+                  app.kubernetes.io/instance: loki
+                  app.kubernetes.io/name: loki
+              topologyKey: kubernetes.io/hostname
+            weight: 1
+          requiredDuringSchedulingIgnoredDuringExecution: []
       volumes:
         - name: tmp
           emptyDir: {}
@@ -1255,11 +1260,16 @@ spec:
               mountPath: "/rules"
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app.kubernetes.io/component: backend
-            topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: backend
+                  app.kubernetes.io/instance: loki
+                  app.kubernetes.io/name: loki
+              topologyKey: kubernetes.io/hostname
+            weight: 1
+          requiredDuringSchedulingIgnoredDuringExecution: []
       volumes:
         - name: tmp
           emptyDir: {}
@@ -1348,15 +1358,15 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              memory: 9830Mi
+              memory: 1229Mi
             requests:
               cpu: 500m
-              memory: 9830Mi
+              memory: 1229Mi
           ports:
             - containerPort: 11211
               name: client
           args:
-            - -m 8192
+            - -m 1024
             - --extended=modern,track_sizes
             - -I 5m
             - -c 16384
@@ -1650,11 +1660,16 @@ spec:
             {}
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app.kubernetes.io/component: write
-            topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: write
+                  app.kubernetes.io/instance: loki
+                  app.kubernetes.io/name: loki
+              topologyKey: kubernetes.io/hostname
+            weight: 1
+          requiredDuringSchedulingIgnoredDuringExecution: []
       volumes:
         - name: config
           configMap:
