@@ -1,0 +1,10 @@
+apiVersion: v2
+name: local-path-provisioner
+description: Local Path Provisioner for Kubernetes
+type: application
+version: 0.1.0
+appVersion: v0.0.32
+dependencies:
+  - name: local-path-provisioner
+    version: 0.0.32
+    repository: https://charts.containeroo.ch
