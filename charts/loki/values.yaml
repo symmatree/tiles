@@ -6,7 +6,7 @@ loki:
     extraVolumes:
       - name: gsa-loki
         secret:
-          name: gsa-loki
+          secretName: gsa-loki
     extraEnv:
       - name: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/gsa-loki/credential.json

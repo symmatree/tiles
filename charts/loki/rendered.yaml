@@ -1126,7 +1126,7 @@ spec:
             name: loki-runtime
         - name: gsa-loki
           secret:
-            name: gsa-loki
+            secretName: gsa-loki
 ---
 # Source: loki/charts/loki/templates/backend/statefulset-backend.yaml
 apiVersion: apps/v1
@@ -1276,7 +1276,7 @@ spec:
           emptyDir: {}
         - name: gsa-loki
           secret:
-            name: gsa-loki
+            secretName: gsa-loki
   volumeClaimTemplates:
     - apiVersion: v1
       kind: PersistentVolumeClaim
@@ -1667,7 +1667,7 @@ spec:
             name: loki-runtime
         - name: gsa-loki
           secret:
-            name: gsa-loki
+            secretName: gsa-loki
   volumeClaimTemplates:
     - apiVersion: v1
       kind: PersistentVolumeClaim
