@@ -57,6 +57,10 @@ resource "google_project_iam_member" "tiles_tf_dns_admin" {
   project = var.gcp_project_id
   role    = "roles/dns.admin"
   member  = "serviceAccount:${google_service_account.tiles-tf.email}"
+  # Note: This role includes dns.managedZones.setIamPolicy permission needed
+  # to manage IAM policies on DNS managed zones. If you encounter 403 errors
+  # when setting IAM policies on managed zones, ensure permissions have propagated
+  # (may take a few minutes) or grant roles/dns.admin directly on the managed zone resource.
 }
 
 resource "google_project_iam_member" "tiles_tf_project_iam_admin" {
@@ -69,6 +73,14 @@ resource "google_project_iam_member" "tiles_tf_iam_security_admin" {
   project = var.gcp_project_id
   role    = "roles/iam.securityAdmin"
   member  = "serviceAccount:${google_service_account.tiles-tf.email}"
+}
+
+# Enable required APIs
+resource "google_project_service" "kms_api" {
+  project = var.gcp_project_id
+  service = "cloudkms.googleapis.com"
+
+  disable_on_destroy = false
 }
 
 output "gcp_tiles_tf_sa_email" {
