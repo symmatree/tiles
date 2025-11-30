@@ -253,6 +253,18 @@ resource "onepassword_item" "misc_config" {
       label = "loki_bucket_admin"
       value = module.k8s.loki_bucket_admin
     }
+    field {
+      label = "mimir_bucket_blocks"
+      value = module.k8s.mimir_bucket_blocks
+    }
+    field {
+      label = "mimir_bucket_ruler"
+      value = module.k8s.mimir_bucket_ruler
+    }
+    field {
+      label = "mimir_bucket_alertmanager"
+      value = module.k8s.mimir_bucket_alertmanager
+    }
   }
   section {
     label = "metadata"

@@ -11,6 +11,9 @@ required_vars=(
 	"loki_bucket_chunks"
 	"loki_bucket_ruler"
 	"loki_bucket_admin"
+	"mimir_bucket_blocks"
+	"mimir_bucket_ruler"
+	"mimir_bucket_alertmanager"
 )
 
 # Build helm args array
