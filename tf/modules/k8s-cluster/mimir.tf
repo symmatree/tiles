@@ -39,10 +39,6 @@ resource "onepassword_item" "gsa-mimir" {
   }
 }
 
-locals {
-  terraform_identity = endswith(data.google_client_openid_userinfo.terraform.email, ".iam.gserviceaccount.com") ? "serviceAccount:${data.google_client_openid_userinfo.terraform.email}" : "user:${data.google_client_openid_userinfo.terraform.email}"
-}
-
 module "mimir_encryption_key" {
   source     = "terraform-google-modules/kms/google"
   version    = ">= 4.0"
