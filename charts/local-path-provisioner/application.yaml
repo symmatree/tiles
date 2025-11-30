@@ -26,4 +26,5 @@ spec:
       - ServerSideApply=true
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/warn: baseline
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
