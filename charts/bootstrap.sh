@@ -8,6 +8,9 @@ required_vars=(
 	"external_ip_cidr"
 	"vault_name"
 	"project_id"
+	"loki_bucket_chunks"
+	"loki_bucket_ruler"
+	"loki_bucket_admin"
 )
 
 # Build helm args array
