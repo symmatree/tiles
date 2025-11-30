@@ -296,7 +296,8 @@ spec:
       - ServerSideApply=true
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/warn: baseline
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
 ---
 # Source: argocd-applications/templates/loki-application.yaml
 apiVersion: argoproj.io/v1alpha1
