@@ -196,6 +196,24 @@ resource "onepassword_item" "talosconfig" {
   }
 }
 
+variable "project_id" {
+  description = "Google Cloud project ID"
+  type        = string
+}
+
+variable "gcp_region" {
+  description = "Google Cloud region"
+  type        = string
+}
+
+module "k8s" {
+  source            = "../k8s-cluster"
+  project_id        = var.project_id
+  gcp_region        = var.gcp_region
+  cluster_name      = var.cluster_name
+  onepassword_vault = var.onepassword_vault
+}
+
 resource "onepassword_item" "misc_config" {
   count    = var.start_vms ? 1 : 0
   vault    = var.onepassword_vault
@@ -222,6 +240,18 @@ resource "onepassword_item" "misc_config" {
     field {
       label = "vault_name"
       value = var.onepassword_vault_name
+    }
+    field {
+      label = "loki_bucket_chunks"
+      value = module.k8s.loki_bucket_chunks
+    }
+    field {
+      label = "loki_bucket_ruler"
+      value = module.k8s.loki_bucket_ruler
+    }
+    field {
+      label = "loki_bucket_admin"
+      value = module.k8s.loki_bucket_admin
     }
   }
   section {

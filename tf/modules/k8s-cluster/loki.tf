@@ -1,0 +1,149 @@
+resource "google_service_account" "loki" {
+  account_id   = "${var.cluster_name}-loki"
+  display_name = "${var.cluster_name} Loki Service Account"
+  description  = "Service account for ${var.cluster_name} Loki"
+  project      = var.project_id
+}
+
+resource "google_service_account_key" "loki" {
+  service_account_id = google_service_account.loki.name
+  public_key_type    = "TYPE_X509_PEM_FILE"
+}
+
+resource "onepassword_item" "gsa-loki" {
+  vault    = var.onepassword_vault
+  title    = "${var.cluster_name}-gsa-loki"
+  category = "secure_note"
+  section {
+    label = "credentials"
+    field {
+      label = "credential.json"
+      type  = "CONCEALED"
+      value = base64decode(google_service_account_key.loki.private_key)
+    }
+  }
+  section {
+    label = "metadata"
+    field {
+      label = "source"
+      value = "managed by terraform"
+    }
+    field {
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
+    }
+  }
+}
+
+resource "random_password" "loki_cluster_tenant" {
+  length  = 24
+  special = true
+}
+
+resource "htpasswd_password" "loki_cluster_tenant" {
+  password = random_password.loki_cluster_tenant.result
+}
+
+resource "onepassword_item" "loki_tenant_auth_secret" {
+  vault    = var.onepassword_vault
+  title    = "${var.cluster_name}-loki-tenant-auth"
+  category = "secure_note"
+  section {
+    label = "credentials"
+    field {
+      label = "username"
+      value = var.cluster_name
+    }
+    field {
+      label = "password"
+      type  = "CONCEALED"
+      value = random_password.loki_cluster_tenant.result
+    }
+    field {
+      label = ".htaccess"
+      type  = "CONCEALED"
+      value = "${var.cluster_name}:${htpasswd_password.loki_cluster_tenant.bcrypt}"
+    }
+  }
+  section {
+    label = "metadata"
+    field {
+      label = "source"
+      value = "managed by terraform"
+    }
+    field {
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
+    }
+  }
+}
+
+data "google_storage_project_service_account" "gcs_account" {
+  project = var.project_id
+}
+
+module "loki_encryption_key" {
+  source     = "terraform-google-modules/kms/google"
+  version    = ">= 4.0"
+  project_id = var.project_id
+  location   = var.gcp_region
+  keyring    = "${var.cluster_name}-loki"
+  # Used for all the buckets
+  keys               = ["loki-storage"]
+  set_decrypters_for = ["loki-storage"]
+  set_encrypters_for = ["loki-storage"]
+  decrypters = [
+    "serviceAccount:${google_service_account.loki.email}",
+    "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
+  ]
+  encrypters = [
+    "serviceAccount:${google_service_account.loki.email}",
+    "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
+  ]
+}
+
+module "loki_buckets" {
+  source     = "terraform-google-modules/cloud-storage/google"
+  version    = ">= 12.0"
+  project_id = var.project_id
+  location   = var.gcp_region
+  names = [
+    "chunks",
+    "ruler",
+    "admin"
+  ]
+  prefix        = "${var.cluster_name}-loki"
+  storage_class = "STANDARD"
+  versioning = {
+    "chunks" = false
+    "ruler"  = true
+    "admin"  = true
+  }
+  admins          = ["serviceAccount:${google_service_account.loki.email}"]
+  set_admin_roles = true
+  encryption_key_names = {
+    "chunks" = module.loki_encryption_key.keys["loki-storage"]
+    "ruler"  = module.loki_encryption_key.keys["loki-storage"]
+    "admin"  = module.loki_encryption_key.keys["loki-storage"]
+  }
+}
+
+output "loki_bucket_chunks" {
+  value = module.loki_buckets.buckets_map["chunks"].name
+}
+
+output "loki_bucket_ruler" {
+  value = module.loki_buckets.buckets_map["ruler"].name
+}
+
+output "loki_bucket_admin" {
+  value = module.loki_buckets.buckets_map["admin"].name
+}

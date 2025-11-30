@@ -1,0 +1,3 @@
+# Helm cache poison file
+# Modify this file to force Helm cache invalidation
+# Last updated: 2025-01-XX

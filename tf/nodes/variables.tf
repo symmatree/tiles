@@ -15,3 +15,8 @@ variable "talos_version" {
   description = "Talos Linux version"
   type        = string
 }
+
+variable "gcp_region" {
+  description = "Google Cloud region"
+  type        = string
+}

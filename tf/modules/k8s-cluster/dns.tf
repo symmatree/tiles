@@ -50,9 +50,18 @@ data "cloudflare_zone" "parent_zone" {
   }
 }
 
+# Validate that Google Cloud DNS public zone has exactly 4 name servers
+check "name_servers_count" {
+  assert {
+    condition     = length(module.dns-public-zone.name_servers) == 4
+    error_message = "Expected 4 name servers from Google Cloud DNS, but got ${length(module.dns-public-zone.name_servers)}"
+  }
+}
+
 # Create NS records in Cloudflare to delegate the subdomain to Google Cloud DNS
+# Google Cloud DNS public zones always have 4 name servers
 resource "cloudflare_dns_record" "delegation" {
-  count = length(module.dns-public-zone.name_servers)
+  count = 4
 
   zone_id = data.cloudflare_zone.parent_zone.id
   name    = var.cluster_name

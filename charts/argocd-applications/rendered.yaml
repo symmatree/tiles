@@ -86,6 +86,9 @@ spec:
         external_ip_cidr: "placeholder-external-ip-cidr"
         vault_name: "placeholder"
         project_id: "placeholder-project-id"
+        loki_bucket_chunks: "placeholder-loki-bucket-chunks"
+        loki_bucket_ruler: "placeholder-loki-bucket-ruler"
+        loki_bucket_admin: "placeholder-loki-bucket-admin"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -253,6 +256,45 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+---
+# Source: argocd-applications/templates/loki-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  labels:
+    name: loki
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/loki
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        loki:
+          loki:
+            storage:
+              bucketNames:
+                chunks: "placeholder-loki-bucket-chunks"
+                ruler: "placeholder-loki-bucket-ruler"
+                admin: "placeholder-loki-bucket-admin"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: loki
   syncPolicy:
     automated:
       prune: true

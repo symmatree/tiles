@@ -41,13 +41,8 @@ module "tiles-test" {
   service_cidr      = "10.0.200.0/21"
   control_plane_vip = "10.0.192.10"
   vms               = local.test_vms
-}
-
-module "k8s-test" {
-  source            = "../modules/k8s-cluster"
   project_id        = var.project_id
-  cluster_name      = "tiles-test"
-  onepassword_vault = data.onepassword_vault.tf_secrets.uuid
+  gcp_region        = var.gcp_region
 }
 
 output "test_machine_secrets" {
