@@ -50,6 +50,7 @@ jobs:
           GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
           GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
+          KUBECONFIG_SECRET: "op://tiles-secrets/tiles-test-kubeconfig/notesPlain"
 
       - name: Authenticate to Google Cloud
         run: |
@@ -116,6 +117,14 @@ jobs:
         uses: azure/setup-helm@v4.3.1
         with:
           version: "v4.0.0"
+
+      - name: Setup kubeconfig
+        run: |
+          set -euo pipefail
+          kubeconfig_path="${RUNNER_TEMP}/kubeconfig"
+          echo '${{ steps.load_secrets.outputs.KUBECONFIG_SECRET }}' > "${kubeconfig_path}"
+          chmod 600 "${kubeconfig_path}"
+          echo "KUBECONFIG=${kubeconfig_path}" >> "$GITHUB_ENV"
 
       - name: Regenerate API versions
         shell: bash

@@ -224,9 +224,3 @@ data:
       Major: "1"
       Minor: "34"
       Version: v1.34
-    HelmVersion:
-      git_commit: 99cd1964357c793351be481d55abbe21c6b2f4ec
-      git_tree_state: clean
-      go_version: go1.25.4
-      kube_client_version: v1.34
-      version: v4.0.0

@@ -8,5 +8,3 @@ data:
     {{- toYaml .Capabilities.APIVersions | nindent 6}}
     KubeVersion:
     {{- toYaml .Capabilities.KubeVersion | nindent 6}}
-    HelmVersion:
-    {{- toYaml .Capabilities.HelmVersion | nindent 6}}
