@@ -17,7 +17,22 @@ spec:
       valuesObject:
         vault_name: "{{ .Values.vault_name }}"
         cluster_name: "{{ .Values.cluster_name }}"
-        mimir: {}
+        mimir-distributed:
+          mimir:
+            structuredConfig:
+              alertmanager_storage:
+                bucket_name: "{{ .Values.mimir_bucket_alertmanager }}"
+              blocks_storage:
+                bucket_name: "{{ .Values.mimir_bucket_blocks }}"
+              ruler_storage:
+                bucket_name: "{{ .Values.mimir_bucket_ruler }}"
+          ingress:
+            hosts:
+              - mimir.{{ .Values.cluster_name }}.symmatree.com
+            tls:
+              - secretName: mimir-tls
+                hosts:
+                  - mimir.{{ .Values.cluster_name }}.symmatree.com
   destination:
     server: https://kubernetes.default.svc
     namespace: mimir
