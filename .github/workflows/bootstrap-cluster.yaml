@@ -93,6 +93,9 @@ jobs:
           loki_bucket_chunks: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_chunks"
           loki_bucket_ruler: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_ruler"
           loki_bucket_admin: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_admin"
+          mimir_bucket_blocks: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_blocks"
+          mimir_bucket_ruler: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_ruler"
+          mimir_bucket_alertmanager: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_alertmanager"
           onepassword_operator_token: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-operator/credential"
           onepassword_connect_credentials: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
       - name: Bootstrap cluster
