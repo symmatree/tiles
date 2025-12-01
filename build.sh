@@ -8,6 +8,15 @@ vault_name=placeholder
 
 echo "::notice title=Helm::$(helm version)"
 
+# Build helm args array for API versions
+helm_args=()
+while IFS= read -r api_version; do
+	helm_args+=(-a "${api_version}")
+done <charts/extract-apis/helm-api-versions.txt
+
+KUBE_VERSION=$(tr -d '[:space:]' <charts/extract-apis/helm-kube-version.txt)
+helm_args+=(--kube-version "${KUBE_VERSION}")
+
 for chart in charts/*; do
 	if [[ ! -f "$chart/Chart.yaml" ]]; then
 		continue
@@ -22,6 +31,7 @@ for chart in charts/*; do
 
 	helm template "${name}" . --namespace "${name}" \
 		--skip-crds \
+		"${helm_args[@]}" \
 		--set "targetRevision=$targetRevision" \
 		--set "cluster_name=$cluster_name" \
 		--set "pod_cidr=$pod_cidr" \

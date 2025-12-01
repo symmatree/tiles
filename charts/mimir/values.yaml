@@ -38,24 +38,24 @@ mimir-distributed:
     persistentVolume:
       storageClass: "local-path"
       enableRetentionPolicy: true
-      whenDeleted: delete
-      whenScaled: delete
+      whenDeleted: Delete
+      whenScaled: Delete
     terminationGracePeriodSeconds: 60
 
   compactor:
     persistentVolume:
       storageClass: "local-path"
       enableRetentionPolicy: true
-      whenDeleted: delete
-      whenScaled: delete
+      whenDeleted: Delete
+      whenScaled: Delete
     terminationGracePeriodSeconds: 60
 
   ingester:
     persistentVolume:
       storageClass: "local-path"
       enableRetentionPolicy: true
-      whenDeleted: delete
-      whenScaled: delete
+      whenDeleted: Delete
+      whenScaled: Delete
     terminationGracePeriodSeconds: 60
     replicas: 2
     zoneAwareReplication:
@@ -122,8 +122,8 @@ mimir-distributed:
     persistentVolume:
       storageClass: "local-path"
       enableRetentionPolicy: true
-      whenDeleted: delete
-      whenScaled: delete
+      whenDeleted: Delete
+      whenScaled: Delete
 
   gateway:
     enabled: false
