@@ -1440,11 +1440,6 @@ spec:
       annotations:
         # ensure pods roll when configmap updates
         cilium.io/cilium-configmap-checksum: "1c1cee072a3d2664c48a5ba647ae32462bd02752af99cfd7122330158a41e30f"
-        # Set app AppArmor's profile to "unconfined". The value of this annotation
-        # can be modified as long users know which profiles they have available
-        # in AppArmor.
-        container.apparmor.security.beta.kubernetes.io/cilium-agent: "unconfined"
-        container.apparmor.security.beta.kubernetes.io/clean-cilium-state: "unconfined"
         kubectl.kubernetes.io/default-container: cilium-agent
       labels:
         k8s-app: cilium
@@ -1452,6 +1447,8 @@ spec:
         app.kubernetes.io/part-of: cilium
     spec:
       securityContext:
+        appArmorProfile:
+          type: Unconfined
         seccompProfile:
           type: Unconfined
       containers:
@@ -1943,16 +1940,15 @@ spec:
       annotations:
         # ensure pods roll when configmap updates
         cilium.io/cilium-envoy-configmap-checksum: "050d90a85058864126bf447f3ebe5f8d80aea953ebc787bc734be3141df98fa8"
-        # Set app AppArmor's profile to "unconfined". The value of this annotation
-        # can be modified as long users know which profiles they have available
-        # in AppArmor.
-        container.apparmor.security.beta.kubernetes.io/cilium-envoy: "unconfined"
       labels:
         k8s-app: cilium-envoy
         name: cilium-envoy
         app.kubernetes.io/name: cilium-envoy
         app.kubernetes.io/part-of: cilium
     spec:
+      securityContext:
+        appArmorProfile:
+          type: Unconfined
       containers:
       - name: cilium-envoy
         image: "quay.io/cilium/cilium-envoy:v1.34.10-1762597008-ff7ae7d623be00078865cff1b0672cc5d9bfc6d5@sha256:1deb6709afcb5523579bf1abbc3255adf9e354565a88c4a9162c8d9cb1d77ab5"
@@ -2564,6 +2560,15 @@ subsets:
   - ip: "192.192.192.192"
   ports:
   - port: 9999
+---
+# Source: cilium/charts/cilium/templates/cilium-gateway-api-class.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: cilium
+spec:
+  controllerName: io.cilium/gateway-controller
+  description: The default Cilium GatewayClass
 ---
 # Source: cilium/charts/cilium/templates/cilium-agent/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1

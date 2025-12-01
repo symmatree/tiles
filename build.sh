@@ -25,10 +25,10 @@ for chart in charts/*; do
 	echo "::group::Linting $name at $chart"
 	pushd "$chart"
 	# We do NOT dep update here because we might have cached it.
-	ls -lR
-	set -x
+	echo "Linting $chart"
 	helm lint --strict .
 
+	echo "Templating $chart"
 	helm template "${name}" . --namespace "${name}" \
 		--skip-crds \
 		"${helm_args[@]}" \
@@ -37,8 +37,7 @@ for chart in charts/*; do
 		--set "pod_cidr=$pod_cidr" \
 		--set "vault_name=$vault_name" \
 		>rendered.yaml
-	set +x
-	#	| kubectl diff --server-side -f-
+	echo "Done templating $chart"
 	popd
 	echo "::endgroup::"
 done
