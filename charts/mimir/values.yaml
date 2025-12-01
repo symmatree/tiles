@@ -1,0 +1,140 @@
+mimir-distributed:
+  global:
+    extraVolumes:
+      - name: gsa-mimir
+        secret:
+          secretName: gsa-mimir
+    extraEnv:
+      - name: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/gsa-mimir/credential.json
+    extraVolumeMounts:
+      - name: gsa-mimir
+        mountPath: /etc/secrets/gsa-mimir/
+
+  mimir:
+    structuredConfig:
+      multitenancy_enabled: true
+      tenant_federation:
+        enabled: true
+      common:
+        storage:
+          backend: gcs
+      alertmanager_storage:
+        bucket_name: mimir-am-bucket-placeholder
+      blocks_storage:
+        bucket_name: mimir-blocks-bucket-placeholder
+      ruler_storage:
+        bucket_name: mimir-ruler-bucket-placeholder
+
+  alertmanager:
+    zoneAwareReplication:
+      enabled: false
+    resources:
+      requests:
+        cpu: 250m
+        memory: 128Mi
+    statefulSet:
+      enabled: true
+    persistentVolume:
+      storageClass: "local-path"
+      enableRetentionPolicy: true
+      whenDeleted: delete
+      whenScaled: delete
+    terminationGracePeriodSeconds: 60
+
+  compactor:
+    persistentVolume:
+      storageClass: "local-path"
+      enableRetentionPolicy: true
+      whenDeleted: delete
+      whenScaled: delete
+    terminationGracePeriodSeconds: 60
+
+  ingester:
+    persistentVolume:
+      storageClass: "local-path"
+      enableRetentionPolicy: true
+      whenDeleted: delete
+      whenScaled: delete
+    terminationGracePeriodSeconds: 60
+    replicas: 2
+    zoneAwareReplication:
+      enabled: false
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: ingester
+                  app.kubernetes.io/name: mimir
+                  app.kubernetes.io/instance: mimir
+              topologyKey: kubernetes.io/hostname
+        requiredDuringSchedulingIgnoredDuringExecution: []
+
+  chunks-cache:
+    enabled: true
+    replicas: 1
+    # allocated memory in MB
+    allocatedMemory: 512
+  index-cache:
+    enabled: true
+    replicas: 1
+    allocatedMemory: 128
+
+  metadata-cache:
+    enabled: true
+    replicas: 1
+    allocatedMemory: 128
+
+  results-cache:
+    enabled: true
+    replicas: 1
+    allocatedMemory: 128
+
+  minio:
+    enabled: false
+
+  overrides_exporter:
+    replicas: 1
+    resources:
+      limits:
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  querier:
+    replicas: 1
+    terminationGracePeriodSeconds: 60
+
+  query_frontend:
+    replicas: 1
+    terminationGracePeriodSeconds: 60
+
+  ruler:
+    replicas: 1
+    terminationGracePeriodSeconds: 60
+  store_gateway:
+    zoneAwareReplication:
+      enabled: false
+    persistentVolume:
+      storageClass: "local-path"
+      enableRetentionPolicy: true
+      whenDeleted: delete
+      whenScaled: delete
+
+  gateway:
+    enabled: false
+  ingress:
+    enabled: true
+    ingressClassName: cilium
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+    hosts:
+      - mimir.placeholder.symmatree.com
+    tls:
+      - secretName: mimir-tls
+        hosts:
+          - mimir.placeholder.symmatree.com

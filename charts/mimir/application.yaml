@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mimir
+  namespace: argocd
+  labels:
+    name: mimir
+spec:
+  project: "{{ .Values.cluster_name }}"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "{{ .Values.targetRevision }}"
+    path: charts/mimir
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        vault_name: "{{ .Values.vault_name }}"
+        cluster_name: "{{ .Values.cluster_name }}"
+        mimir-distributed:
+          mimir:
+            structuredConfig:
+              alertmanager_storage:
+                bucket_name: "{{ .Values.mimir_bucket_alertmanager }}"
+              blocks_storage:
+                bucket_name: "{{ .Values.mimir_bucket_blocks }}"
+              ruler_storage:
+                bucket_name: "{{ .Values.mimir_bucket_ruler }}"
+          ingress:
+            hosts:
+              - mimir.{{ .Values.cluster_name }}.symmatree.com
+            tls:
+              - secretName: mimir-tls
+                hosts:
+                  - mimir.{{ .Values.cluster_name }}.symmatree.com
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mimir
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline

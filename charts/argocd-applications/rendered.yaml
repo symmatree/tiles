@@ -89,6 +89,9 @@ spec:
         loki_bucket_chunks: "placeholder-loki-bucket-chunks"
         loki_bucket_ruler: "placeholder-loki-bucket-ruler"
         loki_bucket_admin: "placeholder-loki-bucket-admin"
+        mimir_bucket_alertmanager: "placeholder-mimir-bucket-alertmanager"
+        mimir_bucket_blocks: "placeholder-mimir-bucket-blocks"
+        mimir_bucket_ruler: "placeholder-mimir-bucket-ruler"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -329,6 +332,56 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: loki
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+---
+# Source: argocd-applications/templates/mimir-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mimir
+  namespace: argocd
+  labels:
+    name: mimir
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/mimir
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        vault_name: "placeholder"
+        cluster_name: "placeholder"
+        mimir-distributed:
+          mimir:
+            structuredConfig:
+              alertmanager_storage:
+                bucket_name: "placeholder-mimir-bucket-alertmanager"
+              blocks_storage:
+                bucket_name: "placeholder-mimir-bucket-blocks"
+              ruler_storage:
+                bucket_name: "placeholder-mimir-bucket-ruler"
+          ingress:
+            hosts:
+              - mimir.placeholder.symmatree.com
+            tls:
+              - secretName: mimir-tls
+                hosts:
+                  - mimir.placeholder.symmatree.com
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mimir
   syncPolicy:
     automated:
       prune: true
