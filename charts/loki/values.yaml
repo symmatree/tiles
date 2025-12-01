@@ -4,7 +4,7 @@ cluster_name: placeholder
 loki:
   global:
     extraArgs:
-      - --config.expand-env=true
+      - -config.expand-env=true
       - -log-config-reverse-order
     extraVolumes:
       - name: gsa-loki

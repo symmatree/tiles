@@ -340,6 +340,41 @@ spec:
       labels:
         pod-security.kubernetes.io/warn: baseline
 ---
+# Source: argocd-applications/templates/mimir-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mimir
+  namespace: argocd
+  labels:
+    name: mimir
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "main"
+    path: charts/mimir
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        vault_name: "placeholder"
+        cluster_name: "placeholder"
+        mimir: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mimir
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+---
 # Source: argocd-applications/templates/onepassword-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application

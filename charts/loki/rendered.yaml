@@ -1063,7 +1063,7 @@ spec:
             - -target=read
             - -legacy-read-mode=false
             - -common.compactor-grpc-address=loki-backend.loki.svc.cluster.local:9095
-            - --config.expand-env=true
+            - -config.expand-env=true
             - -log-config-reverse-order
           ports:
             - name: http-metrics
@@ -1189,7 +1189,7 @@ spec:
             - -config.file=/etc/loki/config/config.yaml
             - -target=backend
             - -legacy-read-mode=false
-            - --config.expand-env=true
+            - -config.expand-env=true
             - -log-config-reverse-order
           ports:
             - name: http-metrics
@@ -1620,7 +1620,7 @@ spec:
           args:
             - -config.file=/etc/loki/config/config.yaml
             - -target=write
-            - --config.expand-env=true
+            - -config.expand-env=true
             - -log-config-reverse-order
           ports:
             - name: http-metrics
