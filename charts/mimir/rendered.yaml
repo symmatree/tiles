@@ -1,48 +1,6 @@
 ---
-# Source: mimir/charts/mimir-distributed/templates/podsecuritypolicy.yaml
-apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  name: mimir
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    "seccomp.security.alpha.kubernetes.io/allowedProfileNames": runtime/default
-spec:
-  privileged: false
-  allowPrivilegeEscalation: false
-  volumes:
-    - 'configMap'
-    - 'emptyDir'
-    - 'persistentVolumeClaim'
-    - 'secret'
-  hostNetwork: false
-  hostIPC: false
-  hostPID: false
-  runAsUser:
-    rule: MustRunAsNonRoot
-  seLinux:
-    rule: RunAsAny
-  supplementalGroups:
-    rule: MustRunAs
-    ranges:
-    - min: 1
-      max: 65535
-  fsGroup:
-    rule: MustRunAs
-    ranges:
-    - min: 1
-      max: 65535
-  readOnlyRootFilesystem: true
-  requiredDropCapabilities:
-    - ALL
----
 # Source: mimir/charts/mimir-distributed/templates/alertmanager/alertmanager-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-alertmanager
@@ -63,7 +21,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/chunks-cache/chunks-cache-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-chunks-cache
@@ -84,7 +42,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/compactor/compactor-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-compactor
@@ -105,7 +63,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/distributor/distributor-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-distributor
@@ -126,7 +84,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/index-cache/index-cache-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-index-cache
@@ -147,7 +105,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/ingester/ingester-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-ingester
@@ -168,7 +126,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/kafka/kafka-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-kafka
@@ -189,7 +147,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/metadata-cache/metadata-cache-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-metadata-cache
@@ -210,7 +168,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/overrides-exporter/overrides-exporter-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-overrides-exporter
@@ -231,7 +189,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/querier/querier-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-querier
@@ -252,7 +210,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/query-frontend/query-frontend-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-query-frontend
@@ -273,7 +231,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/query-scheduler/query-scheduler-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-query-scheduler
@@ -294,7 +252,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/results-cache/results-cache-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-results-cache
@@ -315,7 +273,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/ruler/ruler-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-ruler
@@ -336,7 +294,7 @@ spec:
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/store-gateway/store-gateway-pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: mimir-store-gateway
@@ -679,24 +637,6 @@ rules:
     verbs:
       - create
 ---
-# Source: mimir/charts/mimir-distributed/templates/role.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: mimir
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  namespace: "mimir"
-rules:
-- apiGroups:      ['extensions']
-  resources:      ['podsecuritypolicies']
-  verbs:          ['use']
-  resourceNames:  [mimir]
----
 # Source: mimir/charts/mimir-distributed/charts/rollout_operator/templates/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -731,28 +671,6 @@ subjects:
   - kind: ServiceAccount
     name: mimir-rollout-operator
     namespace: "mimir"
----
-# Source: mimir/charts/mimir-distributed/templates/rolebinding.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: mimir
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  namespace: "mimir"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: mimir
-subjects:
-- kind: ServiceAccount
-  name: mimir
-- kind: ServiceAccount
-  name: mimir-mimir-distributed
 ---
 # Source: mimir/charts/mimir-distributed/charts/rollout_operator/templates/service.yaml
 apiVersion: v1
@@ -833,6 +751,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -897,6 +816,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -963,6 +883,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -1091,6 +1012,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -1214,6 +1136,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -1246,6 +1169,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -1277,6 +1201,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -1342,6 +1267,7 @@ metadata:
     {}
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -1406,6 +1332,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -1468,6 +1395,7 @@ metadata:
   namespace: "mimir"
 spec:
   type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
     - port: 8080
       protocol: TCP
@@ -2346,6 +2274,9 @@ metadata:
   namespace: "mimir"
 spec:
   replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
   selector:
     matchLabels:
       app.kubernetes.io/name: mimir
@@ -2608,6 +2539,9 @@ metadata:
   namespace: "mimir"
 spec:
   podManagementPolicy: OrderedReady
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
   replicas: 1
   selector:
     matchLabels:
@@ -2858,6 +2792,9 @@ metadata:
 spec:
   podManagementPolicy: Parallel
   replicas: 2
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
   selector:
     matchLabels:
       app.kubernetes.io/name: mimir
@@ -3369,6 +3306,9 @@ metadata:
 spec:
   podManagementPolicy: OrderedReady
   replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
   selector:
     matchLabels:
       app.kubernetes.io/name: mimir

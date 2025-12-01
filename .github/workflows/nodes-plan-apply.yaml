@@ -50,6 +50,7 @@ jobs:
           GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
           GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
+          KUBECONFIG_SECRET: "op://tiles-secrets/tiles-test-kubeconfig/notesPlain"
 
       - name: Authenticate to Google Cloud
         run: |
@@ -111,6 +112,34 @@ jobs:
           cd "${GITHUB_WORKSPACE}/tf/nodes"
           echo "Applying plan"
           terraform apply -lock-timeout=5m "${PLAN_FILE}"
+
+      - name: Install helm
+        uses: azure/setup-helm@v4.3.1
+        with:
+          version: "v4.0.0"
+
+      - name: Setup kubeconfig
+        run: |
+          set -euo pipefail
+          kubeconfig_path="${RUNNER_TEMP}/kubeconfig"
+          echo '${{ steps.load_secrets.outputs.KUBECONFIG_SECRET }}' > "${kubeconfig_path}"
+          chmod 600 "${kubeconfig_path}"
+          echo "KUBECONFIG=${kubeconfig_path}" >> "$GITHUB_ENV"
+
+      - name: Regenerate API versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          # TODO: Install yq properly with caching and versioning.
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+          ./charts/extract-apis/generate-api-versions.sh
+          # Check for changes (warn only, don't fail)
+          if ! git diff --exit-code ; then
+            echo "::warning title=API Versions Changed::API versions or kube version have changed. Consider committing the updated files."
+            git diff charts/extract-apis/helm-api-versions.txt charts/extract-apis/helm-kube-version.txt
+          fi
 
       - name: De-wireguard
         if: always()

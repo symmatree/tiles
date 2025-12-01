@@ -1,0 +1,6 @@
+apiVersion: v2
+name: extract-apis
+description: extract-apis is a fake chart to get a single value out of helm
+type: application
+version: 0.1.0
+appVersion: 0.1.0
