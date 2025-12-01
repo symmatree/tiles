@@ -90,7 +90,7 @@ module "mimir_buckets" {
   depends_on = [module.mimir_encryption_key]
 }
 
-output "mimir_bucket_chunks" {
+output "mimir_bucket_blocks" {
   value = module.mimir_buckets.buckets_map["blocks"].name
 }
 
