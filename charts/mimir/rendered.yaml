@@ -20,27 +20,6 @@ spec:
       app.kubernetes.io/component: alertmanager
   maxUnavailable: 1
 ---
-# Source: mimir/charts/mimir-distributed/templates/chunks-cache/chunks-cache-pdb.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: mimir-chunks-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: chunks-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  namespace: "mimir"
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: chunks-cache
-  maxUnavailable: 1
----
 # Source: mimir/charts/mimir-distributed/templates/compactor/compactor-pdb.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -83,27 +62,6 @@ spec:
       app.kubernetes.io/component: distributor
   maxUnavailable: 1
 ---
-# Source: mimir/charts/mimir-distributed/templates/index-cache/index-cache-pdb.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: mimir-index-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: index-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  namespace: "mimir"
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: index-cache
-  maxUnavailable: 1
----
 # Source: mimir/charts/mimir-distributed/templates/ingester/ingester-pdb.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -144,27 +102,6 @@ spec:
       app.kubernetes.io/name: mimir
       app.kubernetes.io/instance: mimir
       app.kubernetes.io/component: kafka
-  maxUnavailable: 1
----
-# Source: mimir/charts/mimir-distributed/templates/metadata-cache/metadata-cache-pdb.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: mimir-metadata-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: metadata-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  namespace: "mimir"
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: metadata-cache
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/overrides-exporter/overrides-exporter-pdb.yaml
@@ -249,27 +186,6 @@ spec:
       app.kubernetes.io/name: mimir
       app.kubernetes.io/instance: mimir
       app.kubernetes.io/component: query-scheduler
-  maxUnavailable: 1
----
-# Source: mimir/charts/mimir-distributed/templates/results-cache/results-cache-pdb.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: mimir-results-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: results-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  namespace: "mimir"
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: results-cache
   maxUnavailable: 1
 ---
 # Source: mimir/charts/mimir-distributed/templates/ruler/ruler-pdb.yaml
@@ -388,32 +304,14 @@ data:
       external_url: /alertmanager
       fallback_config_file: /configs/alertmanager_fallback_config.yaml
     alertmanager_storage:
-      bucket_name: mimir-am-bucket-placeholder
+      gcs:
+        bucket_name: mimir-am-bucket-placeholder
     blocks_storage:
       backend: s3
-      bucket_name: mimir-blocks-bucket-placeholder
       bucket_store:
-        chunks_cache:
-          backend: memcached
-          memcached:
-            addresses: dnssrvnoa+mimir-chunks-cache.mimir.svc.cluster.local.:11211
-            max_idle_connections: 150
-            max_item_size: 1048576
-            timeout: 750ms
-        index_cache:
-          backend: memcached
-          memcached:
-            addresses: dnssrvnoa+mimir-index-cache.mimir.svc.cluster.local.:11211
-            max_idle_connections: 150
-            max_item_size: 5242880
-            timeout: 750ms
-        metadata_cache:
-          backend: memcached
-          memcached:
-            addresses: dnssrvnoa+mimir-metadata-cache.mimir.svc.cluster.local.:11211
-            max_idle_connections: 150
-            max_item_size: 1048576
         sync_dir: /data/tsdb-sync
+      gcs:
+        bucket_name: mimir-blocks-bucket-placeholder
       tsdb:
         dir: /data/tsdb
         head_compaction_interval: 15m
@@ -439,15 +337,7 @@ data:
         heartbeat_period: 1m
         heartbeat_timeout: 4m
     frontend:
-      cache_results: true
       parallelize_shardable_queries: true
-      query_sharding_target_series_per_shard: 2500
-      results_cache:
-        backend: memcached
-        memcached:
-          addresses: dnssrvnoa+mimir-results-cache.mimir.svc.cluster.local.:11211
-          max_item_size: 5242880
-          timeout: 500ms
       scheduler_address: mimir-query-scheduler-headless.mimir.svc:9095
     frontend_worker:
       grpc_client_config:
@@ -492,13 +382,8 @@ data:
       enable_api: true
       rule_path: /data
     ruler_storage:
-      bucket_name: mimir-ruler-bucket-placeholder
-      cache:
-        backend: memcached
-        memcached:
-          addresses: dnssrvnoa+mimir-metadata-cache.mimir.svc.cluster.local.:11211
-          max_item_size: 1048576
-          timeout: 500ms
+      gcs:
+        bucket_name: mimir-ruler-bucket-placeholder
     runtime_config:
       file: /var/mimir/runtime.yaml
     store_gateway:
@@ -766,38 +651,6 @@ spec:
     app.kubernetes.io/instance: mimir
     app.kubernetes.io/component: alertmanager
 ---
-# Source: mimir/charts/mimir-distributed/templates/chunks-cache/chunks-cache-svc-headless.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: mimir-chunks-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: chunks-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: memcached-client
-      port: 11211
-      targetPort: 11211
-    
-    - name: http-metrics
-      port: 9150
-      targetPort: 9150
-    
-  selector:
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: chunks-cache
----
 # Source: mimir/charts/mimir-distributed/templates/compactor/compactor-svc.yaml
 apiVersion: v1
 kind: Service
@@ -928,38 +781,6 @@ spec:
     app.kubernetes.io/instance: mimir
     app.kubernetes.io/part-of: memberlist
 ---
-# Source: mimir/charts/mimir-distributed/templates/index-cache/index-cache-svc-headless.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: mimir-index-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: index-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: memcached-client
-      port: 11211
-      targetPort: 11211
-    
-    - name: http-metrics
-      port: 9150
-      targetPort: 9150
-    
-  selector:
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: index-cache
----
 # Source: mimir/charts/mimir-distributed/templates/ingester/ingester-svc-headless.yaml
 apiVersion: v1
 kind: Service
@@ -1086,38 +907,6 @@ spec:
     app.kubernetes.io/name: mimir
     app.kubernetes.io/instance: mimir
     app.kubernetes.io/component: kafka
----
-# Source: mimir/charts/mimir-distributed/templates/metadata-cache/metadata-cache-svc-headless.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: mimir-metadata-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: metadata-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: memcached-client
-      port: 11211
-      targetPort: 11211
-    
-    - name: http-metrics
-      port: 9150
-      targetPort: 9150
-    
-  selector:
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: metadata-cache
 ---
 # Source: mimir/charts/mimir-distributed/templates/overrides-exporter/overrides-exporter-svc.yaml
 apiVersion: v1
@@ -1281,38 +1070,6 @@ spec:
     app.kubernetes.io/name: mimir
     app.kubernetes.io/instance: mimir
     app.kubernetes.io/component: query-scheduler
----
-# Source: mimir/charts/mimir-distributed/templates/results-cache/results-cache-svc-headless.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: mimir-results-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: results-cache
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: memcached-client
-      port: 11211
-      targetPort: 11211
-    
-    - name: http-metrics
-      port: 9150
-      targetPort: 9150
-    
-  selector:
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: results-cache
 ---
 # Source: mimir/charts/mimir-distributed/templates/ruler/ruler-svc.yaml
 apiVersion: v1
@@ -1524,7 +1281,7 @@ spec:
         app.kubernetes.io/component: distributor
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -1581,8 +1338,7 @@ spec:
             initialDelaySeconds: 45
           resources:
             requests:
-              cpu: 100m
-              memory: 512Mi
+              memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -1590,8 +1346,6 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOMAXPROCS
-              value: "8"
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/secrets/gsa-mimir/credential.json
       topologySpreadConstraints:
@@ -1659,7 +1413,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: overrides-exporter
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -1711,7 +1465,6 @@ spec:
             limits:
               memory: 128Mi
             requests:
-              cpu: 100m
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -1783,7 +1536,7 @@ spec:
         app.kubernetes.io/component: querier
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
     spec:
       serviceAccountName: mimir
       securityContext:
@@ -1833,7 +1586,6 @@ spec:
             initialDelaySeconds: 45
           resources:
             requests:
-              cpu: 100m
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -1842,8 +1594,6 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOMAXPROCS
-              value: "5"
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/secrets/gsa-mimir/credential.json
       topologySpreadConstraints:
@@ -1913,7 +1663,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: query-frontend
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -1963,7 +1713,6 @@ spec:
             initialDelaySeconds: 45
           resources:
             requests:
-              cpu: 100m
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -2040,7 +1789,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: query-scheduler
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
     spec:
       serviceAccountName: mimir
       securityContext:
@@ -2086,7 +1835,6 @@ spec:
             initialDelaySeconds: 45
           resources:
             requests:
-              cpu: 100m
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -2165,7 +1913,7 @@ spec:
         app.kubernetes.io/component: ruler
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2216,7 +1964,6 @@ spec:
             initialDelaySeconds: 45
           resources:
             requests:
-              cpu: 100m
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -2308,7 +2055,7 @@ spec:
         app.kubernetes.io/component: alertmanager
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
         checksum/alertmanager-fallback-config: 54a9a1d0fb49e4972929bca4c416e4895fdab7c3c25a37efcfec07d5d6d2bf36
       namespace: "mimir"
     spec:
@@ -2398,7 +2145,6 @@ spec:
             initialDelaySeconds: 45
           resources:
             requests:
-              cpu: 250m
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -2409,117 +2155,6 @@ spec:
           env:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/secrets/gsa-mimir/credential.json
----
-# Source: mimir/charts/mimir-distributed/templates/chunks-cache/chunks-cache-statefulset.yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: mimir-chunks-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: memcached
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  podManagementPolicy: Parallel
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: chunks-cache
-  updateStrategy:
-    type: RollingUpdate
-  serviceName: mimir-chunks-cache
-
-  template:
-    metadata:
-      labels:
-        helm.sh/chart: mimir-distributed-6.0.3
-        app.kubernetes.io/name: mimir
-        app.kubernetes.io/instance: mimir
-        app.kubernetes.io/version: "3.0.0"
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/component: chunks-cache
-      annotations:
-
-    spec:
-      serviceAccountName: mimir
-      securityContext:
-        fsGroup: 10001
-        runAsGroup: 10001
-        runAsNonRoot: true
-        runAsUser: 10001
-        seccompProfile:
-          type: RuntimeDefault
-      
-      terminationGracePeriodSeconds: 30
-      volumes:
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
-      containers:
-        - name: memcached
-          image: memcached:1.6.39-alpine
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 614Mi
-            requests:
-              cpu: 500m
-              memory: 614Mi
-          ports:
-            - containerPort: 11211
-              name: client
-          args:
-            - -m 512
-            - --extended=modern
-            - -I 1m
-            - -c 16384
-            - -v
-            - -u 11211
-          env:
-              
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
-        - name: exporter
-          image: prom/memcached-exporter:v0.15.3
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 9150
-              name: http-metrics
-          args:
-            - "--memcached.address=localhost:11211"
-            - "--web.listen-address=0.0.0.0:9150"
-          resources:
-            limits:
-              memory: 250Mi
-            requests:
-              cpu: 50m
-              memory: 50Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
 ---
 # Source: mimir/charts/mimir-distributed/templates/compactor/compactor-statefulset.yaml
 apiVersion: apps/v1
@@ -2574,7 +2209,7 @@ spec:
         app.kubernetes.io/component: compactor
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2662,117 +2297,6 @@ spec:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/secrets/gsa-mimir/credential.json
 ---
-# Source: mimir/charts/mimir-distributed/templates/index-cache/index-cache-statefulset.yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: mimir-index-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: memcached
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  podManagementPolicy: Parallel
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: index-cache
-  updateStrategy:
-    type: RollingUpdate
-  serviceName: mimir-index-cache
-
-  template:
-    metadata:
-      labels:
-        helm.sh/chart: mimir-distributed-6.0.3
-        app.kubernetes.io/name: mimir
-        app.kubernetes.io/instance: mimir
-        app.kubernetes.io/version: "3.0.0"
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/component: index-cache
-      annotations:
-
-    spec:
-      serviceAccountName: mimir
-      securityContext:
-        fsGroup: 10001
-        runAsGroup: 10001
-        runAsNonRoot: true
-        runAsUser: 10001
-        seccompProfile:
-          type: RuntimeDefault
-      
-      terminationGracePeriodSeconds: 30
-      volumes:
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
-      containers:
-        - name: memcached
-          image: memcached:1.6.39-alpine
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 154Mi
-            requests:
-              cpu: 500m
-              memory: 154Mi
-          ports:
-            - containerPort: 11211
-              name: client
-          args:
-            - -m 128
-            - --extended=modern
-            - -I 5m
-            - -c 16384
-            - -v
-            - -u 11211
-          env:
-              
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
-        - name: exporter
-          image: prom/memcached-exporter:v0.15.3
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 9150
-              name: http-metrics
-          args:
-            - "--memcached.address=localhost:11211"
-            - "--web.listen-address=0.0.0.0:9150"
-          resources:
-            limits:
-              memory: 250Mi
-            requests:
-              cpu: 50m
-              memory: 50Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
----
 # Source: mimir/charts/mimir-distributed/templates/ingester/ingester-statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
@@ -2826,7 +2350,7 @@ spec:
         app.kubernetes.io/component: ingester
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2917,8 +2441,7 @@ spec:
             initialDelaySeconds: 60
           resources:
             requests:
-              cpu: 100m
-              memory: 512Mi
+              memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2926,8 +2449,6 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOMAXPROCS
-              value: "4"
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /etc/secrets/gsa-mimir/credential.json
 ---
@@ -2964,7 +2485,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: kafka
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -3026,8 +2547,7 @@ spec:
           resources:
             limits: {}
             requests:
-              cpu: 1
-              memory: 1Gi
+              memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -3064,228 +2584,6 @@ spec:
         resources:
           requests:
             storage: "5Gi"
----
-# Source: mimir/charts/mimir-distributed/templates/metadata-cache/metadata-cache-statefulset.yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: mimir-metadata-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: memcached
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  podManagementPolicy: Parallel
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: metadata-cache
-  updateStrategy:
-    type: RollingUpdate
-  serviceName: mimir-metadata-cache
-
-  template:
-    metadata:
-      labels:
-        helm.sh/chart: mimir-distributed-6.0.3
-        app.kubernetes.io/name: mimir
-        app.kubernetes.io/instance: mimir
-        app.kubernetes.io/version: "3.0.0"
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/component: metadata-cache
-      annotations:
-
-    spec:
-      serviceAccountName: mimir
-      securityContext:
-        fsGroup: 10001
-        runAsGroup: 10001
-        runAsNonRoot: true
-        runAsUser: 10001
-        seccompProfile:
-          type: RuntimeDefault
-      
-      terminationGracePeriodSeconds: 30
-      volumes:
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
-      containers:
-        - name: memcached
-          image: memcached:1.6.39-alpine
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 154Mi
-            requests:
-              cpu: 500m
-              memory: 154Mi
-          ports:
-            - containerPort: 11211
-              name: client
-          args:
-            - -m 128
-            - --extended=modern
-            - -I 1m
-            - -c 16384
-            - -v
-            - -u 11211
-          env:
-              
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
-        - name: exporter
-          image: prom/memcached-exporter:v0.15.3
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 9150
-              name: http-metrics
-          args:
-            - "--memcached.address=localhost:11211"
-            - "--web.listen-address=0.0.0.0:9150"
-          resources:
-            limits:
-              memory: 250Mi
-            requests:
-              cpu: 50m
-              memory: 50Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
----
-# Source: mimir/charts/mimir-distributed/templates/results-cache/results-cache-statefulset.yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: mimir-results-cache
-  labels:
-    helm.sh/chart: mimir-distributed-6.0.3
-    app.kubernetes.io/name: mimir
-    app.kubernetes.io/instance: mimir
-    app.kubernetes.io/component: memcached
-    app.kubernetes.io/version: "3.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    {}
-  namespace: "mimir"
-spec:
-  podManagementPolicy: Parallel
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: mimir
-      app.kubernetes.io/instance: mimir
-      app.kubernetes.io/component: results-cache
-  updateStrategy:
-    type: RollingUpdate
-  serviceName: mimir-results-cache
-
-  template:
-    metadata:
-      labels:
-        helm.sh/chart: mimir-distributed-6.0.3
-        app.kubernetes.io/name: mimir
-        app.kubernetes.io/instance: mimir
-        app.kubernetes.io/version: "3.0.0"
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/component: results-cache
-      annotations:
-
-    spec:
-      serviceAccountName: mimir
-      securityContext:
-        fsGroup: 10001
-        runAsGroup: 10001
-        runAsNonRoot: true
-        runAsUser: 10001
-        seccompProfile:
-          type: RuntimeDefault
-      
-      terminationGracePeriodSeconds: 30
-      volumes:
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
-      containers:
-        - name: memcached
-          image: memcached:1.6.39-alpine
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 154Mi
-            requests:
-              cpu: 500m
-              memory: 154Mi
-          ports:
-            - containerPort: 11211
-              name: client
-          args:
-            - -m 128
-            - --extended=modern
-            - -I 5m
-            - -c 16384
-            - -v
-            - -u 11211
-          env:
-              
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
-        - name: exporter
-          image: prom/memcached-exporter:v0.15.3
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 9150
-              name: http-metrics
-          args:
-            - "--memcached.address=localhost:11211"
-            - "--web.listen-address=0.0.0.0:9150"
-          resources:
-            limits:
-              memory: 250Mi
-            requests:
-              cpu: 50m
-              memory: 50Mi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
 ---
 # Source: mimir/charts/mimir-distributed/templates/store-gateway/store-gateway-statefulset.yaml
 apiVersion: apps/v1
@@ -3340,7 +2638,7 @@ spec:
         app.kubernetes.io/component: store-gateway
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: fb77607e986354aa33b36c3563c78951dbead82a5381366becfe9193e4e4a260
+        checksum/config: 5aea5bd216b9ff0ae4bde4c09544d08962ac69f264d14638ff7bf1536b8ecbc6
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -3417,7 +2715,6 @@ spec:
             initialDelaySeconds: 60
           resources:
             requests:
-              cpu: 100m
               memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -3426,8 +2723,6 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOMAXPROCS
-              value: "5"
             - name: GOMEMLIMIT
               value: "536870912"
             - name: GOOGLE_APPLICATION_CREDENTIALS
