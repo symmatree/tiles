@@ -367,11 +367,14 @@ spec:
           mimir:
             structuredConfig:
               alertmanager_storage:
-                bucket_name: "placeholder-mimir-bucket-alertmanager"
+                gcs:
+                  bucket_name: "placeholder-mimir-bucket-alertmanager"
               blocks_storage:
-                bucket_name: "placeholder-mimir-bucket-blocks"
+                gcs:
+                  bucket_name: "placeholder-mimir-bucket-blocks"
               ruler_storage:
-                bucket_name: "placeholder-mimir-bucket-ruler"
+                gcs:
+                  bucket_name: "placeholder-mimir-bucket-ruler"
           ingress:
             hosts:
               - mimir.placeholder.symmatree.com
