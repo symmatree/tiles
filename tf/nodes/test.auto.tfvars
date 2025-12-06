@@ -1,5 +1,7 @@
 # Test-specific overrides (if any)
 # Common values are in terraform.tfvars
+cluster_name = "tiles-test"
+cluster_code = "x"
 
 control_plane_vip = "10.0.192.10"
 external_ip_cidr  = "10.0.193.0/24"
