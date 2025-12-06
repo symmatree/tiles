@@ -9,8 +9,8 @@ spec:
   project: default
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
-    path: tiles/charts/grafana
+    targetRevision: "{{ .Values.targetRevision }}"
+    path: charts/grafana
     helm:
       valueFiles:
         - values.yaml
