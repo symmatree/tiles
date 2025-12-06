@@ -19,8 +19,6 @@ mimir-distributed:
       common:
         storage:
           backend: gcs
-          gcs:
-            enable_upload_retries: true
       alertmanager_storage:
         backend: gcs
         gcs:
