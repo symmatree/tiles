@@ -19,13 +19,18 @@ mimir-distributed:
       common:
         storage:
           backend: gcs
+        gcs:
+          enable_upload_retries: true
       alertmanager_storage:
+        backend: gcs
         gcs:
           bucket_name: mimir-am-bucket-placeholder
       blocks_storage:
+        backend: gcs
         gcs:
           bucket_name: mimir-blocks-bucket-placeholder
       ruler_storage:
+        backend: gcs
         gcs:
           bucket_name: mimir-ruler-bucket-placeholder
 
