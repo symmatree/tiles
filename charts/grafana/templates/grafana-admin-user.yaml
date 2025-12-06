@@ -1,0 +1,8 @@
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  namespace: "{{ .Release.Namespace }}"
+  name: grafana-admin-user
+type: Opaque
+spec:
+  itemPath: vaults/tales-secrets/items/grafana-admin-user

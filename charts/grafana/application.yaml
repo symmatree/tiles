@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+  labels:
+    name: grafana
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: main
+    path: tiles/charts/grafana
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        grafana:
+          ingress:
+            hosts:
+              - borgmon.{{ .Values.cluster_name }}.symmatree.com
+            tls:
+              - secretName: grafana-tls
+                hosts:
+                  - borgmon.{{ .Values.cluster_name }}.symmatree.com
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grafana
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+        trust-bundle: enabled
