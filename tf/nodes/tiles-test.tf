@@ -5,8 +5,8 @@ locals {
       type              = "control"
       proxmox_node_name = "nuc-g3p-2"
       vm_id             = 7411
-      cores             = 1
-      ram_mb            = 3000
+      cores             = 2
+      ram_mb            = 4096
       mac_address       = "bc:24:11:d0:74:11"
       ip_address        = "10.0.192.11"
     }
@@ -14,8 +14,8 @@ locals {
       type              = "worker"
       proxmox_node_name = "nuc-g3p-2"
       vm_id             = 7421
-      cores             = 3
-      ram_mb            = 11000
+      cores             = 2
+      ram_mb            = 8192
       mac_address       = "bc:24:11:d0:74:21"
       ip_address        = "10.0.192.21"
     }
