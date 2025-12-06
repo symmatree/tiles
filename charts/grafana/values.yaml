@@ -1,0 +1,52 @@
+global:
+  extraEnv:
+    - name: SSL_CERT_FILE
+      value: /etc/ssl/certs/ca-certificates.crt
+  extraVolumes:
+    - name: ca-certificates
+      configMap:
+        name: trust-bundle
+  extraVolumeMounts:
+    - name: ca-certificates
+      mountPath: /etc/ssl/certs
+      readOnly: true
+grafana:
+  # https://github.com/grafana/helm-charts/blob/grafana-8.13.1/charts/grafana/values.yaml
+  automountServiceAccountToken: false
+  configMapAnnotations:
+    argocd.argoproj.io/sync-options: Replace=true
+  ingress:
+    enabled: true
+    ingressClassName: cilium
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+    hosts:
+      - placeholder.symmatree.com
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.{{ .Values.cluster_name }}.symmatree.com
+  persistence:
+    enabled: true
+  admin:
+    existingSecret: grafana-admin-user
+    userKey: username
+    passwordKey: password
+  plugins:
+    - grafana-github-datasource
+    - grafana-lokiexplore-app
+    # - grafana-metricsdrilldown-app
+    # - grafana-mqtt-datasource
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+      folderAnnotation: k8s-sidecar-target-directory
+      provider:
+        folderUid: sidecar
+        folder: Sidecar
+        allowUiUpdates: true
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      searchNamespace: ALL
