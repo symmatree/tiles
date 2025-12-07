@@ -4,6 +4,40 @@
 
 This document describes the strategy for managing two parallel Terraform environments (test and production) with a tag-based deployment workflow, while maintaining side-by-side configuration files for easy comparison and review in pull requests.
 
+## Procedures
+
+### Making Changes and Deploying
+
+**For Terraform or Helm/Kubernetes changes:**
+
+1. **Create a Pull Request** to `main` branch
+   - Make your changes to Terraform files (`tf/nodes/`) or Helm charts
+   - The PR will automatically run Terraform plan for both test and prod environments
+   - Review the plan outputs attached to the PR
+
+2. **Merge to `main`**
+   - Upon merge, the workflow automatically:
+     - Pushes the `test` tag to the merged commit
+     - Deploys to the test environment (Terraform apply)
+
+3. **Deploy to Production**
+   - Manually trigger the `nodes-plan-apply` workflow via `workflow_dispatch`
+   - Select `environment: prod` and `apply: true`
+   - The workflow will:
+     - Push the `prod` tag to the current commit (or promote from test tag if on test)
+     - Deploy to the production environment (Terraform apply)
+
+4. **ArgoCD Deployment**
+   - ArgoCD is configured to point at the `test` and `prod` Git tags
+   - When tags are updated, ArgoCD automatically syncs the changes to the clusters
+   - Test cluster tracks the `test` tag
+   - Production cluster tracks the `prod` tag
+
+**Workflow Summary:**
+```
+PR → main → auto-deploy to test (test tag) → manual deploy to prod (prod tag) → ArgoCD syncs
+```
+
 ## Current State
 
 The repository currently implements:
@@ -588,17 +622,6 @@ PRs automatically run Terraform plan for both environments:
 - Changes to environment-specific configs show in their respective `.auto.tfvars` files
 - Reviewers can see what will change in both test and prod
 
-### Migration Status
-
-✅ **Completed**:
-
-- Workspace-based structure implemented
-- Terraform state migrated manually
-- GitHub Actions workflow updated with composite actions
-- Tag-based deployment workflow implemented
-- Test environment deployed via workflow
-- Production environment ready for first deployment from tag
-
 ## Suggested Refinements
 
 ### 1. Environment Protection Rules
@@ -690,14 +713,11 @@ Consider keeping tag history:
 10. ✅ **Other shared resources**: No additional shared resources desired
 11. ✅ **PR planning**: Plan both environments
 12. ✅ **PR diff comments**: No separate diff comment needed
-13. ✅ **Migration strategy**: Test first, then prod from tag
-14. ✅ **State migration**: Completed manually
-15. ✅ **Tag history**: Force-update acceptable for now
+13. ✅ **Tag history**: Force-update acceptable for now
 
 ### Pending Items
 
-1. **Tag annotations (Q9)**: Currently using lightweight tags; should update to annotated tags with message including GitHub actor and current ref
-2. **Deployment status tracking**: Filed as issue for future implementation
+1. **Deployment status tracking**: Filed as issue for future implementation
 
 ## Current Implementation
 
@@ -710,7 +730,4 @@ The environment strategy is implemented and operational:
 - ✅ Both test and prod environments managed
 - ✅ PR planning for both environments
 - ✅ Terraform plan with detailed exit codes
-
-### Code Changes Needed
-
-1. **Tag annotations**: Update `configure-deployment` action to create annotated tags with message including GitHub actor and current ref (per Q9 answer)
+- ✅ Annotated tags with deployment metadata
