@@ -1802,6 +1802,8 @@ spec:
           - --cluster-resource-namespace=$(POD_NAMESPACE)
           - --leader-election-namespace=kube-system
           - --acme-http01-solver-image=quay.io/jetstack/cert-manager-acmesolver:v1.18.2
+          - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
+          - --dns01-recursive-nameservers-only
           - --max-concurrent-challenges=60
           - --enable-certificate-owner-ref=true
           ports:
