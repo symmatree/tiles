@@ -106,6 +106,17 @@ jobs:
           ./charts/install-crds.sh
           ./charts/bootstrap.sh
 
+          # TODO: Install yq properly with caching and versioning.
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+          ./charts/extract-apis/generate-api-versions.sh
+          # Check for changes (warn only, don't fail)
+          if ! git diff --exit-code ; then
+            echo "::warning title=API Versions Changed::API versions or kube version have changed. Consider committing the updated files."
+            git diff charts/extract-apis/helm-api-versions.txt charts/extract-apis/helm-kube-version.txt
+          fi
+
       - name: De-wireguard
         if: always()
         run: |

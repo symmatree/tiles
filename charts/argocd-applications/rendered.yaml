@@ -282,8 +282,8 @@ spec:
   project: default
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
-    path: tiles/charts/grafana
+    targetRevision: "main"
+    path: charts/grafana
     helm:
       valueFiles:
         - values.yaml

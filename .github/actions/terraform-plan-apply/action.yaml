@@ -1,0 +1,71 @@
+name: "terraform-plan-apply"
+description: "Run Terraform plan and apply for a specific workspace"
+inputs:
+  workspace:
+    description: "Terraform workspace name (test or prod)"
+    required: true
+  apply:
+    description: "Whether to apply the plan after creating it"
+    required: false
+    default: "false"
+  plan_file:
+    description: "Path to the plan file to produce"
+    required: true
+  txt_output_file:
+    description: "Path to the text output file to produce"
+    required: true
+outputs:
+  plan_file:
+    description: "Path to the created plan file"
+    value: ${{ inputs.plan_file }}
+  txt_output_file:
+    description: "Path to the created text output file"
+    value: ${{ inputs.txt_output_file }}
+runs:
+  using: "composite"
+  steps:
+    - name: Select or create workspace
+      shell: bash
+      working-directory: "tf/nodes"
+      run: |
+        set -euo pipefail
+        terraform workspace select "${{ inputs.workspace }}" || terraform workspace new "${{ inputs.workspace }}"
+
+    - name: Terraform plan
+      id: tf-plan
+      shell: bash
+      working-directory: "tf/nodes"
+      env:
+        PLAN_FILE: ${{ inputs.plan_file }}
+        TXT_OUTPUT_FILE: ${{ inputs.txt_output_file }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$(dirname "${TXT_OUTPUT_FILE}")"
+        set +e
+        terraform plan -detailed-exitcode -lock-timeout=5m -input=false -out="${PLAN_FILE}"
+        PLAN_EXIT_CODE=$?
+        set -e
+        if [ "${PLAN_EXIT_CODE}" -eq 0 ]; then
+          echo "::notice title=Terraform::Plan ${{ inputs.workspace }} succeeded with no changes"
+        elif [ "${PLAN_EXIT_CODE}" -eq 1 ]; then
+          echo "::error title=Terraform::Plan ${{ inputs.workspace }} failed with errors"
+          exit 1
+        elif [ "${PLAN_EXIT_CODE}" -eq 2 ]; then
+          echo "::notice title=Terraform::Plan ${{ inputs.workspace }} succeeded with changes detected"
+        else
+          echo "::error title=Terraform::Plan ${{ inputs.workspace }} exited with unexpected code: ${PLAN_EXIT_CODE}"
+          exit 1
+        fi
+        terraform show -no-color "${PLAN_FILE}" > "${TXT_OUTPUT_FILE}"
+
+    - name: Terraform apply
+      id: tf-apply
+      if: inputs.apply == 'true'
+      shell: bash
+      working-directory: "tf/nodes"
+      env:
+        PLAN_FILE: ${{ inputs.plan_file }}
+      run: |
+        set -euo pipefail
+        echo "::notice title=Terraform::Applying plan for workspace: ${{ inputs.workspace }}"
+        terraform apply -lock-timeout=5m "${PLAN_FILE}"

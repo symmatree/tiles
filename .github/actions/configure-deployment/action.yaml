@@ -1,0 +1,50 @@
+name: "configure-deployment"
+description: "Configure deployment settings and push tags as needed"
+outputs:
+  test_apply:
+    description: "Whether to apply to test environment"
+    value: ${{ steps.config.outputs.test_apply }}
+  prod_apply:
+    description: "Whether to apply to prod environment"
+    value: ${{ steps.config.outputs.prod_apply }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/github-script@v8
+      name: Configure deployment
+      id: config
+      with:
+        script: |
+          const { execSync } = require('child_process');
+
+          const eventName = context.eventName;
+          const ref = context.ref;
+          const isPushToMain = eventName === 'push' && ref === 'refs/heads/main';
+          const isPushToTestTag = eventName === 'push' && ref === 'refs/tags/test';
+          const isPushToProdTag = eventName === 'push' && ref === 'refs/tags/prod';
+          const isManualApply = eventName === 'workflow_dispatch' && context.payload.inputs?.apply === 'true';
+          const manualTarget = context.payload.inputs?.environment || '';
+
+          // Determine deployment flags
+          const testApply = (isManualApply && manualTarget === 'test') || isPushToMain || isPushToTestTag;
+          const prodApply = (isManualApply && manualTarget === 'prod') || isPushToProdTag;
+
+          // Push tags when we apply to that environment
+          const tagsToPush = [
+            { shouldPush: testApply && !isPushToTestTag, name: 'test' },
+            { shouldPush: prodApply && !isPushToProdTag, name: 'prod' }
+          ];
+
+          for (const tag of tagsToPush) {
+            if (tag.shouldPush) {
+              console.log(`::notice title=Git::Pushing ${tag.name} tag from ${ref}...`);
+              const tagMessage = `Deployed by ${context.actor} from ${ref}`;
+              execSync(`git tag -f -m "${tagMessage}" ${tag.name} HEAD`, { stdio: 'inherit' });
+              execSync(`git push -f origin ${tag.name}`, { stdio: 'inherit' });
+              console.log(`Pushed ${tag.name} tag`);
+            }
+          }
+
+          // Set outputs
+          core.setOutput('test_apply', testApply.toString());
+          core.setOutput('prod_apply', prodApply.toString());
