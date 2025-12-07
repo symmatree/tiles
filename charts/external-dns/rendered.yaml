@@ -147,6 +147,7 @@ spec:
             - --domain-filter=0.10.in-addr.arpa
             - --provider=google
             - --google-project=placeholder-project-id
+            - --regex-domain-exclusion=^_acme-challenge\.
           ports:
             - name: http
               protocol: TCP
