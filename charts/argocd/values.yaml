@@ -185,6 +185,8 @@ argo-cd:
       controller: generic
       annotations:
         cert-manager.io/cluster-issuer: real-cert
+        # Note: Cilium automatically syncs TLS secrets from the ingress namespace
+        # to cilium-secrets namespace when enable-ingress-secrets-sync is true
       ingressClassName: cilium
       # -- Enable TLS configuration for the hostname defined at `server.ingress.hostname`
       ## TLS certificate will be retrieved from a TLS secret `argocd-server-tls`

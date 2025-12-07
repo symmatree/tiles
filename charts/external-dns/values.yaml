@@ -29,6 +29,8 @@ external-dns:
     name: google
   extraArgs:
     - --google-project=placeholder-project-id
+    # Exclude ACME challenge domains (contain underscores, not valid IDNA)
+    - --regex-domain-exclusion=^_acme-challenge\.
   env:
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: /etc/secrets/service-account/credential.json
