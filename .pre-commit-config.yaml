@@ -40,7 +40,7 @@ repos:
       - id: check-yaml
         args:
           - --allow-multiple-documents
-        exclude: ".*\\.helm\\.yaml"
+        exclude: "(.*\\.helm\\.yaml)$"
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.24.2
