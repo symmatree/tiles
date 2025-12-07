@@ -1,0 +1,203 @@
+global:
+  extraEnv:
+    - name: SSL_CERT_FILE
+      value: /etc/ssl/certs/ca-certificates.crt
+  extraVolumes:
+    - name: ca-certificates
+      configMap:
+        name: trust-bundle
+  extraVolumeMounts:
+    - name: ca-certificates
+      mountPath: /etc/ssl/certs
+      readOnly: true
+k8s-monitoring:
+  cluster:
+    name: "{{ .Values.cluster_name }}"
+  destinations:
+    - name: localMimir
+      type: prometheus
+      url: http://mimir-distributor-headless.mimir.svc:8080/api/v1/push
+    - name: localLoki
+      type: loki
+      url: http://loki-gateway.loki.svc/loki/api/v1/push
+    # - name: localTempo
+    #   type: otlp
+    #   protocol: http
+    #   url: http://tempo.tempo.svc:4318/ # /v1/traces is added automatically
+    #   tls:
+    #     insecure: true
+
+    #   logs:
+    #     enabled: false
+    #   metrics:
+    #     enabled: false
+    #   traces:
+    #     enabled: true
+  # https://github.com/grafana/k8s-monitoring-helm/blob/main/charts/k8s-monitoring/charts/feature-cluster-metrics/values.yaml
+  clusterMetrics:
+    enabled: true
+    controlPlane:
+      enabled: true
+    kubeProxy:
+      # there isn't one, cilium replaces it.
+      enabled: false
+    windows-exporter:
+      enabled: false
+      deploy: false
+    node-exporter:
+      enabled: true
+      deploy: true
+      metricsTuning:
+        useDefaultAllowList: true
+        useIntegrationAllowList: true
+        includeMetrics:
+          - "node_pressure.*"
+          - "node_xfs.*"
+          - "node_time_seconds"
+          - "node_bonding.*"
+        dropMetricsForFilesystem:
+          - ramfs
+          - tmpfs
+          - nsfs
+          - overlayfs
+      extraArgs:
+        - --collector.filesystem.fs-types-exclude=^(ramfs|tmpfs|nsfs|overlayfs)$
+    kepler:
+      enabled: false
+    opencost:
+      enabled: false
+  clusterEvents:
+    enabled: true
+    # logfmt version does NO escaping:
+    # https://github.com/grafana/alloy/blob/main/internal/component/loki/source/kubernetes_events/event_controller.go#L303
+    # to
+    # https://github.com/grafana/alloy/blob/main/internal/component/loki/source/kubernetes_events/event_controller.go#L324
+    logFormat: json
+  nodeLogs:
+    # Talos doesn't surface these through the filesystem.
+    enabled: false
+  podLogs:
+    enabled: true
+  # applicationObservability:
+  #   enabled: true
+  #   receivers:
+  #     otlp:
+  #       grpc:
+  #         enabled: true
+  #         port: 4317
+  #         includeMetadata: true
+  #       http:
+  #         enabled: true
+  #         port: 4318
+  #         includeMetadata: true
+  #   processors:
+  #     kubernetes_node:
+  #       enabled: true
+  #   connectors:
+  #     spanLogs:
+  #       enabled: true
+  #       roots: true
+  #       spans: false
+  #     spanMetrics:
+  #       enabled: true
+  #   metrics:
+  #     enabled: false
+  #   logs:
+  #     enabled: false
+  #   traces:
+  #     enabled: true
+  prometheusOperatorObjects:
+    enabled: true
+    crds:
+      deploy: false
+  alloy-metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    # This is the instance running prometheus.operator.probes
+    # so make it also the blackbox exporter.
+    # https://github.com/grafana/alloy/issues/2333#issuecomment-2741631302
+    # goes a long way here.
+    extraConfig: |-
+      prometheus.exporter.blackbox "blackbox_exporter" {
+        config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
+      }
+    alloy:
+      resources: # Set 2025-07-20
+        # requests:
+        #   memory: 768Mi
+        limits:
+          memory: 1Gi
+  alloy-singleton:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    extraConfig: |-
+      mimir.rules.kubernetes "default" {
+        address = "http://mimir-ruler.mimir.svc:8080"
+      }
+    alloy:
+      resources: # Set 2025-07-20
+        # requests:
+        #   memory: 256Mi
+        limits:
+          memory: 512Mi
+  alloy-logs:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    alloy:
+      mounts:
+        # /var/log/pods and /var/log/containers exist. (Also audit.)
+        varlog: true
+        dockercontainers: false
+  # alloy-receiver:
+  #   enabled: true
+  #   serviceMonitor:
+  #     enabled: true
+  #   controller:
+  #     type: "deployment"
+  #   alloy:
+  #     extraPorts:
+  #       - name: otlp-grpc
+  #         port: 4317
+  #         targetPort: 4317
+  #         protocol: TCP
+  #       - name: otlp-http
+  #         port: 4318
+  #         targetPort: 4318
+  #         protocol: TCP
+  integrations:
+    alloy:
+      instances:
+        - name: alloy
+          namespace: alloy
+          labelSelectors:
+            app.kubernetes.io/name:
+              - alloy-metrics
+              - alloy-singleton
+              - alloy-logs
+    cert-manager:
+      instances:
+        - name: cert-manager
+          namespace: cert-manager
+          labelSelectors:
+            app.kubernetes.io/name: cert-manager
+    # grafana:
+    #   instances:
+    #     - name: lgtm-grafana
+    #       namespace: lgtm
+    #       labelSelectors:
+    #         app.kubernetes.io/name: grafana
+    # loki:
+    #   instances:
+    #     - name: lgtm-loki
+    #       namespace: lgtm
+    #       labelSelectors:
+    #         app.kubernetes.io/name: loki
+    # mimir:
+    #   instances:
+    #     - name: lgtm-mimir
+    #       namespace: lgtm
+    #       labelSelectors:
+    #         app.kubernetes.io/name: mimir

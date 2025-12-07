@@ -7,8 +7,11 @@ export ARGOCD_VERSION="v3.2.0"
 export TRUST_MANAGER_VERSION="v0.20.2"
 export ONEPASSWORD_OPERATOR_VERSION="v1.8.1"
 export GATEWAY_API_VERSION="v1.4.0"
+export ALLOY_OPERATOR_VERSION="alloy-operator-0.3.14"
 
 set -x
+kubectl apply --server-side -f "https://github.com/grafana/alloy-operator/releases/download/${ALLOY_OPERATOR_VERSION}/collectors.grafana.com_alloy.yaml"
+
 # Prometheus Operator
 kubectl apply --server-side -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_servicemonitors.yaml"
 kubectl apply --server-side -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_podmonitors.yaml"
