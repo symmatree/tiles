@@ -45,17 +45,23 @@ runs:
         terraform plan -detailed-exitcode -lock-timeout=5m -input=false -out="${PLAN_FILE}"
         PLAN_EXIT_CODE=$?
         set -e
-        if [ "${PLAN_EXIT_CODE}" -eq 0 ]; then
-          echo "::notice title=Terraform::Plan ${{ inputs.workspace }} succeeded with no changes"
-        elif [ "${PLAN_EXIT_CODE}" -eq 1 ]; then
-          echo "::error title=Terraform::Plan ${{ inputs.workspace }} failed with errors"
-          exit 1
-        elif [ "${PLAN_EXIT_CODE}" -eq 2 ]; then
-          echo "::notice title=Terraform::Plan ${{ inputs.workspace }} succeeded with changes detected"
-        else
-          echo "::error title=Terraform::Plan ${{ inputs.workspace }} exited with unexpected code: ${PLAN_EXIT_CODE}"
-          exit 1
-        fi
+        echo "Terraform plan exited with code: ${PLAN_EXIT_CODE}"
+        case "${PLAN_EXIT_CODE}" in
+          0)
+            echo "::notice title=Terraform::Plan ${{ inputs.workspace }} succeeded with no changes"
+            ;;
+          1)
+            echo "::error title=Terraform::Plan ${{ inputs.workspace }} failed with errors"
+            exit 1
+            ;;
+          2)
+            echo "::notice title=Terraform::Plan ${{ inputs.workspace }} succeeded with changes detected"
+            ;;
+          *)
+            echo "::error title=Terraform::Plan ${{ inputs.workspace }} exited with unexpected code: ${PLAN_EXIT_CODE}"
+            exit 1
+            ;;
+        esac
         terraform show -no-color "${PLAN_FILE}" > "${TXT_OUTPUT_FILE}"
 
     - name: Terraform apply
