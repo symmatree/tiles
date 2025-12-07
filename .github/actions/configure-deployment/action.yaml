@@ -29,6 +29,10 @@ runs:
           const testApply = (isManualApply && manualTarget === 'test') || isPushToMain || isPushToTestTag;
           const prodApply = (isManualApply && manualTarget === 'prod') || isPushToProdTag;
 
+          // Configure git user for tag creation
+          execSync(`git config user.name "${context.actor}"`, { stdio: 'inherit' });
+          execSync(`git config user.email "${context.actor}@users.noreply.github.com"`, { stdio: 'inherit' });
+
           // Push tags when we apply to that environment
           const tagsToPush = [
             { shouldPush: testApply && !isPushToTestTag, name: 'test' },
