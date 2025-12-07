@@ -229,8 +229,9 @@ spec:
               drop:
               - ALL
             readOnlyRootFilesystem: false
+            runAsGroup: 472
             runAsNonRoot: false
-            runAsUser: 0
+            runAsUser: 472
             seccompProfile:
               type: RuntimeDefault
           command:
