@@ -1,3 +1,4 @@
+vault_name: placeholder
 global:
   extraEnv:
     - name: SSL_CERT_FILE
@@ -12,7 +13,6 @@ global:
       readOnly: true
 grafana:
   # https://github.com/grafana/helm-charts/blob/grafana-8.13.1/charts/grafana/values.yaml
-  automountServiceAccountToken: false
   configMapAnnotations:
     argocd.argoproj.io/sync-options: Replace=true
   ingress:
