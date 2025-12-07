@@ -38,7 +38,8 @@ runs:
           for (const tag of tagsToPush) {
             if (tag.shouldPush) {
               console.log(`::notice title=Git::Pushing ${tag.name} tag from ${ref}...`);
-              execSync(`git tag -f ${tag.name} HEAD`, { stdio: 'inherit' });
+              const tagMessage = `Deployed by ${context.actor} from ${ref}`;
+              execSync(`git tag -f -m "${tagMessage}" ${tag.name} HEAD`, { stdio: 'inherit' });
               execSync(`git push -f origin ${tag.name}`, { stdio: 'inherit' });
               console.log(`Pushed ${tag.name} tag`);
             }

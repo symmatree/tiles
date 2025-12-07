@@ -6,25 +6,29 @@ This document describes the strategy for managing two parallel Terraform environ
 
 ## Current State
 
-Currently, the repository has:
+The repository currently implements:
 
-- A single shared Terraform workspace (`tf/nodes`) that manages both test and production configurations
-- Test environment is active (`tiles-test` cluster)
-- Production environment is commented out (`tiles-prod` module)
-- Both environments share the same Terraform state backend
-- Automatic deployment on push to `main` branch
-- Manual deployment via `workflow_dispatch` with an `apply` input
+- Terraform workspaces (`test` and `prod`) in `tf/nodes` directory
+- Test environment active (`tiles-test` cluster)
+- Production environment ready (`tiles` cluster)
+- Separate state files per workspace in GCS backend
+- Tag-based deployment workflow (`test` and `prod` tags)
+- Automatic tag pushing when deploying to environments
+- Automatic deployment on push to `main` branch (deploys to test)
+- Manual deployment via `workflow_dispatch` with environment selection
+- Composite actions for modular workflow steps
+- PR planning for both test and prod environments
 
-## Desired State
+## Architecture
 
 ### Architecture Principles
 
-1. **Parallel Environments**: Test and production should be managed as separate, parallel environments rather than a shared workspace
+1. **Parallel Environments**: Test and production are managed as separate Terraform workspaces
 2. **Shared Bootstrap**: The bootstrap Terraform (`tf/bootstrap`) remains shared since it initializes resources for both environments
 3. **Side-by-Side Configuration**: Both environment configurations live in the same source tree for easy diffing in PRs
-4. **Tag-Based Deployment**: Use Git tags (`test` and `prod`) to trigger deployments
-5. **Promotion Workflow**: Production deployments are explicitly promoted from test-tagged commits
-6. **Shared Code, Different Variables**: Most differences between environments should be represented as different `.tfvars` files
+4. **Tag-Based Deployment**: Git tags (`test` and `prod`) track what's deployed and trigger redeployments
+5. **Promotion Workflow**: Production deployments can be promoted from test-tagged commits or deployed directly
+6. **Shared Code, Different Variables**: Most differences between environments are represented as different `.auto.tfvars` files
 
 ### Directory Structure
 
@@ -68,7 +72,12 @@ tf/
 **Questions:**
 
 - **Q1**: Which structure do you prefer? Separate directories (`nodes-test/`, `nodes-prod/`) or single directory with Terraform workspaces?
+
+A: Workspaces
+
 - **Q2**: Should `main.tf` (provider setup) be duplicated, symlinked, or extracted to a shared module?
+
+A: Workspaces so same file
 
 ## Terraform Workspaces Deep Dive
 
@@ -394,118 +403,63 @@ Given your requirement to "diff both sides in PRs", **workspaces might actually 
 
 ### Deployment Workflow
 
-#### Test Environment Deployment
+The deployment workflow is implemented in `.github/workflows/nodes-plan-apply.yaml` and uses composite actions for modularity.
 
-**Trigger**: Merge to `main` branch
+#### Workflow Triggers
 
-**Actions**:
+- **Push to `main`**: Automatically deploys to test environment (pushes test tag and applies)
+- **Push to `test` tag**: Redeploys test environment (no tag push needed)
+- **Push to `prod` tag**: Redeploys prod environment (no tag push needed)
+- **Manual workflow dispatch**: Allows selecting target environment (test or prod) with optional apply
 
-1. Create/update Git tag `test` pointing to the merged commit
-2. Checkout the tagged commit
-3. Run Terraform plan/apply for test environment
-4. Deploy to `tiles-test` cluster
+#### Tag Management
 
-**GitHub Actions Workflow** (using workspaces):
+Tags are automatically pushed by the `configure-deployment` action when deploying to an environment:
 
-```yaml
-on:
-  push:
-    branches:
-      - main
+- **Test tag**: Pushed when deploying to test (unless already on test tag)
+- **Prod tag**: Pushed when deploying to prod (unless already on prod tag)
+- Tags are force-updated to point to the current commit being deployed
+- Tag pushing happens before Terraform operations, ensuring tags always reflect what's deployed
 
-jobs:
-  deploy-test:
-    steps:
-      - uses: actions/checkout@v6
-      - uses: hashicorp/setup-terraform@v3
+#### Deployment Logic
 
-      - name: Create/update test tag
-        run: |
-          git tag -f test HEAD
-          git push -f origin test
+The `configure-deployment` action determines:
 
-      - name: Terraform init
-        working-directory: tf/nodes
-        run: terraform init
+- Whether to push tags based on the deployment target
+- Whether to apply to test environment (`test_apply`)
+- Whether to apply to prod environment (`prod_apply`)
 
-      - name: Select or create test workspace
-        working-directory: tf/nodes
-        run: terraform workspace select test || terraform workspace new test
+**Deployment scenarios:**
 
-      - name: Terraform plan
-        working-directory: tf/nodes
-        run: terraform plan -lock-timeout=5m -input=false
+- Push to main → Push test tag, deploy test
+- Push to test tag → Deploy test (no tag push)
+- Push to prod tag → Deploy prod (no tag push)
+- Manual: target test → Push test tag (if not on test tag), deploy test
+- Manual: target prod → Push prod tag (if on test tag or main), deploy prod
 
-      - name: Terraform apply
-        working-directory: tf/nodes
-        run: terraform apply -lock-timeout=5m -auto-approve
-```
+#### Terraform Operations
 
-#### Production Environment Deployment
+The `terraform-plan-apply` composite action handles:
 
-**Trigger**: Manual workflow dispatch with `environment: prod` input
-
-**Actions**:
-
-1. Find the commit tagged with `test`
-2. Create/update Git tag `prod` pointing to that same commit
-3. Checkout the tagged commit
-4. Run Terraform plan/apply for production environment
-5. Deploy to `tiles` (production) cluster
-
-**GitHub Actions Workflow** (using workspaces):
-
-```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to deploy"
-        required: true
-        type: choice
-        options:
-          - prod
-
-jobs:
-  deploy-prod:
-    steps:
-      - uses: actions/checkout@v6
-      - uses: hashicorp/setup-terraform@v3
-
-      - name: Find test tag commit
-        id: test-tag
-        run: |
-          TEST_COMMIT=$(git rev-list -n 1 test)
-          echo "commit=${TEST_COMMIT}" >> $GITHUB_OUTPUT
-          git checkout ${TEST_COMMIT}
-
-      - name: Create/update prod tag
-        run: |
-          git tag -f prod ${{ steps.test-tag.outputs.commit }}
-          git push -f origin prod
-
-      - name: Terraform init
-        working-directory: tf/nodes
-        run: terraform init
-
-      - name: Select or create prod workspace
-        working-directory: tf/nodes
-        run: terraform workspace select prod || terraform workspace new prod
-
-      - name: Terraform plan
-        working-directory: tf/nodes
-        run: terraform plan -lock-timeout=5m -input=false
-
-      - name: Terraform apply
-        working-directory: tf/nodes
-        run: terraform apply -lock-timeout=5m -auto-approve
-```
+- Workspace selection/creation (get-or-create pattern)
+- Terraform plan with `-detailed-exitcode` flag (exits 0=no changes, 1=error, 2=changes)
+- Logging notices for plan results (no changes vs changes detected)
+- Conditional apply based on input flag
+- All operations use `working-directory` instead of `cd` commands
 
 **Questions:**
 
 - **Q3**: Should production deployment require explicit approval (GitHub environment protection rules)?
+
+A: No.
+
 - **Q4**: Should we validate that the test tag exists before allowing prod deployment?
+
+A: No
+
 - **Q5**: Should we prevent prod deployment if the test tag is "too old" (e.g., > 7 days)?
+
+A: No
 
 ### Terraform State Management
 
@@ -576,25 +530,33 @@ run_bootstrap        = false  # Manual bootstrap for prod
 **Questions:**
 
 - **Q7**: Should VM configurations (node specs, IPs, etc.) be in separate `.tf` files (`test-vms.tf`, `prod-vms.tf`) or as data structures in `.tfvars`?
+
+tfvars.
+
 - **Q8**: Should we extract shared Talos schematic configuration to a shared location?
+
+I don't understand but with workspaces the code is shared and the config may intentionally
+differ if I'm testing a change to the schematic we use.
 
 ### Tag Management
 
 **Tag Naming**:
 
 - `test`: Points to the latest commit deployed to test
-- `prod`: Points to the commit deployed to production (must match a `test` tag commit)
+- `prod`: Points to the commit deployed to production
 
 **Tag Behavior**:
 
 - Tags are force-updated (`git tag -f`) to avoid tag conflicts
 - Tags are pushed with `git push -f origin <tag>` to update remote
-- The workflow needs `contents: write` permission to create/update tags
+- The workflow has `contents: write` permission to create/update tags
+- Tags are pushed automatically when deploying to an environment
+- Tags are only pushed if not already on that tag (prevents unnecessary pushes)
 
-**Questions:**
+**Current Implementation**:
 
-- **Q9**: Should we use annotated tags with messages, or lightweight tags?
-- **Q10**: Should we prevent force-pushing tags if they're already deployed? (Requires checking deployment status)
+- Tags are currently lightweight tags
+- **TODO (Q9)**: Update to annotated tags with message including GitHub actor and current ref
 
 ### Shared Resources
 
@@ -607,34 +569,35 @@ Some resources are shared between environments and should remain in bootstrap or
 **Questions:**
 
 - **Q11**: Should Talos ISO downloads be environment-specific or shared? (Currently they're per-node, but could be per-environment)
+
+I don't want to store multiple copies of an iso just for isolation. Right now they will share them by name
+but might fight over the id assigned to them. I don't really want to add a whole other "shared" chunk of terraorm though.
+
 - **Q12**: Are there any other resources that should remain shared vs. environment-specific?
+
+I don't want to.
 
 ### Pull Request Workflow
 
-PRs should show diffs for both environments:
+PRs automatically run Terraform plan for both environments:
 
-- Changes to shared code (modules, bootstrap) affect both
-- Changes to environment-specific configs show in their respective files
+- The workflow runs on `pull_request` events
+- Both test and prod workspaces are planned
+- Plan outputs are attached to PR comments via the `attach-outputs` action
+- Changes to shared code (modules, bootstrap) affect both environments
+- Changes to environment-specific configs show in their respective `.auto.tfvars` files
 - Reviewers can see what will change in both test and prod
 
-**Questions:**
+### Migration Status
 
-- **Q13**: Should PRs run Terraform plan for both environments, or just test?
-- **Q14**: Should we add a PR comment showing the diff between test and prod configs?
+✅ **Completed**:
 
-### Migration Plan
-
-1. **Phase 1**: Create new directory structure (or workspace setup)
-2. **Phase 2**: Split current `tf/nodes` into test and prod configurations
-3. **Phase 3**: Migrate Terraform state (if using separate backends)
-4. **Phase 4**: Update GitHub Actions workflow
-5. **Phase 5**: Test deployment workflow
-6. **Phase 6**: Decommission old shared workspace
-
-**Questions:**
-
-- **Q15**: Should we do a "big bang" migration or gradual (test first, then prod)?
-- **Q16**: How should we handle the existing Terraform state? (Import existing resources into new state?)
+- Workspace-based structure implemented
+- Terraform state migrated manually
+- GitHub Actions workflow updated with composite actions
+- Tag-based deployment workflow implemented
+- Test environment deployed via workflow
+- Production environment ready for first deployment from tag
 
 ## Suggested Refinements
 
@@ -645,6 +608,8 @@ Use GitHub Environments to add approval gates for production:
 - `test` environment: Auto-approve
 - `prod` environment: Require manual approval
 
+A: There's just me, I don't need to approve myself.
+
 ### 2. Deployment Status Tracking
 
 Track which commit is deployed where:
@@ -652,12 +617,16 @@ Track which commit is deployed where:
 - Add a deployment status file or use GitHub Deployments API
 - Show deployment status in PR comments
 
+**Status**: Filed as issue for future implementation
+
 ### 3. Automated Promotion
 
 Consider a "promote to prod" button in PR comments after test deployment succeeds:
 
 - One-click promotion workflow
 - Still requires explicit action (not automatic)
+
+A: Meh, maybe.
 
 ### 4. Configuration Validation
 
@@ -675,6 +644,8 @@ Define how to rollback:
 - Re-run deployment workflow
 - Document rollback procedure
 
+A: That's the procedure, right?
+
 ### 6. Tag History
 
 Consider keeping tag history:
@@ -683,9 +654,7 @@ Consider keeping tag history:
 - `test` and `prod` tags point to latest
 - Allows auditing what was deployed when
 
-**Questions:**
-
-- **Q17**: Do you want tag history, or is force-updating tags acceptable?
+**Status**: Force-updating tags is acceptable for now. Tag history may be considered in the future.
 
 ## Alternatives Considered
 
@@ -705,28 +674,43 @@ Consider keeping tag history:
 - `tiles-test` and `tiles-prod` repos
 - **Rejected**: Harder to keep in sync, can't diff in PRs
 
-## Open Questions Summary
+## Implementation Summary
 
-1. Directory structure: Separate dirs vs. workspaces?
-2. Provider setup: Duplicate, symlink, or shared module?
-3. Production approval: Require manual approval?
-4. Test tag validation: Validate test tag exists/age before prod deploy?
-5. State management: Workspaces vs. separate backend prefixes?
-6. VM configs: Separate `.tf` files vs. `.tfvars`?
-7. Talos schematic: Extract to shared location?
-8. Tag type: Annotated vs. lightweight?
-9. Tag protection: Prevent force-push if deployed?
-10. Talos ISOs: Shared or environment-specific?
-11. Other shared resources?
-12. PR planning: Plan both environments or just test?
-13. PR diff comments: Show test vs. prod diff?
-14. Migration strategy: Big bang vs. gradual?
-15. State migration: How to handle existing state?
-16. Tag history: Keep history or force-update?
+### Resolved Decisions
 
-## Next Steps
+1. ✅ **Directory structure**: Workspaces (single `tf/nodes` directory with workspace-based isolation)
+2. ✅ **Provider setup**: Shared (same file for all workspaces)
+3. ✅ **Production approval**: No approval required
+4. ✅ **Test tag validation**: No validation required
+5. ✅ **State management**: Workspaces with automatic state path isolation
+6. ✅ **VM configs**: In `.tfvars` files
+7. ✅ **Talos schematic**: Shared code, config may differ per workspace
+8. ✅ **Tag protection**: Force-push is acceptable
+9. ✅ **Talos ISOs**: Shared by name (may fight over ID assignment)
+10. ✅ **Other shared resources**: No additional shared resources desired
+11. ✅ **PR planning**: Plan both environments
+12. ✅ **PR diff comments**: No separate diff comment needed
+13. ✅ **Migration strategy**: Test first, then prod from tag
+14. ✅ **State migration**: Completed manually
+15. ✅ **Tag history**: Force-update acceptable for now
 
-1. Review and answer open questions
-2. Finalize directory structure and state management approach
-3. Create implementation plan
-4. Begin migration
+### Pending Items
+
+1. **Tag annotations (Q9)**: Currently using lightweight tags; should update to annotated tags with message including GitHub actor and current ref
+2. **Deployment status tracking**: Filed as issue for future implementation
+
+## Current Implementation
+
+The environment strategy is implemented and operational:
+
+- ✅ Workspace-based Terraform structure
+- ✅ Tag-based deployment workflow
+- ✅ Automated tag pushing on deployment
+- ✅ Composite actions for modularity
+- ✅ Both test and prod environments managed
+- ✅ PR planning for both environments
+- ✅ Terraform plan with detailed exit codes
+
+### Code Changes Needed
+
+1. **Tag annotations**: Update `configure-deployment` action to create annotated tags with message including GitHub actor and current ref (per Q9 answer)

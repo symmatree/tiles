@@ -26,7 +26,7 @@ runs:
   steps:
     - name: Select or create workspace
       shell: bash
-      working-directory: "${GITHUB_WORKSPACE}/tf/nodes"
+      working-directory: "tf/nodes"
       run: |
         set -euo pipefail
         terraform workspace select "${{ inputs.workspace }}" || terraform workspace new "${{ inputs.workspace }}"
@@ -34,7 +34,7 @@ runs:
     - name: Terraform plan
       id: tf-plan
       shell: bash
-      working-directory: "${GITHUB_WORKSPACE}/tf/nodes"
+      working-directory: "tf/nodes"
       env:
         PLAN_FILE: ${{ inputs.plan_file }}
         TXT_OUTPUT_FILE: ${{ inputs.txt_output_file }}
@@ -62,7 +62,7 @@ runs:
       id: tf-apply
       if: inputs.apply == 'true'
       shell: bash
-      working-directory: "${GITHUB_WORKSPACE}/tf/nodes"
+      working-directory: "tf/nodes"
       env:
         PLAN_FILE: ${{ inputs.plan_file }}
       run: |
