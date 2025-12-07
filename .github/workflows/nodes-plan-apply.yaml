@@ -36,6 +36,44 @@ jobs:
 
     steps:
       - uses: "actions/checkout@v6"
+        with:
+          fetch-depth: 0 # Need full history for git diff
+      - name: Check if only charts changed
+        id: charts_only
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ runner.temp }}/txt-outputs/"
+          # For non-PR events, always run Terraform
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Not a pull request, running Terraform"
+            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Get the base and head SHAs for the PR
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}"..."${HEAD_SHA}" || git diff --name-only "${BASE_SHA}".."${HEAD_SHA}")
+
+          if [ -z "${CHANGED_FILES}" ]; then
+            echo "No changed files detected, running Terraform to be safe"
+            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if any file is outside charts/
+          NON_CHARTS_FILES=$(echo "${CHANGED_FILES}" | grep -v "^charts/" || true)
+
+          if [ -n "${NON_CHARTS_FILES}" ]; then
+            echo "Found changes outside charts/ directory:"
+            echo "${NON_CHARTS_FILES}"
+            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "All changes are in charts/ directory, skipping Terraform"
+            echo "run_terraform=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: ./.github/actions/configure-deployment
         id: config
       - name: DateAndTimeStamps
@@ -52,6 +90,7 @@ jobs:
 
       - name: Load secrets
         id: load_secrets
+        if: steps.charts_only.outputs.run_terraform == 'true'
         uses: 1password/load-secrets-action@v3
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
@@ -60,6 +99,7 @@ jobs:
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
 
       - name: Authenticate to Google Cloud
+        if: steps.charts_only.outputs.run_terraform == 'true'
         run: |
           set -euo pipefail
           echo '${{ steps.load_secrets.outputs.GCP_TILES_TF_SA_KEY }}' > "${RUNNER_TEMP}/gcp-sa-key.json"
@@ -82,7 +122,7 @@ jobs:
             ${{ runner.os }}-tf-${{ steps.stamps.outputs.DATESTAMP }}-
 
       - name: Terraform init
-        if: steps.tf-cache.outputs.cache-hit != 'true'
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit != 'true'
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
@@ -90,12 +130,14 @@ jobs:
 
       - uses: ./.github/actions/wg-quick
         id: wireguard
+        if: steps.charts_only.outputs.run_terraform == 'true'
         with:
           wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
           conf_dir: "$HOME"
 
       - name: Terraform plan and apply - test
         id: tf-test
+        if: steps.charts_only.outputs.run_terraform == 'true'
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "test"
@@ -105,6 +147,7 @@ jobs:
 
       - name: Terraform plan and apply - prod
         id: tf-prod
+        if: steps.charts_only.outputs.run_terraform == 'true'
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "prod"
@@ -124,9 +167,18 @@ jobs:
           time sudo wg-quick down "$HOME/wg0.conf" || true
           echo "Disconnected"
 
+      - name: Determine outcome message
+        id: outcome_msg
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          if [ "${{ steps.charts_only.outputs.run_terraform }}" == "false" ]; then
+            echo "message=Skipped (charts-only changes)" >> "$GITHUB_OUTPUT"
+          else
+            echo "message=test: ${{ steps.tf-test.outcome }}, prod: ${{ steps.tf-prod.outcome }}" >> "$GITHUB_OUTPUT"
+          fi
       - uses: ./.github/actions/attach-outputs
         name: Attach outputs to PR
         if: always() && github.event_name == 'pull_request'
         with:
           txt_output_dir: "${{ runner.temp }}/txt-outputs/"
-          outcome: "test: ${{ steps.tf-test.outcome }}, prod: ${{ steps.tf-prod.outcome }}"
+          outcome: ${{ steps.outcome_msg.outputs.message }}
