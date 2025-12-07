@@ -15,6 +15,7 @@ spec:
       valueFiles:
         - values.yaml
       valuesObject:
+        vault_name: "{{ .Values.vault_name }}"
         grafana:
           ingress:
             hosts:
