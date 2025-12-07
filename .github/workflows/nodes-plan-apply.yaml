@@ -12,10 +12,6 @@ on:
         options:
           - test
           - prod
-      regenerate_apis:
-        description: "Whether to regenerate the API versions"
-        type: boolean
-        default: false
   pull_request: {}
   push:
     branches:
@@ -62,7 +58,6 @@ jobs:
           GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
           GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
-          KUBECONFIG_SECRET: "op://tiles-secrets/tiles-test-kubeconfig/notesPlain"
 
       - name: Authenticate to Google Cloud
         run: |
@@ -88,9 +83,9 @@ jobs:
 
       - name: Terraform init
         if: steps.tf-cache.outputs.cache-hit != 'true'
+        working-directory: "tf/nodes"
         run: |
           set -euo pipefail
-          cd "${GITHUB_WORKSPACE}/tf/nodes"
           terraform init
 
       - uses: ./.github/actions/wg-quick
