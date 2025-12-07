@@ -452,7 +452,7 @@ metadata:
     grafana_datasource: "1"
 type: Opaque
 spec:
-  itemPath: vaults/tiles-secrets/items/grafana-github-token
+  itemPath: "vaults/placeholder/items/grafana-github-token"
 ---
 # Source: grafana/templates/grafana-admin-user.yaml
 apiVersion: onepassword.com/v1
@@ -462,7 +462,7 @@ metadata:
   name: grafana-admin-user
 type: Opaque
 spec:
-  itemPath: vaults/tales-secrets/items/grafana-admin-user
+  itemPath: "vaults/placeholder/items/grafana-admin-user"
 ---
 # Source: grafana/charts/grafana/templates/tests/test-serviceaccount.yaml
 apiVersion: v1

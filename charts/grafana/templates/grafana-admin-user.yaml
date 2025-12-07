@@ -5,4 +5,4 @@ metadata:
   name: grafana-admin-user
 type: Opaque
 spec:
-  itemPath: vaults/tales-secrets/items/grafana-admin-user
+  itemPath: "vaults/{{.Values.vault_name}}/items/grafana-admin-user"
