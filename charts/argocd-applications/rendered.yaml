@@ -353,6 +353,7 @@ spec:
         - values.yaml
       valuesObject:
         vault_name: "placeholder"
+        cluster_name: "placeholder"
         grafana:
           ingress:
             hosts:

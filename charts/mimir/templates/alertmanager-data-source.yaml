@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: mimir-data-source
+  name: alertmanager-data-source
   namespace: "{{ .Release.Namespace }}"
   labels:
     grafana_datasource: "1"
@@ -9,15 +9,13 @@ data:
   datasource.yaml: |-
     apiVersion: 1
     datasources:
-      - name: Mimir
-        uid: prom
-        type: prometheus
-        url: http://mimir-distributor.mimir.svc/prometheus
-        isDefault: true
+      - name: Mimir Alertmanager
+        uid: alertmanager
+        type: alertmanager
+        url: http://mimir-alertmanager.mimir.svc/
         jsonData:
-          prometheusType: Mimir
-          alertmanagerUid: alertmanager
+          implementation: mimir
+          handleGrafanaManagedAlerts: true
           httpHeaderName1: X-Scope-OrgID
         secureJsonData:
-          tlsCACert: $__file{/etc/ssl/certs/ca-certificates.crt}
           httpHeaderValue1: "{{ .Values.cluster_name }}"

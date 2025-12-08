@@ -417,6 +417,29 @@ data:
     
     {}
 ---
+# Source: mimir/templates/alertmanager-data-source.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-data-source
+  namespace: "mimir"
+  labels:
+    grafana_datasource: "1"
+data:
+  datasource.yaml: |-
+    apiVersion: 1
+    datasources:
+      - name: Mimir Alertmanager
+        uid: alertmanager
+        type: alertmanager
+        url: http://mimir-alertmanager.mimir.svc/
+        jsonData:
+          implementation: mimir
+          handleGrafanaManagedAlerts: true
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: "placeholder"
+---
 # Source: mimir/templates/mimir-data-source.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -432,13 +455,15 @@ data:
       - name: Mimir
         uid: prom
         type: prometheus
-        url: http://mimir-nginx.mimir.svc/prometheus
+        url: http://mimir-distributor.mimir.svc/prometheus
         isDefault: true
         jsonData:
           prometheusType: Mimir
           alertmanagerUid: alertmanager
+          httpHeaderName1: X-Scope-OrgID
         secureJsonData:
           tlsCACert: $__file{/etc/ssl/certs/ca-certificates.crt}
+          httpHeaderValue1: "placeholder"
 ---
 # Source: mimir/charts/mimir-distributed/charts/rollout_operator/templates/webhook-clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1

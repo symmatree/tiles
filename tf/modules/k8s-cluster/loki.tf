@@ -68,6 +68,24 @@ resource "onepassword_item" "loki_tenant_auth_secret" {
       type  = "CONCEALED"
       value = "${var.cluster_name}:${htpasswd_password.loki_cluster_tenant.bcrypt}"
     }
+    field {
+      label = "datasource.yaml"
+      value = <<-EOT
+apiVersion: 1
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    url: http://loki-gateway.loki.svc
+    isDefault: false
+    jsonData:
+      httpHeaderName1: X-Scope-OrgID
+    secureJsonData:
+      httpHeaderValue1: ${var.cluster_name}
+      basicAuthUser: ${var.cluster_name}
+      basicAuthPassword: ${random_password.loki_cluster_tenant.result}
+EOT
+    }
   }
   section {
     label = "metadata"
