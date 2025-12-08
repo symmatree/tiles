@@ -12,14 +12,30 @@ global:
       readOnly: true
 k8s-monitoring:
   cluster:
-    name: "{{ .Values.cluster_name }}"
+    name: "placeholder-cluster"
   destinations:
-    - name: localMimir
+    # This array is replaced entirely in the application.yaml file.
+    - name: placeholder-mimir
       type: prometheus
-      url: http://mimir-distributor-headless.mimir.svc:8080/api/v1/push
-    - name: localLoki
+      url: http://placeholder.mimir.svc:8080/api/v1/push
+      tenantId: "placeholder-mimir-tenant"
+      secret:
+        # This is just the tenant name
+        create: false
+        embed: true
+    - name: placeholder-loki
       type: loki
-      url: http://loki-gateway.loki.svc/loki/api/v1/push
+      url: http://placeholder.loki.svc/loki/api/v1/push
+      tenantId: "placeholder-loki-tenant"
+      http_user: "placeholder-loki-tenant"
+      secret:
+        # This is just the tenant name
+        create: false
+        embed: true
+      http_passwd:
+        secret:
+          name: loki-tenant-auth
+          key: password
     # - name: localTempo
     #   type: otlp
     #   protocol: http

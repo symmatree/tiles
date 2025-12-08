@@ -38,6 +38,37 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+      valuesObject:
+        vault_name: "placeholder"
+        cluster_name: "placeholder"
+        k8s-monitoring:
+          cluster:
+            name: "placeholder"
+
+          # Arrays don't value-merge so we have to do it all here.
+          destinations:
+            - name: localMimir
+              type: prometheus
+              url: http://mimir-distributor-headless.mimir.svc:8080/api/v1/push
+              tenantId: "placeholder"
+              secret:
+                # This is just the tenant name
+                create: false
+                embed: true
+            - name: localLoki
+              type: loki
+              url: http://loki-gateway.loki.svc/loki/api/v1/push
+              tenantId: "placeholder"
+              http_user: "placeholder"
+              secret:
+                # This is just the tenant name
+                create: false
+                embed: true
+              http_passwd:
+                secret:
+                  name: loki-tenant-auth
+                  key: password
+
   destination:
     server: https://kubernetes.default.svc
     namespace: alloy

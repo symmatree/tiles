@@ -14,6 +14,37 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+      valuesObject:
+        vault_name: "{{ .Values.vault_name }}"
+        cluster_name: "{{ .Values.cluster_name }}"
+        k8s-monitoring:
+          cluster:
+            name: "{{ .Values.cluster_name }}"
+
+          # Arrays don't value-merge so we have to do it all here.
+          destinations:
+            - name: localMimir
+              type: prometheus
+              url: http://mimir-distributor-headless.mimir.svc:8080/api/v1/push
+              tenantId: "{{ .Values.cluster_name }}"
+              secret:
+                # This is just the tenant name
+                create: false
+                embed: true
+            - name: localLoki
+              type: loki
+              url: http://loki-gateway.loki.svc/loki/api/v1/push
+              tenantId: "{{ .Values.cluster_name }}"
+              http_user: "{{ .Values.cluster_name }}"
+              secret:
+                # This is just the tenant name
+                create: false
+                embed: true
+              http_passwd:
+                secret:
+                  name: loki-tenant-auth
+                  key: password
+
   destination:
     server: https://kubernetes.default.svc
     namespace: alloy

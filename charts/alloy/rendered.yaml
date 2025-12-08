@@ -6,10 +6,10 @@ metadata:
   name: alloy-alloy-operator
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
 ---
@@ -19,13 +19,13 @@ kind: ServiceAccount
 automountServiceAccountToken: true
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.4
+    helm.sh/chart: kube-state-metrics-6.4.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.17.0"
     release: alloy
   name: alloy-kube-state-metrics
   namespace: alloy
@@ -37,13 +37,13 @@ metadata:
   name: alloy-node-exporter
   namespace: alloy
   labels:
-    helm.sh/chart: node-exporter-4.47.3
+    helm.sh/chart: node-exporter-4.49.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: node-exporter
     app.kubernetes.io/name: node-exporter
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.9.1"
+    app.kubernetes.io/version: "1.10.2"
     release: alloy
 automountServiceAccountToken: false
 ---
@@ -88,8 +88,10 @@ data:
         job_name = "integrations/kubernetes/kubelet"
         scheme   = "https"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
     
         tls_config {
@@ -130,8 +132,10 @@ data:
         job_name = "integrations/kubernetes/resources"
         scheme   = "https"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
     
         tls_config {
@@ -172,8 +176,10 @@ data:
         job_name = "integrations/kubernetes/cadvisor"
         scheme = "https"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
     
         tls_config {
@@ -310,8 +316,10 @@ data:
         job_name = "integrations/kubernetes/kube-apiserver"
         scheme = "https"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
     
         tls_config {
@@ -340,7 +348,7 @@ data:
       discovery.relabel "kube_controller_manager" {
         targets = discovery.kubernetes.kube_controller_manager.targets
         rule {
-          source_labels = ["__address__"]
+          source_labels = ["__meta_kubernetes_pod_ip"]
           replacement = "$1:10257"
           target_label = "__address__"
         }
@@ -351,8 +359,10 @@ data:
         job_name          = "kube-controller-manager"
         scheme            = "https"
         scrape_interval   = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
         tls_config {
           insecure_skip_verify = true
@@ -464,8 +474,10 @@ data:
         job_name = "integrations/kubernetes/kube-dns"
         scheme = "http"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         clustering {
           enabled = true
         }
@@ -486,7 +498,7 @@ data:
       discovery.relabel "kube_scheduler" {
         targets = discovery.kubernetes.kube_scheduler.targets
         rule {
-          source_labels = ["__address__"]
+          source_labels = ["__meta_kubernetes_pod_ip"]
           replacement = "$1:10259"
           target_label = "__address__"
         }
@@ -497,8 +509,10 @@ data:
         job_name          = "kube-scheduler"
         scheme            = "https"
         scrape_interval   = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
         tls_config {
           insecure_skip_verify = true
@@ -542,8 +556,10 @@ data:
         targets = discovery.relabel.kube_state_metrics.output
         job_name = "integrations/kubernetes/kube-state-metrics"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         scheme = "http"
         bearer_token_file = ""
         tls_config {
@@ -560,7 +576,7 @@ data:
         max_cache_size = 100000
         rule {
           source_labels = ["__name__"]
-          regex = "up|scrape_samples_scraped|kube_configmap_info|kube_configmap_metadata_resource_version|kube_cronjob.*|kube_daemonset.*|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_condition|kube_deployment_status_observed_generation|kube_deployment_status_replicas_available|kube_deployment_status_replicas_updated|kube_horizontalpodautoscaler_spec_max_replicas|kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_status_desired_replicas|kube_job.*|kube_namespace_status_phase|kube_node.*|kube_persistentvolume_status_phase|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_info|kube_persistentvolumeclaim_labels|kube_persistentvolumeclaim_resource_requests_storage_bytes|kube_persistentvolumeclaim_status_phase|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_last_terminated_reason|kube_pod_container_status_restarts_total|kube_pod_container_status_waiting_reason|kube_pod_info|kube_pod_owner|kube_pod_spec_volumes_persistentvolumeclaims_info|kube_pod_start_time|kube_pod_status_phase|kube_pod_status_reason|kube_replicaset.*|kube_resourcequota|kube_secret_metadata_resource_version|kube_statefulset.*"
+          regex = "up|scrape_samples_scraped|kube_configmap_info|kube_configmap_metadata_resource_version|kube_cronjob.*|kube_daemonset.*|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_condition|kube_deployment_status_observed_generation|kube_deployment_status_replicas_available|kube_deployment_status_replicas_updated|kube_horizontalpodautoscaler_spec_max_replicas|kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_status_desired_replicas|kube_job.*|kube_namespace_status_phase|kube_node.*|kube_persistentvolume_status_phase|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_info|kube_persistentvolumeclaim_labels|kube_persistentvolumeclaim_resource_requests_storage_bytes|kube_persistentvolumeclaim_status_phase|kube_pod_completion_time|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_last_terminated_reason|kube_pod_container_status_last_terminated_timestamp|kube_pod_container_status_restarts_total|kube_pod_container_status_waiting_reason|kube_pod_info|kube_pod_owner|kube_pod_restart_policy|kube_pod_spec_volumes_persistentvolumeclaims_info|kube_pod_start_time|kube_pod_status_phase|kube_pod_status_reason|kube_pod_init_.*|kube_replicaset.*|kube_resourcequota|kube_secret_metadata_resource_version|kube_statefulset.*"
           action = "keep"
         }
         forward_to = argument.metrics_destinations.value
@@ -675,8 +691,10 @@ data:
         targets = discovery.relabel.node_exporter.output
         job_name = "integrations/node_exporter"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         scheme = "http"
         bearer_token_file = ""
         tls_config {
@@ -708,7 +726,7 @@ data:
     }
     cluster_metrics "feature" {
       metrics_destinations = [
-        prometheus.remote_write.localmimir.receiver,
+        prometheus.remote_write.placeholder_mimir.receiver,
       ]
     }
     // Feature: Prometheus Operator Objects
@@ -724,6 +742,7 @@ data:
         }
         scrape {
           default_scrape_interval = "60s"
+          default_scrape_timeout = "10s"
         }
         forward_to = argument.metrics_destinations.value
       }
@@ -735,6 +754,7 @@ data:
         }
         scrape {
           default_scrape_interval = "60s"
+          default_scrape_timeout = "10s"
         }
         forward_to = argument.metrics_destinations.value
       }
@@ -746,13 +766,14 @@ data:
         }
         scrape {
           default_scrape_interval = "60s"
+          default_scrape_timeout = "10s"
         }
         forward_to = argument.metrics_destinations.value
       }
     }
     prometheus_operator_objects "feature" {
       metrics_destinations = [
-        prometheus.remote_write.localmimir.receiver,
+        prometheus.remote_write.placeholder_mimir.receiver,
       ]
     }
     declare "alloy_integration" {
@@ -922,6 +943,11 @@ data:
           optional = true
         }
     
+        argument "scrape_timeout" {
+          comment = "The timeout for scraping metrics from the targets (default: 10s)"
+          optional = true
+        }
+    
         argument "scrape_protocols" {
           comment = "The scrape protocols to use for scraping metrics"
           optional = true
@@ -929,6 +955,11 @@ data:
     
         argument "scrape_classic_histograms" {
           comment = "Whether to scrape classic histograms (default: false)."
+          optional = true
+        }
+    
+        argument "scrape_native_histograms" {
+          comment = "Whether to scrape native histograms (default: false)."
           optional = true
         }
     
@@ -947,8 +978,10 @@ data:
           forward_to = [prometheus.relabel.alloy.receiver]
           targets = argument.targets.value
           scrape_interval = coalesce(argument.scrape_interval.value, "60s")
+          scrape_timeout = coalesce(argument.scrape_timeout.value, "10s")
           scrape_protocols = argument.scrape_protocols.value
           scrape_classic_histograms = argument.scrape_classic_histograms.value
+          scrape_native_histograms = argument.scrape_native_histograms.value
     
           clustering {
             enabled = coalesce(argument.clustering.value, false)
@@ -1046,21 +1079,23 @@ data:
         label_selectors = ["app.kubernetes.io/name in (alloy-metrics,alloy-singleton,alloy-logs)"]
       }
     
-      alloy_integration_scrape  "alloy" {
+      alloy_integration_scrape "alloy" {
         targets = alloy_integration_discovery.alloy.output
         job_label = "integrations/alloy"
         clustering = true
         keep_metrics = "up|scrape_samples_scraped|alloy_build_info|alloy_component_controller_running_components|alloy_component_dependencies_wait_seconds|alloy_component_dependencies_wait_seconds_bucket|alloy_component_evaluation_seconds|alloy_component_evaluation_seconds_bucket|alloy_component_evaluation_seconds_count|alloy_component_evaluation_seconds_sum|alloy_component_evaluation_slow_seconds|alloy_config_hash|alloy_resources_machine_rx_bytes_total|alloy_resources_machine_tx_bytes_total|alloy_resources_process_cpu_seconds_total|alloy_resources_process_resident_memory_bytes|alloy_tcp_connections|alloy_wal_samples_appended_total|alloy_wal_storage_active_series|cluster_node_gossip_health_score|cluster_node_gossip_proto_version|cluster_node_gossip_received_events_total|cluster_node_info|cluster_node_lamport_time|cluster_node_peers|cluster_node_update_observers|cluster_transport_rx_bytes_total|cluster_transport_rx_packet_queue_length|cluster_transport_rx_packets_failed_total|cluster_transport_rx_packets_total|cluster_transport_stream_rx_bytes_total|cluster_transport_stream_rx_packets_failed_total|cluster_transport_stream_rx_packets_total|cluster_transport_stream_tx_bytes_total|cluster_transport_stream_tx_packets_failed_total|cluster_transport_stream_tx_packets_total|cluster_transport_streams|cluster_transport_tx_bytes_total|cluster_transport_tx_packet_queue_length|cluster_transport_tx_packets_failed_total|cluster_transport_tx_packets_total|otelcol_exporter_send_failed_spans_total|otelcol_exporter_sent_spans_total|go_gc_duration_seconds_count|go_goroutines|go_memstats_heap_inuse_bytes|loki_process_dropped_lines_total|loki_write_batch_retries_total|loki_write_dropped_bytes_total|loki_write_dropped_entries_total|loki_write_encoded_bytes_total|loki_write_mutated_bytes_total|loki_write_mutated_entries_total|loki_write_request_duration_seconds_bucket|loki_write_sent_bytes_total|loki_write_sent_entries_total|process_cpu_seconds_total|process_start_time_seconds|otelcol_processor_batch_batch_send_size_bucket|otelcol_processor_batch_metadata_cardinality|otelcol_processor_batch_timeout_trigger_send_total|prometheus_remote_storage_bytes_total|prometheus_remote_storage_enqueue_retries_total|prometheus_remote_storage_highest_timestamp_in_seconds|prometheus_remote_storage_metadata_bytes_total|prometheus_remote_storage_queue_highest_sent_timestamp_seconds|prometheus_remote_storage_samples_dropped_total|prometheus_remote_storage_samples_failed_total|prometheus_remote_storage_samples_pending|prometheus_remote_storage_samples_retried_total|prometheus_remote_storage_samples_total|prometheus_remote_storage_sent_batch_duration_seconds_bucket|prometheus_remote_storage_sent_batch_duration_seconds_count|prometheus_remote_storage_sent_batch_duration_seconds_sum|prometheus_remote_storage_shard_capacity|prometheus_remote_storage_shards|prometheus_remote_storage_shards_desired|prometheus_remote_storage_shards_max|prometheus_remote_storage_shards_min|prometheus_remote_storage_succeeded_samples_total|prometheus_remote_write_wal_samples_appended_total|prometheus_remote_write_wal_storage_active_series|prometheus_sd_discovered_targets|prometheus_target_interval_length_seconds_count|prometheus_target_interval_length_seconds_sum|prometheus_target_scrapes_exceeded_sample_limit_total|prometheus_target_scrapes_sample_duplicate_timestamp_total|prometheus_target_scrapes_sample_out_of_bounds_total|prometheus_target_scrapes_sample_out_of_order_total|prometheus_target_sync_length_seconds_sum|prometheus_wal_watcher_current_segment|otelcol_receiver_accepted_spans_total|otelcol_receiver_refused_spans_total|rpc_server_duration_milliseconds_bucket|scrape_duration_seconds|traces_exporter_send_failed_spans|traces_exporter_send_failed_spans_total|traces_exporter_sent_spans|traces_exporter_sent_spans_total|traces_loadbalancer_backend_outcome|traces_loadbalancer_num_backends|traces_receiver_accepted_spans|traces_receiver_accepted_spans_total|traces_receiver_refused_spans|traces_receiver_refused_spans_total"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         max_cache_size = 100000
         forward_to = argument.metrics_destinations.value
       }
     }
     alloy_integration "integration" {
       metrics_destinations = [
-        prometheus.remote_write.localmimir.receiver,
+        prometheus.remote_write.placeholder_mimir.receiver,
       ]
     }
     declare "cert_manager_integration" {
@@ -1172,8 +1207,10 @@ data:
         targets = discovery.relabel.cert_manager.output
         job_name = "integrations/cert-manager"
         scrape_interval = "60s"
+        scrape_timeout = "10s"
         scrape_protocols = ["OpenMetricsText1.0.0","OpenMetricsText0.0.1","PrometheusText0.0.4"]
         scrape_classic_histograms = false
+        scrape_native_histograms = false
         clustering {
           enabled = true
         }
@@ -1182,7 +1219,7 @@ data:
     }
     cert_manager_integration "integration" {
       metrics_destinations = [
-        prometheus.remote_write.localmimir.receiver,
+        prometheus.remote_write.placeholder_mimir.receiver,
       ]
     }
     
@@ -1191,17 +1228,18 @@ data:
     prometheus.exporter.blackbox "blackbox_exporter" {
       config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
     }
-    // Destination: localMimir (prometheus)
-    otelcol.exporter.prometheus "localmimir" {
+    // Destination: placeholder-mimir (prometheus)
+    otelcol.exporter.prometheus "placeholder_mimir" {
       add_metric_suffixes = true
       resource_to_telemetry_conversion = false
-      forward_to = [prometheus.remote_write.localmimir.receiver]
+      forward_to = [prometheus.remote_write.placeholder_mimir.receiver]
     }
     
-    prometheus.remote_write "localmimir" {
+    prometheus.remote_write "placeholder_mimir" {
       endpoint {
-        url = "http://mimir-distributor-headless.mimir.svc:8080/api/v1/push"
+        url = "http://placeholder.mimir.svc:8080/api/v1/push"
         headers = {
+          "X-Scope-OrgID" = "placeholder-mimir-tenant",
         }
         tls_config {
           insecure_skip_verify = false
@@ -1223,13 +1261,13 @@ data:
         write_relabel_config {
           source_labels = ["cluster"]
           regex = ""
-          replacement = "{{ .Values.cluster_name }}"
+          replacement = "placeholder-cluster"
           target_label = "cluster"
         }
         write_relabel_config {
           source_labels = ["k8s_cluster_name"]
           regex = ""
-          replacement = "{{ .Values.cluster_name }}"
+          replacement = "placeholder-cluster"
           target_label = "k8s_cluster_name"
         }
       }
@@ -1335,7 +1373,7 @@ data:
     }
     cluster_events "feature" {
       logs_destinations = [
-        loki.write.localloki.receiver,
+        loki.write.placeholder_loki.receiver,
       ]
     }
     // Self Reporting
@@ -1377,7 +1415,7 @@ data:
         action = "keep"
       }
       forward_to = [
-        prometheus.remote_write.localmimir.receiver,
+        prometheus.remote_write.placeholder_mimir.receiver,
       ]
     }
     
@@ -1386,17 +1424,18 @@ data:
     mimir.rules.kubernetes "default" {
       address = "http://mimir-ruler.mimir.svc:8080"
     }
-    // Destination: localMimir (prometheus)
-    otelcol.exporter.prometheus "localmimir" {
+    // Destination: placeholder-mimir (prometheus)
+    otelcol.exporter.prometheus "placeholder_mimir" {
       add_metric_suffixes = true
       resource_to_telemetry_conversion = false
-      forward_to = [prometheus.remote_write.localmimir.receiver]
+      forward_to = [prometheus.remote_write.placeholder_mimir.receiver]
     }
     
-    prometheus.remote_write "localmimir" {
+    prometheus.remote_write "placeholder_mimir" {
       endpoint {
-        url = "http://mimir-distributor-headless.mimir.svc:8080/api/v1/push"
+        url = "http://placeholder.mimir.svc:8080/api/v1/push"
         headers = {
+          "X-Scope-OrgID" = "placeholder-mimir-tenant",
         }
         tls_config {
           insecure_skip_verify = false
@@ -1418,13 +1457,13 @@ data:
         write_relabel_config {
           source_labels = ["cluster"]
           regex = ""
-          replacement = "{{ .Values.cluster_name }}"
+          replacement = "placeholder-cluster"
           target_label = "cluster"
         }
         write_relabel_config {
           source_labels = ["k8s_cluster_name"]
           regex = ""
-          replacement = "{{ .Values.cluster_name }}"
+          replacement = "placeholder-cluster"
           target_label = "k8s_cluster_name"
         }
       }
@@ -1435,14 +1474,16 @@ data:
         max_keepalive_time = "8h"
       }
     }
-    // Destination: localLoki (loki)
-    otelcol.exporter.loki "localloki" {
-      forward_to = [loki.write.localloki.receiver]
+    // Destination: placeholder-loki (loki)
+    otelcol.exporter.loki "placeholder_loki" {
+      forward_to = [loki.write.placeholder_loki.receiver]
     }
     
-    loki.write "localloki" {
+    loki.write "placeholder_loki" {
       endpoint {
-        url = "http://loki-gateway.loki.svc/loki/api/v1/push"
+        url = "http://placeholder.loki.svc/loki/api/v1/push"
+        retry_on_http_429 = true
+        tenant_id = "placeholder-loki-tenant"
         tls_config {
           insecure_skip_verify = false
         }
@@ -1451,14 +1492,14 @@ data:
         max_backoff_retries = "10"
       }
       external_labels = {
-        "cluster" = "{{ .Values.cluster_name }}",
-        "k8s_cluster_name" = "{{ .Values.cluster_name }}",
+        "cluster" = "placeholder-cluster",
+        "k8s_cluster_name" = "placeholder-cluster",
       }
     }
   self-reporting-metric.prom: |
     # HELP grafana_kubernetes_monitoring_build_info A metric to report the version of the Kubernetes Monitoring Helm chart
     # TYPE grafana_kubernetes_monitoring_build_info gauge
-    grafana_kubernetes_monitoring_build_info{version="3.3.2", namespace="alloy"} 1
+    grafana_kubernetes_monitoring_build_info{version="3.6.2", namespace="alloy"} 1
     # HELP grafana_kubernetes_monitoring_feature_info A metric to report the enabled features of the Kubernetes Monitoring Helm chart
     # TYPE grafana_kubernetes_monitoring_feature_info gauge
     grafana_kubernetes_monitoring_feature_info{deployments="kube-state-metrics,node-exporter", feature="clusterMetrics", sources="controlPlane,kubelet,kubeletResource,cadvisor,kube-state-metrics,node-exporter", version="1.0.0"} 1
@@ -1536,7 +1577,6 @@ data:
         // choose the first value found from the following ordered list:
         // - pod.annotation[resource.opentelemetry.io/service.name]
         // - pod.label[app.kubernetes.io/name]
-        // - k8s.pod.name
         // - k8s.container.name
         rule {
           action = "replace"
@@ -1685,21 +1725,23 @@ data:
     }
     pod_logs "feature" {
       logs_destinations = [
-        loki.write.localloki.receiver,
+        loki.write.placeholder_loki.receiver,
       ]
     }
     
     
     
     
-    // Destination: localLoki (loki)
-    otelcol.exporter.loki "localloki" {
-      forward_to = [loki.write.localloki.receiver]
+    // Destination: placeholder-loki (loki)
+    otelcol.exporter.loki "placeholder_loki" {
+      forward_to = [loki.write.placeholder_loki.receiver]
     }
     
-    loki.write "localloki" {
+    loki.write "placeholder_loki" {
       endpoint {
-        url = "http://loki-gateway.loki.svc/loki/api/v1/push"
+        url = "http://placeholder.loki.svc/loki/api/v1/push"
+        retry_on_http_429 = true
+        tenant_id = "placeholder-loki-tenant"
         tls_config {
           insecure_skip_verify = false
         }
@@ -1708,8 +1750,8 @@ data:
         max_backoff_retries = "10"
       }
       external_labels = {
-        "cluster" = "{{ .Values.cluster_name }}",
-        "k8s_cluster_name" = "{{ .Values.cluster_name }}",
+        "cluster" = "placeholder-cluster",
+        "k8s_cluster_name" = "placeholder-cluster",
       }
     }
 ---
@@ -1719,10 +1761,10 @@ kind: ClusterRole
 metadata:
   name: alloy-alloy-operator-alloy-manager
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups:
@@ -1757,7 +1799,8 @@ rules:
   # Rules which allow the management of Horizontal Pod Autoscalers.
   - apiGroups: ["autoscaling"]
     resources: ["horizontalpodautoscalers"]
-    verbs: ["*"]# Rules which allow the management of ServiceMonitor.
+    verbs: ["*"]
+  # Rules which allow the management of ServiceMonitor.
   - apiGroups: ["monitoring.coreos.com"]
     resources: ["servicemonitors"]
     verbs: ["*"]
@@ -1769,9 +1812,9 @@ rules:
   - apiGroups: ["policy"]
     resources: ["poddisruptionbudgets"]
     verbs: ["*"]
-  # Rules which allow the management of ClusterRoles and ClusterRoleBindings.
+  # Rules which allow the management of ClusterRoles, ClusterRoleBindings, Roles, and RoleBindings.
   - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["clusterroles", "clusterrolebindings"]
+    resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
     verbs: ["*"]
 ---
 # Source: alloy/charts/k8s-monitoring/charts/clusterMetrics/charts/kube-state-metrics/templates/role.yaml
@@ -1779,13 +1822,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.4
+    helm.sh/chart: kube-state-metrics-6.4.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.17.0"
     release: alloy
   name: alloy-kube-state-metrics
 rules:
@@ -1936,10 +1979,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy-alloy-operator-alloy-manager
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -1956,10 +1999,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy-alloy-operator
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -1975,13 +2018,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.4
+    helm.sh/chart: kube-state-metrics-6.4.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.17.0"
     release: alloy
   name: alloy-kube-state-metrics
 roleRef:
@@ -2000,10 +2043,10 @@ metadata:
   name: alloy-alloy-operator-leader-election-role
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups:
@@ -2045,10 +2088,10 @@ metadata:
   name: alloy-alloy-operator-leader-election-rolebinding
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -2066,10 +2109,10 @@ metadata:
   name: alloy-alloy-operator
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
@@ -2093,22 +2136,22 @@ metadata:
   name: alloy-kube-state-metrics
   namespace: alloy
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.4
+    helm.sh/chart: kube-state-metrics-6.4.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.17.0"
     release: alloy
   annotations:
 spec:
   type: "ClusterIP"
   ports:
-  - name: "http"
+  - name: http
     protocol: TCP
     port: 8080
-    targetPort: 8080
+    targetPort: http
   
   selector:    
     app.kubernetes.io/name: kube-state-metrics
@@ -2121,13 +2164,13 @@ metadata:
   name: alloy-node-exporter
   namespace: alloy
   labels:
-    helm.sh/chart: node-exporter-4.47.3
+    helm.sh/chart: node-exporter-4.49.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: node-exporter
     app.kubernetes.io/name: node-exporter
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.9.1"
+    app.kubernetes.io/version: "1.10.2"
     release: alloy
   annotations:
     prometheus.io/scrape: "false"
@@ -2149,13 +2192,13 @@ metadata:
   name: alloy-node-exporter
   namespace: alloy
   labels:
-    helm.sh/chart: node-exporter-4.47.3
+    helm.sh/chart: node-exporter-4.49.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: node-exporter
     app.kubernetes.io/name: node-exporter
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.9.1"
+    app.kubernetes.io/version: "1.10.2"
     release: alloy
 spec:
   selector:
@@ -2173,13 +2216,13 @@ spec:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
         k8s.grafana.com/logs.job: integrations/node_exporter
       labels:
-        helm.sh/chart: node-exporter-4.47.3
+        helm.sh/chart: node-exporter-4.49.1
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: metrics
         app.kubernetes.io/part-of: node-exporter
         app.kubernetes.io/name: node-exporter
         app.kubernetes.io/instance: alloy
-        app.kubernetes.io/version: "1.9.1"
+        app.kubernetes.io/version: "1.10.2"
         release: alloy
     spec:
       automountServiceAccountToken: false
@@ -2191,7 +2234,7 @@ spec:
       serviceAccountName: alloy-node-exporter
       containers:
         - name: node-exporter
-          image: quay.io/prometheus/node-exporter:v1.9.1
+          image: quay.io/prometheus/node-exporter:v1.10.2
           imagePullPolicy: IfNotPresent
           args:
             - --path.procfs=/host/proc
@@ -2277,10 +2320,10 @@ metadata:
   name: alloy-alloy-operator
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.8
+    helm.sh/chart: alloy-operator-0.3.14
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.2.1"
+    app.kubernetes.io/version: "1.5.0"
     app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
@@ -2291,16 +2334,23 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: alloy-operator-0.3.8
+        helm.sh/chart: alloy-operator-0.3.14
         app.kubernetes.io/name: alloy-operator
         app.kubernetes.io/instance: alloy
-        app.kubernetes.io/version: "1.2.1"
+        app.kubernetes.io/version: "1.5.0"
         app.kubernetes.io/managed-by: Helm
     spec:
       serviceAccountName: alloy-alloy-operator
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: alloy-operator
-          image: "ghcr.io/grafana/alloy-operator:1.2.1"
+          image: "ghcr.io/grafana/alloy-operator:1.5.0"
           imagePullPolicy: IfNotPresent
           args:
             - --health-probe-bind-address=:8081
@@ -2331,7 +2381,11 @@ spec:
             limits: {}
             requests: {}
           securityContext:
-            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
       nodeSelector:
         kubernetes.io/os: linux
 ---
@@ -2342,13 +2396,13 @@ metadata:
   name: alloy-kube-state-metrics
   namespace: alloy
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.4
+    helm.sh/chart: kube-state-metrics-6.4.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.17.0"
     release: alloy
 spec:
   selector:
@@ -2362,13 +2416,13 @@ spec:
   template:
     metadata:
       labels:        
-        helm.sh/chart: kube-state-metrics-6.1.4
+        helm.sh/chart: kube-state-metrics-6.4.1
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: metrics
         app.kubernetes.io/part-of: kube-state-metrics
         app.kubernetes.io/name: kube-state-metrics
         app.kubernetes.io/instance: alloy
-        app.kubernetes.io/version: "2.16.0"
+        app.kubernetes.io/version: "2.17.0"
         release: alloy
       annotations:
       
@@ -2392,10 +2446,10 @@ spec:
         - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
         - --metric-labels-allowlist=nodes=[agentpool,alpha.eksctl.io/cluster-name,alpha.eksctl.io/nodegroup-name,beta.kubernetes.io/instance-type,cloud.google.com/gke-nodepool,cluster-name,ec2.amazonaws.com/Name,ec2.amazonaws.com/aws-autoscaling-groupName,ec2.amazonaws.com/aws-autoscaling-group-name,ec2.amazonaws.com/name,eks.amazonaws.com/nodegroup,k8s.io/cloud-provider-aws,karpenter.sh/nodepool,kubernetes.azure.com/cluster,kubernetes.io/arch,kubernetes.io/hostname,kubernetes.io/os,node.kubernetes.io/instance-type,topology.kubernetes.io/region,topology.kubernetes.io/zone]
         imagePullPolicy: IfNotPresent
-        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.16.0
+        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.17.0
         ports:
         - containerPort: 8080
-          name: "http"
+          name: http
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -2429,365 +2483,6 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
 ---
-# Source: alloy/templates/external-probers.yaml
-apiVersion: monitoring.coreos.com/v1
-kind: Probe
-metadata:
-  name: hubitat-http
-  namespace: "alloy"
-spec:
-  interval: 30s
-  module: http_2xx
-  prober:
-    url: alloy-alloy-metrics-cluster.alloy.svc:12345
-    path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-  targets:
-    staticConfig:
-      static:
-        - http://hubitat.local.symmatree.com
----
-# Source: alloy/templates/external-probers.yaml
-apiVersion: monitoring.coreos.com/v1
-kind: Probe
-metadata:
-  name: raconteur-syno-ui
-  namespace: "alloy"
-spec:
-  interval: 30s
-  module: http_2xx
-  prober:
-    url: alloy-alloy-metrics-cluster.alloy.svc:12345
-    path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-  targets:
-    staticConfig:
-      static:
-        - https://raconteur.ad.local.symmatree.com:5001/
----
-# Source: alloy/templates/external-probers.yaml
-apiVersion: monitoring.coreos.com/v1
-kind: Probe
-metadata:
-  name: morpheus-ui
-  namespace: "alloy"
-spec:
-  interval: 30s
-  module: http_2xx
-  prober:
-    url: alloy-alloy-metrics-cluster.alloy.svc:12345
-    path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-  targets:
-    staticConfig:
-      static:
-        - https://morpheus.local.symmatree.com/
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: alloy-k8s-monitoring-add-finalizer
-  namespace: alloy
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    "helm.sh/hook-weight": "5"
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_wait-for-operator.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: alloy-k8s-monitoring-wait-alloy-operator
-  namespace: alloy
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    "helm.sh/hook-weight": "5"
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-  namespace: alloy
-  annotations:
-    helm.sh/hook: pre-delete
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: alloy-k8s-monitoring-add-finalizer
-  namespace: alloy
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    "helm.sh/hook-weight": "5"
-rules:
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "watch", "patch"]
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_wait-for-operator.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: alloy-k8s-monitoring-wait-alloy-operator
-  namespace: alloy
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    "helm.sh/hook-weight": "5"
-rules:
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "watch"]
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-  namespace: alloy
-  annotations:
-    helm.sh/hook: pre-delete
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-rules:
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "watch", "patch"]
-  - apiGroups: ["collectors.grafana.com"]
-    resources: ["alloys"]
-    verbs: ["get", "list", "watch", "delete"]
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: alloy-k8s-monitoring-add-finalizer
-  namespace: alloy
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    "helm.sh/hook-weight": "5"
-subjects:
-  - kind: ServiceAccount
-    name: alloy-k8s-monitoring-add-finalizer
-    namespace: alloy
-roleRef:
-  kind: Role
-  name: alloy-k8s-monitoring-add-finalizer
-  apiGroup: rbac.authorization.k8s.io
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_wait-for-operator.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: alloy-k8s-monitoring-wait-alloy-operator
-  namespace: alloy
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    "helm.sh/hook-weight": "5"
-subjects:
-  - kind: ServiceAccount
-    name: alloy-k8s-monitoring-wait-alloy-operator
-    namespace: alloy
-roleRef:
-  kind: Role
-  name: alloy-k8s-monitoring-wait-alloy-operator
-  apiGroup: rbac.authorization.k8s.io
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-  namespace: alloy
-  annotations:
-    helm.sh/hook: pre-delete
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-subjects:
-  - kind: ServiceAccount
-    name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-    namespace: alloy
-roleRef:
-  kind: Role
-  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-  apiGroup: rbac.authorization.k8s.io
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: alloy-k8s-monitoring-add-finalizer
-  namespace: alloy
-  labels:
-    app.kubernetes.io/name: alloy-k8s-monitoring-add-finalizer
-    app.kubernetes.io/instance: alloy
-    helm.sh/chart: k8s-monitoring-3.3.2
-  annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "15"
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-spec:
-  ttlSecondsAfterFinished: 300
-  backoffLimit: 3
-  template:
-    metadata:
-      name: alloy-k8s-monitoring-add-finalizer
-      labels:
-        app.kubernetes.io/name: alloy-k8s-monitoring
-        app.kubernetes.io/instance: alloy
-        sidecar.istio.io/inject: "false"
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        kubernetes.io/os: linux
-      serviceAccountName: alloy-k8s-monitoring-add-finalizer
-      containers:
-        - name: add-finalizers
-          image: "ghcr.io/grafana/helm-chart-toolbox-kubectl:0.1.1"
-          imagePullPolicy: IfNotPresent
-          command:
-            - /bin/bash
-            - -ce
-            - |
-              kubectl patch \
-                --namespace=alloy \
-                --patch='{"metadata":{"finalizers":["k8s.grafana.com/finalizer"]}}' \
-                deployment/alloy-alloy-operator
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_wait-for-operator.yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: alloy-k8s-monitoring-wait-alloy-operator
-  namespace: alloy
-  labels:
-    app.kubernetes.io/name: alloy-k8s-monitoring-wait-alloy-operator
-    app.kubernetes.io/instance: alloy
-    helm.sh/chart: k8s-monitoring-3.3.2
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    "helm.sh/hook-weight": "5"
-spec:
-  ttlSecondsAfterFinished: 300
-  backoffLimit: 3
-  template:
-    metadata:
-      name: alloy-k8s-monitoring-wait-alloy-operator
-      labels:
-        app.kubernetes.io/name: alloy-k8s-monitoring
-        app.kubernetes.io/instance: alloy
-        sidecar.istio.io/inject: "false"
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        kubernetes.io/os: linux
-      serviceAccountName: alloy-k8s-monitoring-wait-alloy-operator
-      containers:
-        - name: wait-for-operator
-          image: "ghcr.io/grafana/helm-chart-toolbox-kubectl:0.1.1"
-          imagePullPolicy: IfNotPresent
-          command:
-            - /bin/bash
-            - -ce
-            - |
-              echo "Waiting for Alloy Operator to be ready..."
-              kubectl wait \
-                --timeout=300s \
-                --namespace=alloy \
-                --for=condition=available \
-                deployment/alloy-alloy-operator
-
-              echo "Verifying Alloy Operator pod is running..."
-              kubectl wait \
-                --timeout=120s \
-                --namespace=alloy \
-                --for=condition=ready \
-                pod -l app.kubernetes.io/name=alloy-operator
-
-              echo "Alloy Operator is ready!"
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
----
-# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-  namespace: alloy
-  labels:
-    app.kubernetes.io/name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-    app.kubernetes.io/instance: alloy
-    helm.sh/chart: k8s-monitoring-3.3.2
-  annotations:
-    helm.sh/hook: pre-delete
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-spec:
-  ttlSecondsAfterFinished: 300
-  backoffLimit: 3
-  template:
-    metadata:
-      name: alloy-k8s-monitoring-remove-alloy-and-finalizer
-      labels:
-        app.kubernetes.io/name: alloy-k8s-monitoring
-        app.kubernetes.io/instance: alloy
-        sidecar.istio.io/inject: "false"
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        kubernetes.io/os: linux
-      serviceAccountName: alloy-k8s-monitoring-remove-alloy-and-finalizer
-      containers:
-        - name: remove-finalizers
-          image: "ghcr.io/grafana/helm-chart-toolbox-kubectl:0.1.1"
-          imagePullPolicy: IfNotPresent
-          command:
-            - /bin/bash
-            - -ce
-            - |
-              echo "Deleting Alloy instance: alloy/alloy-alloy-metrics..."
-              kubectl delete alloy/alloy-alloy-metrics --ignore-not-found=true --wait
-              kubectl wait --for=delete alloy/alloy-alloy-metrics --timeout=60s || echo "Timed out waiting for deletion of alloy/alloy-alloy-metrics or it may not exist."
-
-              echo "Deleting Alloy instance: alloy/alloy-alloy-singleton..."
-              kubectl delete alloy/alloy-alloy-singleton --ignore-not-found=true --wait
-              kubectl wait --for=delete alloy/alloy-alloy-singleton --timeout=60s || echo "Timed out waiting for deletion of alloy/alloy-alloy-singleton or it may not exist."
-
-              echo "Deleting Alloy instance: alloy/alloy-alloy-logs..."
-              kubectl delete alloy/alloy-alloy-logs --ignore-not-found=true --wait
-              kubectl wait --for=delete alloy/alloy-alloy-logs --timeout=60s || echo "Timed out waiting for deletion of alloy/alloy-alloy-logs or it may not exist."
-
-              kubectl patch \
-                --namespace=alloy \
-                --type json \
-                --patch='[{"op": "remove", "path": "/metadata/finalizers"}]' \
-                deployment/alloy-alloy-operator
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
----
 # Source: alloy/charts/k8s-monitoring/templates/alloy.yaml
 apiVersion: collectors.grafana.com/v1alpha1
 kind: Alloy
@@ -2795,8 +2490,6 @@ metadata:
   name: alloy-alloy-metrics
   namespace: alloy
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "10"
     helm.sdk.operatorframework.io/uninstall-wait: "true"
 spec:
   alloy:
@@ -2992,8 +2685,6 @@ metadata:
   name: alloy-alloy-singleton
   namespace: alloy
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "10"
     helm.sdk.operatorframework.io/uninstall-wait: "true"
 spec:
   alloy:
@@ -3189,8 +2880,6 @@ metadata:
   name: alloy-alloy-logs
   namespace: alloy
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "10"
     helm.sdk.operatorframework.io/uninstall-wait: "true"
 spec:
   alloy:
@@ -3378,3 +3067,272 @@ spec:
     metricRelabelings: []
     relabelings: []
     tlsConfig: {}
+---
+# Source: alloy/templates/loki-tenant-auth-secret.yaml
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  name: loki-tenant-auth
+  namespace: "alloy"
+type: Opaque
+spec:
+  itemPath: vaults/placeholder/items/placeholder-loki-tenant-auth
+---
+# Source: alloy/templates/external-probers.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: hubitat-http
+  namespace: "alloy"
+spec:
+  interval: 30s
+  module: http_2xx
+  prober:
+    url: alloy-alloy-metrics-cluster.alloy.svc:12345
+    path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+  targets:
+    staticConfig:
+      static:
+        - http://hubitat.local.symmatree.com
+---
+# Source: alloy/templates/external-probers.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: raconteur-syno-ui
+  namespace: "alloy"
+spec:
+  interval: 30s
+  module: http_2xx
+  prober:
+    url: alloy-alloy-metrics-cluster.alloy.svc:12345
+    path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+  targets:
+    staticConfig:
+      static:
+        - https://raconteur.ad.local.symmatree.com:5001/
+---
+# Source: alloy/templates/external-probers.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: morpheus-ui
+  namespace: "alloy"
+spec:
+  interval: 30s
+  module: http_2xx
+  prober:
+    url: alloy-alloy-metrics-cluster.alloy.svc:12345
+    path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+  targets:
+    staticConfig:
+      static:
+        - https://morpheus.local.symmatree.com/
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy-k8s-monitoring-add-finalizer
+  namespace: alloy
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "5"
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+  namespace: alloy
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alloy-k8s-monitoring-add-finalizer
+  namespace: alloy
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "5"
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+  namespace: alloy
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["collectors.grafana.com"]
+    resources: ["alloys"]
+    verbs: ["get", "list", "watch", "delete"]
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alloy-k8s-monitoring-add-finalizer
+  namespace: alloy
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "5"
+subjects:
+  - kind: ServiceAccount
+    name: alloy-k8s-monitoring-add-finalizer
+    namespace: alloy
+roleRef:
+  kind: Role
+  name: alloy-k8s-monitoring-add-finalizer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+  namespace: alloy
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+subjects:
+  - kind: ServiceAccount
+    name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+    namespace: alloy
+roleRef:
+  kind: Role
+  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alloy-k8s-monitoring-add-finalizer
+  namespace: alloy
+  labels:
+    app.kubernetes.io/name: alloy-k8s-monitoring-add-finalizer
+    app.kubernetes.io/instance: alloy
+    helm.sh/chart: k8s-monitoring-3.6.2
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "15"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      name: alloy-k8s-monitoring-add-finalizer
+      labels:
+        app.kubernetes.io/name: alloy-k8s-monitoring
+        app.kubernetes.io/instance: alloy
+        linkerd.io/inject: disabled
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: alloy-k8s-monitoring-add-finalizer
+      containers:
+        - name: add-finalizers
+          image: "ghcr.io/grafana/helm-chart-toolbox-kubectl:0.1.2"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -ce
+            - |
+              kubectl patch \
+                --namespace=alloy \
+                --patch='{"metadata":{"finalizers":["k8s.grafana.com/finalizer"]}}' \
+                deployment/alloy-alloy-operator
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 4242
+            seccompProfile:
+              type: RuntimeDefault
+---
+# Source: alloy/charts/k8s-monitoring/templates/hooks/pre-delete_remove-alloy-and-finalizer.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+  namespace: alloy
+  labels:
+    app.kubernetes.io/name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+    app.kubernetes.io/instance: alloy
+    helm.sh/chart: k8s-monitoring-3.6.2
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      name: alloy-k8s-monitoring-remove-alloy-and-finalizer
+      labels:
+        app.kubernetes.io/name: alloy-k8s-monitoring
+        app.kubernetes.io/instance: alloy
+        linkerd.io/inject: disabled
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: alloy-k8s-monitoring-remove-alloy-and-finalizer
+      containers:
+        - name: remove-finalizers
+          image: "ghcr.io/grafana/helm-chart-toolbox-kubectl:0.1.2"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -ce
+            - |
+              echo "Deleting Alloy instance: alloy/alloy-alloy-metrics..."
+              kubectl delete alloy/alloy-alloy-metrics --ignore-not-found=true --wait
+              kubectl wait --for=delete alloy/alloy-alloy-metrics --timeout=60s || echo "Timed out waiting for deletion of alloy/alloy-alloy-metrics or it may not exist."
+
+              echo "Deleting Alloy instance: alloy/alloy-alloy-singleton..."
+              kubectl delete alloy/alloy-alloy-singleton --ignore-not-found=true --wait
+              kubectl wait --for=delete alloy/alloy-alloy-singleton --timeout=60s || echo "Timed out waiting for deletion of alloy/alloy-alloy-singleton or it may not exist."
+
+              echo "Deleting Alloy instance: alloy/alloy-alloy-logs..."
+              kubectl delete alloy/alloy-alloy-logs --ignore-not-found=true --wait
+              kubectl wait --for=delete alloy/alloy-alloy-logs --timeout=60s || echo "Timed out waiting for deletion of alloy/alloy-alloy-logs or it may not exist."
+
+              kubectl patch \
+                --namespace=alloy \
+                --type json \
+                --patch='[{"op": "remove", "path": "/metadata/finalizers"}]' \
+                deployment/alloy-alloy-operator
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 4242
+            seccompProfile:
+              type: RuntimeDefault
