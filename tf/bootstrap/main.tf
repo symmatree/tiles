@@ -11,7 +11,7 @@ terraform {
     }
     github = {
       source  = "integrations/github"
-      version = "< 6.8.4"
+      version = "< 6.9.1"
     }
     unifi = {
       source  = "ubiquiti-community/unifi"
