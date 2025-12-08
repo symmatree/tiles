@@ -70,7 +70,6 @@ resource "onepassword_item" "loki_tenant_auth_secret" {
     }
     field {
       label = "datasource.yaml"
-      type  = "NOTES"
       value = <<-EOT
 apiVersion: 1
 datasources:
