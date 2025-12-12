@@ -113,7 +113,7 @@ jobs:
       - name: Terraform cache
         if: steps.charts_only.outputs.run_terraform == 'true'
         id: tf-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             **/.terraform
