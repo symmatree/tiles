@@ -1,3 +1,8 @@
+# Component: Mimir
+# Documentation: charts/mimir/README.md
+# Application: charts/mimir/application.yaml
+# This module creates Google Cloud service accounts, KMS keys, and GCS buckets for Mimir metrics storage.
+
 resource "google_service_account" "mimir" {
   account_id   = "${var.cluster_name}-mimir"
   display_name = "${var.cluster_name} Mimir Service Account"

@@ -52,6 +52,19 @@ mimir-distributed:
       whenDeleted: Delete
       whenScaled: Delete
     terminationGracePeriodSeconds: 60
+    extraContainers:
+      - name: alert-forward
+        image: ghcr.io/symmatree/tiles/mimir-webhook:20251213
+        ports:
+          - name: webhook
+            containerPort: 3000
+            protocol: TCP
+        env:
+          - name: APPRISE_URL
+            # Trailing slash is required
+            value: http://apprise.apprise.svc:8000/notify/
+          - name: APPRISE_KEY
+            value: apprise
 
   compactor:
     persistentVolume:

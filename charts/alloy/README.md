@@ -1,59 +1,59 @@
-# tales/lgtm
+# Alloy - Telemetry Collector
 
-## Background
+Grafana Alloy deployment using the [k8s-monitoring](https://github.com/grafana/k8s-monitoring-helm) Helm chart to collect metrics and logs from the Kubernetes cluster and forward them to Mimir and Loki.
 
-Loki, grafana etc. But I don't want to allocate my entire cluster just to documenting
-itself. This is the motivation for minio however.
+## Configuration
 
-## Setup
+- **Application**: [`application.yaml`](application.yaml)
+- **Values**: [`values.yaml`](values.yaml)
+- **k8s-monitoring Documentation**: <https://github.com/grafana/k8s-monitoring-helm>
 
-This could be automated with `mc admin accesskey create` but for the moment
+## Architecture
 
-- I went to https://minio-console.local.symmatree.com:9443/access-keys and
-  created a key named `loki-s3-creds`. Went to 1password and edited that entry
-  to use the provided access key id and secret access key.
-- I created three buckets, `loki-chunks`, `loki-ruler`, and `loki-admin`
+This deployment runs multiple Alloy instances:
 
-## CRDs
+- **alloy-metrics**: Scrapes cluster and application metrics, includes embedded blackbox exporter
+- **alloy-singleton**: Handles PrometheusRules synchronization to Mimir ruler
+- **alloy-logs**: Collects pod logs from `/var/log/pods`
 
-Most CRDs are found through the archive at https://github.com/datreeio/CRDs-catalog. Alloy isn't (probably too new)
-but created as
+All instances run with clustering enabled for high availability.
 
-```
-pushd alloy/vendor
-python ./openapi2jsonschema.py \
-  https://raw.githubusercontent.com/grafana/alloy-operator/refs/heads/main/charts/alloy-crd/crds/collectors.grafana.com_alloy.yaml
-```
+## Key Features
 
-which produces `vendor/alloy_v1alpha1.json`. This pattern is then added to kubeconform.sh.
+### Metrics Collection
 
-I also had to add the CRDs to get Helm to be happy:
+- Scrapes cluster metrics (kubelet, control plane, node-exporter)
+- Respects Prometheus Operator CRDs: `PodMonitors`, `ServiceMonitors`, and `Probes`
+- kube-proxy metrics disabled (Cilium replaces kube-proxy)
+- Blackbox exporter embedded in alloy-metrics instance
 
-```
-kubectl apply -f https://github.com/grafana/alloy-operator/releases/download/alloy-operator-0.3.2/collectors.grafana.com_alloy.yaml
-```
+### Log Collection
 
-(After teh fact I noticed I used main in one and a release in the other, oh well.)
+- Collects pod logs from `/var/log/pods`
+- Node logs disabled (Talos doesn't surface them through the filesystem)
+- Cluster events enabled with JSON format (for proper escaping)
 
-I also had to add the CRD to `helm.sh`
+### PrometheusRules
 
-## Debugging
+- `alloy-singleton` instance sends `PrometheusRules` to Mimir ruler via `mimir.rules.kubernetes` component
+- Rules are discovered from Prometheus Operator CRDs
 
-Web UI for alloy is pretty useful, e.g.
+### Tenant Configuration
 
-```
-k port-forward lgtm-alloy-logs-thzwl  12345:12345
-```
+- Tenant ID for both Mimir and Loki: cluster name (from `cluster_name` value)
+- Loki authentication: HTTP basic auth using `http_user` (cluster name) and `http_passwd` from `loki-tenant-auth` secret
+- Mimir uses tenant ID only (no additional auth required)
 
-Loki gives you metrics on 3100 but I haven't found
-a debug UI:
+## Security
 
-```
-k port-forward lgtm-loki-0 3100:3100
-```
+- Trust bundle mounted for SSL certificate validation (`trust-bundle` ConfigMap)
+- Runs with privileged pod security policy (required for log collection and node metrics)
 
-Mimir ingestion including its ring status:
+## Integrations
 
-```
-k port-forward lgtm-mimir-ingester-0 8080:8080
-```
+Self-monitoring enabled for:
+
+- Alloy instances (metrics, singleton, logs)
+- cert-manager
+
+Additional integrations can be enabled via the `integrations` section in `values.yaml`.

@@ -2149,6 +2149,18 @@ spec:
           secret:
             secretName: gsa-mimir
       containers:
+        
+        - env:
+          - name: APPRISE_URL
+            value: http://apprise.apprise.svc:8000/notify/
+          - name: APPRISE_KEY
+            value: apprise
+          image: ghcr.io/symmatree/tiles/mimir-webhook:20251213
+          name: alert-forward
+          ports:
+          - containerPort: 3000
+            name: webhook
+            protocol: TCP
         - name: alertmanager
           image: grafana/mimir:3.0.0
           imagePullPolicy: IfNotPresent
