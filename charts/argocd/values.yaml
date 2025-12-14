@@ -225,8 +225,8 @@ argo-cd:
       - recipients:
           - slack:tiles
         triggers:
-          - on-sync-running
-          - on-sync-succeeded
+          #- on-sync-running
+          #- on-sync-succeeded
           - on-created
           - on-deployed
     triggers:
@@ -235,8 +235,6 @@ argo-cd:
         - on-health-degraded
         - on-sync-failed
         - on-deleted
-        - on-sync-running
-        - on-sync-succeeded
         - on-created
         - on-deployed
       trigger.on-deployed: |

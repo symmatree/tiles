@@ -322,8 +322,6 @@ data:
     - recipients:
       - slack:tiles
       triggers:
-      - on-sync-running
-      - on-sync-succeeded
       - on-created
       - on-deployed
   template.app-deployed: |
@@ -544,8 +542,6 @@ data:
     - on-health-degraded
     - on-sync-failed
     - on-deleted
-    - on-sync-running
-    - on-sync-succeeded
     - on-created
     - on-deployed
   trigger.on-deployed: |
