@@ -2,6 +2,11 @@
 
 <https://github.com/caronc/apprise-api/tree/master>
 
+## Helpful endpoints
+
+* <https://apprise.tiles.symmatree.com/cfg/apprise>
+* <https://apprise.tiles-test.symmatree.com/cfg/apprise>
+
 ## What
 
 Delivers notifications in a centrally-routed way. Which I sometimes bypass but prefer not
