@@ -2155,7 +2155,7 @@ spec:
             value: http://apprise.apprise.svc:8000/notify/
           - name: APPRISE_KEY
             value: apprise
-          image: ghcr.io/symmatree/tiles/mimir-webhook:20251213
+          image: ghcr.io/symmatree/tiles/mimir-webhook:main
           name: alert-forward
           ports:
           - containerPort: 3000
