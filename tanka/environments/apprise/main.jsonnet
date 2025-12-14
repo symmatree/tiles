@@ -2,7 +2,16 @@ local k_util = import 'github.com/grafana/jsonnet-libs/ksonnet-util/util.libsonn
 local k = import 'k.libsonnet';
 local op = import 'op.libsonnet';
 
-local APP_ENV = std.parseYaml(std.extVar('APP_ENV'));
+// local APP_ENV = std.parseYaml(std.extVar('APP_ENV'));
+local APP_ENV = {
+  // Temp hack
+  hostname: 'apprise.tiles-test.symmatree.com',
+  vault_name: 'tiles-secrets',
+  cluster_name: 'tiles-test',
+  cluster_issuer: 'real-cert',
+  apprise_env: 'tiles-test-apprise-env',
+  apprise_admin: 'tiles-test-apprise-admin',
+};
 local apprise = {
   local kDeployment = k.apps.v1.deployment,
   local kContainer = k.core.v1.container,

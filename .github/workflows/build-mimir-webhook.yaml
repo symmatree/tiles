@@ -49,7 +49,7 @@ jobs:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
           labels: ${{ steps.docker-metadata.outputs.labels }}
-          context: tiles/charts/mimir/webhook
+          context: charts/mimir/webhook
           containerfiles: |
             Dockerfile
           build-args: |
