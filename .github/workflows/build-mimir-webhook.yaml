@@ -52,8 +52,8 @@ jobs:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
           labels: ${{ steps.docker-metadata.outputs.labels }}
-          # context: ./charts/mimir/webhook
-          context: .
+          context: ./charts/mimir/webhook
+          #context: .
           containerfiles: |
             ./charts/mimir/webhook/Dockerfile
           build-args: |

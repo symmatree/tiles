@@ -7,7 +7,9 @@ WORKDIR /app
 
 RUN npm i nunjucks axios
 
-COPY . .
+COPY index.js .
+COPY "*.njk" .
+COPY LICENSE .
 
 EXPOSE 3000
 
