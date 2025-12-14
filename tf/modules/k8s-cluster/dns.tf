@@ -1,3 +1,8 @@
+# Component: DNS Zone (Google Cloud)
+# This module creates a Google Cloud DNS managed zone for the cluster subdomain.
+# Infrastructure resource only - no Kubernetes application or separate README needed.
+# See docs/components.md for more information.
+
 locals {
   fqdn = "${var.cluster_name}.symmatree.com"
 }

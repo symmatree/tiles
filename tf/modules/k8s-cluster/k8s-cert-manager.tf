@@ -1,3 +1,8 @@
+# Component: cert-manager
+# Documentation: charts/cert-manager/README.md
+# Application: charts/cert-manager/application.yaml
+# This module creates a Google Cloud service account and IAM bindings for cert-manager to perform DNS01 ACME challenges.
+
 resource "google_service_account" "cert_manager_dns01" {
   account_id   = "sa-${var.cluster_name}-cert-manager"
   display_name = "${var.cluster_name} cert-manager DNS01 Solver"

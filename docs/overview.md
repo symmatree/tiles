@@ -120,12 +120,12 @@ own logs and metrics" or "provide DNS for the services it provides", rather the 
 
 From a cold start, with a proxmox cluster,
 
-* bring up the test cluster VMs and perform Talos bootstrapping
-* Run the `bootstrap` script (through Github actions for repeatability)
-  to initialize Cilium and ArgoCD enough to self-assemble the rest of
-  the cluster.
-* Reboot the VMs to get them happy with their lot in life
+* Push to main, or run `nodes-plan-apply` on `tags/test` with a target of `test`,
+  to trigger a deployment of the`tiles-test` cluster
+* Run `bootstrap-cluster` with a target of `tiles-test` to install CRDs and initial versions of argocd, cilium and onepassword.
 
+From there, ArgoCD will replace itself, cilium and 1password with managed versions (mostly just adding an annotation),
+as well as installing the rest of the helper and payload components.
 
 ## Intended Concept of Operations: Cluster Maintenance and Deployment
 
@@ -140,3 +140,5 @@ These are not all worked out in detail, but the basic reasoning for this setup:
 * As an alternative, since the Proxmox hosts are a cluster, we can migrate VMs between machines.
   So we could down the workers and make room for multiple control planes on a single machime, for
   example.
+* Or we could take the node VMs out of service one-by-one and replace them instead of bothering
+  to try to upgrade them

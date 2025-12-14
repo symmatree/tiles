@@ -1,3 +1,8 @@
+# Component: external-dns
+# Documentation: charts/external-dns/README.md
+# Application: charts/external-dns/application.yaml
+# This module creates a Google Cloud service account and IAM bindings for external-dns to manage DNS records.
+
 resource "google_service_account" "external_dns" {
   account_id   = "sa-${var.cluster_name}-external-dns"
   display_name = "${var.cluster_name} external-dns"

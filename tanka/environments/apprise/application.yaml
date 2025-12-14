@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apprise
+  namespace: argocd
+  labels:
+    name: apprise
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "{{ .Values.targetRevision }}"
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: apprise
+        - name: APP_ENV
+          # The two secrets are generated in apprise.tf with random passwords
+          # and an htpasswd file.
+          value: |
+            hostname: "apprise.{{ .Values.cluster_name }}.symmatree.com"
+            vault_name: "{{ .Values.vault_name }}"
+            cluster_name: "{{ .Values.cluster_name }}"
+            cluster_issuer: "real-cert"
+            apprise_env: "{{ .Values.cluster_name }}-apprise-env"
+            apprise_admin: "{{ .Values.cluster_name }}-apprise-admin"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apprise
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
