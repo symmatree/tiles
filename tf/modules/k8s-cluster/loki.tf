@@ -1,3 +1,8 @@
+# Component: Loki
+# Documentation: charts/loki/README.md
+# Application: charts/loki/application.yaml
+# This module creates Google Cloud service accounts, KMS keys, and GCS buckets for Loki log storage.
+
 resource "google_service_account" "loki" {
   account_id   = "${var.cluster_name}-loki"
   display_name = "${var.cluster_name} Loki Service Account"
