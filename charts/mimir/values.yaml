@@ -54,6 +54,8 @@ mimir-distributed:
     terminationGracePeriodSeconds: 60
     extraContainers:
       - name: alert-forward
+        # Pull-always since we build daily with security patches.
+        imagePullPolicy: Always
         image: "ghcr.io/symmatree/tiles/mimir-webhook:main"
         ports:
           - name: webhook

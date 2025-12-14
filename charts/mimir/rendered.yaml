@@ -2156,6 +2156,7 @@ spec:
           - name: APPRISE_KEY
             value: apprise
           image: ghcr.io/symmatree/tiles/mimir-webhook:main
+          imagePullPolicy: Always
           name: alert-forward
           ports:
           - containerPort: 3000
