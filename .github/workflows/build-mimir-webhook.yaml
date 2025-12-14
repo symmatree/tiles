@@ -55,7 +55,7 @@ jobs:
           # Relative paths seem to get confused here
           context: ${{ github.workspace }}/charts/mimir/webhook
           containerfiles: |
-            ${{ github.workspace }}/charts/mimir/webhook/Dockerfile
+            ./Dockerfile
           build-args: |
             BASE_IMAGE=node
             BASE_TAG=alpine
