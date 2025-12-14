@@ -52,9 +52,10 @@ jobs:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
           labels: ${{ steps.docker-metadata.outputs.labels }}
-          context: ./charts/mimir/webhook
+          # context: ./charts/mimir/webhook
+          context: .
           containerfiles: |
-            ./Dockerfile
+            ./charts/mimir/webhook/Dockerfile
           build-args: |
             BASE_IMAGE=node
             BASE_TAG=alpine
