@@ -52,8 +52,7 @@ jobs:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
           labels: ${{ steps.docker-metadata.outputs.labels }}
-          # Relative paths seem to get confused here
-          context: ${{ github.workspace }}/charts/mimir/webhook
+          context: ./charts/mimir/webhook
           containerfiles: |
             ./Dockerfile
           build-args: |
