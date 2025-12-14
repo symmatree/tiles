@@ -9,7 +9,7 @@ resource "random_password" "apprise_env" {
 }
 
 resource "onepassword_item" "apprise_env" {
-  vault    = data.onepassword_vault.tf_secrets.uuid
+  vault    = var.onepassword_vault
   title    = "${var.cluster_name}-apprise-env"
   category = "secure_note"
   section {
@@ -47,7 +47,7 @@ resource "htpasswd_password" "apprise_admin" {
 }
 
 resource "onepassword_item" "apprise_admin" {
-  vault    = data.onepassword_vault.tf_secrets.uuid
+  vault    = var.onepassword_vault
   title    = "${var.cluster_name}-apprise-admin"
   category = "login"
   username = "apprise"
