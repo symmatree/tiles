@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: ghcr.io/symmatree/tiles/mimir-webhook
+      IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+      REGISTRY_USER: ${{ github.actor }}
+      REGISTRY_PASSWORD: ${{ github.token }}
     steps:
       - uses: actions/checkout@v6
       - name: Docker Metadata
@@ -59,8 +62,8 @@ jobs:
           # --network=host
           extra-args: |
             --disable-compression=false
-            --cache-from ${{ env.IMAGE_NAME }}-cache
-            --cache-to ${{ env.IMAGE_NAME }}-cache
+            --cache-from=${{ env.IMAGE_NAME }}-cache
+            --cache-to=${{ env.IMAGE_NAME }}-cache
 
       - name: Echo Outputs
         run: |
@@ -79,3 +82,17 @@ jobs:
           buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.OCIv1.config.Labels."org.opencontainers.image.description"'
           buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.Docker.config.Labels."org.opencontainers.image.title"'
           buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.Docker.config.Labels."org.opencontainers.image.description"'
+      - name: Push To GHCR
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        with:
+          image: ${{ steps.build_image.outputs.image }}
+          tags: ${{ steps.build_image.outputs.tags }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          extra-args: |
+            --disable-content-trust
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(steps.push.outputs) }}"

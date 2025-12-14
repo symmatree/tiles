@@ -539,9 +539,15 @@ data:
           {{end}}
           ]
         }]
-  For more information: https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/triggers/#default-triggers
   defaultTriggers: |
     - on-sync-status-unknown
+    - on-health-degraded
+    - on-sync-failed
+    - on-deleted
+    - on-sync-running
+    - on-sync-succeeded
+    - on-created
+    - on-deployed
   trigger.on-deployed: |
     - description: Application is synced and healthy. Triggered once per commit.
       oncePer: app.status.sync.revision
