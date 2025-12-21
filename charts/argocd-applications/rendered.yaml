@@ -372,10 +372,10 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argocd-mixin
-  namespace: argocd
+  name: cilium-mixin
+  namespace: cilium
   labels:
-    name: argocd-mixin
+    name: cilium-mixin
 spec:
   project: "placeholder"
   source:
@@ -385,10 +385,10 @@ spec:
     plugin:
       env:
         - name: TK_ENV
-          value: argocd-mixin
+          value: cilium-mixin
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: cilium
   syncPolicy:
     automated:
       prune: true
