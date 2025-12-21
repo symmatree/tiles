@@ -3,12 +3,12 @@ local k = import 'k.libsonnet';
 local op = import 'op.libsonnet';
 
 local APP = std.parseJson(std.extVar('ARGOCD_APP_PARAMETERS'));
-assert std.length(APP.vault_name) > 0;
-assert std.length(APP.cluster_name) > 0;
-assert std.length(APP.app_settings.apprise_env) > 0;
-assert std.length(APP.app_settings.apprise_admin) > 0;
-assert std.length(APP.app_settings.cluster_issuer) > 0;
-assert std.length(APP.app_settings.hostname) > 0;
+assert APP.vault_name != null && APP.vault_name != "";
+assert APP.cluster_name != null && APP.cluster_name != "";
+assert APP.app_settings.apprise_env != null && APP.app_settings.apprise_env != "";
+assert APP.app_settings.apprise_admin != null && APP.app_settings.apprise_admin != "";
+assert APP.app_settings.cluster_issuer != null && APP.app_settings.cluster_issuer != "";
+assert APP.app_settings.hostname != null && APP.app_settings.hostname != "";
 // local APP = {
 //   // Temp hack
 //   hostname: 'apprise.tiles-test.symmatree.com',
