@@ -496,7 +496,8 @@ argo-cd:
     # Following https://raynix.info/archives/4565
     extraContainers:
       - name: tanka
-        image: curlimages/curl:latest
+        # We need git for downloading dependencies with jb.
+        image: prontotools/alpine-git-curl:latest
         # install jb and tk then start the argocd-cmp-server
         command:
           - sh
