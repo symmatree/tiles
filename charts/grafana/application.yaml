@@ -6,7 +6,7 @@ metadata:
   labels:
     name: grafana
 spec:
-  project: default
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'

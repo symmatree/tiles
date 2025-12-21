@@ -166,7 +166,7 @@ spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -321,14 +321,14 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium-mixin
-  namespace: cilium
+  namespace: argocd
   labels:
     name: cilium-mixin
 spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -404,7 +404,7 @@ metadata:
   labels:
     name: grafana
 spec:
-  project: default
+  project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: 'placeholder'
@@ -450,7 +450,7 @@ spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -467,13 +467,12 @@ spec:
           map: {}
   destination:
     server: https://kubernetes.default.svc
-    namespace: kubernetes-mixin
+    namespace: alloy
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/local-path-provisioner-application.yaml
@@ -614,7 +613,7 @@ spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -631,13 +630,12 @@ spec:
           map: {}
   destination:
     server: https://kubernetes.default.svc
-    namespace: kubernetes-mixin
+    namespace: alloy
   syncPolicy:
-    # automated:
-    #   prune: true
-    #   selfHeal: true
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/onepassword-application.yaml

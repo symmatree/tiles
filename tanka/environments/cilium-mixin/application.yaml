@@ -2,14 +2,14 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium-mixin
-  namespace: cilium
+  namespace: argocd
   labels:
     name: cilium-mixin
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: tanka
     plugin:
       env:
