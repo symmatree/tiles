@@ -1,7 +1,7 @@
 #!/bin/bash
 set -exuo pipefail
 
-# Source the helper script to set up helm_template_args and set_flags
+# Source the helper script to set up helm_template_args and config_set_flags
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${REPO_ROOT}/scripts/helm-common.bash"
@@ -15,11 +15,12 @@ kubectl label namespace argocd "pod-security.kubernetes.io/enforce=privileged" -
 kubectl label namespace argocd "trust-bundle=enabled" --overwrite
 kubectl config set-context --current --namespace=argocd
 
+# Use config_set_flags which contains all config variables from the environment.
+# Additional --set flags override computed values that ArgoCD will also set.
 helm template argocd charts/argocd --namespace argocd \
 	--skip-crds \
 	"${helm_template_args[@]}" \
-	"${set_flags[@]}" \
-	--set "cluster_name=${cluster_name:?}" \
+	"${config_set_flags[@]}" \
 	--set "argo-cd.global.domain=argocd.${cluster_name:?}.symmatree.com" \
 	--set "argo-cd.server.ingressGrpc.hostname=grpc-argocd.${cluster_name:?}.symmatree.com" |
 	kubectl apply --server-side -f-

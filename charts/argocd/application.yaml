@@ -15,6 +15,8 @@ spec:
       valueFiles:
         - values.yaml
       valuesObject:
+        # Pass config values needed by argocd chart templates (e.g., tiles-appproject.yaml)
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
         argo-cd:
           global:

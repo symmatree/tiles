@@ -1,6 +1,6 @@
 # No shebang; must be sourced.
 # Bash helper script to set up Helm arguments from template variables and API versions
-# Source this script to get helm_template_args and set_flags arrays
+# Source this script to get helm_template_args, set_flags, and config_set_flags arrays
 
 # Fail if script is executed directly instead of sourced
 if [[ ${BASH_SOURCE[0]} == "${0}" ]]; then
@@ -13,16 +13,25 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Extract variables from the template file using envsubst
-TEMPLATE_FILE="${REPO_ROOT}/charts/argocd-applications/application.yaml.tmpl"
-if [[ ! -f $TEMPLATE_FILE ]]; then
-	echo "Error: Template file $TEMPLATE_FILE not found" >&2
-	exit 1
-fi
-
-# Get list of variables from template (envsubst -v outputs variable names)
-# Sort and deduplicate to handle variables that appear multiple times
-VARIABLES=$(envsubst -v "$(cat "$TEMPLATE_FILE")" 2>/dev/null | sort -u || true)
+# Canonical list of config variables from 1Password misc-config.
+# These are Terraform outputs stored in 1Password for propagation to ArgoCD.
+# Keep this list in sync with:
+#   - .github/workflows/bootstrap-cluster.yaml (Load cluster config step)
+#   - charts/argocd-applications/application.yaml.tmpl (valuesObject)
+CONFIG_VARS=(
+	targetRevision
+	pod_cidr
+	cluster_name
+	external_ip_cidr
+	vault_name
+	project_id
+	loki_bucket_chunks
+	loki_bucket_ruler
+	loki_bucket_admin
+	mimir_bucket_blocks
+	mimir_bucket_ruler
+	mimir_bucket_alertmanager
+)
 
 # Build helm args array for API versions (used only for template, not lint)
 helm_template_args=()
@@ -36,11 +45,21 @@ done <"${REPO_ROOT}/charts/extract-apis/helm-api-versions.txt"
 KUBE_VERSION=$(tr -d '[:space:]' <"${REPO_ROOT}/charts/extract-apis/helm-kube-version.txt")
 helm_template_args+=(--kube-version "${KUBE_VERSION}")
 
-# Build --set flags for all variables with placeholder values
+# Build --set flags for all config variables with placeholder values (for linting/CI)
 set_flags=()
-while IFS= read -r var; do
-	# Skip empty lines
-	[[ -z $var ]] && continue
-	# Set default placeholder value for each variable (include var name for easier troubleshooting)
+for var in "${CONFIG_VARS[@]}"; do
 	set_flags+=(--set "${var}=placeholder")
-done <<<"$VARIABLES"
+done
+
+# Build --set flags for all config variables with actual values from environment.
+# Use this in bootstrap scripts to pass real values to helm template.
+# Variables must be exported in the environment before sourcing this script.
+config_set_flags=()
+for var in "${CONFIG_VARS[@]}"; do
+	if [[ -n ${!var:-} ]]; then
+		config_set_flags+=(--set "${var}=${!var}")
+	else
+		# Fall back to placeholder if not set (allows partial bootstrap)
+		config_set_flags+=(--set "${var}=placeholder")
+	fi
+done

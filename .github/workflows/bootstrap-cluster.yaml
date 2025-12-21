@@ -116,6 +116,7 @@ jobs:
           cluster_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_name"
           external_ip_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/external_ip_cidr"
           vault_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/vault_name"
+          project_id: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/project_id"
           loki_bucket_chunks: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_chunks"
           loki_bucket_ruler: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_ruler"
           loki_bucket_admin: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_admin"
