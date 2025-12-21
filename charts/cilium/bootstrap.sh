@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source the helper script to set up helm_template_args and set_flags
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/helm-common.bash"
+cd "${REPO_ROOT}"
+
 echo "::group::Bootstrap Cilium"
 required_vars=(
 	"pod_cidr"
@@ -23,6 +29,8 @@ kubectl label namespace cilium "pod-security.kubernetes.io/enforce=privileged" -
 kubectl config set-context --current --namespace=cilium
 helm template cilium charts/cilium --namespace cilium \
 	--skip-crds \
+	"${helm_template_args[@]}" \
+	"${set_flags[@]}" \
 	--set "cilium.ipv4NativeRoutingCIDR=${pod_cidr:?}" \
 	--set "cilium.cluster.name=${cluster_name:?}" \
 	--set "cilium.hubble.ui.ingress.hosts[0]=hubble.${cluster_name:?}.symmatree.com" \
