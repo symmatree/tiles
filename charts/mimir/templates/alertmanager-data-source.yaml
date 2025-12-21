@@ -12,7 +12,7 @@ data:
       - name: Mimir Alertmanager
         uid: alertmanager
         type: alertmanager
-        url: http://mimir-alertmanager.mimir.svc/
+        url: http://mimir-alertmanager.mimir.svc:8080/
         jsonData:
           implementation: mimir
           handleGrafanaManagedAlerts: true
