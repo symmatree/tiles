@@ -4,9 +4,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: alloy
-  namespace: argocd
-  labels:
-    name: alloy
 spec:
   project: 'placeholder'
   source:
@@ -74,9 +71,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: apprise
-  namespace: argocd
-  labels:
-    name: apprise
 spec:
   project: 'placeholder'
   source:
@@ -119,9 +113,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd
-  namespace: argocd
-  labels:
-    name: argocd
 spec:
   project: 'placeholder'
   source:
@@ -159,14 +150,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd-mixin
-  namespace: argocd
-  labels:
-    name: argocd-mixin
 spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -196,9 +184,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cert-manager
-  namespace: argocd
-  labels:
-    name: cert-manager
 spec:
   project: 'placeholder'
   source:
@@ -236,9 +221,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium
-  namespace: argocd
-  labels:
-    name: cilium
 spec:
   project: 'placeholder'
   source:
@@ -287,9 +269,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium-config
-  namespace: argocd
-  labels:
-    name: cilium-config
 spec:
   project: 'placeholder'
   source:
@@ -321,14 +300,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium-mixin
-  namespace: cilium
-  labels:
-    name: cilium-mixin
 spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -358,9 +334,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: external-dns
-  namespace: argocd
-  labels:
-    name: external-dns
 spec:
   project: 'placeholder'
   source:
@@ -400,11 +373,8 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: grafana
-  namespace: argocd
-  labels:
-    name: grafana
 spec:
-  project: default
+  project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: 'placeholder'
@@ -443,14 +413,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: kubernetes-mixin
-  namespace: argocd
-  labels:
-    name: kubernetes-mixin
 spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -467,13 +434,12 @@ spec:
           map: {}
   destination:
     server: https://kubernetes.default.svc
-    namespace: kubernetes-mixin
+    namespace: alloy
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/local-path-provisioner-application.yaml
@@ -481,9 +447,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: local-path-provisioner
-  namespace: argocd
-  labels:
-    name: local-path-provisioner
 spec:
   project: 'placeholder'
   source:
@@ -513,9 +476,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: loki
-  namespace: argocd
-  labels:
-    name: loki
 spec:
   project: 'placeholder'
   source:
@@ -554,9 +514,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: mimir
-  namespace: argocd
-  labels:
-    name: mimir
 spec:
   project: 'placeholder'
   source:
@@ -607,14 +564,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: node-exporter-mixin
-  namespace: argocd
-  labels:
-    name: node-exporter-mixin
 spec:
   project: 'placeholder'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: 'placeholder'
     path: tanka
     plugin:
       env:
@@ -631,13 +585,12 @@ spec:
           map: {}
   destination:
     server: https://kubernetes.default.svc
-    namespace: kubernetes-mixin
+    namespace: alloy
   syncPolicy:
-    # automated:
-    #   prune: true
-    #   selfHeal: true
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/onepassword-application.yaml
@@ -645,9 +598,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: onepassword
-  namespace: argocd
-  labels:
-    name: onepassword
 spec:
   project: 'placeholder'
   source:

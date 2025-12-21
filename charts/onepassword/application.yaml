@@ -2,9 +2,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: onepassword
-  namespace: argocd
-  labels:
-    name: onepassword
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:

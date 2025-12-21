@@ -2,9 +2,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: local-path-provisioner
-  namespace: argocd
-  labels:
-    name: local-path-provisioner
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:

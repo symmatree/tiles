@@ -2,14 +2,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: kubernetes-mixin
-  namespace: argocd
-  labels:
-    name: kubernetes-mixin
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: main
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: tanka
     plugin:
       env:
@@ -26,11 +23,10 @@ spec:
           map: {}
   destination:
     server: https://kubernetes.default.svc
-    namespace: kubernetes-mixin
+    namespace: alloy
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
