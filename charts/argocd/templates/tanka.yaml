@@ -4,6 +4,7 @@ metadata:
   name: cmp-tanka
   namespace: "{{ .Release.Namespace }}"
 data:
+  # Note that the ArgoCD parser apparently can't handle multiline YAML formats.
   plugin.yaml: |
     apiVersion: argoproj.io/v1alpha1
     kind: ConfigManagementPlugin
@@ -28,9 +29,6 @@ data:
         command:
           - "sh"
           - "-c"
-          - |
-            /home/argocd/cmp-server/plugins/tk show environments/${ARGOCD_ENV_TK_ENV} \
-              --dangerous-allow-redirect \
-              --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
+          - /home/argocd/cmp-server/plugins/tk show environments/${ARGOCD_ENV_TK_ENV} --dangerous-allow-redirect --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
       discover:
         fileName: "./environments/*/main.jsonnet"
