@@ -36,11 +36,14 @@ done <"${REPO_ROOT}/charts/extract-apis/helm-api-versions.txt"
 KUBE_VERSION=$(tr -d '[:space:]' <"${REPO_ROOT}/charts/extract-apis/helm-kube-version.txt")
 helm_template_args+=(--kube-version "${KUBE_VERSION}")
 
-# Build --set flags for all variables with placeholder values
+# Build --set flags for all variables
+# Use actual environment variable value if set, otherwise use placeholder
 set_flags=()
 while IFS= read -r var; do
 	# Skip empty lines
 	[[ -z $var ]] && continue
-	# Set default placeholder value for each variable (include var name for easier troubleshooting)
-	set_flags+=(--set "${var}=placeholder")
+	# Use actual env var value if set, otherwise placeholder
+	# ${!var} is indirect expansion (value of variable named by $var)
+	# ${!var:-placeholder} provides default if unset or empty
+	set_flags+=(--set "${var}=${!var:-placeholder}")
 done <<<"$VARIABLES"
