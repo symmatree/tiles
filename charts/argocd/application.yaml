@@ -6,22 +6,22 @@ metadata:
   labels:
     name: argocd
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/argocd
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        targetRevision: "{{ .Values.targetRevision }}"
+        targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
         argo-cd:
           global:
-            domain: "argocd.{{ .Values.cluster_name }}.symmatree.com"
+            domain: 'argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
           server:
             ingressGrpc:
-              hostname: "grpc-argocd.{{ .Values.cluster_name }}.symmatree.com"
+              hostname: 'grpc-argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

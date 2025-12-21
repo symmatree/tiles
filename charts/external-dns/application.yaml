@@ -6,25 +6,25 @@ metadata:
   labels:
     name: external-dns
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/external-dns
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        cluster_name: "{{ .Values.cluster_name }}"
-        project_id: "{{ .Values.project_id }}"
-        vault_name: "{{ .Values.vault_name }}"
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        project_id: '{{ required ".Values.project_id is required" .Values.project_id }}'
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         external-dns:
-          txtOwnerId: "{{ .Values.cluster_name }}"
+          txtOwnerId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
           domainFilters:
-            - "{{ .Values.cluster_name }}.symmatree.com"
+            - '{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
             - 0.10.in-addr.arpa
           extraArgs:
-            - "--google-project={{ .Values.project_id }}"
+            - '--google-project={{ required ".Values.project_id is required" .Values.project_id }}'
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns

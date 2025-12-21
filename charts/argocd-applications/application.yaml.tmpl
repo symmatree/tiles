@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-applications
+  namespace: argocd
+  labels:
+    name: argocd-applications
+spec:
+  project: "${cluster_name}"
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: "${targetRevision}"
+    path: charts/argocd-applications
+    helm:
+      valuesObject:
+        # Propagate to other application.yaml files
+        targetRevision: "${targetRevision}"
+        pod_cidr: "${pod_cidr}"
+        cluster_name: "${cluster_name}"
+        external_ip_cidr: "${external_ip_cidr}"
+        vault_name: "${vault_name}"
+        project_id: "${project_id}"
+        loki_bucket_chunks: "${loki_bucket_chunks}"
+        loki_bucket_ruler: "${loki_bucket_ruler}"
+        loki_bucket_admin: "${loki_bucket_admin}"
+        mimir_bucket_alertmanager: "${mimir_bucket_alertmanager}"
+        mimir_bucket_blocks: "${mimir_bucket_blocks}"
+        mimir_bucket_ruler: "${mimir_bucket_ruler}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - FailOnSharedResource=true

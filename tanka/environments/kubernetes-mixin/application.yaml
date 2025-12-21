@@ -6,9 +6,9 @@ metadata:
   labels:
     name: kubernetes-mixin
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
-    repoURL: https://github.com/symmatree/tales.git
+    repoURL: https://github.com/symmatree/tiles.git
     targetRevision: main
     path: tanka
     plugin:

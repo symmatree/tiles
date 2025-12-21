@@ -9,22 +9,22 @@ spec:
   project: default
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/grafana
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        vault_name: "{{ .Values.vault_name }}"
-        cluster_name: "{{ .Values.cluster_name }}"
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         grafana:
           ingress:
             hosts:
-              - borgmon.{{ .Values.cluster_name }}.symmatree.com
+              - 'borgmon.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
             tls:
               - secretName: grafana-tls
                 hosts:
-                  - borgmon.{{ .Values.cluster_name }}.symmatree.com
+                  - 'borgmon.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: grafana
