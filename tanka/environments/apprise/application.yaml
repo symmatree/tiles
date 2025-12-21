@@ -23,7 +23,6 @@ spec:
         - name: project_id
           string: "{{ .Values.project_id }}"
         - name: app_settings
-          collectionType: map
           map:
             hostname: "apprise.{{ .Values.cluster_name }}.symmatree.com"
             cluster_issuer: "real-cert"
