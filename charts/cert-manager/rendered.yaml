@@ -2295,7 +2295,7 @@ spec:
             - "placeholder.symmatree.com"
         dns01:
           cloudDNS:
-            project: ""
+            project: "placeholder"
             serviceAccountSecretRef:
               # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
               name: cert-manager-dns01-sa-key
@@ -2319,7 +2319,7 @@ spec:
             - "placeholder.symmatree.com"
         dns01:
           cloudDNS:
-            project: ""
+            project: "placeholder"
             serviceAccountSecretRef:
               # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
               name: cert-manager-dns01-sa-key

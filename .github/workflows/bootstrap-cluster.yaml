@@ -9,6 +9,32 @@ on:
         options:
           - tiles-test
           - tiles
+      crds:
+        description: "Whether to install CRDs"
+        required: false
+        type: boolean
+        default: false
+      cilium:
+        description: "Whether to reset and bootstrap Cilium"
+        required: false
+        type: boolean
+        default: false
+      argocd:
+        description: "Whether to reset and bootstrap ArgoCD"
+        required: false
+        type: boolean
+        default: false
+      onepassword:
+        description: "Whether to reset and bootstrap OnePassword"
+        required: false
+        type: boolean
+        default: false
+      argocd_applications:
+        description: "Whether to install ArgoCD App-of-apps"
+        required: false
+        type: boolean
+        # Common case is just adding a new variable to Terraform, not creating a new cluster.
+        default: true
 
 env:
   TF_IN_AUTOMATION: "true"
@@ -103,8 +129,21 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          ./charts/install-crds.sh
-          ./charts/bootstrap.sh
+          if [ "${{ github.event.inputs.crds }}" == "true" ]; then
+            ./charts/install-crds.sh
+          fi
+          if [ "${{ github.event.inputs.cilium }}" == "true" ]; then
+            ./charts/cilium/bootstrap.sh
+          fi
+          if [ "${{ github.event.inputs.argocd }}" == "true" ]; then
+            ./charts/argocd/bootstrap.sh
+          fi
+          if [ "${{ github.event.inputs.onepassword }}" == "true" ]; then
+            ./charts/onepassword/make-secrets.sh
+          fi
+          if [ "${{ github.event.inputs.argocd_applications }}" == "true" ]; then
+            ./charts/argocd-applications/install-application.sh
+          fi
 
           # TODO: Install yq properly with caching and versioning.
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64

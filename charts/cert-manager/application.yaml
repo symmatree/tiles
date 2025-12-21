@@ -6,23 +6,23 @@ metadata:
   labels:
     name: cert-manager
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/cert-manager
     helm:
       skipCrds: true
       valueFiles:
         - values.yaml
       valuesObject:
-        cluster_name: "{{ .Values.cluster_name }}"
-        project_id: "{{ .Values.project_id }}"
-        vault_name: "{{ .Values.vault_name }}"
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        project_id: '{{ required ".Values.project_id is required" .Values.project_id }}'
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         trust-manager:
           secretTargets:
             authorizedSecrets:
-              - "{{ .Values.cluster_name }}-ca-tls"
+              - '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ca-tls'
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager

@@ -6,10 +6,10 @@ metadata:
   labels:
     name: cilium
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/cilium
     helm:
       valueFiles:
@@ -17,22 +17,22 @@ spec:
       # Inject values from Terraform or that vary by environment.
       valuesObject:
         cilium:
-          ipv4NativeRoutingCIDR: "{{ .Values.pod_cidr }}"
+          ipv4NativeRoutingCIDR: '{{ required ".Values.pod_cidr is required" .Values.pod_cidr }}'
           cluster:
-            name: "{{ .Values.cluster_name }}"
+            name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
           hubble:
             tls:
               auto:
                 certManagerIssuerRef:
-                  name: "{{ .Values.cluster_name }}-ca-issuer"
+                  name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ca-issuer'
             ui:
               ingress:
                 hosts:
-                  - "hubble.{{ .Values.cluster_name }}.symmatree.com"
+                  - 'hubble.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
                 tls:
                   - secretName: hubble-ui-tls
                     hosts:
-                      - "hubble.{{ .Values.cluster_name }}.symmatree.com"
+                      - 'hubble.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: cilium

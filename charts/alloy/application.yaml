@@ -6,27 +6,27 @@ metadata:
   labels:
     name: alloy
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/alloy
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        vault_name: "{{ .Values.vault_name }}"
-        cluster_name: "{{ .Values.cluster_name }}"
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         k8s-monitoring:
           cluster:
-            name: "{{ .Values.cluster_name }}"
+            name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
 
           # Arrays don't value-merge so we have to do it all here.
           destinations:
             - name: localMimir
               type: prometheus
               url: http://mimir-distributor-headless.mimir.svc:8080/api/v1/push
-              tenantId: "{{ .Values.cluster_name }}"
+              tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
               secret:
                 # This is just the tenant name
                 create: false
@@ -34,8 +34,8 @@ spec:
             - name: localLoki
               type: loki
               url: http://loki-gateway.loki.svc/loki/api/v1/push
-              tenantId: "{{ .Values.cluster_name }}"
-              http_user: "{{ .Values.cluster_name }}"
+              tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+              http_user: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
               secret:
                 # This is just the tenant name
                 create: false
@@ -48,7 +48,7 @@ spec:
             extraConfig: |-
               mimir.rules.kubernetes "default" {
                 address = "http://mimir-ruler.mimir.svc:8080"
-                tenant_id = "{{ .Values.cluster_name }}"
+                tenant_id = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
               }
 
   destination:

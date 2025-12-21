@@ -6,24 +6,24 @@ metadata:
   labels:
     name: loki
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/loki
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        vault_name: "{{ .Values.vault_name }}"
-        cluster_name: "{{ .Values.cluster_name }}"
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         loki:
           loki:
             storage:
               bucketNames:
-                chunks: "{{ .Values.loki_bucket_chunks }}"
-                ruler: "{{ .Values.loki_bucket_ruler }}"
-                admin: "{{ .Values.loki_bucket_admin }}"
+                chunks: '{{ required ".Values.loki_bucket_chunks is required" .Values.loki_bucket_chunks }}'
+                ruler: '{{ required ".Values.loki_bucket_ruler is required" .Values.loki_bucket_ruler }}'
+                admin: '{{ required ".Values.loki_bucket_admin is required" .Values.loki_bucket_admin }}'
   destination:
     server: https://kubernetes.default.svc
     namespace: loki

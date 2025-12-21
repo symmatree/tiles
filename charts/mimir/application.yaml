@@ -6,36 +6,36 @@ metadata:
   labels:
     name: mimir
 spec:
-  project: "{{ .Values.cluster_name }}"
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: "{{ .Values.targetRevision }}"
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/mimir
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        vault_name: "{{ .Values.vault_name }}"
-        cluster_name: "{{ .Values.cluster_name }}"
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         mimir-distributed:
           mimir:
             structuredConfig:
               alertmanager_storage:
                 gcs:
-                  bucket_name: "{{ .Values.mimir_bucket_alertmanager }}"
+                  bucket_name: '{{ required ".Values.mimir_bucket_alertmanager is required" .Values.mimir_bucket_alertmanager }}'
               blocks_storage:
                 gcs:
-                  bucket_name: "{{ .Values.mimir_bucket_blocks }}"
+                  bucket_name: '{{ required ".Values.mimir_bucket_blocks is required" .Values.mimir_bucket_blocks }}'
               ruler_storage:
                 gcs:
-                  bucket_name: "{{ .Values.mimir_bucket_ruler }}"
+                  bucket_name: '{{ required ".Values.mimir_bucket_ruler is required" .Values.mimir_bucket_ruler }}'
           ingress:
             hosts:
-              - mimir.{{ .Values.cluster_name }}.symmatree.com
+              - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
             tls:
               - secretName: mimir-tls
                 hosts:
-                  - mimir.{{ .Values.cluster_name }}.symmatree.com
+                  - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: mimir
