@@ -68,6 +68,12 @@ spec:
                 secret:
                   name: loki-tenant-auth
                   key: password
+          alloy-singleton:
+            extraConfig: |-
+              mimir.rules.kubernetes "default" {
+                address = "http://mimir-ruler.mimir.svc:8080"
+                tenant_id = "placeholder"
+              }
 
   destination:
     server: https://kubernetes.default.svc
@@ -94,7 +100,7 @@ metadata:
   labels:
     name: apprise
 spec:
-  project: default
+  project: "placeholder"
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: "main"
@@ -208,6 +214,34 @@ spec:
     syncOptions:
       - ServerSideApply=true
       - FailOnSharedResource=true
+---
+# Source: argocd-applications/templates/argocd-mixin-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-mixin
+  namespace: argocd
+  labels:
+    name: argocd-mixin
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tales.git
+    targetRevision: main
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: argocd-mixin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/cert-manager-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -334,6 +368,34 @@ spec:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
 ---
+# Source: argocd-applications/templates/cilium-mixin-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-mixin
+  namespace: argocd
+  labels:
+    name: argocd-mixin
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tales.git
+    targetRevision: main
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: argocd-mixin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
 # Source: argocd-applications/templates/external-dns-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -418,6 +480,35 @@ spec:
       labels:
         pod-security.kubernetes.io/warn: baseline
         trust-bundle: enabled
+---
+# Source: argocd-applications/templates/kubernetes-mixin-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubernetes-mixin
+  namespace: argocd
+  labels:
+    name: kubernetes-mixin
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tales.git
+    targetRevision: main
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: kubernetes-mixin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubernetes-mixin
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/local-path-provisioner-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -544,6 +635,35 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+---
+# Source: argocd-applications/templates/node-exporter-mixin-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: node-exporter-mixin
+  namespace: argocd
+  labels:
+    name: node-exporter-mixin
+spec:
+  project: "placeholder"
+  source:
+    repoURL: https://github.com/symmatree/tales.git
+    targetRevision: main
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: node-exporter-mixin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubernetes-mixin
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/onepassword-application.yaml
 apiVersion: argoproj.io/v1alpha1

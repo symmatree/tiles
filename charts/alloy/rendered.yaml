@@ -1423,6 +1423,7 @@ data:
     
     mimir.rules.kubernetes "default" {
       address = "http://mimir-ruler.mimir.svc:8080"
+      tenant_id = "placeholder-cluster"
     }
     // Destination: placeholder-mimir (prometheus)
     otelcol.exporter.prometheus "placeholder_mimir" {

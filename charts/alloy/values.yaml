@@ -148,9 +148,11 @@ k8s-monitoring:
     enabled: true
     serviceMonitor:
       enabled: true
+    # extraConfig is fully overridden by the application.yaml file.
     extraConfig: |-
       mimir.rules.kubernetes "default" {
         address = "http://mimir-ruler.mimir.svc:8080"
+        tenant_id = "placeholder-cluster"
       }
     alloy:
       resources: # Set 2025-07-20

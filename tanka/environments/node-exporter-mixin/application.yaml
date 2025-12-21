@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: node-exporter-mixin
+  namespace: argocd
+  labels:
+    name: node-exporter-mixin
+spec:
+  project: "{{ .Values.cluster_name }}"
+  source:
+    repoURL: https://github.com/symmatree/tales.git
+    targetRevision: main
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: node-exporter-mixin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubernetes-mixin
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
