@@ -3624,7 +3624,7 @@ metadata:
   namespace: "argocd"
 type: Opaque
 spec:
-  itemPath: vaults/tiles-secrets/items/argocd-slack-token
+  itemPath: 'vaults/placeholder/items/argocd-slack-token'
 ---
 # Source: argocd/templates/google-oauth-secret.yaml
 apiVersion: onepassword.com/v1
@@ -3634,7 +3634,7 @@ metadata:
   namespace: "argocd"
 type: Opaque
 spec:
-  itemPath: vaults/tiles-secrets/items/argocd-google-oauth
+  itemPath: 'vaults/placeholder/items/argocd-google-oauth'
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/prometheusrule.yaml
 apiVersion: monitoring.coreos.com/v1

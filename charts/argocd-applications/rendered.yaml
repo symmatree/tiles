@@ -124,6 +124,8 @@ spec:
         - values.yaml
       valuesObject:
         targetRevision: 'placeholder'
+        cluster_name: 'placeholder'
+        vault_name: 'placeholder'
         argo-cd:
           global:
             domain: 'argocd.placeholder.symmatree.com'
