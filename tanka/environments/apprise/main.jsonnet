@@ -2,16 +2,22 @@ local k_util = import 'github.com/grafana/jsonnet-libs/ksonnet-util/util.libsonn
 local k = import 'k.libsonnet';
 local op = import 'op.libsonnet';
 
-// local APP_ENV = std.parseYaml(std.extVar('APP_ENV'));
-local APP_ENV = {
-  // Temp hack
-  hostname: 'apprise.tiles-test.symmatree.com',
-  vault_name: 'tiles-secrets',
-  cluster_name: 'tiles-test',
-  cluster_issuer: 'real-cert',
-  apprise_env: 'tiles-test-apprise-env',
-  apprise_admin: 'tiles-test-apprise-admin',
-};
+local APP = std.parseJson(std.extVar('ARGOCD_APP_PARAMETERS'));
+assert std.length(APP.vault_name) > 0;
+assert std.length(APP.cluster_name) > 0;
+assert std.length(APP.cluster_issuer) > 0;
+assert std.length(APP.app_settings.hostname) > 0;
+assert std.length(APP.app_settings.apprise_env) > 0;
+assert std.length(APP.app_settings.apprise_admin) > 0;
+// local APP = {
+//   // Temp hack
+//   hostname: 'apprise.tiles-test.symmatree.com',
+//   vault_name: 'tiles-secrets',
+//   cluster_name: 'tiles-test',
+//   cluster_issuer: 'real-cert',
+//   apprise_env: 'tiles-test-apprise-env',
+//   apprise_admin: 'tiles-test-apprise-admin',
+// };
 local apprise = {
   local kDeployment = k.apps.v1.deployment,
   local kContainer = k.core.v1.container,
@@ -26,20 +32,20 @@ local apprise = {
     image: 'caronc/apprise',
     version: '1.2',
     // Ref https://github.com/caronc/apprise-api#environment-variables
-    envSecret: APP_ENV.apprise_env,
-    htpasswdSecret: APP_ENV.apprise_admin,
+    envSecret: APP.app_settings.apprise_env,
+    htpasswdSecret: APP.app_settings.apprise_admin,
     port: kPort.newNamed(8000, 'http'),
     ingressAnnotations: {
-      'cert-manager.io/cluster-issuer': APP_ENV.cluster_issuer,
+      'cert-manager.io/cluster-issuer': APP.app_settings.cluster_issuer,
     },
     ingressClassName: 'cilium',
-    host: APP_ENV.hostname,
+    host: APP.app_settings.hostname,
   },
   new(overrides):: {
     local appriseObj = self,
     local config = defaults + overrides,
-    envSecret: op.item.new(config.envSecret, 'vaults/' + APP_ENV.vault_name + '/items/' + config.envSecret),
-    htpasswd: op.item.new(config.htpasswdSecret, 'vaults/' + APP_ENV.vault_name + '/items/' + config.htpasswdSecret),
+    envSecret: op.item.new(config.envSecret, 'vaults/' + APP.vault_name + '/items/' + config.envSecret),
+    htpasswd: op.item.new(config.htpasswdSecret, 'vaults/' + APP.vault_name + '/items/' + config.htpasswdSecret),
     configPvc: kPersistentVolumeClaim.new(std.format('%s-config', config.name))
                + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
                + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '1Gi' }),

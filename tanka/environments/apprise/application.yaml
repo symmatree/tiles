@@ -15,13 +15,17 @@ spec:
       env:
         - name: TK_ENV
           value: apprise
-        - name: APP_ENV
-          # The two secrets are generated in apprise.tf with random passwords
-          # and an htpasswd file.
-          value: |
+      parameters:
+        - name: cluster_name
+          string: "{{ .Values.cluster_name }}"
+        - name: vault_name
+          string: "{{ .Values.vault_name }}"
+        - name: project_id
+          string: "{{ .Values.project_id }}"
+        - name: app_settings
+          collectionType: map
+          map:
             hostname: "apprise.{{ .Values.cluster_name }}.symmatree.com"
-            vault_name: "{{ .Values.vault_name }}"
-            cluster_name: "{{ .Values.cluster_name }}"
             cluster_issuer: "real-cert"
             apprise_env: "{{ .Values.cluster_name }}-apprise-env"
             apprise_admin: "{{ .Values.cluster_name }}-apprise-admin"
