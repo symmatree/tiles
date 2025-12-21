@@ -1485,6 +1485,10 @@ data:
         url = "http://placeholder.loki.svc/loki/api/v1/push"
         retry_on_http_429 = true
         tenant_id = "placeholder-loki-tenant"
+        basic_auth {
+          username = "placeholder-loki-tenant"
+          password = secret(loki-tenant-auth).password
+        }
         tls_config {
           insecure_skip_verify = false
         }
@@ -1743,6 +1747,10 @@ data:
         url = "http://placeholder.loki.svc/loki/api/v1/push"
         retry_on_http_429 = true
         tenant_id = "placeholder-loki-tenant"
+        basic_auth {
+          username = "placeholder-loki-tenant"
+          password = secret(loki-tenant-auth).password
+        }
         tls_config {
           insecure_skip_verify = false
         }
