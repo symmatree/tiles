@@ -12,7 +12,7 @@ data:
       - name: Mimir
         uid: prom
         type: prometheus
-        url: http://mimir-distributor.mimir.svc/prometheus
+        url: http://mimir-query-frontend.mimir.svc:8080/prometheus
         isDefault: true
         jsonData:
           prometheusType: Mimir

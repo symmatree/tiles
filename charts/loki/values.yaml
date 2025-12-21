@@ -30,6 +30,8 @@ loki:
       chunk_encoding: snappy
     pattern_ingester:
       enabled: true
+    limits_config:
+      volume_enabled: true
     tracing:
       enabled: true
     ruler:
@@ -118,13 +120,13 @@ loki:
     allocatedMemory: 1024
   monitoring:
     dashboards:
-      enabled: true
-      annotations:
-        k8s-sidecar-target-directory: /tmp/dashboards/Loki
+      enabled: false
+      # annotations:
+      #   k8s-sidecar-target-directory: /tmp/dashboards/Loki
     serviceMonitor:
       enabled: true
     rules:
-      enabled: true
+      enabled: false
     selfMonitoring:
       enabled: false
 
