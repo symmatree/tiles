@@ -1485,6 +1485,10 @@ data:
         url = "http://placeholder.loki.svc/loki/api/v1/push"
         retry_on_http_429 = true
         tenant_id = "placeholder-loki-tenant"
+        basic_auth {
+          username = "placeholder-loki-tenant"
+          password = secret(loki-tenant-auth).password
+        }
         tls_config {
           insecure_skip_verify = false
         }
@@ -1743,6 +1747,10 @@ data:
         url = "http://placeholder.loki.svc/loki/api/v1/push"
         retry_on_http_429 = true
         tenant_id = "placeholder-loki-tenant"
+        basic_auth {
+          username = "placeholder-loki-tenant"
+          password = secret(loki-tenant-auth).password
+        }
         tls_config {
           insecure_skip_verify = false
         }
@@ -2906,10 +2914,7 @@ spec:
     livenessProbe: {}
     mounts:
       dockercontainers: false
-      extra:
-      - mountPath: /etc/alloy/secrets/loki-tenant-auth
-        name: loki-tenant-auth
-        readOnly: true
+      extra: []
       varlog: true
     resources: {}
     securityContext:
@@ -3021,10 +3026,7 @@ spec:
     updateStrategy: {}
     volumeClaimTemplates: []
     volumes:
-      extra:
-      - name: loki-tenant-auth
-        secret:
-          secretName: loki-tenant-auth
+      extra: []
   crds:
     create: false
   extraObjects: []

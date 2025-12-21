@@ -34,25 +34,14 @@ spec:
               type: loki
               url: http://loki-gateway.loki.svc/loki/api/v1/push
               tenantId: 'placeholder'
-              http_user: 'placeholder'
+              auth:
+                type: basic
+                username: 'placeholder'
+                passwordFrom: 'secret(loki-tenant-auth).password'
               secret:
                 # This is just the tenant name
                 create: false
                 embed: true
-              http_passwd:
-                secret:
-                  name: loki-tenant-auth
-                  key: password
-          alloy-logs:
-            extraConfig: |-
-              loki.write "localLoki" {
-                endpoint {
-                  basic_auth {
-                    username = "placeholder"
-                    password_file = "/etc/alloy/secrets/loki-tenant-auth/password"
-                  }
-                }
-              }
           alloy-singleton:
             extraConfig: |-
               mimir.rules.kubernetes "default" {
