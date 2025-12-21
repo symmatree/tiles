@@ -2,7 +2,7 @@
 local argocdMixin = import 'github.com/adinhodovic/argo-cd-mixin/mixin.libsonnet';
 local libMonResources = import 'monitoring-resources.libsonnet';
 local APP = std.parseJson(std.extVar('ARGOCD_APP_PARAMETERS'));
-assert std.length(APP.cluster_name) > 0;
+assert APP.cluster_name != null && APP.cluster_name != "";
 
 libMonResources.new(
   argocdMixin  {
