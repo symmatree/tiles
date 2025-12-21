@@ -117,7 +117,6 @@ spec:
         - name: project_id
           string: "placeholder-project-id"
         - name: app_settings
-          collectionType: map
           map:
             hostname: "apprise.placeholder.symmatree.com"
             cluster_issuer: "real-cert"
