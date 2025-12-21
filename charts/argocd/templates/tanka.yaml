@@ -30,6 +30,6 @@ data:
           - >
             /home/argocd/cmp-server/plugins/tk show environments/${ARGOCD_ENV_TK_ENV}
               --dangerous-allow-redirect
-              --ext-str ARGOCD_APP_PARAMETERS=\"${ARGOCD_APP_PARAMETERS }\"
+              --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
       discover:
         fileName: "./environments/*/main.jsonnet"
