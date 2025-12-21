@@ -2,9 +2,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium-mixin
-  namespace: argocd
-  labels:
-    name: cilium-mixin
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:

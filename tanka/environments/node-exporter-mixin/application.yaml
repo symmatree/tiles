@@ -2,9 +2,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: node-exporter-mixin
-  namespace: argocd
-  labels:
-    name: node-exporter-mixin
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:

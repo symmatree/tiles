@@ -4,9 +4,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: alloy
-  namespace: argocd
-  labels:
-    name: alloy
 spec:
   project: 'placeholder'
   source:
@@ -74,9 +71,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: apprise
-  namespace: argocd
-  labels:
-    name: apprise
 spec:
   project: 'placeholder'
   source:
@@ -119,9 +113,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd
-  namespace: argocd
-  labels:
-    name: argocd
 spec:
   project: 'placeholder'
   source:
@@ -159,9 +150,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd-mixin
-  namespace: argocd
-  labels:
-    name: argocd-mixin
 spec:
   project: 'placeholder'
   source:
@@ -196,9 +184,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cert-manager
-  namespace: argocd
-  labels:
-    name: cert-manager
 spec:
   project: 'placeholder'
   source:
@@ -236,9 +221,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium
-  namespace: argocd
-  labels:
-    name: cilium
 spec:
   project: 'placeholder'
   source:
@@ -287,9 +269,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium-config
-  namespace: argocd
-  labels:
-    name: cilium-config
 spec:
   project: 'placeholder'
   source:
@@ -321,9 +300,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cilium-mixin
-  namespace: argocd
-  labels:
-    name: cilium-mixin
 spec:
   project: 'placeholder'
   source:
@@ -358,9 +334,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: external-dns
-  namespace: argocd
-  labels:
-    name: external-dns
 spec:
   project: 'placeholder'
   source:
@@ -400,9 +373,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: grafana
-  namespace: argocd
-  labels:
-    name: grafana
 spec:
   project: 'placeholder'
   source:
@@ -443,9 +413,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: kubernetes-mixin
-  namespace: argocd
-  labels:
-    name: kubernetes-mixin
 spec:
   project: 'placeholder'
   source:
@@ -480,9 +447,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: local-path-provisioner
-  namespace: argocd
-  labels:
-    name: local-path-provisioner
 spec:
   project: 'placeholder'
   source:
@@ -512,9 +476,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: loki
-  namespace: argocd
-  labels:
-    name: loki
 spec:
   project: 'placeholder'
   source:
@@ -553,9 +514,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: mimir
-  namespace: argocd
-  labels:
-    name: mimir
 spec:
   project: 'placeholder'
   source:
@@ -606,9 +564,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: node-exporter-mixin
-  namespace: argocd
-  labels:
-    name: node-exporter-mixin
 spec:
   project: 'placeholder'
   source:
@@ -643,9 +598,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: onepassword
-  namespace: argocd
-  labels:
-    name: onepassword
 spec:
   project: 'placeholder'
   source:
