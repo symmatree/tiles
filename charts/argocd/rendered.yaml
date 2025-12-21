@@ -697,11 +697,25 @@ data:
     spec:
       init:
         command: ["sh", "-c", "/home/argocd/cmp-server/plugins/jb install"]
+      parameters:
+        - name: cluster_name
+          string: "placeholder-cluster-name"
+        - name: vault_name
+          string: "placeholder-vault-name"
+        - name: project_id
+          string: "placeholder-project-id"
+        - name: app_settings
+          collectionType: map
+          map: {}
+
       generate:
         command:
           - "sh"
           - "-c"
-          - "/home/argocd/cmp-server/plugins/tk show environments/${ARGOCD_ENV_TK_ENV} --dangerous-allow-redirect --ext-str APP_ENV=\"${APP_ENV}\""
+          - >
+            /home/argocd/cmp-server/plugins/tk show environments/${ARGOCD_ENV_TK_ENV}
+              --dangerous-allow-redirect
+              --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
       discover:
         fileName: "./environments/*/main.jsonnet"
 ---
