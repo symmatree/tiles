@@ -13,6 +13,8 @@ spec:
         - values.yaml
       valuesObject:
         targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         argo-cd:
           global:
             domain: 'argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
