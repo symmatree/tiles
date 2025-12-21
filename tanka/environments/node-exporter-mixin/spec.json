@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/node-exporter-mixin"
+  },
+  "spec": {
+    "namespace": "alloy",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}

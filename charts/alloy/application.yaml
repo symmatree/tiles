@@ -44,6 +44,12 @@ spec:
                 secret:
                   name: loki-tenant-auth
                   key: password
+          alloy-singleton:
+            extraConfig: |-
+              mimir.rules.kubernetes "default" {
+                address = "http://mimir-ruler.mimir.svc:8080"
+                tenant_id = "{{ .Values.cluster_name }}"
+              }
 
   destination:
     server: https://kubernetes.default.svc
