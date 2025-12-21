@@ -4,6 +4,24 @@
     {
       "source": {
         "git": {
+          "remote": "https://github.com/adinhodovic/argo-cd-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "main"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/jsonnet-libs.git",
+          "subdir": "cilium-enterprise-mixin"
+        }
+      },
+      "version": "master"
+    },
+    {
+      "source": {
+        "git": {
           "remote": "https://github.com/grafana/jsonnet-libs.git",
           "subdir": "ksonnet-util"
         }
@@ -22,15 +40,6 @@
     {
       "source": {
         "git": {
-          "remote": "https://github.com/jsonnet-libs/prometheus-operator-libsonnet.git",
-          "subdir": "0.77"
-        }
-      },
-      "version": "main"
-    },
-    {
-      "source": {
-        "git": {
           "remote": "https://github.com/jsonnet-libs/k8s-libsonnet.git",
           "subdir": "1.32"
         }
@@ -40,11 +49,11 @@
     {
       "source": {
         "git": {
-          "remote": "https://github.com/grafana/jsonnet-libs.git",
-          "subdir": "cilium-enterprise-mixin"
+          "remote": "https://github.com/jsonnet-libs/prometheus-operator-libsonnet.git",
+          "subdir": "0.77"
         }
       },
-      "version": "master"
+      "version": "main"
     },
     {
       "source": {
@@ -63,6 +72,15 @@
         }
       },
       "version": "release-1.9"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://gitlab.com/gitlab-com/gl-infra/monitoring-mixins.git",
+          "subdir": "jsonnet-libs/mixin-utils"
+        }
+      },
+      "version": "main"
     }
   ],
   "legacyImports": true

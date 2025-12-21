@@ -6,7 +6,7 @@ metadata:
   labels:
     name: apprise
 spec:
-  project: default
+  project: "{{ .Values.cluster_name }}"
   source:
     repoURL: https://github.com/symmatree/tiles.git
     targetRevision: "{{ .Values.targetRevision }}"

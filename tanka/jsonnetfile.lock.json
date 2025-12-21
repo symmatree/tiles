@@ -4,11 +4,32 @@
     {
       "source": {
         "git": {
+          "remote": "https://github.com/adinhodovic/argo-cd-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "eabba531863a1e7cdcb389f7a946a70a098149d4",
+      "sum": "mWAUVDvpJn9Ghk6Hymz4BayzU8w6xKQj4vnUl7n35qU="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/adinhodovic/mixin-utils.git",
+          "subdir": ""
+        }
+      },
+      "version": "2d7880588e2b94f547c20ba270594dd7ecdc2ed9",
+      "sum": "/n6K29u+5LfCLOiSOD8uehfMrd4AQoZCaqYYg3oV6xU=",
+      "name": "mm-utils"
+    },
+    {
+      "source": {
+        "git": {
           "remote": "https://github.com/grafana/grafonnet.git",
           "subdir": "gen/grafonnet-latest"
         }
       },
-      "version": "5a8f3d6aa89b7e7513528371d2d1265aedc844bc",
+      "version": "7380c9c64fb973f34c3ec46265621a2b0dee0058",
       "sum": "V9vAj21qJOc2DlMPDgB1eEjSQU4A+sAA4AXuJ6bd4xc="
     },
     {
@@ -18,7 +39,7 @@
           "subdir": "gen/grafonnet-v11.4.0"
         }
       },
-      "version": "5a8f3d6aa89b7e7513528371d2d1265aedc844bc",
+      "version": "7380c9c64fb973f34c3ec46265621a2b0dee0058",
       "sum": "aVAX09paQYNOoCSKVpuk1exVIyBoMt/C50QJI+Q/3nA="
     },
     {
@@ -28,7 +49,7 @@
           "subdir": "cilium-enterprise-mixin"
         }
       },
-      "version": "da2e332f4ad19bc0e808fb70fcde951b0d9041e1",
+      "version": "5299b4cd62c6c039ae426a1e5225d0d3666f46c9",
       "sum": "ysCe2gbjTar0ZF7G0koRTjeUvpasQ9heovpD4AeO1pw="
     },
     {
@@ -38,7 +59,7 @@
           "subdir": "ksonnet-util"
         }
       },
-      "version": "da2e332f4ad19bc0e808fb70fcde951b0d9041e1",
+      "version": "5299b4cd62c6c039ae426a1e5225d0d3666f46c9",
       "sum": "0y3AFX9LQSpfWTxWKSwoLgbt0Wc9nnCwhMH2szKzHv0="
     },
     {
@@ -58,7 +79,7 @@
           "subdir": "1.32"
         }
       },
-      "version": "14aa0545f3b789c3fa4ffe19ef9709ec5fa8c147",
+      "version": "291653b2c17d03e855e7e00ce0e4ec25502b2ce2",
       "sum": "L70C3SiMFOsNCuIGOxRKAzd6wUBuabAoEGrgvCyeCBc="
     },
     {
@@ -78,8 +99,8 @@
           "subdir": ""
         }
       },
-      "version": "4eee017d21cb63a303925d1dcd9fc5c496809b46",
-      "sum": "Kh0GbIycNmJPzk6IOMXn1BbtLNyaiiimclYk7+mvsns="
+      "version": "4d7f8cb24d613430799f9d56809cc6964f35cea9",
+      "sum": "hOrwkOx34tOXqoDVnwuI/Uf/dr9HFFSPWpDPOvnEGrk="
     },
     {
       "source": {
@@ -88,8 +109,8 @@
           "subdir": ""
         }
       },
-      "version": "eb631d882a2c917cd9a5fc237cc2d0f37f8f890f",
-      "sum": "7E/dvR6uooYrdb9GPx25tefet1YC1ijVcMrVntU+o+4="
+      "version": "8e9b81fc932d502d8193cdb13f737b607c170af0",
+      "sum": "GfAQvOHXILh2Q9OP6HOVnYvH1jZ6+/FRRFun7vFGBlU="
     },
     {
       "source": {
@@ -100,6 +121,16 @@
       },
       "version": "f2ec547b49af53815038a50265aa2adcd1275959",
       "sum": "8dNyJ4vpnKVBbCFN9YLsugp1IjlZjDCwdKMjKi0KTG4="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://gitlab.com/gitlab-com/gl-infra/monitoring-mixins.git",
+          "subdir": "jsonnet-libs/mixin-utils"
+        }
+      },
+      "version": "7332c62721a5979108b7b0e5a8eacc77903b5e11",
+      "sum": "xboSELZKtDI9qxqrlsDv+yRmu8nfPpgPBqnQAmVNqAE="
     }
   ],
   "legacyImports": false

@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-mixin
+  namespace: argocd
+  labels:
+    name: argocd-mixin
+spec:
+  project: "{{ .Values.cluster_name }}"
+  source:
+    repoURL: https://github.com/symmatree/tales.git
+    targetRevision: main
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: argocd-mixin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
