@@ -38,10 +38,10 @@ grafana:
     # - grafana-metricsdrilldown-app
     # - grafana-mqtt-datasource
   initChownData:
+    enabled: false
     # Ref https://github.com/grafana/helm-charts/issues/752 for tradeoff
     # between this and outright disabling.
     # This is the user grafana uses, just empirically.
-    enabled: true
     securityContext:
       runAsUser: 472
       runAsGroup: 472

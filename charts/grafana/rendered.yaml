@@ -218,30 +218,6 @@ spec:
         runAsGroup: 472
         runAsNonRoot: true
         runAsUser: 472
-      initContainers:
-        - name: init-chown-data
-          image: "docker.io/library/busybox:1.31.1"
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            capabilities:
-              add:
-              - CHOWN
-              drop:
-              - ALL
-            readOnlyRootFilesystem: false
-            runAsGroup: 472
-            runAsNonRoot: false
-            runAsUser: 472
-            seccompProfile:
-              type: RuntimeDefault
-          command:
-            - chown
-            - -R
-            - 472:472
-            - /var/lib/grafana
-          volumeMounts:
-            - name: storage
-              mountPath: "/var/lib/grafana"
       enableServiceLinks: true
       containers:
         - name: grafana-sc-dashboard
