@@ -2906,7 +2906,10 @@ spec:
     livenessProbe: {}
     mounts:
       dockercontainers: false
-      extra: []
+      extra:
+      - mountPath: /etc/alloy/secrets/loki-tenant-auth
+        name: loki-tenant-auth
+        readOnly: true
       varlog: true
     resources: {}
     securityContext:
@@ -3018,7 +3021,10 @@ spec:
     updateStrategy: {}
     volumeClaimTemplates: []
     volumes:
-      extra: []
+      extra:
+      - name: loki-tenant-auth
+        secret:
+          secretName: loki-tenant-auth
   crds:
     create: false
   extraObjects: []
