@@ -13,15 +13,16 @@ data:
       init:
         command: ["sh", "-c", "/home/argocd/cmp-server/plugins/jb install"]
       parameters:
-        - name: cluster_name
-          string: "placeholder-cluster-name"
-        - name: vault_name
-          string: "placeholder-vault-name"
-        - name: project_id
-          string: "placeholder-project-id"
-        - name: app_settings
-          collectionType: map
-          map: {}
+        static:
+          - name: cluster_name
+            string: "placeholder-cluster-name"
+          - name: vault_name
+            string: "placeholder-vault-name"
+          - name: project_id
+            string: "placeholder-project-id"
+          - name: app_settings
+            collectionType: map
+            map: {}
 
       generate:
         command:
