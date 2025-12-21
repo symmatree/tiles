@@ -19,6 +19,7 @@ helm template argocd charts/argocd --namespace argocd \
 	--skip-crds \
 	"${helm_template_args[@]}" \
 	"${set_flags[@]}" \
+	--set "cluster_name=${cluster_name:?}" \
 	--set "argo-cd.global.domain=argocd.${cluster_name:?}.symmatree.com" \
 	--set "argo-cd.server.ingressGrpc.hostname=grpc-argocd.${cluster_name:?}.symmatree.com" |
 	kubectl apply --server-side -f-
