@@ -172,6 +172,15 @@ spec:
       env:
         - name: TK_ENV
           value: argocd-mixin
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -325,6 +334,15 @@ spec:
       env:
         - name: TK_ENV
           value: cilium-mixin
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: cilium
@@ -438,6 +456,15 @@ spec:
       env:
         - name: TK_ENV
           value: kubernetes-mixin
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: kubernetes-mixin
@@ -593,6 +620,15 @@ spec:
       env:
         - name: TK_ENV
           value: node-exporter-mixin
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: kubernetes-mixin
