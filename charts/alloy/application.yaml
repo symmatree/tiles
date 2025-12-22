@@ -35,11 +35,12 @@ spec:
               auth:
                 type: basic
                 username: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-                passwordFrom: 'secret(loki-tenant-auth).password'
+                passwordKey: password
               secret:
-                # This is just the tenant name
                 create: false
-                embed: true
+                name: loki-tenant-auth
+              tls:
+                insecureSkipVerify: true
           alloy-singleton:
             extraConfig: |-
               mimir.rules.kubernetes "default" {
