@@ -30,11 +30,12 @@ k8s-monitoring:
       auth:
         type: basic
         username: "placeholder-loki-tenant"
-        passwordFrom: "secret(loki-tenant-auth).password"
+        passwordKey: password
       secret:
-        # This is just the tenant name
         create: false
-        embed: true
+        name: loki-tenant-auth
+      tls:
+
     # - name: localTempo
     #   type: otlp
     #   protocol: http
