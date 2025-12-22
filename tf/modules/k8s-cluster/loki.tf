@@ -69,7 +69,7 @@ resource "onepassword_item" "loki_tenant_auth_secret" {
       value = random_password.loki_cluster_tenant.result
     }
     field {
-      label = ".htaccess"
+      label = ".htpasswd"
       type  = "CONCEALED"
       value = "${var.cluster_name}:${htpasswd_password.loki_cluster_tenant.bcrypt}"
     }

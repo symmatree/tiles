@@ -1657,18 +1657,6 @@ type: Opaque
 spec:
   itemPath: vaults/placeholder/items/placeholder-gsa-loki
 ---
-# Source: loki/templates/loki-data-source-secret.yaml
-apiVersion: onepassword.com/v1
-kind: OnePasswordItem
-metadata:
-  name: loki-data-source
-  namespace: "loki"
-  labels:
-    grafana_datasource: "1"
-type: Opaque
-spec:
-  itemPath: vaults/placeholder/items/placeholder-loki-tenant-auth
----
 # Source: loki/templates/loki-tenant-auth-secret.yaml
 apiVersion: onepassword.com/v1
 kind: OnePasswordItem
