@@ -1,5 +1,8 @@
 # Prod-specific overrides (if any)
 # Common values are in terraform.tfvars
+# Common values are in terraform.tfvars
+cluster_name = "tiles"
+cluster_code = "p"
 
 # Network configuration for tiles cluster (10.0.128.0/18 block)
 control_plane_vip = "10.0.128.10"

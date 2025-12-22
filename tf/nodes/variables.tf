@@ -12,6 +12,11 @@ variable "cluster_code" {
   }
 }
 
+variable "admin_user" {
+  description = "Admin user email"
+  type        = string
+}
+
 variable "proxmox_storage_iso" {
   description = "Proxmox storage for ISO files"
   type        = string

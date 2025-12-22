@@ -19,8 +19,11 @@ variable "onepassword_vault" {
   type        = string
 }
 
+variable "admin_user" {
+  description = "Admin user email"
+  type        = string
+}
+
 data "google_storage_project_service_account" "gcs_account" {
   project = var.project_id
 }
-
-data "google_client_openid_userinfo" "terraform" {}

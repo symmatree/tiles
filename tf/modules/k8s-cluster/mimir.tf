@@ -64,7 +64,7 @@ module "mimir_encryption_key" {
     "serviceAccount:${google_service_account.mimir.email}",
   ]
   owners = [
-    local.terraform_identity
+    local.admin_identity
   ]
 }
 

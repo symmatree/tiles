@@ -75,6 +75,10 @@ resource "onepassword_item" "loki_tenant_auth_secret" {
       value = random_password.loki_cluster_tenant.result
     }
     field {
+      label = "tenantId"
+      value = var.cluster_name
+    }
+    field {
       label = ".htpasswd"
       type  = "CONCEALED"
       value = <<-EOT
@@ -119,7 +123,7 @@ EOT
 }
 
 locals {
-  terraform_identity = endswith(data.google_client_openid_userinfo.terraform.email, ".iam.gserviceaccount.com") ? "serviceAccount:${data.google_client_openid_userinfo.terraform.email}" : "user:${data.google_client_openid_userinfo.terraform.email}"
+  admin_identity = "user:${var.admin_user}"
 }
 
 module "loki_encryption_key" {
@@ -142,7 +146,7 @@ module "loki_encryption_key" {
     "serviceAccount:${google_service_account.loki.email}",
   ]
   owners = [
-    local.terraform_identity
+    local.admin_identity
   ]
 }
 

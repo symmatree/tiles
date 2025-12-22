@@ -42,7 +42,7 @@ spec:
                 create: false
                 name: loki-tenant-auth
               tls:
-                insecureSkipVerify: true
+                # empty
           alloy-singleton:
             extraConfig: |-
               mimir.rules.kubernetes "default" {

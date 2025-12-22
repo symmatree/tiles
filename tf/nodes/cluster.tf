@@ -16,6 +16,7 @@ module "cluster" {
     schematic = talos_image_factory_schematic.this.id
   }
 
+  admin_user        = var.admin_user
   external_ip_cidr  = var.external_ip_cidr
   pod_cidr          = var.pod_cidr
   service_cidr      = var.service_cidr

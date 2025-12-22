@@ -79,6 +79,11 @@ variable "onepassword_vault_name" {
   type        = string
 }
 
+variable "admin_user" {
+  description = "Admin user email"
+  type        = string
+}
+
 # Load base configuration from YAML file
 locals {
   base_config_yaml = file("${path.module}/talos-config.yaml")
@@ -212,6 +217,7 @@ module "k8s" {
   gcp_region        = var.gcp_region
   cluster_name      = var.cluster_name
   onepassword_vault = var.onepassword_vault
+  admin_user        = var.admin_user
 }
 
 resource "onepassword_item" "misc_config" {
