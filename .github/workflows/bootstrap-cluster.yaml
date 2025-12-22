@@ -10,27 +10,27 @@ on:
           - tiles-test
           - tiles
       crds:
-        description: "Whether to install CRDs"
+        description: "Install CRDs"
         required: false
         type: boolean
         default: false
       cilium:
-        description: "Whether to reset and bootstrap Cilium"
+        description: "Reset and bootstrap Cilium"
         required: false
         type: boolean
         default: false
       argocd:
-        description: "Whether to reset and bootstrap ArgoCD"
+        description: "Reset and bootstrap ArgoCD"
         required: false
         type: boolean
         default: false
       onepassword:
-        description: "Whether to reset and bootstrap OnePassword"
+        description: "Create OnePassword secrets"
         required: false
         type: boolean
         default: false
       argocd_applications:
-        description: "Whether to install ArgoCD App-of-apps"
+        description: "Install ArgoCD App-of-apps"
         required: false
         type: boolean
         # Common case is just adding a new variable to Terraform, not creating a new cluster.
