@@ -176,15 +176,15 @@ mimir-distributed:
       whenScaled: Delete
 
   gateway:
-    enabled: false
-  ingress:
     enabled: true
-    ingressClassName: cilium
-    annotations:
-      cert-manager.io/cluster-issuer: real-cert
-    hosts:
-      - mimir.placeholder.symmatree.com
-    tls:
-      - secretName: mimir-tls
-        hosts:
-          - mimir.placeholder.symmatree.com
+    # ingress:
+    #   enabled: true
+    #   ingressClassName: cilium
+    #   annotations:
+    #     cert-manager.io/cluster-issuer: real-cert
+    #   hosts:
+    #     - mimir.placeholder.symmatree.com
+    #   tls:
+    #     - secretName: mimir-tls
+    #       hosts:
+    #         - mimir.placeholder.symmatree.com
