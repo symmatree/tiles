@@ -75,6 +75,10 @@ resource "onepassword_item" "loki_tenant_auth_secret" {
       value = random_password.loki_cluster_tenant.result
     }
     field {
+      label = "tenantId"
+      value = var.cluster_name
+    }
+    field {
       label = ".htpasswd"
       type  = "CONCEALED"
       value = <<-EOT
