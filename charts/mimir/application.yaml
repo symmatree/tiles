@@ -26,13 +26,14 @@ spec:
               ruler_storage:
                 gcs:
                   bucket_name: '{{ required ".Values.mimir_bucket_ruler is required" .Values.mimir_bucket_ruler }}'
-          ingress:
-            hosts:
-              - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-            tls:
-              - secretName: mimir-tls
-                hosts:
-                  - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+          gateway:
+            ingress:
+              hosts:
+                - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+              tls:
+                - secretName: mimir-tls
+                  hosts:
+                    - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: mimir

@@ -1422,7 +1422,7 @@ data:
     
     
     mimir.rules.kubernetes "default" {
-      address = "http://mimir-ruler.mimir.svc:8080"
+      address = "http://mimir-gateway.mimir.svc"
       tenant_id = "placeholder-cluster"
     }
     // Destination: placeholder-mimir (prometheus)
