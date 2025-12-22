@@ -53,6 +53,12 @@ resource "htpasswd_password" "loki_cluster_tenant" {
   password = random_password.loki_cluster_tenant.result
 }
 
+resource "htpasswd_password" "loki_self_monitoring" {
+  # No real need for a password for this tenant.
+  password = ""
+}
+
+
 resource "onepassword_item" "loki_tenant_auth_secret" {
   vault    = var.onepassword_vault
   title    = "${var.cluster_name}-loki-tenant-auth"
@@ -69,9 +75,12 @@ resource "onepassword_item" "loki_tenant_auth_secret" {
       value = random_password.loki_cluster_tenant.result
     }
     field {
-      label = ".htaccess"
+      label = ".htpasswd"
       type  = "CONCEALED"
-      value = "${var.cluster_name}:${htpasswd_password.loki_cluster_tenant.bcrypt}"
+      value = <<-EOT
+        ${var.cluster_name}:${htpasswd_password.loki_cluster_tenant.bcrypt}
+        self-monitoring:${htpasswd_password.loki_self_monitoring.bcrypt}
+EOT
     }
     field {
       label = "datasource.yaml"
