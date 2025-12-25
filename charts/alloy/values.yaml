@@ -34,8 +34,7 @@ k8s-monitoring:
       secret:
         create: false
         name: loki-tenant-auth
-      tls:
-        # empty
+      tls: null
 
     # - name: localTempo
     #   type: otlp
