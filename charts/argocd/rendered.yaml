@@ -3615,6 +3615,8 @@ spec:
   clusterResourceBlacklist:
     - group: "apiextensions.k8s.io/v1"
       kind: "CustomResourceDefinition"
+  orphanedResources:
+    warn: true
 ---
 # Source: argocd/templates/argocd-notifications-secret.yaml
 apiVersion: onepassword.com/v1
