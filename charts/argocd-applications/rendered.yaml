@@ -355,6 +355,7 @@ spec:
             - 0.10.in-addr.arpa
           extraArgs:
             - '--google-project=placeholder'
+            - '--regex-domain-exclusion=^_acme-challenge\.'
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns
