@@ -22,6 +22,7 @@ spec:
             - 0.10.in-addr.arpa
           extraArgs:
             - '--google-project={{ required ".Values.project_id is required" .Values.project_id }}'
+            - '--regex-domain-exclusion=^_acme-challenge\.'
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns
