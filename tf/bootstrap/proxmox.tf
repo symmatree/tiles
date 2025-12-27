@@ -4,7 +4,7 @@ provider "proxmox" {
   # Assume the root user is in the PAM realm.
   username = "${data.onepassword_item.proxmox_root_user.username}@pam"
   password = data.onepassword_item.proxmox_root_user.password
-  insecure = true  # Invalid cert
+  insecure = true # Invalid cert
 }
 
 resource "random_password" "proxmox_tiles_tf_password" {
