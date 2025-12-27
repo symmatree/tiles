@@ -422,6 +422,7 @@ metadata:
   namespace: "loki"
   labels:
     grafana_datasource: "1"
+data:
   datasource.yaml: |-
     apiVersion: 1
     datasources:
