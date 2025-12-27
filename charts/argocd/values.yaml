@@ -1,6 +1,11 @@
 # https://raw.githubusercontent.com/argoproj/argo-helm/refs/tags/argo-cd-7.8.23/charts/argo-cd/values.yaml
 # then deleted values we do not override.
 
+# Grafana integration for ArgoCD notifications (optional)
+# Set to true and uncomment the service.grafana notifier below to enable
+# Requires setup: see charts/grafana/README.md
+grafana_integration_enabled: false
+
 global:
   tolerations:
     - effect: NoSchedule
@@ -213,6 +218,13 @@ argo-cd:
     notifiers:
       service.slack: |
         token: $slack-token
+      # Grafana service for deployment annotations
+      # Uncomment and set grafana_integration_enabled: true to enable
+      # Requires grafana-argocd-apikey to be stored in 1Password
+      # See charts/grafana/README.md for setup instructions
+      # service.grafana: |
+      #   apiUrl: http://grafana.grafana.svc.cluster.local
+      #   apiKey: $grafana-apikey:apikey
     subscriptions:
       - recipients:
           - slack:tiles
