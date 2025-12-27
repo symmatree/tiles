@@ -6,7 +6,6 @@ set -euo pipefail
 # Configuration
 GRAFANA_URL="${GRAFANA_URL:-http://grafana.grafana.svc.cluster.local}"
 VAULT_NAME="${vault_name:-}"
-CLUSTER_NAME="${cluster_name:-}"
 
 if [ -z "$VAULT_NAME" ]; then
   echo "ERROR: vault_name environment variable is required"
@@ -48,7 +47,7 @@ if [ "$GRAFANA_URL" = "http://grafana.grafana.svc.cluster.local" ]; then
   echo "Setting up port-forward to Grafana..."
   kubectl port-forward -n grafana svc/grafana 3000:80 &
   PORT_FORWARD_PID=$!
-  trap "kill $PORT_FORWARD_PID 2>/dev/null || true" EXIT
+  trap 'kill $PORT_FORWARD_PID 2>/dev/null || true' EXIT
   sleep 3
   GRAFANA_URL="http://localhost:3000"
 fi
