@@ -26,7 +26,7 @@ Each project is configured with:
 2. **Organization** (Optional): If you have a GCP organization, note the organization ID
 3. **Google Group**: Create a Google Group named "tiles-owner" at https://groups.google.com/
    - Use the email address specified in `tiles_owner_group_email` variable
-   - Add yourself (symmetry@pobox.com) as a member
+   - Add the user specified in `gcp_essential_contacts_email` as a member
 4. **Required Permissions**: You need the following permissions to run this bootstrap:
    - Billing Account User on the billing account
    - Project Creator (or Organization Admin if using an organization)
