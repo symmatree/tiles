@@ -113,6 +113,10 @@ spec:
               echo "Grafana is ready"
               break
             fi
+            if [ $i -eq 30 ]; then
+              echo "ERROR: Grafana did not become ready after 30 attempts"
+              exit 1
+            fi
             echo "Waiting for Grafana... attempt $i/30"
             sleep 10
           done
@@ -120,7 +124,7 @@ spec:
           # Check if service account already exists
           SA_LIST=$(curl -sf -u "${ADMIN_USER}:${ADMIN_PASS}" \
             "${GRAFANA_URL}/api/serviceaccounts/search?query=argocd-notifications")
-          SA_ID=$(echo "$SA_LIST" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2 || echo "")
+          SA_ID=$(echo "$SA_LIST" | jq -r '.serviceAccounts[0].id // empty')
           
           if [ -z "$SA_ID" ]; then
             echo "Creating service account for ArgoCD..."
@@ -129,7 +133,7 @@ spec:
               -u "${ADMIN_USER}:${ADMIN_PASS}" \
               -d '{"name":"argocd-notifications","role":"Editor"}' \
               "${GRAFANA_URL}/api/serviceaccounts")
-            SA_ID=$(echo "$SA_RESPONSE" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+            SA_ID=$(echo "$SA_RESPONSE" | jq -r '.id')
             echo "Service account created with ID: $SA_ID"
           else
             echo "Service account already exists with ID: $SA_ID"
@@ -138,12 +142,12 @@ spec:
           # Check if token already exists for this service account
           TOKEN_LIST=$(curl -sf -u "${ADMIN_USER}:${ADMIN_PASS}" \
             "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
-          EXISTING_TOKEN=$(echo "$TOKEN_LIST" | grep -o '"name":"argocd-notifications-token"' || echo "")
+          EXISTING_TOKEN=$(echo "$TOKEN_LIST" | jq -r '.[] | select(.name=="argocd-notifications-token") | .id // empty')
           
           if [ -n "$EXISTING_TOKEN" ]; then
             echo "Token already exists. Deleting old tokens..."
             # Delete all tokens for this service account and recreate
-            TOKEN_IDS=$(echo "$TOKEN_LIST" | grep -o '"id":[0-9]*' | cut -d':' -f2)
+            TOKEN_IDS=$(echo "$TOKEN_LIST" | jq -r '.[].id')
             for TOKEN_ID in $TOKEN_IDS; do
               curl -sf -X DELETE \
                 -u "${ADMIN_USER}:${ADMIN_PASS}" \
@@ -159,9 +163,9 @@ spec:
             -d '{"name":"argocd-notifications-token"}' \
             "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
           
-          API_KEY=$(echo "$TOKEN_RESPONSE" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
+          API_KEY=$(echo "$TOKEN_RESPONSE" | jq -r '.key')
           
-          if [ -z "$API_KEY" ]; then
+          if [ -z "$API_KEY" ] || [ "$API_KEY" = "null" ]; then
             echo "ERROR: Could not create API key"
             exit 1
           fi
