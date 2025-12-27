@@ -24,7 +24,7 @@ echo "::group::Install ArgoCD CLI"
 if ! command -v argocd &>/dev/null; then
 	echo "Installing argocd CLI..."
 	ARGOCD_VERSION="v2.13.2"
-	curl -sSL -o /tmp/argocd "https://github.com/argoproj/argocd-cmd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
+	curl -sSL -o /tmp/argocd "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
 	chmod +x /tmp/argocd
 	sudo mv /tmp/argocd /usr/local/bin/argocd
 	echo "ArgoCD CLI installed: $(argocd version --client)"
@@ -42,8 +42,17 @@ if [ -z "${ARGOCD_SERVER}" ]; then
 fi
 echo "ArgoCD server: ${ARGOCD_SERVER}"
 
-# Login to argocd (using kubeconfig auth)
-argocd login "${ARGOCD_SERVER}" --core --grpc-web
+# Login to argocd using kubectl port-forward (works better in CI)
+# Start port-forward in background
+kubectl port-forward -n argocd svc/argocd-server 8080:443 &
+PORT_FORWARD_PID=$!
+echo "Port-forward PID: ${PORT_FORWARD_PID}"
+
+# Wait for port-forward to be ready
+sleep 3
+
+# Login using kubernetes auth (no password needed)
+argocd login localhost:8080 --core --insecure
 echo "::endgroup::"
 
 echo "::group::Render argocd-applications with Helm"
@@ -85,12 +94,14 @@ for app_name in ${APP_NAMES}; do
 	target_revision=$(yq eval '.spec.source.targetRevision' "${app_yaml}")
 	path=$(yq eval '.spec.source.path' "${app_yaml}")
 	namespace=$(yq eval '.spec.destination.namespace' "${app_yaml}")
+	has_plugin=$(yq eval '.spec.source.plugin // "null"' "${app_yaml}")
 
 	echo "Application: ${app_name}"
 	echo "  Repo: ${repo_url}"
 	echo "  Revision: ${target_revision}"
 	echo "  Path: ${path}"
 	echo "  Namespace: ${namespace}"
+	echo "  Plugin: ${has_plugin}"
 
 	# Try to diff against live cluster
 	diff_output="${TXT_OUTPUT_DIR}/${app_name}-diff.txt"
@@ -98,43 +109,63 @@ for app_name in ${APP_NAMES}; do
 	echo "===========================================" >>"${diff_output}"
 	echo "" >>"${diff_output}"
 
+	# Skip plugin-based applications for now
+	if [ "${has_plugin}" != "null" ]; then
+		echo "Skipping plugin-based application (Tanka/other) - not supported yet" | tee -a "${diff_output}"
+		rm -f "${app_yaml}"
+		echo "::endgroup::"
+		continue
+	fi
+
 	# Check if app exists in cluster
-	if argocd app get "${app_name}" --grpc-web &>/dev/null; then
+	if argocd app get "${app_name}" &>/dev/null; then
 		echo "App exists in cluster, running diff..." | tee -a "${diff_output}"
 		echo "" >>"${diff_output}"
 
 		# Run the diff (capture exit code to handle diffs gracefully)
-		if argocd app diff "${app_name}" --grpc-web --local "${REPO_ROOT}/${path}" \
-			--revision "${target_revision}" &>>"${diff_output}"; then
+		# Note: argocd app diff returns 1 if there are differences, which is expected
+		set +e
+		argocd app diff "${app_name}" --local "${REPO_ROOT}/${path}" \
+			--revision "${target_revision}" >>"${diff_output}" 2>&1
+		diff_exit=$?
+		set -e
+
+		if [ ${diff_exit} -eq 0 ]; then
 			echo "No differences detected" | tee -a "${diff_output}"
+		elif [ ${diff_exit} -eq 1 ]; then
+			echo "Differences detected (see above)" | tee -a "${diff_output}"
 		else
-			diff_exit=$?
-			if [ ${diff_exit} -eq 1 ]; then
-				echo "Differences detected (see above)" | tee -a "${diff_output}"
-			else
-				echo "Diff failed with exit code ${diff_exit}" | tee -a "${diff_output}"
-			fi
+			echo "Diff failed with exit code ${diff_exit}" | tee -a "${diff_output}"
 		fi
 	else
 		echo "App does not exist in cluster yet (new application)" | tee -a "${diff_output}"
 		echo "" >>"${diff_output}"
 
-		# For new apps, just render with argocd to show what would be deployed
+		# For new apps, render the manifests to show what would be deployed
 		echo "Rendering manifests for new application..." | tee -a "${diff_output}"
 		echo "" >>"${diff_output}"
 
-		# Use kubectl diff dry-run to simulate what would be deployed
-		# This is a fallback when the app doesn't exist yet
-		if argocd app manifests "${app_name}" --grpc-web --local "${REPO_ROOT}/${path}" \
-			--revision "${target_revision}" &>>"${diff_output}"; then
-			echo "Manifests rendered successfully" | tee -a "${diff_output}"
+		# Try to render manifests using helm template directly
+		cd "${REPO_ROOT}/${path}"
+		if [ -f "Chart.yaml" ]; then
+			# It's a Helm chart
+			helm template "${app_name}" . --namespace "${namespace}" \
+				--skip-crds \
+				"${helm_template_args[@]}" \
+				"${set_flags[@]}" >>"${diff_output}" 2>&1 || echo "Failed to render Helm chart" | tee -a "${diff_output}"
 		else
-			echo "Failed to render manifests" | tee -a "${diff_output}"
+			echo "Not a Helm chart, skipping manifest rendering" | tee -a "${diff_output}"
 		fi
 	fi
 
 	rm -f "${app_yaml}"
 	echo "::endgroup::"
 done
+
+# Cleanup port-forward if it was started
+if [ -n "${PORT_FORWARD_PID:-}" ]; then
+	echo "Stopping port-forward (PID: ${PORT_FORWARD_PID})..."
+	kill "${PORT_FORWARD_PID}" 2>/dev/null || true
+fi
 
 echo "::notice::ArgoCD render and diff complete. Outputs saved to ${TXT_OUTPUT_DIR}"
