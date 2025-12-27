@@ -130,12 +130,12 @@ fi
 # Using op CLI v2 syntax
 if op item get "grafana-argocd-apikey" --vault "${VAULT_NAME}" &>/dev/null; then
   echo "Item exists, updating..."
-  echo "${API_KEY}" | op item edit "grafana-argocd-apikey" \
+  op item edit "grafana-argocd-apikey" \
     --vault "${VAULT_NAME}" \
     "apikey[password]=${API_KEY}"
 else
   echo "Creating new item..."
-  echo "${API_KEY}" | op item create \
+  op item create \
     --category=password \
     --title="grafana-argocd-apikey" \
     --vault="${VAULT_NAME}" \
