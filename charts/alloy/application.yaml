@@ -32,14 +32,10 @@ spec:
               type: loki
               url: http://loki-gateway.loki.svc/loki/api/v1/push
               tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-              auth:
-                type: basic
-                username: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-                passwordKey: password
               secret:
+                # This is just the tenant name
                 create: false
-                name: loki-tenant-auth
-              tls: null
+                embed: true
           alloy-singleton:
             extraConfig: |-
               mimir.rules.kubernetes "default" {
