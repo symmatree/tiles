@@ -1,0 +1,151 @@
+name: "argocd-pr-diff"
+on:
+  pull_request:
+    paths:
+      # Run when charts or their dependencies change
+      - 'charts/**'
+      - 'tanka/**'
+      - 'scripts/argocd-render-diff.sh'
+      - '.github/workflows/argocd-pr-diff.yaml'
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+
+# Share concurrency with other VPN users (same group as bootstrap and terraform)
+concurrency:
+  group: ${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  argocd-diff:
+    runs-on: "ubuntu-latest"
+    # Only run if not a draft PR
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: "read"
+      id-token: "write"
+      pull-requests: "write"
+
+    steps:
+      - name: DateAndTimeStamps
+        id: stamps
+        run: |
+          set -euo pipefail
+          timestamp=$(date +'%Y%m%dT%H%M%S')
+          datestamp=$(date +'%Y%m%d')
+          echo "TIMESTAMP=${timestamp}" | tee -a "$GITHUB_OUTPUT"
+          echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
+
+      - uses: "actions/checkout@v6"
+
+      - name: Determine cluster and kubeconfig secret
+        id: cluster_config
+        run: |
+          set -euo pipefail
+          # Default to tiles-test cluster for PR diffs
+          # Can be overridden with a label or other mechanism in the future
+          cluster="tiles-test"
+          echo "cluster=${cluster}" >> "$GITHUB_OUTPUT"
+          
+          if [ "${cluster}" == "tiles-test" ]; then
+            echo "secret_path=op://tiles-secrets/tiles-test-kubeconfig/notesPlain" >> "$GITHUB_OUTPUT"
+          else
+            echo "secret_path=op://tiles-secrets/tiles-kubeconfig/notesPlain" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Load secrets
+        id: load_secrets
+        uses: 1password/load-secrets-action@v3
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
+          GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
+          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
+          KUBECONFIG_SECRET: ${{ steps.cluster_config.outputs.secret_path }}
+
+      - name: Authenticate to Google Cloud
+        run: |
+          set -euo pipefail
+          echo '${{ steps.load_secrets.outputs.GCP_TILES_TF_SA_KEY }}' > "${RUNNER_TEMP}/gcp-sa-key.json"
+          PROJECT_ID=$(jq -r '.project_id' "${RUNNER_TEMP}/gcp-sa-key.json")
+          {
+            echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json";
+            echo "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}";
+            echo "project_id=${PROJECT_ID}";
+          }>> "$GITHUB_ENV";
+
+      - uses: ./.github/actions/helm-setup
+
+      - uses: ./.github/actions/wg-quick
+        id: wireguard
+        with:
+          wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
+          conf_dir: "${{ runner.temp }}"
+
+      - name: Setup kubeconfig
+        run: |
+          set -euo pipefail
+          kubeconfig_path="${RUNNER_TEMP}/kubeconfig"
+          echo '${{ steps.load_secrets.outputs.KUBECONFIG_SECRET }}' > "${kubeconfig_path}"
+          chmod 600 "${kubeconfig_path}"
+          echo "KUBECONFIG=${kubeconfig_path}" >> "$GITHUB_ENV"
+
+      - name: Load cluster config from 1Password
+        uses: 1password/load-secrets-action@v3
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          targetRevision: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/targetRevision"
+          pod_cidr: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/pod_cidr"
+          cluster_name: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/cluster_name"
+          external_ip_cidr: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/external_ip_cidr"
+          vault_name: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/vault_name"
+          loki_bucket_chunks: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/loki_bucket_chunks"
+          loki_bucket_ruler: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/loki_bucket_ruler"
+          loki_bucket_admin: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/loki_bucket_admin"
+          mimir_bucket_blocks: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/mimir_bucket_blocks"
+          mimir_bucket_ruler: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/mimir_bucket_ruler"
+          mimir_bucket_alertmanager: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/mimir_bucket_alertmanager"
+
+      - name: Install yq
+        run: |
+          set -euo pipefail
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Verify cluster connectivity
+        run: |
+          set -euo pipefail
+          echo "Testing kubectl connectivity..."
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Run ArgoCD render and diff
+        id: argocd_diff
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/txt-outputs
+          export TXT_OUTPUT_DIR=/tmp/txt-outputs
+          ./scripts/argocd-render-diff.sh
+
+      - name: Attach diffs to PR
+        if: always() && steps.argocd_diff.outcome != 'skipped'
+        uses: ./.github/actions/attach-outputs
+        with:
+          txt_output_dir: /tmp/txt-outputs
+          outcome: ${{ steps.argocd_diff.outcome }}
+
+      - name: De-wireguard
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -z "${{ steps.wireguard.outputs.wg_connected }}" ]; then
+            echo "No Wireguard connection established, skipping disconnection."
+            exit 0
+          fi
+          echo "Disconnecting Wireguard..."
+          time sudo wg-quick down "${{ runner.temp }}/wg0.conf" || true
+          echo "Disconnected"
