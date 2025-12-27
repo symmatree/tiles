@@ -278,8 +278,6 @@ data:
       server {
         listen             8080;
         listen             [::]:8080;
-        auth_basic           "Loki";
-        auth_basic_user_file /etc/nginx/secrets/.htpasswd;
     
         location = / {
           return 200 'OK';
@@ -913,7 +911,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: f02c6484353f694adee9bb5f6d001b09e5502768aebf6075746d875f78f1fab7
+        checksum/config: 8fc91032653bf96c8941624bd77f398e16433b2e87e0d0a3ffd4f55b02d638ff
       labels:
         app.kubernetes.io/name: loki
         app.kubernetes.io/instance: loki
@@ -952,8 +950,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/nginx
-            - name: auth
-              mountPath: /etc/nginx/secrets
             - name: tmp
               mountPath: /tmp
             - name: docker-entrypoint-d-override
@@ -971,9 +967,6 @@ spec:
         - name: config
           configMap:
             name: loki-gateway
-        - name: auth
-          secret:
-            secretName: loki-tenant-auth
         - name: tmp
           emptyDir: {}
         - name: docker-entrypoint-d-override
