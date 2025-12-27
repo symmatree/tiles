@@ -14,6 +14,7 @@ spec:
       valuesObject:
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        argocd_integration_enabled: true
         grafana:
           ingress:
             hosts:

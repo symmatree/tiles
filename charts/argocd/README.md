@@ -12,19 +12,13 @@ then syncs over itself (mostly to add a tracking annotation) and from then on is
 
 ### Grafana Notifications Integration
 
-ArgoCD can optionally integrate with Grafana to send deployment annotations. This is disabled by default
-and ArgoCD will work fine without it. To enable:
+ArgoCD can integrate with Grafana to send deployment annotations. This is enabled by setting
+`argocd_integration_enabled: true` in the Grafana chart values. When enabled, the Grafana chart
+creates a service account and API key, then stores it as a Secret in the ArgoCD namespace for
+the notifications controller to use.
 
-1. Follow the setup instructions in `charts/grafana/README.md` to create and store the API key
-2. Set `grafana_integration_enabled: true` in the values
-3. Deploy the updated configuration
-
-The integration is optional because:
-- Grafana is not part of the core bootstrapped deployment
-- ArgoCD should not depend on Grafana being available
-- The API key needs to be created after Grafana is deployed
-
-See [ArgoCD Grafana Notifications Documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/grafana/) for more details.
+The integration is optional - if the Secret doesn't exist, ArgoCD notifications will continue
+to work without Grafana annotations.
 
 ### Tanka (jsonnet) plugin
 
