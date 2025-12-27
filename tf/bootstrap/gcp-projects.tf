@@ -1,40 +1,14 @@
 # GCP Enterprise Foundation Projects
 # Reference: https://docs.cloud.google.com/architecture/blueprints/security-foundations
 
-variable "gcp_billing_account_id" {
-  description = "The GCP billing account ID to attach to all projects"
-  type        = string
-}
-
 variable "gcp_essential_contacts_email" {
   description = "Email address for essential contacts on GCP projects"
   type        = string
 }
 
-variable "tiles_owner_group_email" {
-  description = "Email address of the tiles-owner Google group"
-  type        = string
-}
-
-variable "gcp_organization_id" {
-  description = "The GCP organization ID (optional - leave empty if not using an organization)"
-  type        = string
-  default     = ""
-}
-
-variable "gcp_folder_id" {
-  description = "The GCP folder ID to create projects in (optional)"
-  type        = string
-  default     = ""
-}
-
-# Note: The tiles-owner Google group should be created manually.
-# See ENTERPRISE_SETUP.md for detailed instructions on creating the group
-# and adding members.
-
-locals {
-  org_id    = var.gcp_organization_id != "" ? var.gcp_organization_id : null
-  folder_id = var.gcp_folder_id != "" ? var.gcp_folder_id : null
+# Get billing account from the seed project
+data "google_project" "seed" {
+  project_id = var.gcp_project_id
 }
 
 # Workload Identity Project
@@ -44,9 +18,9 @@ module "tiles_id_project" {
 
   name              = "tiles-id"
   random_project_id = true
-  org_id            = local.org_id
-  billing_account   = var.gcp_billing_account_id
-  folder_id         = local.folder_id
+  org_id            = null
+  billing_account   = data.google_project.seed.billing_account
+  folder_id         = null
 
   labels = {
     tiles  = "true"
@@ -58,6 +32,7 @@ module "tiles_id_project" {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
+    "essentialcontacts.googleapis.com",
   ]
 
   budget_amount                           = 10
@@ -70,7 +45,7 @@ module "tiles_id_project" {
 resource "google_project_iam_member" "tiles_id_owner" {
   project = module.tiles_id_project.project_id
   role    = "roles/owner"
-  member  = "group:${var.tiles_owner_group_email}"
+  member  = "group:tiles-owner@googlegroups.com"
 }
 
 # Set essential contacts for tiles-id project
@@ -88,9 +63,9 @@ module "tiles_kms_project" {
 
   name              = "tiles-kms"
   random_project_id = true
-  org_id            = local.org_id
-  billing_account   = var.gcp_billing_account_id
-  folder_id         = local.folder_id
+  org_id            = null
+  billing_account   = data.google_project.seed.billing_account
+  folder_id         = null
 
   labels = {
     tiles  = "true"
@@ -100,6 +75,7 @@ module "tiles_kms_project" {
   activate_apis = [
     "cloudresourcemanager.googleapis.com",
     "cloudkms.googleapis.com",
+    "essentialcontacts.googleapis.com",
   ]
 
   budget_amount                           = 10
@@ -112,7 +88,7 @@ module "tiles_kms_project" {
 resource "google_project_iam_member" "tiles_kms_owner" {
   project = module.tiles_kms_project.project_id
   role    = "roles/owner"
-  member  = "group:${var.tiles_owner_group_email}"
+  member  = "group:tiles-owner@googlegroups.com"
 }
 
 # Set essential contacts for tiles-kms project
@@ -130,9 +106,9 @@ module "tiles_main_project" {
 
   name              = "tiles-main"
   random_project_id = true
-  org_id            = local.org_id
-  billing_account   = var.gcp_billing_account_id
-  folder_id         = local.folder_id
+  org_id            = null
+  billing_account   = data.google_project.seed.billing_account
+  folder_id         = null
 
   labels = {
     tiles       = "true"
@@ -145,6 +121,7 @@ module "tiles_main_project" {
     "storage.googleapis.com",
     "dns.googleapis.com",
     "iam.googleapis.com",
+    "essentialcontacts.googleapis.com",
   ]
 
   budget_amount                           = 10
@@ -157,7 +134,7 @@ module "tiles_main_project" {
 resource "google_project_iam_member" "tiles_main_owner" {
   project = module.tiles_main_project.project_id
   role    = "roles/owner"
-  member  = "group:${var.tiles_owner_group_email}"
+  member  = "group:tiles-owner@googlegroups.com"
 }
 
 # Set essential contacts for tiles-main project
@@ -175,9 +152,9 @@ module "tiles_test_main_project" {
 
   name              = "tiles-test-main"
   random_project_id = true
-  org_id            = local.org_id
-  billing_account   = var.gcp_billing_account_id
-  folder_id         = local.folder_id
+  org_id            = null
+  billing_account   = data.google_project.seed.billing_account
+  folder_id         = null
 
   labels = {
     tiles       = "true"
@@ -190,6 +167,7 @@ module "tiles_test_main_project" {
     "storage.googleapis.com",
     "dns.googleapis.com",
     "iam.googleapis.com",
+    "essentialcontacts.googleapis.com",
   ]
 
   budget_amount                           = 10
@@ -202,7 +180,7 @@ module "tiles_test_main_project" {
 resource "google_project_iam_member" "tiles_test_main_owner" {
   project = module.tiles_test_main_project.project_id
   role    = "roles/owner"
-  member  = "group:${var.tiles_owner_group_email}"
+  member  = "group:tiles-owner@googlegroups.com"
 }
 
 # Set essential contacts for tiles-test-main project

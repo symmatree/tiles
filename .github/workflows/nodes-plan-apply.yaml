@@ -95,8 +95,8 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
-          WORKLOAD_IDENTITY_PROVIDER: "op://tiles-secrets/gh_oidc_workload_identity/oidc_config/workload_identity_provider"
-          SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/oidc_config/service_account_email"
+          WORKLOAD_IDENTITY_PROVIDER: "op://tiles-secrets/gh_oidc_workload_identity/workload_identity_provider"
+          SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
 
       - name: Authenticate to Google Cloud
         if: steps.charts_only.outputs.run_terraform == 'true'

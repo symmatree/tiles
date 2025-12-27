@@ -83,6 +83,20 @@ resource "google_project_service" "kms_api" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "billing_budgets_api" {
+  project = var.gcp_project_id
+  service = "billingbudgets.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "essential_contacts_api" {
+  project = var.gcp_project_id
+  service = "essentialcontacts.googleapis.com"
+
+  disable_on_destroy = false
+}
+
 output "gcp_tiles_tf_sa_email" {
   description = "The email of the Tiles TF service account."
   value       = google_service_account.tiles-tf.email
