@@ -12,6 +12,3 @@ secrets.yaml
 # Temporary files
 *.tmp
 *.bak
-
-# Rendered YAML files from helm and argocd
-*-rendered.yaml

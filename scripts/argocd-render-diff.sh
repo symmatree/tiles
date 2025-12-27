@@ -4,8 +4,8 @@ set -euo pipefail
 # Script to render ArgoCD applications and diff against live cluster
 # This script:
 # 1. Renders the argocd-applications chart using helm with terraform outputs
-# 2. Uses argocd CLI to render each application to {cluster_name}-rendered.yaml
-# 3. Uses argocd CLI to diff against the live cluster
+# 2. Uses argocd CLI to diff each application against the live cluster
+# 3. Renders each application to {cluster_name}-rendered.yaml in its chart directory
 # 4. Saves diffs to txt-outputs directory for PR comments
 
 # Ensure required environment variables are set
@@ -18,6 +18,10 @@ mkdir -p "${TXT_OUTPUT_DIR}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Get current git branch/ref for overriding target revision
+CURRENT_REF="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD)}}"
+echo "Current ref: ${CURRENT_REF}"
 
 echo "::group::Install ArgoCD CLI"
 # Install argocd CLI if not already installed
@@ -98,68 +102,59 @@ for app_name in ${APP_NAMES}; do
 	target_revision=$(yq eval '.spec.source.targetRevision' "${app_yaml}")
 	path=$(yq eval '.spec.source.path' "${app_yaml}")
 	namespace=$(yq eval '.spec.destination.namespace' "${app_yaml}")
-	has_plugin=$(yq eval '.spec.source.plugin // "null"' "${app_yaml}")
 
 	echo "Application: ${app_name}"
 	echo "  Repo: ${repo_url}"
 	echo "  Revision: ${target_revision}"
 	echo "  Path: ${path}"
 	echo "  Namespace: ${namespace}"
-	echo "  Plugin: ${has_plugin}"
 
-	# Try to diff against live cluster
+	# Override target revision if the source repo is the tiles repo (same repo)
+	effective_revision="${target_revision}"
+	if [[ "${repo_url}" == *"symmatree/tiles"* ]]; then
+		effective_revision="${CURRENT_REF}"
+		echo "  Using current branch/ref: ${effective_revision} (overriding ${target_revision})"
+	fi
+
+	# Prepare diff output file
 	diff_output="${TXT_OUTPUT_DIR}/${app_name}-diff.txt"
 	echo "ArgoCD Diff for ${app_name}" >"${diff_output}"
 	echo "===========================================" >>"${diff_output}"
 	echo "" >>"${diff_output}"
 
-	# Skip plugin-based applications for now
-	if [ "${has_plugin}" != "null" ]; then
-		echo "Skipping plugin-based application (Tanka/other) - not supported yet" | tee -a "${diff_output}"
-		rm -f "${app_yaml}"
-		echo "::endgroup::"
-		continue
+	# Run the diff using argocd app diff with --local flag
+	# This works for helm, plugin (tanka), and other source types
+	# The --local flag tells argocd to use the local path instead of fetching from git
+	set +e
+	argocd app diff "${app_name}" --local "${REPO_ROOT}/${path}" \
+		--revision "${effective_revision}" >>"${diff_output}" 2>&1
+	diff_exit=$?
+	set -e
+
+	if [ ${diff_exit} -eq 0 ]; then
+		echo "No differences detected" >>"${diff_output}"
+	elif [ ${diff_exit} -eq 1 ]; then
+		# Exit code 1 means differences were found, which is expected
+		echo "" >>"${diff_output}"
+	else
+		echo "Diff command failed with exit code ${diff_exit}" >>"${diff_output}"
 	fi
 
-	# Check if app exists in cluster
-	if argocd app get "${app_name}" &>/dev/null; then
-		echo "App exists in cluster, running diff..." | tee -a "${diff_output}"
-		echo "" >>"${diff_output}"
+	# Always render the application manifests to the chart directory for reference
+	# This creates a static snapshot of the intended state
+	render_output="${REPO_ROOT}/${path}/${cluster_name}-rendered.yaml"
+	echo "Rendering manifests to ${render_output}..."
+	set +e
+	argocd app manifests "${app_name}" --local "${REPO_ROOT}/${path}" \
+		--revision "${effective_revision}" >"${render_output}" 2>&1
+	render_exit=$?
+	set -e
 
-		# Run the diff (capture exit code to handle diffs gracefully)
-		# Note: argocd app diff returns 1 if there are differences, which is expected
-		set +e
-		argocd app diff "${app_name}" --local "${REPO_ROOT}/${path}" \
-			--revision "${target_revision}" >>"${diff_output}" 2>&1
-		diff_exit=$?
-		set -e
-
-		if [ ${diff_exit} -eq 0 ]; then
-			echo "No differences detected" | tee -a "${diff_output}"
-		elif [ ${diff_exit} -eq 1 ]; then
-			echo "Differences detected (see above)" | tee -a "${diff_output}"
-		else
-			echo "Diff failed with exit code ${diff_exit}" | tee -a "${diff_output}"
-		fi
+	if [ ${render_exit} -eq 0 ]; then
+		echo "Manifests rendered successfully to ${render_output}"
 	else
-		echo "App does not exist in cluster yet (new application)" | tee -a "${diff_output}"
-		echo "" >>"${diff_output}"
-
-		# For new apps, render the manifests to show what would be deployed
-		echo "Rendering manifests for new application..." | tee -a "${diff_output}"
-		echo "" >>"${diff_output}"
-
-		# Try to render manifests using helm template directly
-		cd "${REPO_ROOT}/${path}"
-		if [ -f "Chart.yaml" ]; then
-			# It's a Helm chart
-			helm template "${app_name}" . --namespace "${namespace}" \
-				--skip-crds \
-				"${helm_template_args[@]}" \
-				"${set_flags[@]}" >>"${diff_output}" 2>&1 || echo "Failed to render Helm chart" | tee -a "${diff_output}"
-		else
-			echo "Not a Helm chart, skipping manifest rendering" | tee -a "${diff_output}"
-		fi
+		echo "::warning::Failed to render manifests for ${app_name} (exit code ${render_exit})"
+		rm -f "${render_output}"
 	fi
 
 	rm -f "${app_yaml}"
