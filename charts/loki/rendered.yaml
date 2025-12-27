@@ -278,8 +278,6 @@ data:
       server {
         listen             8080;
         listen             [::]:8080;
-        auth_basic           "Loki";
-        auth_basic_user_file /etc/nginx/secrets/.htpasswd;
     
         location = / {
           return 200 'OK';
@@ -413,6 +411,27 @@ metadata:
 data:
   runtime-config.yaml: |
     {}
+---
+# Source: loki/templates/loki-data-source.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-data-source
+  namespace: "loki"
+  labels:
+    grafana_datasource: "1"
+data:
+  datasource.yaml: |-
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        uid: loki
+        type: loki
+        url: http://loki-gateway.loki.svc
+        isDefault: false
+        jsonData:
+          httpHeaderName1: X-Scope-OrgID
+          httpHeaderValue1: "placeholder"
 ---
 # Source: loki/charts/loki/templates/backend/clusterrole.yaml
 kind: ClusterRole
@@ -892,7 +911,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: f02c6484353f694adee9bb5f6d001b09e5502768aebf6075746d875f78f1fab7
+        checksum/config: 8fc91032653bf96c8941624bd77f398e16433b2e87e0d0a3ffd4f55b02d638ff
       labels:
         app.kubernetes.io/name: loki
         app.kubernetes.io/instance: loki
@@ -931,8 +950,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/nginx
-            - name: auth
-              mountPath: /etc/nginx/secrets
             - name: tmp
               mountPath: /tmp
             - name: docker-entrypoint-d-override
@@ -950,9 +967,6 @@ spec:
         - name: config
           configMap:
             name: loki-gateway
-        - name: auth
-          secret:
-            secretName: loki-tenant-auth
         - name: tmp
           emptyDir: {}
         - name: docker-entrypoint-d-override
@@ -1656,18 +1670,6 @@ metadata:
 type: Opaque
 spec:
   itemPath: vaults/placeholder/items/placeholder-gsa-loki
----
-# Source: loki/templates/loki-tenant-auth-secret.yaml
-apiVersion: onepassword.com/v1
-kind: OnePasswordItem
-metadata:
-  name: loki-tenant-auth
-  namespace: "loki"
-  labels:
-    grafana_datasource: "1"
-type: Opaque
-spec:
-  itemPath: vaults/placeholder/items/placeholder-loki-tenant-auth
 ---
 # Source: loki/charts/loki/templates/monitoring/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1

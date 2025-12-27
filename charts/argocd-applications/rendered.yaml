@@ -34,15 +34,10 @@ spec:
               type: loki
               url: http://loki-gateway.loki.svc/loki/api/v1/push
               tenantId: 'placeholder'
-              auth:
-                type: basic
-                username: 'placeholder'
-                passwordKey: password
               secret:
+                # This is just the tenant name
                 create: false
-                name: loki-tenant-auth
-              tls:
-                # empty
+                embed: true
           alloy-singleton:
             extraConfig: |-
               mimir.rules.kubernetes "default" {
@@ -356,6 +351,7 @@ spec:
             - 0.10.in-addr.arpa
           extraArgs:
             - '--google-project=placeholder'
+            - '--regex-domain-exclusion=^_acme-challenge\.'
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns

@@ -98,6 +98,7 @@ datasources:
     isDefault: false
     jsonData:
       httpHeaderName1: X-Scope-OrgID
+      basicAuth: true
     secureJsonData:
       httpHeaderValue1: ${var.cluster_name}
       basicAuthUser: ${var.cluster_name}

@@ -27,15 +27,10 @@ k8s-monitoring:
       type: loki
       url: http://placeholder.loki.svc/loki/api/v1/push
       tenantId: "placeholder-loki-tenant"
-      auth:
-        type: basic
-        username: "placeholder-loki-tenant"
-        passwordKey: password
       secret:
+        # This is just the tenant name
         create: false
-        name: loki-tenant-auth
-      tls:
-        # empty
+        embed: true
 
     # - name: localTempo
     #   type: otlp

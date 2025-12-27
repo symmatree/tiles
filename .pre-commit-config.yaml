@@ -6,7 +6,7 @@ repos:
     hooks:
       # general text file...stuff.
       - id: trailing-whitespace
-        exclude: "^(.*/dist/.*\\.js.*)|(.*/rendered\\.yaml)$"
+        exclude: "^(.*/dist/.*\\.js.*)|(.*/(.*-)?rendered\\.yaml)$"
       - id: end-of-file-fixer
         exclude: "^.*/dist/.*\\.js.*$"
       - id: fix-byte-order-marker

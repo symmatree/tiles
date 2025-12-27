@@ -268,6 +268,11 @@ argo-cd:
           send:
           - app-sync-succeeded
           when: app.status.operationState.phase in ['Succeeded']
+      trigger.on-created: |
+        - description: Application is created.
+          send:
+          - app-created
+          when: "true"
 
     templates:
       template.app-deployed: |
@@ -306,6 +311,30 @@ argo-cd:
                 "short": true
               }
               {{end}}
+              ]
+            }]
+      template.app-created: |
+        email:
+          subject: Application {{.app.metadata.name}} has been created.
+        message: |
+          {{if eq .serviceType "slack"}}:new:{{end}} Application {{.app.metadata.name}} has been created.
+        slack:
+          attachments: |
+            [{
+              "title": "{{ .app.metadata.name}}",
+              "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+              "color": "#36a64f",
+              "fields": [
+              {
+                "title": "Repository",
+                "value": "{{.app.spec.source.repoURL}}",
+                "short": true
+              },
+              {
+                "title": "Path",
+                "value": "{{.app.spec.source.path}}",
+                "short": true
+              }
               ]
             }]
       template.app-health-degraded: |
