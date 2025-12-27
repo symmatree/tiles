@@ -51,7 +51,7 @@ for i in {1..30}; do
 		echo "Port-forward is ready"
 		break
 	fi
-	if [ $i -eq 30 ]; then
+	if [ "$i" -eq 30 ]; then
 		echo "::error::Port-forward failed to become ready"
 		kill "${PORT_FORWARD_PID}" 2>/dev/null || true
 		exit 1
@@ -111,7 +111,7 @@ for app_name in ${APP_NAMES}; do
 
 	# Override target revision if the source repo is the tiles repo (same repo)
 	effective_revision="${target_revision}"
-	if [[ "${repo_url}" == *"symmatree/tiles"* ]]; then
+	if [[ ${repo_url} == *"symmatree/tiles"* ]]; then
 		effective_revision="${CURRENT_REF}"
 		echo "  Using current branch/ref: ${effective_revision} (overriding ${target_revision})"
 	fi
