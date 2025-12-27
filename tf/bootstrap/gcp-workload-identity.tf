@@ -111,7 +111,7 @@ resource "onepassword_item" "gh_oidc_provider" {
   username = google_service_account.tiles_terraform_oidc.email
 
   section {
-    label = "oidc_config"
+    label = "fields"
 
     field {
       label = "workload_identity_provider"
