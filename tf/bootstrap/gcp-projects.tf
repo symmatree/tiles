@@ -28,9 +28,9 @@ variable "gcp_folder_id" {
   default     = ""
 }
 
-# Note: The tiles-owner Google group should be created manually at
-# https://groups.google.com/ with the email specified in tiles_owner_group_email.
-# Add the essential contacts email as a member of that group manually.
+# Note: The tiles-owner Google group should be created manually.
+# See ENTERPRISE_SETUP.md for detailed instructions on creating the group
+# and adding members.
 
 locals {
   org_id    = var.gcp_organization_id != "" ? var.gcp_organization_id : null
