@@ -414,6 +414,26 @@ data:
   runtime-config.yaml: |
     {}
 ---
+# Source: loki/templates/loki-data-source.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-data-source
+  namespace: "loki"
+  labels:
+    grafana_datasource: "1"
+  datasource.yaml: |-
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        uid: loki
+        type: loki
+        url: http://loki-gateway.loki.svc
+        isDefault: false
+        jsonData:
+          httpHeaderName1: X-Scope-OrgID
+          httpHeaderValue1: "placeholder"
+---
 # Source: loki/charts/loki/templates/backend/clusterrole.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
