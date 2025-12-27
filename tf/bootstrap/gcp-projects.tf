@@ -60,9 +60,9 @@ module "tiles_id_project" {
     "sts.googleapis.com",
   ]
 
-  budget_amount                   = 10
-  budget_alert_pubsub_topic       = null
-  budget_alert_spent_percents     = [0.5, 1.0]
+  budget_amount                           = 10
+  budget_alert_pubsub_topic               = null
+  budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
 }
 
@@ -102,9 +102,9 @@ module "tiles_kms_project" {
     "cloudkms.googleapis.com",
   ]
 
-  budget_amount                   = 10
-  budget_alert_pubsub_topic       = null
-  budget_alert_spent_percents     = [0.5, 1.0]
+  budget_amount                           = 10
+  budget_alert_pubsub_topic               = null
+  budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
 }
 
@@ -147,9 +147,9 @@ module "tiles_main_project" {
     "iam.googleapis.com",
   ]
 
-  budget_amount                   = 10
-  budget_alert_pubsub_topic       = null
-  budget_alert_spent_percents     = [0.5, 1.0]
+  budget_amount                           = 10
+  budget_alert_pubsub_topic               = null
+  budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
 }
 
@@ -192,9 +192,9 @@ module "tiles_test_main_project" {
     "iam.googleapis.com",
   ]
 
-  budget_amount                   = 10
-  budget_alert_pubsub_topic       = null
-  budget_alert_spent_percents     = [0.5, 1.0]
+  budget_amount                           = 10
+  budget_alert_pubsub_topic               = null
+  budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
 }
 

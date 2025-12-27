@@ -11,10 +11,10 @@ module "gh_oidc" {
   source  = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
   version = "~> 4.1"
 
-  project_id = module.tiles_id_project.project_id
-  pool_id    = "github-pool"
+  project_id  = module.tiles_id_project.project_id
+  pool_id     = "github-pool"
   provider_id = "github-provider"
-  
+
   sa_mapping = {
     "tiles-terraform-sa" = {
       sa_name   = "projects/${module.tiles_id_project.project_id}/serviceAccounts/${google_service_account.tiles_terraform_oidc.email}"
@@ -107,38 +107,38 @@ resource "onepassword_item" "gh_oidc_provider" {
   vault    = data.onepassword_vault.tf_secrets.uuid
   title    = "gh_oidc_workload_identity"
   category = "login"
-  
+
   username = google_service_account.tiles_terraform_oidc.email
-  
+
   section {
     label = "oidc_config"
-    
+
     field {
       label = "workload_identity_provider"
       type  = "STRING"
       value = module.gh_oidc.provider_name
     }
-    
+
     field {
       label = "service_account_email"
       type  = "STRING"
       value = google_service_account.tiles_terraform_oidc.email
     }
   }
-  
+
   section {
     label = "metadata"
-    
+
     field {
       label = "source"
       value = "managed by terraform"
     }
-    
+
     field {
       label = "root_module"
       value = basename(abspath(path.root))
     }
-    
+
     field {
       label = "module"
       value = basename(abspath(path.module))
