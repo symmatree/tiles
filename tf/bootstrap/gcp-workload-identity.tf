@@ -9,7 +9,7 @@ variable "github_repository" {
 # Set up GitHub OIDC workload identity pool
 module "gh_oidc" {
   source  = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
-  version = "~> 4.1"
+  version = ">= 4.1"
 
   project_id  = module.tiles_id_project.project_id
   pool_id     = "github-pool"

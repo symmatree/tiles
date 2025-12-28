@@ -14,7 +14,7 @@ data "google_project" "seed" {
 # Workload Identity Project
 module "tiles_id_project" {
   source  = "terraform-google-modules/project-factory/google"
-  version = "~> 17.0"
+  version = ">= 17.0"
 
   name              = "tiles-id"
   random_project_id = true
@@ -59,7 +59,7 @@ resource "google_essential_contacts_contact" "tiles_id_contact" {
 # KMS Project for centralized secrets
 module "tiles_kms_project" {
   source  = "terraform-google-modules/project-factory/google"
-  version = "~> 17.0"
+  version = ">= 17.0"
 
   name              = "tiles-kms"
   random_project_id = true
@@ -102,7 +102,7 @@ resource "google_essential_contacts_contact" "tiles_kms_contact" {
 # Per-environment project for tiles (prod)
 module "tiles_main_project" {
   source  = "terraform-google-modules/project-factory/google"
-  version = "~> 17.0"
+  version = ">= 17.0"
 
   name              = "tiles-main"
   random_project_id = true
@@ -148,7 +148,7 @@ resource "google_essential_contacts_contact" "tiles_main_contact" {
 # Per-environment project for tiles-test
 module "tiles_test_main_project" {
   source  = "terraform-google-modules/project-factory/google"
-  version = "~> 17.0"
+  version = ">= 17.0"
 
   name              = "tiles-test-main"
   random_project_id = true
