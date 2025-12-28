@@ -82,6 +82,16 @@ All tokens are managed through Terraform and stored in 1Password, with automatic
 - Mimir webhook build script
 - Other monitoring integrations
 
+**Note**: For improved security (principle of least privilege), create a separate read-only token instead of reusing the Terraform token. The current implementation uses the same token for simplicity, but this should be split into two separate tokens in production:
+
+```bash
+# When creating separate tokens, use:
+export TF_VAR_github_token="<terraform_admin_token>"
+export TF_VAR_grafana_github_token="<grafana_readonly_token>"
+```
+
+Then update `tf/bootstrap/github.tf` to use `var.grafana_github_token` for the Grafana module.
+
 ## Initial Setup
 
 ### Prerequisites
