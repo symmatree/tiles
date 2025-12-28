@@ -21,15 +21,33 @@ Go to [1password's service account site](https://my.1password.com/developer-tool
   environment variables to use personal creds.)
 * Create SA and VPN cilent config (allowing Github to connect to Wireguard) in Unifi
 * Create ProxMox root login (this module will create a service account for downstream use)
-* Create Github fine-grained PAT
+* Create Github fine-grained PAT (see [GitHub Token Rotation Guide](../docs/github-token-rotation.md))
 * Be logged into GCP both directly and as application-default
 
-For some reason, the Terraform github extension cannot reliably use the password directly
-from a 1password provider, but we can stage it through an environment var:
+## Running Terraform
 
-```
+Terraform requires two secrets to be provided as environment variables:
+
+```bash
 cd tf/bootstrap
 export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential)
 export TF_VAR_github_token=$(op read op://tiles-secrets/github-tiles-tf-bootstrap/password)
 terraform plan
- ```
+terraform apply
+```
+
+**Note**: The GitHub token is used for provider authentication AND is stored back into 1Password with metadata via the `github-app-token` module. This enables:
+- Tracking token expiration and rotation dates
+- Documenting token permissions and usage
+- Automatic propagation to Kubernetes via 1Password Operator
+
+## GitHub Token Management
+
+This bootstrap module manages GitHub tokens using the reusable `github-app-token` module. Tokens are:
+1. Provided via `TF_VAR_github_token` environment variable
+2. Used to authenticate the GitHub terraform provider
+3. Stored in 1Password with metadata (expiration, permissions, last rotation)
+4. Automatically synced to Kubernetes secrets via 1Password Operator
+
+For detailed information on creating, rotating, and troubleshooting GitHub tokens, see:
+**[GitHub Token Rotation Guide](../docs/github-token-rotation.md)**

@@ -30,17 +30,19 @@ Talos machine secrets must be created manually before deploying a new cluster. T
 For a new cluster, generate and store the secrets as follows:
 
 1. Generate the secrets file locally:
+
    ```bash
    talosctl gen secrets --output-file /tmp/secrets.yaml
    ```
 
 2. Create an empty 1Password item with the correct name:
-   - For production: `tiles-machine-secrets`
-   - For test: `tiles-test-machine-secrets`
+   * For production: `tiles-machine-secrets`
+   * For test: `tiles-test-machine-secrets`
 
    Create it as a Secure Note in the `tiles-secrets` vault (or appropriate vault for your environment).
 
 3. Populate the item with the generated secrets:
+
    ```bash
    op item edit \
      --vault tiles-secrets \
@@ -49,11 +51,27 @@ For a new cluster, generate and store the secrets as follows:
    ```
 
 4. Clean up the temporary file:
+
    ```bash
    rm /tmp/secrets.yaml
    ```
 
 **Important**: These secrets are cluster-specific and must never be regenerated for an existing cluster. The `apply-talos-config.sh` script will reuse existing secrets from 1Password.
+
+### GitHub Tokens
+
+GitHub tokens are now managed through Terraform using the `github-app-token` module:
+
+* `github-tiles-tf-bootstrap` - GitHub PAT for Terraform provider (manages repo configuration)
+* `grafana-github-token` - GitHub PAT for Grafana data source (read-only access to repo metrics)
+
+**See [GitHub Token Rotation Guide](./github-token-rotation.md) for detailed documentation on:**
+* Creating and rotating GitHub tokens
+* Token permissions and scopes
+* Automatic propagation to Kubernetes via 1Password Operator
+* Recovery procedures for expired tokens
+
+The old manual tokens from tales have been migrated to the tiles vault and are now managed via Terraform.
 
 ## Runtime / Github Actions
 
