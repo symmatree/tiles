@@ -3,8 +3,9 @@ set -euo pipefail
 pushd "$(dirname "$0")"
 SAVE_DIR=$(pwd)
 
-TOKEN=$(op read op://tales-secrets/jupyterhub-github-token/password)
-REPOUSER=$(op read op://tales-secrets/jupyterhub-github-token/username)
+# Use tokens from the tiles vault instead of tales-secrets
+TOKEN=$(op read op://tiles-secrets/grafana-github-token/password)
+REPOUSER=$(op read op://tiles-secrets/grafana-github-token/username || echo "symmatree")
 IMAGE=ghcr.io/symmatree/internal/mimir-webhook
 TAG=$(date +%Y-%m-%d)
 

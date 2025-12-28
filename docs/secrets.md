@@ -13,8 +13,21 @@ and restricted tokens where it can. However some are created manually:
 * `github-vpn-client` with a `notesPlain` with a Wireguard config in it
 * `morpheus-terraform` with a `terraform` service account creds for the Unifi
 * `proxmox-root` with a `root` service account for the Proxmox cluster
-* `github-tiles-tf-bootstrap` with a Github PAT token granting read-write access
-  to lots of Github assets on the containing repo.
+
+### GitHub Tokens
+
+GitHub tokens are now managed through Terraform using the `github-app-token` module:
+
+* `github-tiles-tf-bootstrap` - GitHub PAT for Terraform provider (manages repo configuration)
+* `grafana-github-token` - GitHub PAT for Grafana data source (read-only access to repo metrics)
+
+**See [GitHub Token Rotation Guide](./github-token-rotation.md) for detailed documentation on:**
+- Creating and rotating GitHub tokens
+- Token permissions and scopes
+- Automatic propagation to Kubernetes via 1Password Operator
+- Recovery procedures for expired tokens
+
+The old manual tokens from tales have been migrated to the tiles vault and are now managed via Terraform.
 
 ## Runtime / Github Actions
 

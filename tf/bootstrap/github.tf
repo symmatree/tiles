@@ -4,15 +4,57 @@ variable "github_owner" {
 }
 
 variable "github_token" {
-  description = "GitHub token"
+  description = "GitHub token - used for provider authentication and stored in 1Password"
   type        = string
   sensitive   = true
 }
 
 provider "github" {
-  # token = data.onepassword_item.github_token.password
   token = var.github_token
   owner = var.github_owner
+}
+
+# Store the GitHub token used by terraform in 1Password with metadata
+module "github_tf_bootstrap_token" {
+  source = "../modules/github-app-token"
+
+  vault_uuid        = data.onepassword_vault.tf_secrets.uuid
+  token_name        = "github-tiles-tf-bootstrap"
+  token_value       = var.github_token
+  token_description = "GitHub PAT for Terraform provider in tf/bootstrap - manages GitHub repository configuration"
+
+  expiration_days = 90
+
+  token_permissions = {
+    administration = "write"
+    contents       = "write"
+    metadata       = "read"
+    secrets        = "write"
+    workflows      = "write"
+  }
+
+  token_repositories = [github_repository.tiles.name]
+}
+
+# Create token for Grafana GitHub data source
+module "grafana_github_token" {
+  source = "../modules/github-app-token"
+
+  vault_uuid        = data.onepassword_vault.tf_secrets.uuid
+  token_name        = "grafana-github-token"
+  token_value       = var.github_token # Using same token for now, can be separate later
+  token_description = "GitHub PAT for Grafana GitHub data source - read-only access to repository data"
+
+  expiration_days = 90
+
+  token_permissions = {
+    contents      = "read"
+    metadata      = "read"
+    pull_requests = "read"
+    issues        = "read"
+  }
+
+  token_repositories = [github_repository.tiles.name]
 }
 
 
