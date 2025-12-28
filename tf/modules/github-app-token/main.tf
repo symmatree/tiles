@@ -27,6 +27,12 @@ variable "token_value" {
   sensitive   = true
 }
 
+variable "token_username" {
+  description = "GitHub username or organization name for this token (optional, defaults to token owner)"
+  type        = string
+  default     = ""
+}
+
 variable "token_description" {
   description = "Description of what this token is used for"
   type        = string
@@ -67,6 +73,7 @@ resource "onepassword_item" "github_token" {
   category = "password"
 
   password = var.token_value
+  username = var.token_username != "" ? var.token_username : null
 
   section {
     label = "metadata"
@@ -92,7 +99,7 @@ resource "onepassword_item" "github_token" {
     }
     field {
       label = "last_rotated"
-      value = timestamp()
+      value = plantimestamp()
     }
   }
 

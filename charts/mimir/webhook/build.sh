@@ -5,7 +5,7 @@ SAVE_DIR=$(pwd)
 
 # Use tokens from the tiles vault instead of tales-secrets
 TOKEN=$(op read op://tiles-secrets/grafana-github-token/password)
-REPOUSER=$(op read op://tiles-secrets/grafana-github-token/username || echo "symmatree")
+REPOUSER=$(op read op://tiles-secrets/grafana-github-token/username)
 IMAGE=ghcr.io/symmatree/internal/mimir-webhook
 TAG=$(date +%Y-%m-%d)
 
