@@ -211,11 +211,11 @@ argo-cd:
       create: false
       name: argocd-notifications-secret
     notifiers:
-      service.slack: |
-        token: $slack-token
       service.grafana: |
         apiUrl: http://grafana.grafana.svc.cluster.local
         apiKey: $grafana-apikey:apikey
+      service.slack: |
+        token: $slack-token
     subscriptions:
       - recipients:
           - slack:tiles

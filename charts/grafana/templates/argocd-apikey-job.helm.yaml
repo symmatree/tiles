@@ -99,13 +99,13 @@ spec:
         - -c
         - |
           set -euo pipefail
-          
+
           # Get Grafana admin credentials
           ADMIN_USER=$(kubectl get secret grafana-admin-user -n {{ .Release.Namespace }} -o jsonpath='{.data.username}' | base64 -d)
           ADMIN_PASS=$(kubectl get secret grafana-admin-user -n {{ .Release.Namespace }} -o jsonpath='{.data.password}' | base64 -d)
-          
+
           GRAFANA_URL="http://grafana.{{ .Release.Namespace }}.svc.cluster.local"
-          
+
           # Wait for Grafana to be ready
           echo "Waiting for Grafana to be ready..."
           for i in $(seq 1 30); do
@@ -120,12 +120,12 @@ spec:
             echo "Waiting for Grafana... attempt $i/30"
             sleep 10
           done
-          
+
           # Check if service account already exists
           SA_LIST=$(curl -sf -u "${ADMIN_USER}:${ADMIN_PASS}" \
             "${GRAFANA_URL}/api/serviceaccounts/search?query=argocd-notifications")
           SA_ID=$(echo "$SA_LIST" | jq -r '.serviceAccounts[0].id // empty')
-          
+
           if [ -z "$SA_ID" ]; then
             echo "Creating service account for ArgoCD..."
             SA_RESPONSE=$(curl -sf -X POST \
@@ -138,12 +138,12 @@ spec:
           else
             echo "Service account already exists with ID: $SA_ID"
           fi
-          
+
           # Check if token already exists for this service account
           TOKEN_LIST=$(curl -sf -u "${ADMIN_USER}:${ADMIN_PASS}" \
             "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
           EXISTING_TOKEN=$(echo "$TOKEN_LIST" | jq -r '.[] | select(.name=="argocd-notifications-token") | .id // empty')
-          
+
           if [ -n "$EXISTING_TOKEN" ]; then
             echo "Token already exists. Deleting old tokens..."
             # Delete all tokens for this service account and recreate
@@ -154,7 +154,7 @@ spec:
                 "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens/${TOKEN_ID}" || true
             done
           fi
-          
+
           # Create new token
           echo "Creating API token..."
           TOKEN_RESPONSE=$(curl -sf -X POST \
@@ -162,19 +162,19 @@ spec:
             -u "${ADMIN_USER}:${ADMIN_PASS}" \
             -d '{"name":"argocd-notifications-token"}' \
             "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
-          
+
           API_KEY=$(echo "$TOKEN_RESPONSE" | jq -r '.key')
-          
+
           if [ -z "$API_KEY" ] || [ "$API_KEY" = "null" ]; then
             echo "ERROR: Could not create API key"
             exit 1
           fi
-          
+
           echo "API key created successfully"
-          
+
           # Create or update secret in argocd namespace
           SECRET_NAME="grafana-apikey"
-          
+
           if kubectl get secret "$SECRET_NAME" -n argocd > /dev/null 2>&1; then
             echo "Updating existing secret in argocd namespace..."
             kubectl create secret generic "$SECRET_NAME" \
@@ -187,6 +187,6 @@ spec:
               --from-literal=apikey="$API_KEY" \
               -n argocd
           fi
-          
+
           echo "Secret created/updated successfully in argocd namespace"
 {{- end }}

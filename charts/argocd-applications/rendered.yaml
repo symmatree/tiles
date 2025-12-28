@@ -383,6 +383,7 @@ spec:
       valuesObject:
         vault_name: 'placeholder'
         cluster_name: 'placeholder'
+        argocd_integration_enabled: true
         grafana:
           ingress:
             hosts:

@@ -308,6 +308,9 @@ metadata:
 data:
   context: |
     argocdUrl: https://argocd.placeholder.symmatree.com
+  service.grafana: |
+    apiUrl: http://grafana.grafana.svc.cluster.local
+    apiKey: $grafana-apikey:apikey
   service.slack: |
     token: $slack-token
   subscriptions: |
