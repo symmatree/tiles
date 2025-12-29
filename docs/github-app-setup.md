@@ -160,7 +160,7 @@ For services like Grafana that consume tokens from 1Password, you can:
      name: refresh-github-token
      namespace: grafana
    spec:
-     schedule: "*/50 * * * *"  # Every 50 minutes (before 1hr expiry)
+     schedule: "*/50 * * * *"  # Every 50 minutes (10 min buffer before 1hr expiry)
      jobTemplate:
        spec:
          template:
@@ -180,7 +180,7 @@ For services like Grafana that consume tokens from 1Password, you can:
    name: Refresh GitHub App Token
    on:
      schedule:
-       - cron: '*/50 * * * *'  # Every 50 minutes
+       - cron: '*/50 * * * *'  # Every 50 minutes (10 min buffer)
    jobs:
      refresh:
        runs-on: ubuntu-latest

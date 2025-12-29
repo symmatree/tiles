@@ -44,7 +44,7 @@ Example:
     # Using environment variables
     export GITHUB_APP_ID="123456"
     export GITHUB_APP_INSTALLATION_ID="78901234"
-    export GITHUB_APP_PEM_FILE="\$(cat /path/to/app.pem)"
+    export GITHUB_APP_PEM_FILE=$(cat /path/to/app.pem)
     $0 -t grafana-github-token
 
 Requirements:
@@ -126,11 +126,13 @@ JWT_PAYLOAD=$(jq -n \
     openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
 
 # Create JWT signature
-echo "$PEM_FILE" > /tmp/github_app_key.pem
+TEMP_KEY_FILE=$(mktemp)
+chmod 600 "$TEMP_KEY_FILE"
+echo "$PEM_FILE" > "$TEMP_KEY_FILE"
 JWT_SIGNATURE=$(echo -n "${JWT_HEADER}.${JWT_PAYLOAD}" | \
-    openssl dgst -sha256 -sign /tmp/github_app_key.pem | \
+    openssl dgst -sha256 -sign "$TEMP_KEY_FILE" | \
     openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
-rm /tmp/github_app_key.pem
+rm -f "$TEMP_KEY_FILE"
 
 # Complete JWT
 JWT="${JWT_HEADER}.${JWT_PAYLOAD}.${JWT_SIGNATURE}"
