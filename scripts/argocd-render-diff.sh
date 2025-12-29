@@ -38,29 +38,14 @@ fi
 echo "::endgroup::"
 
 echo "::group::Login to ArgoCD"
-# Login to argocd using kubectl port-forward (works better in CI)
-# Start port-forward in background
-kubectl port-forward -n argocd svc/argocd-server 8080:443 &
-PORT_FORWARD_PID=$!
-echo "Port-forward PID: ${PORT_FORWARD_PID}"
+# Login to ArgoCD using direct access via ingress
+# We're on the VPN and can access argocd.{cluster_name}.symmatree.com directly
+ARGOCD_SERVER="argocd.${cluster_name}.symmatree.com"
+echo "Connecting to ArgoCD at ${ARGOCD_SERVER}"
 
-# Wait for port-forward to be ready
-echo "Waiting for port-forward to be ready..."
-for i in {1..30}; do
-	if curl -k -s https://localhost:8080 >/dev/null 2>&1; then
-		echo "Port-forward is ready"
-		break
-	fi
-	if [ "$i" -eq 30 ]; then
-		echo "::error::Port-forward failed to become ready"
-		kill "${PORT_FORWARD_PID}" 2>/dev/null || true
-		exit 1
-	fi
-	sleep 1
-done
-
-# Login using kubernetes auth (no password needed)
-argocd login localhost:8080 --core --insecure
+# Login using kubernetes auth (no password needed with --core flag)
+# The --core flag uses kubectl directly for auth instead of the API server
+argocd login "${ARGOCD_SERVER}" --core
 echo "::endgroup::"
 
 echo "::group::Render argocd-applications with Helm"
@@ -160,19 +145,5 @@ for app_name in ${APP_NAMES}; do
 	rm -f "${app_yaml}"
 	echo "::endgroup::"
 done
-
-# Cleanup port-forward if it was started
-if [ -n "${PORT_FORWARD_PID:-}" ]; then
-	echo "Stopping port-forward (PID: ${PORT_FORWARD_PID})..."
-	kill "${PORT_FORWARD_PID}" 2>/dev/null || true
-	# Wait for process to terminate (up to 5 seconds)
-	for i in {1..5}; do
-		if ! kill -0 "${PORT_FORWARD_PID}" 2>/dev/null; then
-			echo "Port-forward stopped"
-			break
-		fi
-		sleep 1
-	done
-fi
 
 echo "::notice::ArgoCD render and diff complete. Outputs saved to ${TXT_OUTPUT_DIR}"
