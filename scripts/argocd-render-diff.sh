@@ -45,7 +45,7 @@ echo "Connecting to ArgoCD at ${ARGOCD_SERVER}"
 
 # Login using kubernetes auth (no password needed with --core flag)
 # The --core flag uses kubectl directly for auth instead of the API server
-argocd login "${ARGOCD_SERVER}" --core
+argocd login "${ARGOCD_SERVER}" --core --insecure
 echo "::endgroup::"
 
 echo "::group::Render argocd-applications with Helm"
