@@ -33,6 +33,7 @@ module "tiles_id_project" {
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
     "essentialcontacts.googleapis.com",
+    "billingbudgets.googleapis.com"
   ]
 
   budget_amount                           = 10
@@ -76,6 +77,7 @@ module "tiles_kms_project" {
     "cloudresourcemanager.googleapis.com",
     "cloudkms.googleapis.com",
     "essentialcontacts.googleapis.com",
+    "billingbudgets.googleapis.com"
   ]
 
   budget_amount                           = 10
@@ -121,6 +123,7 @@ module "tiles_main_project" {
     "dns.googleapis.com",
     "iam.googleapis.com",
     "essentialcontacts.googleapis.com",
+    "billingbudgets.googleapis.com"
   ]
 
   budget_amount                           = 10
@@ -166,6 +169,7 @@ module "tiles_test_main_project" {
     "dns.googleapis.com",
     "iam.googleapis.com",
     "essentialcontacts.googleapis.com",
+    "billingbudgets.googleapis.com"
   ]
 
   budget_amount                           = 10
