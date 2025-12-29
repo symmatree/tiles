@@ -1,4 +1,4 @@
-gcp_project_id  = "symm-custodes"
+seed_project_id = "symm-custodes"
 gcp_region      = "us-central1"
 gcp_owner_email = "seth.porter@gmail.com"
 

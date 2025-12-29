@@ -8,7 +8,7 @@ variable "gcp_essential_contacts_email" {
 
 # Get billing account from the seed project
 data "google_project" "seed" {
-  project_id = var.gcp_project_id
+  project_id = var.seed_project_id
 }
 
 # Workload Identity Project
@@ -40,6 +40,7 @@ module "tiles_id_project" {
   budget_alert_pubsub_topic               = null
   budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
+  depends_on                              = [google_project_service.seed_essential_contacts_api, google_project_service.seed_billing_budgets_api]
 }
 
 # Grant Owner role to tiles-owner group on tiles-id project
@@ -84,6 +85,7 @@ module "tiles_kms_project" {
   budget_alert_pubsub_topic               = null
   budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
+  depends_on                              = [google_project_service.seed_essential_contacts_api, google_project_service.seed_billing_budgets_api]
 }
 
 # Grant Owner role to tiles-owner group on tiles-kms project
@@ -130,6 +132,7 @@ module "tiles_main_project" {
   budget_alert_pubsub_topic               = null
   budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
+  depends_on                              = [google_project_service.seed_essential_contacts_api, google_project_service.seed_billing_budgets_api]
 }
 
 # Grant Owner role to tiles-owner group on tiles-main project
@@ -176,6 +179,7 @@ module "tiles_test_main_project" {
   budget_alert_pubsub_topic               = null
   budget_alert_spent_percents             = [0.5, 1.0]
   budget_monitoring_notification_channels = []
+  depends_on                              = [google_project_service.seed_essential_contacts_api, google_project_service.seed_billing_budgets_api]
 }
 
 # Grant Owner role to tiles-owner group on tiles-test-main project

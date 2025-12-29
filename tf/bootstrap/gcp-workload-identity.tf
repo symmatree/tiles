@@ -85,19 +85,19 @@ resource "google_project_iam_member" "tiles_terraform_oidc_test_main_dns_admin" 
 
 # Also grant permissions on the existing seed project for backwards compatibility
 resource "google_project_iam_member" "tiles_terraform_oidc_seed_editor" {
-  project = var.gcp_project_id
+  project = var.seed_project_id
   role    = "roles/editor"
   member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
 }
 
 resource "google_project_iam_member" "tiles_terraform_oidc_seed_storage_admin" {
-  project = var.gcp_project_id
+  project = var.seed_project_id
   role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
 }
 
 resource "google_project_iam_member" "tiles_terraform_oidc_seed_dns_admin" {
-  project = var.gcp_project_id
+  project = var.seed_project_id
   role    = "roles/dns.admin"
   member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
 }
