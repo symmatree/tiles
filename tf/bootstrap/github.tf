@@ -8,6 +8,11 @@ variable "github_token" {
   type        = string
   sensitive   = true
   default     = ""
+
+  validation {
+    condition     = var.github_token == "" || (var.github_app_id == "" && var.github_app_installation_id == "" && var.github_app_pem_file == "")
+    error_message = "Cannot use both github_token and GitHub App authentication. Set either github_token OR the github_app_* variables, not both."
+  }
 }
 
 # GitHub App authentication variables (optional - use these instead of PAT for automated token generation)
