@@ -10,6 +10,16 @@ properly until `external-dns` and `cert-manager` are up. We then install the `ar
 chart which includes `charts/argocd/application.yaml`, which has autosync turned on. ArgoCD
 then syncs over itself (mostly to add a tracking annotation) and from then on is self-managed.
 
+### Grafana Notifications Integration
+
+ArgoCD can integrate with Grafana to send deployment annotations. This is enabled by setting
+`argocd_integration_enabled: true` in the Grafana chart values. When enabled, the Grafana chart
+creates a service account and API key, then stores it as a Secret in the ArgoCD namespace for
+the notifications controller to use.
+
+The integration is optional - if the Secret doesn't exist, ArgoCD notifications will continue
+to work without Grafana annotations.
+
 ### Tanka (jsonnet) plugin
 
 I'm using Tanka to define a directory structure and combine jsonnet-bundler and compiler

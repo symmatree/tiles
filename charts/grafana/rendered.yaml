@@ -51,7 +51,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
 data:
-  
+
   plugins: grafana-github-datasource,grafana-lokiexplore-app
   grafana.ini: |
     [analytics]
@@ -209,7 +209,7 @@ spec:
         checksum/sc-dashboard-provider-config: e3aca4961a8923a0814f12363c5e5e10511bb1deb6cd4e0cbe138aeee493354f
         kubectl.kubernetes.io/default-container: grafana
     spec:
-      
+
       serviceAccountName: grafana
       automountServiceAccountToken: true
       shareProcessNamespace: false
@@ -441,6 +441,201 @@ type: Opaque
 spec:
   itemPath: "vaults/placeholder/items/grafana-admin-user"
 ---
+# Source: grafana/templates/argocd-apikey-job.helm.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana-argocd-apikey-creator
+  namespace: grafana
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "1"
+---
+# Source: grafana/templates/argocd-apikey-job.helm.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: grafana-argocd-apikey-creator
+  namespace: grafana
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "1"
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+# Source: grafana/templates/argocd-apikey-job.helm.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: grafana-argocd-apikey-creator
+  namespace: argocd
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "1"
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "create", "update", "patch"]
+---
+# Source: grafana/templates/argocd-apikey-job.helm.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grafana-argocd-apikey-creator
+  namespace: grafana
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "1"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: grafana-argocd-apikey-creator
+subjects:
+- kind: ServiceAccount
+  name: grafana-argocd-apikey-creator
+  namespace: grafana
+---
+# Source: grafana/templates/argocd-apikey-job.helm.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grafana-argocd-apikey-creator
+  namespace: argocd
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "1"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: grafana-argocd-apikey-creator
+subjects:
+- kind: ServiceAccount
+  name: grafana-argocd-apikey-creator
+  namespace: grafana
+---
+# Source: grafana/templates/argocd-apikey-job.helm.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grafana-create-argocd-apikey-1
+  namespace: grafana
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "2"
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      name: grafana-create-argocd-apikey
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: grafana-argocd-apikey-creator
+      containers:
+      - name: create-apikey
+        image: bitnami/kubectl:1.31.4
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -euo pipefail
+
+          # Get Grafana admin credentials
+          ADMIN_USER=$(kubectl get secret grafana-admin-user -n grafana -o jsonpath='{.data.username}' | base64 -d)
+          ADMIN_PASS=$(kubectl get secret grafana-admin-user -n grafana -o jsonpath='{.data.password}' | base64 -d)
+
+          GRAFANA_URL="http://grafana.grafana.svc.cluster.local"
+
+          # Wait for Grafana to be ready
+          echo "Waiting for Grafana to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf "${GRAFANA_URL}/api/health" > /dev/null 2>&1; then
+              echo "Grafana is ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "ERROR: Grafana did not become ready after 30 attempts"
+              exit 1
+            fi
+            echo "Waiting for Grafana... attempt $i/30"
+            sleep 10
+          done
+
+          # Check if service account already exists
+          SA_LIST=$(curl -sf -u "${ADMIN_USER}:${ADMIN_PASS}" \
+            "${GRAFANA_URL}/api/serviceaccounts/search?query=argocd-notifications")
+          SA_ID=$(echo "$SA_LIST" | jq -r '.serviceAccounts[0].id // empty')
+
+          if [ -z "$SA_ID" ]; then
+            echo "Creating service account for ArgoCD..."
+            SA_RESPONSE=$(curl -sf -X POST \
+              -H "Content-Type: application/json" \
+              -u "${ADMIN_USER}:${ADMIN_PASS}" \
+              -d '{"name":"argocd-notifications","role":"Editor"}' \
+              "${GRAFANA_URL}/api/serviceaccounts")
+            SA_ID=$(echo "$SA_RESPONSE" | jq -r '.id')
+            echo "Service account created with ID: $SA_ID"
+          else
+            echo "Service account already exists with ID: $SA_ID"
+          fi
+
+          # Check if token already exists for this service account
+          TOKEN_LIST=$(curl -sf -u "${ADMIN_USER}:${ADMIN_PASS}" \
+            "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
+          EXISTING_TOKEN=$(echo "$TOKEN_LIST" | jq -r '.[] | select(.name=="argocd-notifications-token") | .id // empty')
+
+          if [ -n "$EXISTING_TOKEN" ]; then
+            echo "Token already exists. Deleting old tokens..."
+            # Delete all tokens for this service account and recreate
+            TOKEN_IDS=$(echo "$TOKEN_LIST" | jq -r '.[].id')
+            for TOKEN_ID in $TOKEN_IDS; do
+              curl -sf -X DELETE \
+                -u "${ADMIN_USER}:${ADMIN_PASS}" \
+                "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens/${TOKEN_ID}" || true
+            done
+          fi
+
+          # Create new token
+          echo "Creating API token..."
+          TOKEN_RESPONSE=$(curl -sf -X POST \
+            -H "Content-Type: application/json" \
+            -u "${ADMIN_USER}:${ADMIN_PASS}" \
+            -d '{"name":"argocd-notifications-token"}' \
+            "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
+
+          API_KEY=$(echo "$TOKEN_RESPONSE" | jq -r '.key')
+
+          if [ -z "$API_KEY" ] || [ "$API_KEY" = "null" ]; then
+            echo "ERROR: Could not create API key"
+            exit 1
+          fi
+
+          echo "API key created successfully"
+
+          # Create or update secret in argocd namespace
+          SECRET_NAME="grafana-apikey"
+
+          if kubectl get secret "$SECRET_NAME" -n argocd > /dev/null 2>&1; then
+            echo "Updating existing secret in argocd namespace..."
+            kubectl create secret generic "$SECRET_NAME" \
+              --from-literal=apikey="$API_KEY" \
+              --dry-run=client -o yaml | \
+              kubectl apply -n argocd -f -
+          else
+            echo "Creating secret in argocd namespace..."
+            kubectl create secret generic "$SECRET_NAME" \
+              --from-literal=apikey="$API_KEY" \
+              -n argocd
+          fi
+
+          echo "Secret created/updated successfully in argocd namespace"
 # Source: grafana/charts/grafana/templates/tests/test-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount

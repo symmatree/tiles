@@ -308,6 +308,9 @@ metadata:
 data:
   context: |
     argocdUrl: https://argocd.placeholder.symmatree.com
+  service.grafana: |
+    apiUrl: http://grafana.grafana.svc.cluster.local
+    apiKey: $grafana-apikey:apikey
   service.slack: |
     token: $slack-token
   subscriptions: |
@@ -877,7 +880,7 @@ rules:
   - apiGroups:
       - batch
     resources:
-      
+
       - jobs
     verbs:
       - create
@@ -886,7 +889,7 @@ rules:
     resources:
       - workflows
     verbs:
-      
+
       - create
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/clusterrolebinding.yaml
@@ -1414,7 +1417,7 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.2.0"
 spec:
-  type: ClusterIP  
+  type: ClusterIP
   ports:
   - name: http-metrics
     protocol: TCP
@@ -1439,7 +1442,7 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.2.0"
 spec:
-  type: ClusterIP  
+  type: ClusterIP
   ports:
   - name: http-webhook
     port: 7000
@@ -1462,7 +1465,7 @@ metadata:
     app.kubernetes.io/version: "v3.2.0"
   name: argocd-repo-server
   namespace: argocd
-spec:  
+spec:
   ports:
   - name: tcp-repo-server
     protocol: TCP
@@ -1487,7 +1490,7 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.2.0"
 spec:
-  type: ClusterIP  
+  type: ClusterIP
   ports:
   - name: http-metrics
     protocol: TCP
@@ -1512,7 +1515,7 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.2.0"
 spec:
-  type: ClusterIP  
+  type: ClusterIP
   sessionAffinity: None
   ports:
   - name: http
@@ -1541,7 +1544,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.2.0"
-spec:  
+spec:
   ports:
   - name: http
     protocol: TCP
@@ -1573,7 +1576,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.2.0"
-spec:  
+spec:
   ports:
   - name: redis
     port: 6379

@@ -1,4 +1,7 @@
 vault_name: placeholder
+# Enable ArgoCD notifications integration
+# When enabled, creates a Grafana API key and stores it as a secret in the argocd namespace
+argocd_integration_enabled: true
 global:
   extraEnv:
     - name: SSL_CERT_FILE
