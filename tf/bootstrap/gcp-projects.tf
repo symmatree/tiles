@@ -23,8 +23,8 @@ module "tiles_id_project" {
   folder_id         = null
 
   labels = {
-    tiles  = "true"
-    source = "tf/bootstrap/gcp-projects.tf"
+    tiles       = "true"
+    environment = "shared"
   }
 
   activate_apis = [
@@ -68,8 +68,8 @@ module "tiles_kms_project" {
   folder_id         = null
 
   labels = {
-    tiles  = "true"
-    source = "tf/bootstrap/gcp-projects.tf"
+    tiles       = "true"
+    environment = "shared"
   }
 
   activate_apis = [
@@ -113,7 +113,6 @@ module "tiles_main_project" {
   labels = {
     tiles       = "true"
     environment = "prod"
-    source      = "tf/bootstrap/gcp-projects.tf"
   }
 
   activate_apis = [
@@ -159,7 +158,6 @@ module "tiles_test_main_project" {
   labels = {
     tiles       = "true"
     environment = "test"
-    source      = "tf/bootstrap/gcp-projects.tf"
   }
 
   activate_apis = [
