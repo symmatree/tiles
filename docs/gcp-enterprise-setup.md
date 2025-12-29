@@ -7,7 +7,7 @@ Implements a lightweight GCP enterprise foundation inspired by the [GCP Security
 The bootstrap creates four GCP projects:
 
 - **tiles-id**: Workload identity pool for GitHub Actions OIDC authentication
-- **tiles-kms**: Centralized KMS for secrets management  
+- **tiles-kms**: Centralized KMS for secrets management
 - **tiles-main**: Per-environment resources for prod (buckets, DNS, service accounts)
 - **tiles-test-main**: Per-environment resources for test
 
