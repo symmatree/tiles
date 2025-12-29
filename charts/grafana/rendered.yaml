@@ -51,7 +51,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
 data:
-  
+
   plugins: grafana-github-datasource,grafana-lokiexplore-app
   grafana.ini: |
     [analytics]
@@ -209,7 +209,7 @@ spec:
         checksum/sc-dashboard-provider-config: e3aca4961a8923a0814f12363c5e5e10511bb1deb6cd4e0cbe138aeee493354f
         kubectl.kubernetes.io/default-container: grafana
     spec:
-      
+
       serviceAccountName: grafana
       automountServiceAccountToken: true
       shareProcessNamespace: false
