@@ -9,6 +9,7 @@ spec:
     targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
     path: charts/alloy
     helm:
+      version: v3
       valueFiles:
         - values.yaml
       valuesObject:

@@ -48,9 +48,19 @@ echo "Connecting to ArgoCD at ${ARGOCD_SERVER}"
 argocd login "${ARGOCD_SERVER}" --core --insecure
 echo "::endgroup::"
 
+echo "::group::Set kubectl namespace to argocd"
+# Set the current kubectl namespace context to "argocd"
+# The argocd CLI uses the current namespace context when interacting with the cluster
+kubectl config set-context --current --namespace=argocd
+echo "Current namespace set to: $(kubectl config view --minify -o jsonpath='{..namespace}')"
+echo "::endgroup::"
+
 echo "::group::Render argocd-applications with Helm"
 # First, render the argocd-applications chart to get the list of applications
 cd "${REPO_ROOT}/charts/argocd-applications"
+
+helm_template_args=()
+set_flags=()
 
 # Source the helper script to set up helm_template_args and set_flags
 # shellcheck source=scripts/helm-common.bash
@@ -112,7 +122,7 @@ for app_name in ${APP_NAMES}; do
 	# The --local flag tells argocd to use the local path instead of fetching from git
 	set +e
 	argocd app diff "${app_name}" --local "${REPO_ROOT}/${path}" \
-		--revision "${effective_revision}" >>"${diff_output}" 2>&1
+		--revision "${effective_revision}" | tee -a "${diff_output}" 2>&1
 	diff_exit=$?
 	set -e
 
@@ -131,7 +141,7 @@ for app_name in ${APP_NAMES}; do
 	echo "Rendering manifests to ${render_output}..."
 	set +e
 	argocd app manifests "${app_name}" --local "${REPO_ROOT}/${path}" \
-		--revision "${effective_revision}" >"${render_output}" 2>&1
+		--revision "${effective_revision}" | tee "${render_output}" 2>&1
 	render_exit=$?
 	set -e
 
