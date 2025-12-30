@@ -2066,6 +2066,172 @@ spec:
           defaultMode: 420
           secretName: trust-manager-tls
 ---
+# Source: cert-manager/charts/cert-manager/templates/crds.yaml
+#
+# START crd
+---
+# Source: cert-manager/charts/cert-manager/templates/crds.yaml
+# START crd
+---
+# Source: cert-manager/charts/cert-manager/templates/crds.yaml
+# START crd
+---
+# Source: cert-manager/charts/cert-manager/templates/crds.yaml
+# START crd
+---
+# Source: cert-manager/charts/cert-manager/templates/crds.yaml
+# START crd
+---
+# Source: cert-manager/charts/cert-manager/templates/crds.yaml
+# START crd
+---
+# Source: cert-manager/templates/ca-bundle.yaml
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  # The bundle name will also be used for the target
+  name: trust-bundle
+  namespace: "cert-manager"
+spec:
+  sources:
+    - useDefaultCAs: true
+    - secret:
+        name: "tiles-test-ca-tls"
+        key: ca.crt
+  target:
+    configMap:
+      key: ca-certificates.crt
+    namespaceSelector:
+      matchLabels:
+        trust-bundle: enabled
+---
+# Source: cert-manager/charts/trust-manager/templates/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: trust-manager
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/name: trust-manager
+    helm.sh/chart: trust-manager-v0.19.0
+    app.kubernetes.io/instance: cert-manager
+    app.kubernetes.io/version: "v0.19.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  commonName: "trust-manager.cert-manager.svc"
+  dnsNames:
+  - "trust-manager.cert-manager.svc"
+  secretName: trust-manager-tls
+  revisionHistoryLimit: 1
+  issuerRef:
+    name: trust-manager
+    kind: Issuer
+    group: cert-manager.io
+---
+# Source: cert-manager/templates/self-signed-issuer.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "tiles-test-ca"
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: "tiles-test"
+  subject:
+    organizations:
+      - "tiles-test"
+    organizationalUnits:
+      - "tiles-test"
+  secretName: "tiles-test-ca-tls"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: "tiles-test-selfsigned-root"
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Source: cert-manager/templates/lets-encrypt-issuers.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: staging-cert
+  namespace: "cert-manager"
+spec:
+  acme:
+    email: symmetry@pobox.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: lets-encrypt-staging
+    solvers:
+      - selector:
+          dnsZones:
+            - "tiles-test.symmatree.com"
+        dns01:
+          cloudDNS:
+            project: "placeholder"
+            serviceAccountSecretRef:
+              # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
+              name: cert-manager-dns01-sa-key
+              # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
+              key: private_key.json
+---
+# Source: cert-manager/templates/lets-encrypt-issuers.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: real-cert
+spec:
+  acme:
+    email: symmetry@pobox.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: lets-encrypt-real
+    solvers:
+      - selector:
+          dnsZones:
+            - "tiles-test.symmatree.com"
+        dns01:
+          cloudDNS:
+            project: "placeholder"
+            serviceAccountSecretRef:
+              # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
+              name: cert-manager-dns01-sa-key
+              # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
+              key: private_key.json
+---
+# Source: cert-manager/templates/self-signed-issuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: "tiles-test-selfsigned-root"
+spec:
+  selfSigned: {}
+---
+# Source: cert-manager/templates/self-signed-issuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: "tiles-test-ca-issuer"
+spec:
+  ca:
+    secretName: "tiles-test-ca-tls"
+---
+# Source: cert-manager/charts/trust-manager/templates/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: trust-manager
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/name: trust-manager
+    helm.sh/chart: trust-manager-v0.19.0
+    app.kubernetes.io/instance: cert-manager
+    app.kubernetes.io/version: "v0.19.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selfSigned: {}
+---
 # Source: cert-manager/charts/cert-manager/templates/webhook-mutating-webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -2106,6 +2272,59 @@ webhooks:
         name: cert-manager-webhook
         namespace: cert-manager
         path: /mutate
+---
+# Source: cert-manager/templates/clouddns-sa-secret.yaml
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  name: cert-manager-dns01-sa-key
+  namespace: "cert-manager"
+type: Opaque
+spec:
+  # secret name is specified in tf/modules/k8s-cluster/k8s-cert-manager.tf
+  itemPath: vaults/placeholder/items/tiles-test-cert-manager-dns01-sa-key
+---
+# Source: cert-manager/charts/cert-manager/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+  labels:
+    app: cert-manager
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/instance: cert-manager
+    app.kubernetes.io/component: "controller"
+    app.kubernetes.io/version: "v1.18.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: cert-manager-v1.18.2
+    prometheus: default
+spec:
+  jobLabel: cert-manager
+  selector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+        - cainjector
+        - cert-manager
+        - webhook
+      - key: app.kubernetes.io/instance
+        operator: In
+        values:
+        - cert-manager
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+        - cainjector
+        - controller
+        - webhook
+  endpoints:
+  - targetPort: http-metrics
+    path: /metrics
+    interval: 60s
+    scrapeTimeout: 30s
+    honorLabels: false
 ---
 # Source: cert-manager/charts/cert-manager/templates/webhook-validating-webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -2191,225 +2410,6 @@ webhooks:
         name: trust-manager
         namespace: cert-manager
         path: /validate-trust-cert-manager-io-v1alpha1-bundle
----
-# Source: cert-manager/charts/cert-manager/templates/crds.yaml
-#
-# START crd
----
-# Source: cert-manager/charts/cert-manager/templates/crds.yaml
-# START crd
----
-# Source: cert-manager/charts/cert-manager/templates/crds.yaml
-# START crd
----
-# Source: cert-manager/charts/cert-manager/templates/crds.yaml
-# START crd
----
-# Source: cert-manager/charts/cert-manager/templates/crds.yaml
-# START crd
----
-# Source: cert-manager/charts/cert-manager/templates/crds.yaml
-# START crd
----
-# Source: cert-manager/templates/ca-bundle.yaml
-apiVersion: trust.cert-manager.io/v1alpha1
-kind: Bundle
-metadata:
-  # The bundle name will also be used for the target
-  name: trust-bundle
-  namespace: "cert-manager"
-spec:
-  sources:
-    - useDefaultCAs: true
-    - secret:
-        name: "placeholder-ca-tls"
-        key: ca.crt
-  target:
-    configMap:
-      key: ca-certificates.crt
-    namespaceSelector:
-      matchLabels:
-        trust-bundle: enabled
----
-# Source: cert-manager/charts/trust-manager/templates/certificate.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: trust-manager
-  namespace: cert-manager
-  labels:
-    app.kubernetes.io/name: trust-manager
-    helm.sh/chart: trust-manager-v0.19.0
-    app.kubernetes.io/instance: cert-manager
-    app.kubernetes.io/version: "v0.19.0"
-    app.kubernetes.io/managed-by: Helm
-spec:
-  commonName: "trust-manager.cert-manager.svc"
-  dnsNames:
-  - "trust-manager.cert-manager.svc"
-  secretName: trust-manager-tls
-  revisionHistoryLimit: 1
-  issuerRef:
-    name: trust-manager
-    kind: Issuer
-    group: cert-manager.io
----
-# Source: cert-manager/templates/self-signed-issuer.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: "placeholder-ca"
-  namespace: cert-manager
-spec:
-  isCA: true
-  commonName: "placeholder"
-  subject:
-    organizations:
-      - "placeholder"
-    organizationalUnits:
-      - "placeholder"
-  secretName: "placeholder-ca-tls"
-  privateKey:
-    algorithm: ECDSA
-    size: 256
-  issuerRef:
-    name: "placeholder-selfsigned-root"
-    kind: ClusterIssuer
-    group: cert-manager.io
----
-# Source: cert-manager/templates/lets-encrypt-issuers.yaml
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: staging-cert
-  namespace: "cert-manager"
-spec:
-  acme:
-    email: symmetry@pobox.com
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: lets-encrypt-staging
-    solvers:
-      - selector:
-          dnsZones:
-            - "placeholder.symmatree.com"
-        dns01:
-          cloudDNS:
-            project: "placeholder"
-            serviceAccountSecretRef:
-              # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
-              name: cert-manager-dns01-sa-key
-              # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
-              key: private_key.json
----
-# Source: cert-manager/templates/lets-encrypt-issuers.yaml
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: real-cert
-spec:
-  acme:
-    email: symmetry@pobox.com
-    server: https://acme-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: lets-encrypt-real
-    solvers:
-      - selector:
-          dnsZones:
-            - "placeholder.symmatree.com"
-        dns01:
-          cloudDNS:
-            project: "placeholder"
-            serviceAccountSecretRef:
-              # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
-              name: cert-manager-dns01-sa-key
-              # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
-              key: private_key.json
----
-# Source: cert-manager/templates/self-signed-issuer.yaml
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: "placeholder-selfsigned-root"
-spec:
-  selfSigned: {}
----
-# Source: cert-manager/templates/self-signed-issuer.yaml
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: "placeholder-ca-issuer"
-spec:
-  ca:
-    secretName: "placeholder-ca-tls"
----
-# Source: cert-manager/charts/trust-manager/templates/certificate.yaml
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: trust-manager
-  namespace: cert-manager
-  labels:
-    app.kubernetes.io/name: trust-manager
-    helm.sh/chart: trust-manager-v0.19.0
-    app.kubernetes.io/instance: cert-manager
-    app.kubernetes.io/version: "v0.19.0"
-    app.kubernetes.io/managed-by: Helm
-spec:
-  selfSigned: {}
----
-# Source: cert-manager/templates/clouddns-sa-secret.yaml
-apiVersion: onepassword.com/v1
-kind: OnePasswordItem
-metadata:
-  name: cert-manager-dns01-sa-key
-  namespace: "cert-manager"
-type: Opaque
-spec:
-  # secret name is specified in tf/modules/k8s-cluster/k8s-cert-manager.tf
-  itemPath: vaults/placeholder/items/placeholder-cert-manager-dns01-sa-key
----
-# Source: cert-manager/charts/cert-manager/templates/servicemonitor.yaml
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: cert-manager
-  namespace: cert-manager
-  labels:
-    app: cert-manager
-    app.kubernetes.io/name: cert-manager
-    app.kubernetes.io/instance: cert-manager
-    app.kubernetes.io/component: "controller"
-    app.kubernetes.io/version: "v1.18.2"
-    app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: cert-manager-v1.18.2
-    prometheus: default
-spec:
-  jobLabel: cert-manager
-  selector:
-    matchExpressions:
-      - key: app.kubernetes.io/name
-        operator: In
-        values:
-        - cainjector
-        - cert-manager
-        - webhook
-      - key: app.kubernetes.io/instance
-        operator: In
-        values:
-        - cert-manager
-      - key: app.kubernetes.io/component
-        operator: In
-        values:
-        - cainjector
-        - controller
-        - webhook
-  endpoints:
-  - targetPort: http-metrics
-    path: /metrics
-    interval: 60s
-    scrapeTimeout: 30s
-    honorLabels: false
 ---
 # Source: cert-manager/charts/cert-manager/templates/startupapicheck-serviceaccount.yaml
 apiVersion: v1

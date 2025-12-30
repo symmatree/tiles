@@ -5,27 +5,28 @@ kind: Application
 metadata:
   name: alloy
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/alloy
     helm:
+      version: v3
       valueFiles:
         - values.yaml
       valuesObject:
         vault_name: 'placeholder'
-        cluster_name: 'placeholder'
+        cluster_name: 'tiles-test'
         k8s-monitoring:
           cluster:
-            name: 'placeholder'
+            name: 'tiles-test'
 
           # Arrays don't value-merge so we have to do it all here.
           destinations:
             - name: localMimir
               type: prometheus
               url: http://mimir-gateway.mimir.svc/api/v1/push
-              tenantId: 'placeholder'
+              tenantId: 'tiles-test'
               secret:
                 # This is just the tenant name
                 create: false
@@ -33,7 +34,7 @@ spec:
             - name: localLoki
               type: loki
               url: http://loki-gateway.loki.svc/loki/api/v1/push
-              tenantId: 'placeholder'
+              tenantId: 'tiles-test'
               secret:
                 # This is just the tenant name
                 create: false
@@ -42,7 +43,7 @@ spec:
             extraConfig: |-
               mimir.rules.kubernetes "default" {
                 address = "http://mimir-gateway.mimir.svc"
-                tenant_id = "placeholder"
+                tenant_id = "tiles-test"
               }
 
   destination:
@@ -67,10 +68,10 @@ kind: Application
 metadata:
   name: apprise
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: tanka
     plugin:
       env:
@@ -78,17 +79,17 @@ spec:
           value: apprise
       parameters:
         - name: cluster_name
-          string: 'placeholder'
+          string: 'tiles-test'
         - name: vault_name
           string: 'placeholder'
         - name: project_id
           string: 'placeholder'
         - name: app_settings
           map:
-            hostname: 'apprise.placeholder.symmatree.com'
+            hostname: 'apprise.tiles-test.symmatree.com'
             cluster_issuer: "real-cert"
-            apprise_env: 'placeholder-apprise-env'
-            apprise_admin: 'placeholder-apprise-admin'
+            apprise_env: 'tiles-test-apprise-env'
+            apprise_admin: 'tiles-test-apprise-admin'
   destination:
     server: https://kubernetes.default.svc
     namespace: apprise
@@ -109,24 +110,24 @@ kind: Application
 metadata:
   name: argocd
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/argocd
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        targetRevision: 'placeholder'
-        cluster_name: 'placeholder'
+        targetRevision: 'main'
+        cluster_name: 'tiles-test'
         vault_name: 'placeholder'
         argo-cd:
           global:
-            domain: 'argocd.placeholder.symmatree.com'
+            domain: 'argocd.tiles-test.symmatree.com'
           server:
             ingressGrpc:
-              hostname: 'grpc-argocd.placeholder.symmatree.com'
+              hostname: 'grpc-argocd.tiles-test.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -148,10 +149,10 @@ kind: Application
 metadata:
   name: argocd-mixin
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: tanka
     plugin:
       env:
@@ -159,7 +160,7 @@ spec:
           value: argocd-mixin
       parameters:
         - name: cluster_name
-          string: 'placeholder'
+          string: 'tiles-test'
         - name: vault_name
           string: 'placeholder'
         - name: project_id
@@ -182,23 +183,23 @@ kind: Application
 metadata:
   name: cert-manager
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/cert-manager
     helm:
       skipCrds: true
       valueFiles:
         - values.yaml
       valuesObject:
-        cluster_name: 'placeholder'
+        cluster_name: 'tiles-test'
         project_id: 'placeholder'
         vault_name: 'placeholder'
         trust-manager:
           secretTargets:
             authorizedSecrets:
-              - 'placeholder-ca-tls'
+              - 'tiles-test-ca-tls'
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
@@ -219,10 +220,10 @@ kind: Application
 metadata:
   name: cilium
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/cilium
     helm:
       valueFiles:
@@ -232,20 +233,20 @@ spec:
         cilium:
           ipv4NativeRoutingCIDR: 'placeholder'
           cluster:
-            name: 'placeholder'
+            name: 'tiles-test'
           hubble:
             tls:
               auto:
                 certManagerIssuerRef:
-                  name: 'placeholder-ca-issuer'
+                  name: 'tiles-test-ca-issuer'
             ui:
               ingress:
                 hosts:
-                  - 'hubble.placeholder.symmatree.com'
+                  - 'hubble.tiles-test.symmatree.com'
                 tls:
                   - secretName: hubble-ui-tls
                     hosts:
-                      - 'hubble.placeholder.symmatree.com'
+                      - 'hubble.tiles-test.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: cilium
@@ -267,16 +268,16 @@ kind: Application
 metadata:
   name: cilium-config
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/cilium-config
     helm:
       # Inject values from Terraform or that vary by environment.
       valuesObject:
         external_ip_cidr: 'placeholder'
-        targetRevision: 'placeholder'
+        targetRevision: 'main'
   destination:
     server: https://kubernetes.default.svc
     namespace: cilium
@@ -298,10 +299,10 @@ kind: Application
 metadata:
   name: cilium-mixin
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: tanka
     plugin:
       env:
@@ -309,7 +310,7 @@ spec:
           value: cilium-mixin
       parameters:
         - name: cluster_name
-          string: 'placeholder'
+          string: 'tiles-test'
         - name: vault_name
           string: 'placeholder'
         - name: project_id
@@ -332,22 +333,22 @@ kind: Application
 metadata:
   name: external-dns
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/external-dns
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
-        cluster_name: 'placeholder'
+        cluster_name: 'tiles-test'
         project_id: 'placeholder'
         vault_name: 'placeholder'
         external-dns:
-          txtOwnerId: 'placeholder'
+          txtOwnerId: 'tiles-test'
           domainFilters:
-            - 'placeholder.symmatree.com'
+            - 'tiles-test.symmatree.com'
             - 0.10.in-addr.arpa
           extraArgs:
             - '--google-project=placeholder'
@@ -372,25 +373,25 @@ kind: Application
 metadata:
   name: grafana
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/grafana
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
         vault_name: 'placeholder'
-        cluster_name: 'placeholder'
+        cluster_name: 'tiles-test'
         grafana:
           ingress:
             hosts:
-              - 'borgmon.placeholder.symmatree.com'
+              - 'borgmon.tiles-test.symmatree.com'
             tls:
               - secretName: grafana-tls
                 hosts:
-                  - 'borgmon.placeholder.symmatree.com'
+                  - 'borgmon.tiles-test.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: grafana
@@ -412,10 +413,10 @@ kind: Application
 metadata:
   name: kubernetes-mixin
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: tanka
     plugin:
       env:
@@ -423,7 +424,7 @@ spec:
           value: kubernetes-mixin
       parameters:
         - name: cluster_name
-          string: 'placeholder'
+          string: 'tiles-test'
         - name: vault_name
           string: 'placeholder'
         - name: project_id
@@ -446,10 +447,10 @@ kind: Application
 metadata:
   name: local-path-provisioner
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/local-path-provisioner
     helm:
       valueFiles:
@@ -475,17 +476,17 @@ kind: Application
 metadata:
   name: loki
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/loki
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
         vault_name: 'placeholder'
-        cluster_name: 'placeholder'
+        cluster_name: 'tiles-test'
   destination:
     server: https://kubernetes.default.svc
     namespace: loki
@@ -506,26 +507,26 @@ kind: Application
 metadata:
   name: mimir
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/mimir
     helm:
       valueFiles:
         - values.yaml
       valuesObject:
         vault_name: 'placeholder'
-        cluster_name: 'placeholder'
+        cluster_name: 'tiles-test'
         mimir-distributed:
           gateway:
             ingress:
               hosts:
-                - 'mimir.placeholder.symmatree.com'
+                - 'mimir.tiles-test.symmatree.com'
               tls:
                 - secretName: mimir-tls
                   hosts:
-                    - 'mimir.placeholder.symmatree.com'
+                    - 'mimir.tiles-test.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: mimir
@@ -546,7 +547,7 @@ kind: Application
 metadata:
   name: nfs-csi-driver
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://kubernetes-csi.github.io/csi-driver-nfs
     targetRevision: latest
@@ -587,10 +588,10 @@ kind: Application
 metadata:
   name: node-exporter-mixin
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: tanka
     plugin:
       env:
@@ -598,7 +599,7 @@ spec:
           value: node-exporter-mixin
       parameters:
         - name: cluster_name
-          string: 'placeholder'
+          string: 'tiles-test'
         - name: vault_name
           string: 'placeholder'
         - name: project_id
@@ -621,10 +622,10 @@ kind: Application
 metadata:
   name: onepassword
 spec:
-  project: 'placeholder'
+  project: 'tiles-test'
   source:
     repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
+    targetRevision: 'main'
     path: charts/onepassword
     helm:
       valueFiles:

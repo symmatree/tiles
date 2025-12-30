@@ -80,7 +80,7 @@ jobs:
         with:
           # v4 breaks argocd diff
           # Bug: https://github.com/argoproj/argo-cd/issues/25313
-          helm_version: v3
+          helm_version: v3.19.4
 
       - uses: ./.github/actions/wg-quick
         id: wireguard

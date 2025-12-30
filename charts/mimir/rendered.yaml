@@ -601,7 +601,7 @@ data:
           handleGrafanaManagedAlerts: true
           httpHeaderName1: X-Scope-OrgID
         secureJsonData:
-          httpHeaderValue1: "placeholder"
+          httpHeaderValue1: "tiles-test"
 ---
 # Source: mimir/templates/mimir-data-source.yaml
 apiVersion: v1
@@ -626,7 +626,7 @@ data:
           httpHeaderName1: X-Scope-OrgID
         secureJsonData:
           tlsCACert: $__file{/etc/ssl/certs/ca-certificates.crt}
-          httpHeaderValue1: "placeholder"
+          httpHeaderValue1: "tiles-test"
 ---
 # Source: mimir/charts/mimir-distributed/charts/rollout_operator/templates/webhook-clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1

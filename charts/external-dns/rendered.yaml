@@ -194,7 +194,7 @@ metadata:
 type: Opaque
 spec:
   # secret name is specified in tf/modules/k8s-cluster/external-dns.tf
-  itemPath: vaults/placeholder/items/placeholder-external-dns-clouddns-sa-key
+  itemPath: vaults/placeholder/items/tiles-test-external-dns-clouddns-sa-key
 ---
 # Source: external-dns/charts/external-dns/templates/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
