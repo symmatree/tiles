@@ -1,7 +1,7 @@
 onepassword_vault_name = "tiles-secrets"
 admin_user             = "seth.porter@gmail.com"
 proxmox_storage_iso    = "local"
-talos_version          = "1.11.5"
+talos_version          = "1.12.0"
 project_id             = "symm-custodes"
 gcp_region             = "us-east1"
 

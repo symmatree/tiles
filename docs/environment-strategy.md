@@ -34,7 +34,8 @@ This document describes the strategy for managing two parallel Terraform environ
    - Production cluster tracks the `prod` tag
 
 **Workflow Summary:**
-```
+
+```text
 PR → main → auto-deploy to test (test tag) → manual deploy to prod (prod tag) → ArgoCD syncs
 ```
 
@@ -66,52 +67,28 @@ The repository currently implements:
 
 ### Directory Structure
 
-```
+**Current Implementation (Workspaces):**
+
+```text
 tf/
-├── bootstrap/          # Shared bootstrap (unchanged)
+├── bootstrap/          # Shared bootstrap
 │   └── ...
-├── nodes-test/         # Test environment configuration
-│   ├── main.tf         # Shared provider setup
-│   ├── terraform.tfvars
-│   ├── test.tfvars     # Test-specific overrides
-│   ├── cluster.tf      # Cluster module instantiation
-│   └── outputs.tf
-└── nodes-prod/         # Production environment configuration
-    ├── main.tf         # Shared provider setup (symlinked or shared module)
-    ├── terraform.tfvars
-    ├── prod.tfvars     # Prod-specific overrides
-    ├── cluster.tf      # Cluster module instantiation
-    └── outputs.tf
-```
-
-**Alternative Structure (Single Directory with Workspaces):**
-
-```
-tf/
-├── bootstrap/
-└── nodes/
+└── nodes/              # Single directory with workspaces
     ├── main.tf                   # Shared provider setup
+    ├── cluster.tf                # Cluster module (shared, uses variables)
     ├── terraform.tfvars          # Shared defaults
     ├── test.auto.tfvars          # Test-specific (auto-loaded for test workspace)
     ├── prod.auto.tfvars          # Prod-specific (auto-loaded for prod workspace)
-    ├── cluster-test.tf           # Test cluster module (conditional)
-    ├── cluster-prod.tf           # Prod cluster module (conditional)
-    ├── test-vms.tf               # Test VM definitions
-    ├── prod-vms.tf               # Prod VM definitions
     ├── variables.tf
     ├── outputs.tf
-    └── versions.tf
+    ├── versions.tf
+    └── ... (other shared files)
 ```
 
-**Questions:**
+**Structure Decision:**
 
-- **Q1**: Which structure do you prefer? Separate directories (`nodes-test/`, `nodes-prod/`) or single directory with Terraform workspaces?
-
-A: Workspaces
-
-- **Q2**: Should `main.tf` (provider setup) be duplicated, symlinked, or extracted to a shared module?
-
-A: Workspaces so same file
+- **A1**: Using Terraform workspaces (single `tf/nodes` directory with workspace-based isolation)
+- **A2**: Shared `main.tf` (provider setup) - same file for all workspaces
 
 ## Terraform Workspaces Deep Dive
 
@@ -143,20 +120,17 @@ Terraform workspaces are a built-in feature that allows you to maintain multiple
 
 ### Directory Structure with Workspaces
 
-```
+```text
 tf/nodes/
 ├── main.tf                    # Providers, data sources (shared)
 ├── variables.tf               # Variable definitions (shared)
-├── versions.tf               # Backend config (shared, workspace-aware)
-├── terraform.tfvars          # Shared defaults for both environments
-├── test.auto.tfvars          # Auto-loaded when workspace=test
-├── prod.auto.tfvars          # Auto-loaded when workspace=prod
-├── cluster-test.tf           # Test cluster module
-├── cluster-prod.tf           # Prod cluster module
-├── test-vms.tf               # Test VM local values
-├── prod-vms.tf               # Prod VM local values
-├── proxmox-nodes.tf          # Shared Proxmox node handling
-├── talos-schematic.tf        # Shared Talos schematic
+├── versions.tf                # Backend config (shared, workspace-aware)
+├── terraform.tfvars           # Shared defaults for both environments
+├── test.auto.tfvars           # Auto-loaded when workspace=test
+├── prod.auto.tfvars           # Auto-loaded when workspace=prod
+├── cluster.tf                 # Cluster module (shared, uses variables)
+├── talos-iso.tf              # Shared Talos ISO handling
+├── remote.tf                 # Remote state configuration
 └── outputs.tf                # Outputs (can be workspace-aware)
 ```
 
@@ -250,53 +224,24 @@ apply_configs       = true
 run_bootstrap       = false
 ```
 
-### Conditional Resource Creation
+### Resource Creation
 
-Since both environments share the same code, you need to conditionally create resources:
-
-**Option 1: Using `terraform.workspace`**
+The current implementation uses a single `cluster` module that is instantiated once per workspace. Environment-specific configuration is provided via `.auto.tfvars` files:
 
 ```hcl
-# cluster-test.tf
-module "tiles-test" {
-  count = terraform.workspace == "test" ? 1 : 0
-  source = "../modules/talos-cluster"
-  cluster_name = "tiles-test"
-  # ... other config
-}
-
-# cluster-prod.tf
-module "tiles-prod" {
-  count = terraform.workspace == "prod" ? 1 : 0
-  source = "../modules/talos-cluster"
-  cluster_name = "tiles"
-  # ... other config
-}
-```
-
-**Option 2: Using a single module with workspace-based locals**
-
-```hcl
-# cluster.tf
-locals {
-  cluster_config = terraform.workspace == "test" ? {
-    cluster_name = "tiles-test"
-    vms = local.test_vms
-    # ... test config
-  } : {
-    cluster_name = "tiles"
-    vms = local.prod_vms
-    # ... prod config
-  }
-}
-
+# cluster.tf (shared across workspaces)
 module "cluster" {
   source = "../modules/talos-cluster"
-  cluster_name = local.cluster_config.cluster_name
-  vms = local.cluster_config.vms
-  # ...
+  cluster_name = var.cluster_name  # From .auto.tfvars
+  vms = var.virtual_machines       # From .auto.tfvars
+  # ... other config from variables
 }
 ```
+
+Each workspace loads its corresponding `.auto.tfvars` file automatically:
+
+- `test` workspace → `test.auto.tfvars`
+- `prod` workspace → `prod.auto.tfvars`
 
 ### GitHub Actions Workflow with Workspaces
 
@@ -379,7 +324,9 @@ jobs:
 - The state file path is: `gs://custodes-tf-state/terraform/tiles/nodes/{workspace}/default.tfstate`
 - No manual GCS operations needed - Terraform handles everything automatically
 
-### Pros of Workspaces
+### Why Workspaces Were Chosen
+
+Workspaces were selected for this implementation because:
 
 1. **Single Source of Truth**: All code in one place, easier to keep in sync
 2. **Less Duplication**: Provider setup, modules, shared logic defined once
@@ -387,53 +334,13 @@ jobs:
 4. **Simpler Refactoring**: Changes to shared code automatically affect both environments
 5. **Built-in Feature**: No need for symlinks or custom tooling
 6. **State Isolation**: Each workspace has its own state, preventing cross-contamination
+7. **PR Review**: All changes show up in one PR, making it easy to see what differs between test and prod in the `.auto.tfvars` files
 
-### Cons of Workspaces
+**Trade-offs:**
 
-1. **Workspace Awareness Required**: Must remember to select correct workspace
-2. **Accidental Cross-Environment Operations**: Easy to forget to switch workspaces
-3. **Conditional Logic Complexity**: Need `count` or `terraform.workspace` checks for environment-specific resources
-4. **Less Explicit**: Not immediately obvious which environment you're working with (no separate directories)
-5. **CI/CD Complexity**: Must explicitly select workspace in workflows
-6. **State File Naming**: Workspace name is embedded in state path (can't easily rename)
-7. **Limited Workspace Features**: Workspaces are primarily for state isolation, not full environment management
-
-### Comparison: Workspaces vs. Multiple Directories
-
-| Aspect | Workspaces | Multiple Directories |
-|--------|-----------|---------------------|
-| **Code Duplication** | Minimal (shared code) | Some (provider setup, etc.) |
-| **Explicitness** | Less explicit (must check workspace) | Very explicit (directory name) |
-| **Accidental Mistakes** | Higher risk (wrong workspace) | Lower risk (wrong directory) |
-| **Refactoring** | Easier (change once) | Harder (change in multiple places) |
-| **State Management** | Automatic (workspace in path) | Manual (separate backend configs) |
-| **CI/CD** | Must select workspace | Just `cd` to directory |
-| **Local Development** | Must remember workspace | Directory is self-documenting |
-| **Git Diff** | Shows all changes together | Can diff per-environment easily |
-| **Module Sharing** | Automatic (same codebase) | Can share via symlinks/modules |
-
-### Recommendation
-
-**Use workspaces if:**
-
-- You want maximum code sharing and minimal duplication
-- You're comfortable with workspace management
-- You want changes to automatically propagate to both environments
-- You prefer a single codebase to maintain
-
-**Use multiple directories if:**
-
-- You want explicit, obvious separation
-- You want to prevent accidental cross-environment operations
-- You prefer self-documenting structure (directory = environment)
-- You want easier local development (just `cd` to the right place)
-- You want to be able to easily diff environment configs in Git
-
-Given your requirement to "diff both sides in PRs", **workspaces might actually be better** because:
-
-- All changes show up in one PR (easier to review)
-- You can see exactly what differs between test and prod in the `.auto.tfvars` files
-- Shared code changes are immediately visible for both environments
+- Must remember to select correct workspace (mitigated by CI/CD automation)
+- Workspace name is embedded in state path (can't easily rename)
+- Less explicit than separate directories (must check workspace to know which environment)
 
 ### Deployment Workflow
 
@@ -446,7 +353,7 @@ The deployment workflow is implemented in `.github/workflows/nodes-plan-apply.ya
 - **Push to `prod` tag**: Redeploys prod environment (no tag push needed)
 - **Manual workflow dispatch**: Allows selecting target environment (test or prod) with optional apply
 
-#### Tag Management
+#### Automatic Tag Pushing
 
 Tags are automatically pushed by the `configure-deployment` action when deploying to an environment:
 
@@ -481,19 +388,11 @@ The `terraform-plan-apply` composite action handles:
 - Conditional apply based on input flag
 - All operations use `working-directory` instead of `cd` commands
 
-**Questions:**
+**Decisions:**
 
-- **Q3**: Should production deployment require explicit approval (GitHub environment protection rules)?
-
-A: No.
-
-- **Q4**: Should we validate that the test tag exists before allowing prod deployment?
-
-A: No
-
-- **Q5**: Should we prevent prod deployment if the test tag is "too old" (e.g., > 7 days)?
-
-A: No
+- **A3**: Production deployment does not require explicit approval (no GitHub environment protection rules)
+- **A4**: No validation that test tag exists before allowing prod deployment
+- **A5**: No age-based restrictions on prod deployment (test tag can be any age)
 
 ### Terraform State Management
 
@@ -561,16 +460,10 @@ run_bootstrap        = false  # Manual bootstrap for prod
 - `test-vms.tf` or `vms.tf` with environment-specific locals
 - Or as variables passed via `.tfvars`
 
-**Questions:**
+**Decisions:**
 
-- **Q7**: Should VM configurations (node specs, IPs, etc.) be in separate `.tf` files (`test-vms.tf`, `prod-vms.tf`) or as data structures in `.tfvars`?
-
-tfvars.
-
-- **Q8**: Should we extract shared Talos schematic configuration to a shared location?
-
-I don't understand but with workspaces the code is shared and the config may intentionally
-differ if I'm testing a change to the schematic we use.
+- **A7**: VM configurations are defined as data structures in `.auto.tfvars` files (not separate `.tf` files)
+- **A8**: Talos schematic configuration remains in shared code; workspace-specific overrides can be provided via variables if needed for testing schematic changes
 
 ### Tag Management
 
@@ -589,27 +482,20 @@ differ if I'm testing a change to the schematic we use.
 
 **Current Implementation**:
 
-- Tags are currently lightweight tags
-- **TODO (Q9)**: Update to annotated tags with message including GitHub actor and current ref
+- Tags are annotated tags with deployment metadata (GitHub actor and current ref)
 
 ### Shared Resources
 
-Some resources are shared between environments and should remain in bootstrap or a shared module:
+Some resources are shared between environments and remain in bootstrap or as shared modules:
 
 - **Bootstrap**: Service accounts, GitHub repo setup, 1Password vault setup
-- **Talos ISOs**: Currently downloaded per-node; should this be shared or environment-specific?
-- **Talos Schematic**: Currently shared; should remain shared
+- **Talos ISOs**: Downloaded per-node, shared by name across environments (may conflict over ID assignment)
+- **Talos Schematic**: Shared code; workspace-specific overrides can be provided via variables if needed
 
-**Questions:**
+**Decisions:**
 
-- **Q11**: Should Talos ISO downloads be environment-specific or shared? (Currently they're per-node, but could be per-environment)
-
-I don't want to store multiple copies of an iso just for isolation. Right now they will share them by name
-but might fight over the id assigned to them. I don't really want to add a whole other "shared" chunk of terraorm though.
-
-- **Q12**: Are there any other resources that should remain shared vs. environment-specific?
-
-I don't want to.
+- **A11**: Talos ISO downloads are shared by name across environments (not duplicated per environment). They may conflict over ID assignment, but this is acceptable to avoid storing multiple copies.
+- **A12**: No additional shared resources beyond what's already in bootstrap
 
 ### Pull Request Workflow
 
@@ -626,12 +512,7 @@ PRs automatically run Terraform plan for both environments:
 
 ### 1. Environment Protection Rules
 
-Use GitHub Environments to add approval gates for production:
-
-- `test` environment: Auto-approve
-- `prod` environment: Require manual approval
-
-A: There's just me, I don't need to approve myself.
+**Status**: Not implemented. No approval gates needed (single operator).
 
 ### 2. Deployment Status Tracking
 
@@ -649,7 +530,7 @@ Consider a "promote to prod" button in PR comments after test deployment succeed
 - One-click promotion workflow
 - Still requires explicit action (not automatic)
 
-A: Meh, maybe.
+**Status**: Not implemented. May be considered in the future.
 
 ### 4. Configuration Validation
 
@@ -667,7 +548,7 @@ Define how to rollback:
 - Re-run deployment workflow
 - Document rollback procedure
 
-A: That's the procedure, right?
+**Status**: Rollback procedure is to re-tag `test` or `prod` to a previous commit and re-run the deployment workflow.
 
 ### 6. Tag History
 

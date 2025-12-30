@@ -11,6 +11,6 @@ for chart in charts/*; do
 		continue
 	fi
 	pushd "$chart"
-	helm dep build --skip-refresh
+	helm dep update --skip-refresh
 	popd
 done

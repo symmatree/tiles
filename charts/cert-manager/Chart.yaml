@@ -11,11 +11,11 @@ version: 0.1.1
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
-appVersion: "1.17"
+appVersion: "1.19.2"
 dependencies:
   - name: cert-manager
-    version: 1.18.2
+    version: 1.19.2
     repository: https://charts.jetstack.io
   - name: trust-manager
-    version: 0.19.0
+    version: 0.20.3
     repository: https://charts.jetstack.io
