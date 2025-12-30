@@ -15,15 +15,6 @@ module "gh_oidc" {
   pool_id     = "github-pool"
   provider_id = "github-provider"
 
-  # Map GitHub OIDC claims to attributes (required for attribute conditions)
-  # Override default to include repository mapping for sa_mapping conditions
-  # attribute_mapping = {
-  #   "google.subject"       = "assertion.sub"
-  #   "attribute.repository" = "assertion.repository"
-  #   "attribute.actor"      = "assertion.actor"
-  #   "attribute.aud"        = "assertion.aud"
-  # }
-
   # I think this is what prevents other people from using valid github creds
   # (but nothing to do with us) from using them against this pool and provider.
   attribute_condition = "assertion.repository_owner=='${var.github_owner}'"
