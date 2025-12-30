@@ -365,7 +365,7 @@ data:
         isDefault: false
         jsonData:
           httpHeaderName1: X-Scope-OrgID
-          httpHeaderValue1: "placeholder"
+          httpHeaderValue1: "tiles-test"
 ---
 # Source: loki/charts/loki/templates/backend/clusterrole.yaml
 kind: ClusterRole

@@ -4,7 +4,7 @@ inputs:
   helm_version:
     description: "Helm version to install"
     required: true
-    default: "v4.0.0"
+    default: "v3.19.4"
   debug:
     description: "Enable debug logging for cache key globs"
     required: false

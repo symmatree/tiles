@@ -38,34 +38,29 @@ fi
 echo "::endgroup::"
 
 echo "::group::Login to ArgoCD"
-# Login to argocd using kubectl port-forward (works better in CI)
-# Start port-forward in background
-kubectl port-forward -n argocd svc/argocd-server 8080:443 &
-PORT_FORWARD_PID=$!
-echo "Port-forward PID: ${PORT_FORWARD_PID}"
+# Login to ArgoCD using direct access via ingress
+# We're on the VPN and can access argocd.{cluster_name}.symmatree.com directly
+ARGOCD_SERVER="argocd.${cluster_name}.symmatree.com"
+echo "Connecting to ArgoCD at ${ARGOCD_SERVER}"
 
-# Wait for port-forward to be ready
-echo "Waiting for port-forward to be ready..."
-for i in {1..30}; do
-	if curl -k -s https://localhost:8080 >/dev/null 2>&1; then
-		echo "Port-forward is ready"
-		break
-	fi
-	if [ "$i" -eq 30 ]; then
-		echo "::error::Port-forward failed to become ready"
-		kill "${PORT_FORWARD_PID}" 2>/dev/null || true
-		exit 1
-	fi
-	sleep 1
-done
+# Login using kubernetes auth (no password needed with --core flag)
+# The --core flag uses kubectl directly for auth instead of the API server
+argocd login "${ARGOCD_SERVER}" --core --insecure
+echo "::endgroup::"
 
-# Login using kubernetes auth (no password needed)
-argocd login localhost:8080 --core --insecure
+echo "::group::Set kubectl namespace to argocd"
+# Set the current kubectl namespace context to "argocd"
+# The argocd CLI uses the current namespace context when interacting with the cluster
+kubectl config set-context --current --namespace=argocd
+echo "Current namespace set to: $(kubectl config view --minify -o jsonpath='{..namespace}')"
 echo "::endgroup::"
 
 echo "::group::Render argocd-applications with Helm"
 # First, render the argocd-applications chart to get the list of applications
 cd "${REPO_ROOT}/charts/argocd-applications"
+
+helm_template_args=()
+set_flags=()
 
 # Source the helper script to set up helm_template_args and set_flags
 # shellcheck source=scripts/helm-common.bash
@@ -124,10 +119,11 @@ for app_name in ${APP_NAMES}; do
 
 	# Run the diff using argocd app diff with --local flag
 	# This works for helm, plugins (tanka), and other source types
-	# The --local flag tells argocd to use the local path instead of fetching from git
+	# The --local flag should point to the repository root, not the application path
+	# ArgoCD will use the 'path' field from the Application spec to find the app within the repo root
 	set +e
-	argocd app diff "${app_name}" --local "${REPO_ROOT}/${path}" \
-		--revision "${effective_revision}" >>"${diff_output}" 2>&1
+	argocd app diff "${app_name}" --local "${REPO_ROOT}" \
+		--revision "${effective_revision}" | tee -a "${diff_output}" 2>&1
 	diff_exit=$?
 	set -e
 
@@ -145,8 +141,8 @@ for app_name in ${APP_NAMES}; do
 	render_output="${REPO_ROOT}/${path}/${cluster_name}-rendered.yaml"
 	echo "Rendering manifests to ${render_output}..."
 	set +e
-	argocd app manifests "${app_name}" --local "${REPO_ROOT}/${path}" \
-		--revision "${effective_revision}" >"${render_output}" 2>&1
+	argocd app manifests "${app_name}" --local "${REPO_ROOT}" \
+		--revision "${effective_revision}" | tee "${render_output}" 2>&1
 	render_exit=$?
 	set -e
 
@@ -160,19 +156,5 @@ for app_name in ${APP_NAMES}; do
 	rm -f "${app_yaml}"
 	echo "::endgroup::"
 done
-
-# Cleanup port-forward if it was started
-if [ -n "${PORT_FORWARD_PID:-}" ]; then
-	echo "Stopping port-forward (PID: ${PORT_FORWARD_PID})..."
-	kill "${PORT_FORWARD_PID}" 2>/dev/null || true
-	# Wait for process to terminate (up to 5 seconds)
-	for i in {1..5}; do
-		if ! kill -0 "${PORT_FORWARD_PID}" 2>/dev/null; then
-			echo "Port-forward stopped"
-			break
-		fi
-		sleep 1
-	done
-fi
 
 echo "::notice::ArgoCD render and diff complete. Outputs saved to ${TXT_OUTPUT_DIR}"

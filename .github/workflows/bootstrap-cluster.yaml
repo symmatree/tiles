@@ -86,6 +86,8 @@ jobs:
           service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
 
       - uses: ./.github/actions/helm-setup
+        with:
+          helm_version: v3.19.4
       - uses: ./.github/actions/wg-quick
         id: wireguard
         with:

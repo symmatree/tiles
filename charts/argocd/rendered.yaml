@@ -3627,10 +3627,10 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: 'placeholder'
+  name: 'tiles-test'
   namespace: argocd
 spec:
-  description: 'placeholder Project'
+  description: 'tiles-test Project'
   sourceRepos:
     - https://github.com/symmatree/tiles.git
   destinations:

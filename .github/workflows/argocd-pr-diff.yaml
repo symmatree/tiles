@@ -3,11 +3,12 @@ on:
   pull_request:
     paths:
       # Run when charts or their dependencies change
-      - 'charts/**'
-      - 'tanka/**'
-      - 'scripts/argocd-render-diff.sh'
-      - '.github/workflows/argocd-pr-diff.yaml'
-      - '.github/actions/**'
+      # - "charts/**"
+      # - "tanka/**"
+      # Only run when the script itself changes until we fix it.
+      - "scripts/argocd-render-diff.sh"
+      - ".github/workflows/argocd-pr-diff.yaml"
+      # - ".github/actions/**"
   workflow_dispatch:
 
 env:
@@ -22,8 +23,6 @@ concurrency:
 jobs:
   argocd-diff:
     runs-on: "ubuntu-latest"
-    # Only run if not a draft PR
-    if: github.event.pull_request.draft == false
     permissions:
       contents: "read"
       id-token: "write"
@@ -78,6 +77,10 @@ jobs:
           }>> "$GITHUB_ENV";
 
       - uses: ./.github/actions/helm-setup
+        with:
+          # v4 breaks argocd diff
+          # Bug: https://github.com/argoproj/argo-cd/issues/25313
+          helm_version: v3.19.4
 
       - uses: ./.github/actions/wg-quick
         id: wireguard
