@@ -7,7 +7,7 @@ resource "google_service_account" "loki" {
   account_id   = "${var.cluster_name}-loki"
   display_name = "${var.cluster_name} Loki Service Account"
   description  = "Service account for ${var.cluster_name} Loki"
-  project      = var.project_id
+  project      = var.main_project_id
 }
 
 resource "google_service_account_key" "loki" {
@@ -130,7 +130,7 @@ locals {
 module "loki_encryption_key" {
   source     = "terraform-google-modules/kms/google"
   version    = ">= 4.0"
-  project_id = var.project_id
+  project_id = var.kms_project_id
   location   = var.gcp_region
   keyring    = "${var.cluster_name}-loki"
   # Used for all the buckets
@@ -154,7 +154,7 @@ module "loki_encryption_key" {
 module "loki_buckets" {
   source     = "terraform-google-modules/cloud-storage/google"
   version    = ">= 12.0"
-  project_id = var.project_id
+  project_id = var.main_project_id
   location   = var.gcp_region
   names = [
     "chunks",

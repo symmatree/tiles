@@ -7,7 +7,7 @@ resource "google_service_account" "mimir" {
   account_id   = "${var.cluster_name}-mimir"
   display_name = "${var.cluster_name} Mimir Service Account"
   description  = "Service account for ${var.cluster_name} Mimir"
-  project      = var.project_id
+  project      = var.main_project_id
 }
 
 resource "google_service_account_key" "mimir" {
@@ -47,7 +47,7 @@ resource "onepassword_item" "gsa-mimir" {
 module "mimir_encryption_key" {
   source     = "terraform-google-modules/kms/google"
   version    = ">= 4.0"
-  project_id = var.project_id
+  project_id = var.kms_project_id
   location   = var.gcp_region
   keyring    = "${var.cluster_name}-mimir"
   # Used for all the buckets
@@ -71,7 +71,7 @@ module "mimir_encryption_key" {
 module "mimir_buckets" {
   source     = "terraform-google-modules/cloud-storage/google"
   version    = ">= 12.0"
-  project_id = var.project_id
+  project_id = var.main_project_id
   location   = var.gcp_region
   names = [
     "blocks",

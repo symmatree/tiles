@@ -23,7 +23,8 @@ module "cluster" {
   control_plane_vip = var.control_plane_vip
   vms               = var.virtual_machines
   nodes_to_iso_ids  = local.nodes_to_iso_ids
-  project_id        = var.project_id
+  main_project_id   = local.main_project_id
+  kms_project_id    = local.kms_project_id
   gcp_region        = var.gcp_region
 }
 

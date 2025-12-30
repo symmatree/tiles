@@ -1,6 +1,6 @@
 
-variable "project_id" {
-  description = "Google Cloud project ID"
+variable "main_project_id" {
+  description = "GCP project for this cluster"
   type        = string
 }
 
@@ -11,6 +11,11 @@ variable "gcp_region" {
 
 variable "cluster_name" {
   description = "Cluster name"
+  type        = string
+}
+
+variable "kms_project_id" {
+  description = "Google Cloud KMS project ID"
   type        = string
 }
 
@@ -25,5 +30,5 @@ variable "admin_user" {
 }
 
 data "google_storage_project_service_account" "gcs_account" {
-  project = var.project_id
+  project = var.main_project_id
 }

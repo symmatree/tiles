@@ -86,7 +86,8 @@ variable "admin_user" {
 
 # Load base configuration from YAML file
 locals {
-  base_config_yaml = file("${path.module}/talos-config.yaml")
+  config_path      = "${path.module}/talos-config.yaml"
+  base_config_yaml = file(local.config_path)
 
   install_image = "factory.talos.dev/installer/${var.talos.schematic}:v${var.talos.version}"
   common_patch = {
@@ -114,6 +115,11 @@ locals {
       }
     }
   }
+}
+
+output "config_path" {
+  description = "Path to the base configuration file"
+  value       = local.config_path
 }
 
 # Create all VMs
@@ -201,8 +207,13 @@ resource "onepassword_item" "talosconfig" {
   }
 }
 
-variable "project_id" {
-  description = "Google Cloud project ID"
+variable "main_project_id" {
+  description = "GCP project for this cluster"
+  type        = string
+}
+
+variable "kms_project_id" {
+  description = "Google Cloud KMS project ID"
   type        = string
 }
 
@@ -213,7 +224,8 @@ variable "gcp_region" {
 
 module "k8s" {
   source            = "../k8s-cluster"
-  project_id        = var.project_id
+  main_project_id   = var.main_project_id
+  kms_project_id    = var.kms_project_id
   gcp_region        = var.gcp_region
   cluster_name      = var.cluster_name
   onepassword_vault = var.onepassword_vault
@@ -295,9 +307,9 @@ data "talos_machine_configuration" "machineconfig_cp" {
   machine_type     = "controlplane"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
-    local.base_config_yaml,
-    yamlencode(local.common_patch),
-    yamlencode(local.control_plane_patch)
+    # local.base_config_yaml,
+    # yamlencode(local.common_patch),
+    # yamlencode(local.control_plane_patch)
   ]
 }
 
@@ -307,8 +319,8 @@ data "talos_machine_configuration" "machineconfig_worker" {
   machine_type     = "worker"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
-    local.base_config_yaml,
-    yamlencode(local.common_patch)
+    # local.base_config_yaml,
+    # yamlencode(local.common_patch)
   ]
 }
 
