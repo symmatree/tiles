@@ -34,22 +34,33 @@ Each cluster uses `/18` allocation (64 /24s). Pods use `/20` with `node-cidr-mas
 
 ## Recreating cluster
 
-Edit `tiles-test.tf` and set
+To reset the tiles-test cluster and rebuild the Proxmox nodes:
 
-```
-  run_bootstrap       = false
-  apply_configs       = false
-```
+1. **Select the test workspace:**
+   ```bash
+   cd tf/nodes
+   terraform workspace select test
+   ```
 
-and then run
+2. **Destroy the VMs** (this will destroy the Proxmox VMs, allowing them to be rebuilt on next apply):
+   ```bash
+   terraform destroy -target \
+      'module.cluster.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
+   terraform destroy -target \
+      'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
+   ```
 
-```
-cd tiles/tf/nodes
-terraform destroy -target \
-   'module.tiles-test.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
-terraform destroy -target \
-   'module.tiles-test.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
-```
+3. **Recreate the cluster** by running terraform apply (or via the GitHub Actions workflow):
+   ```bash
+   terraform apply
+   ```
+
+   The VMs will be recreated with fresh Talos installations. The cluster module will automatically:
+   - Create new VMs in Proxmox
+   - Apply Talos machine configurations
+   - Bootstrap the Kubernetes cluster (if `run_bootstrap = true`)
+
+**Note**: The cluster configuration uses workspaces (`test` and `prod`). Make sure you're in the correct workspace before running destroy/apply operations. See `docs/environment-strategy.md` for details on the workspace-based deployment strategy.
 
 ## Talos client configuration (talosconfig)
 
