@@ -242,6 +242,11 @@ variable "mimir_nfs_uid" {
   type        = number
 }
 
+variable "nfs_server" {
+  description = "NFS server hostname or IP address"
+  type        = string
+}
+
 module "k8s" {
   source            = "../k8s-cluster"
   main_project_id   = var.main_project_id
@@ -280,30 +285,6 @@ resource "onepassword_item" "misc_config" {
       value = var.onepassword_vault_name
     }
     field {
-      label = "loki_bucket_chunks"
-      value = module.k8s.loki_bucket_chunks
-    }
-    field {
-      label = "loki_bucket_ruler"
-      value = module.k8s.loki_bucket_ruler
-    }
-    field {
-      label = "loki_bucket_admin"
-      value = module.k8s.loki_bucket_admin
-    }
-    field {
-      label = "mimir_bucket_blocks"
-      value = module.k8s.mimir_bucket_blocks
-    }
-    field {
-      label = "mimir_bucket_ruler"
-      value = module.k8s.mimir_bucket_ruler
-    }
-    field {
-      label = "mimir_bucket_alertmanager"
-      value = module.k8s.mimir_bucket_alertmanager
-    }
-    field {
       label = "loki_nfs_path"
       value = var.loki_nfs_path
     }
@@ -318,6 +299,10 @@ resource "onepassword_item" "misc_config" {
     field {
       label = "mimir_nfs_uid"
       value = tostring(var.mimir_nfs_uid)
+    }
+    field {
+      label = "nfs_server"
+      value = var.nfs_server
     }
   }
   section {

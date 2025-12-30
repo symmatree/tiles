@@ -1,64 +1,4 @@
 ---
-# Source: loki/charts/loki/templates/backend/poddisruptionbudget-backend.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: loki-backend
-  namespace: loki
-  labels:
-    helm.sh/chart: loki-6.35.1
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: backend
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: loki
-      app.kubernetes.io/instance: loki
-      app.kubernetes.io/component: backend
-  maxUnavailable: 1
----
-# Source: loki/charts/loki/templates/read/poddisruptionbudget-read.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: loki-read
-  namespace: loki
-  labels:
-    helm.sh/chart: loki-6.35.1
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: read
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: loki
-      app.kubernetes.io/instance: loki
-      app.kubernetes.io/component: read
-  maxUnavailable: 1
----
-# Source: loki/charts/loki/templates/write/poddisruptionbudget-write.yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: loki-write
-  namespace: loki
-  labels:
-    helm.sh/chart: loki-6.35.1
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: write
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: loki
-      app.kubernetes.io/instance: loki
-      app.kubernetes.io/component: write
-  maxUnavailable: 1
----
 # Source: loki/charts/loki/templates/loki-canary/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -103,11 +43,11 @@ data:
     auth_enabled: true
     bloom_build:
       builder:
-        planner_address: loki-backend-headless.loki.svc.cluster.local:9095
+        planner_address: ""
       enabled: false
     bloom_gateway:
       client:
-        addresses: dnssrvnoa+_grpc._tcp.loki-backend-headless.loki.svc.cluster.local
+        addresses: ""
       enabled: false
     chunk_store_config:
       chunk_cache_config:
@@ -125,15 +65,14 @@ data:
           max_idle_conns: 72
           timeout: 2000ms
     common:
-      compactor_grpc_address: 'loki-backend.loki.svc.cluster.local:9095'
+      compactor_grpc_address: 'loki.loki.svc.cluster.local:9095'
       path_prefix: /var/loki
       replication_factor: 3
       storage:
-        gcs:
-          bucket_name: chunks-placeholder
-          chunk_buffer_size: 67108864
-          enable_http2: true
-          request_timeout: 0s
+        filesystem:
+          chunks_directory: /var/loki/chunks
+          directory: /loki/storage
+          rules_directory: /var/loki/rules
     frontend:
       scheduler_address: ""
       tail_proxy_url: ""
@@ -174,12 +113,7 @@ data:
             update_interval: 1m
     ruler:
       storage:
-        gcs:
-          bucket_name: ruler-placeholder
-          chunk_buffer_size: 67108864
-          enable_http2: true
-          request_timeout: 0s
-        type: gcs
+        type: local
       wal:
         dir: /var/loki/ruler-wal
     runtime_config:
@@ -190,7 +124,7 @@ data:
         index:
           period: 24h
           prefix: loki_index_
-        object_store: gcs
+        object_store: filesystem
         schema: v13
         store: tsdb
     server:
@@ -203,14 +137,14 @@ data:
         working_directory: /var/loki/data/bloomshipper
       boltdb_shipper:
         index_gateway_client:
-          server_address: dns+loki-backend-headless.loki.svc.cluster.local:9095
+          server_address: ""
       hedging:
         at: 250ms
         max_per_second: 20
         up_to: 3
       tsdb_shipper:
         index_gateway_client:
-          server_address: dns+loki-backend-headless.loki.svc.cluster.local:9095
+          server_address: ""
       use_thanos_objstore: false
     tracing:
       enabled: true
@@ -287,29 +221,29 @@ data:
         ########################################################
         # Configure backend targets
         location ^~ /ui {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # Distributor
         location = /api/prom/push {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/push {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /distributor/ring {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /otlp/v1/logs {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # Ingester
         location = /flush {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location ^~ /ingester/ {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /ingester {
           internal;        # to suppress 301
@@ -317,79 +251,79 @@ data:
     
         # Ring
         location = /ring {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # MemberListKV
         location = /memberlist {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # Ruler
         location = /ruler/ring {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /api/prom/rules {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location ^~ /api/prom/rules/ {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/rules {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location ^~ /loki/api/v1/rules/ {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /prometheus/api/v1/alerts {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /prometheus/api/v1/rules {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # Compactor
         location = /compactor/ring {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/delete {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/cache/generation_numbers {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # IndexGateway
         location = /indexgateway/ring {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # QueryScheduler
         location = /scheduler/ring {
-          proxy_pass       http://loki-backend.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
         # Config
         location = /config {
-          proxy_pass       http://loki-write.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
     
     
         # QueryFrontend, Querier
         location = /api/prom/tail {
-          proxy_pass       http://loki-read.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/tail {
-          proxy_pass       http://loki-read.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location ^~ /api/prom/ {
-          proxy_pass       http://loki-read.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /api/prom {
           internal;        # to suppress 301
         }
         location ^~ /loki/api/v1/ {
-          proxy_pass       http://loki-read.loki.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.loki.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1 {
           internal;        # to suppress 301
@@ -466,96 +400,6 @@ roleRef:
   kind: ClusterRole
   name: loki-clusterrole
   apiGroup: rbac.authorization.k8s.io
----
-# Source: loki/charts/loki/templates/backend/query-scheduler-discovery.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: loki-query-scheduler-discovery
-  namespace: loki
-  labels:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: backend
-    prometheus.io/service-monitor: "false"
-  annotations:
-spec:
-  type: ClusterIP
-  clusterIP: None
-  publishNotReadyAddresses: true
-  ports:
-    - name: http-metrics
-      port: 3100
-      targetPort: http-metrics
-      protocol: TCP
-    - name: grpc
-      port: 9095
-      targetPort: grpc
-      protocol: TCP
-  selector:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: backend
----
-# Source: loki/charts/loki/templates/backend/service-backend-headless.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: loki-backend-headless
-  namespace: loki
-  labels:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: backend
-    variant: headless
-    prometheus.io/service-monitor: "false"
-  annotations:
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: http-metrics
-      port: 3100
-      targetPort: http-metrics
-      protocol: TCP
-    - name: grpc
-      port: 9095
-      targetPort: grpc
-      protocol: TCP
-      appProtocol: tcp
-  selector:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: backend
----
-# Source: loki/charts/loki/templates/backend/service-backend.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: loki-backend
-  namespace: loki
-  labels:
-    helm.sh/chart: loki-6.35.1
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: backend
-  annotations:
-spec:
-  type: ClusterIP
-  ports:
-    - name: http-metrics
-      port: 3100
-      targetPort: http-metrics
-      protocol: TCP
-    - name: grpc
-      port: 9095
-      targetPort: grpc
-      protocol: TCP
-  selector:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: backend
 ---
 # Source: loki/charts/loki/templates/chunks-cache/service-chunks-cache-headless.yaml
 apiVersion: v1
@@ -638,66 +482,6 @@ spec:
     app.kubernetes.io/instance: loki
     app.kubernetes.io/component: canary
 ---
-# Source: loki/charts/loki/templates/read/service-read-headless.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: loki-read-headless
-  namespace: loki
-  labels:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: read
-    variant: headless
-    prometheus.io/service-monitor: "false"
-  annotations:
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: http-metrics
-      port: 3100
-      targetPort: http-metrics
-      protocol: TCP
-    - name: grpc
-      port: 9095
-      targetPort: grpc
-      protocol: TCP
-      appProtocol: tcp
-  selector:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: read
----
-# Source: loki/charts/loki/templates/read/service-read.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: loki-read
-  namespace: loki
-  labels:
-    helm.sh/chart: loki-6.35.1
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: read
-  annotations:
-spec:
-  type: ClusterIP
-  ports:
-    - name: http-metrics
-      port: 3100
-      targetPort: http-metrics
-      protocol: TCP
-    - name: grpc
-      port: 9095
-      targetPort: grpc
-      protocol: TCP
-  selector:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: read
----
 # Source: loki/charts/loki/templates/results-cache/service-results-cache-headless.yaml
 apiVersion: v1
 kind: Service
@@ -753,49 +537,42 @@ spec:
     app.kubernetes.io/instance: loki
     app.kubernetes.io/part-of: memberlist
 ---
-# Source: loki/charts/loki/templates/write/service-write-headless.yaml
+# Source: loki/charts/loki/templates/single-binary/service-headless.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: loki-write-headless
-  namespace: loki
-  labels:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: write
-    variant: headless
-    prometheus.io/service-monitor: "false"
-  annotations:
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: http-metrics
-      port: 3100
-      targetPort: http-metrics
-      protocol: TCP
-    - name: grpc
-      port: 9095
-      targetPort: grpc
-      protocol: TCP
-      appProtocol: tcp
-  selector:
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: write
----
-# Source: loki/charts/loki/templates/write/service-write.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: loki-write
+  name: loki-headless
   namespace: loki
   labels:
     helm.sh/chart: loki-6.35.1
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: loki
     app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: write
+    variant: headless
+    prometheus.io/service-monitor: "false"
+  annotations:
+spec:
+  clusterIP: None
+  ports:
+    - name: http-metrics
+      port: 3100
+      targetPort: http-metrics
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: loki
+---
+# Source: loki/charts/loki/templates/single-binary/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: loki
+  labels:
+    helm.sh/chart: loki-6.35.1
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/version: "3.5.3"
   annotations:
 spec:
   type: ClusterIP
@@ -811,7 +588,7 @@ spec:
   selector:
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: loki
-    app.kubernetes.io/component: write
+    app.kubernetes.io/component: single-binary
 ---
 # Source: loki/charts/loki/templates/loki-canary/daemonset.yaml
 apiVersion: apps/v1
@@ -911,7 +688,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 8fc91032653bf96c8941624bd77f398e16433b2e87e0d0a3ffd4f55b02d638ff
+        checksum/config: 8d37ebcf256506f31403b5f0f7c319de31bd04f6c6b7b8dabead521b2f5685a4
       labels:
         app.kubernetes.io/name: loki
         app.kubernetes.io/instance: loki
@@ -971,299 +748,6 @@ spec:
           emptyDir: {}
         - name: docker-entrypoint-d-override
           emptyDir: {}
----
-# Source: loki/charts/loki/templates/read/deployment-read.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: loki-read
-  namespace: loki
-  labels:
-    app.kubernetes.io/part-of: memberlist
-    helm.sh/chart: loki-6.35.1
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: read
-spec:
-  replicas: 2
-  strategy:
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-  revisionHistoryLimit: 10
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: loki
-      app.kubernetes.io/instance: loki
-      app.kubernetes.io/component: read
-  template:
-    metadata:
-      annotations:
-        checksum/config: f88c0bc3c1f59a4d27fa296759f8c3342d23bd1459db9f2f91cfe70ef9535bfa
-      labels:
-        app.kubernetes.io/part-of: memberlist
-        app.kubernetes.io/name: loki
-        app.kubernetes.io/instance: loki
-        app.kubernetes.io/component: read
-    spec:
-      serviceAccountName: loki
-      automountServiceAccountToken: true
-      
-      securityContext:
-        fsGroup: 10001
-        runAsGroup: 10001
-        runAsNonRoot: true
-        runAsUser: 10001
-      terminationGracePeriodSeconds: 30
-      containers:
-        - name: loki
-          image: docker.io/grafana/loki:3.5.3
-          imagePullPolicy: IfNotPresent
-          args:
-            - -config.file=/etc/loki/config/config.yaml
-            - -target=read
-            - -legacy-read-mode=false
-            - -common.compactor-grpc-address=loki-backend.loki.svc.cluster.local:9095
-            - -config.expand-env=true
-            - -log-config-reverse-order
-          ports:
-            - name: http-metrics
-              containerPort: 3100
-              protocol: TCP
-            - name: grpc
-              containerPort: 9095
-              protocol: TCP
-            - name: http-memberlist
-              containerPort: 7946
-              protocol: TCP
-          env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-loki/credential.json
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: http-metrics
-            initialDelaySeconds: 30
-            timeoutSeconds: 1
-          volumeMounts:
-            - name: config
-              mountPath: /etc/loki/config
-            - name: runtime-config
-              mountPath: /etc/loki/runtime-config
-            - name: tmp
-              mountPath: /tmp
-            - name: data
-              mountPath: /var/loki
-            - mountPath: /etc/secrets/gsa-loki/
-              name: gsa-loki
-          resources:
-            {}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/component: read
-                  app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki
-              topologyKey: kubernetes.io/hostname
-            weight: 1
-          requiredDuringSchedulingIgnoredDuringExecution: []
-      volumes:
-        - name: tmp
-          emptyDir: {}
-        - name: data
-          emptyDir: {}
-        - name: config
-          configMap:
-            name: loki
-            items:
-              - key: "config.yaml"
-                path: "config.yaml"
-        - name: runtime-config
-          configMap:
-            name: loki-runtime
-        - name: gsa-loki
-          secret:
-            secretName: gsa-loki
----
-# Source: loki/charts/loki/templates/backend/statefulset-backend.yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: loki-backend
-  namespace: loki
-  labels:
-    helm.sh/chart: loki-6.35.1
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/instance: loki
-    app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: backend
-    app.kubernetes.io/part-of: memberlist
-spec:
-  replicas: 2
-  podManagementPolicy: Parallel
-  updateStrategy:
-    rollingUpdate:
-      partition: 0
-  serviceName: loki-backend-headless
-  revisionHistoryLimit: 10
-  
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: Delete
-    whenScaled: Delete
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: loki
-      app.kubernetes.io/instance: loki
-      app.kubernetes.io/component: backend
-  template:
-    metadata:
-      annotations:
-        checksum/config: f88c0bc3c1f59a4d27fa296759f8c3342d23bd1459db9f2f91cfe70ef9535bfa
-        kubectl.kubernetes.io/default-container: "loki"
-      labels:
-        helm.sh/chart: loki-6.35.1
-        app.kubernetes.io/name: loki
-        app.kubernetes.io/instance: loki
-        app.kubernetes.io/version: "3.5.3"
-        app.kubernetes.io/component: backend
-        app.kubernetes.io/part-of: memberlist
-    spec:
-      serviceAccountName: loki
-      automountServiceAccountToken: true
-      
-      securityContext:
-        fsGroup: 10001
-        runAsGroup: 10001
-        runAsNonRoot: true
-        runAsUser: 10001
-      terminationGracePeriodSeconds: 300
-      containers:
-        - name: loki
-          image: docker.io/grafana/loki:3.5.3
-          imagePullPolicy: IfNotPresent
-          args:
-            - -config.file=/etc/loki/config/config.yaml
-            - -target=backend
-            - -legacy-read-mode=false
-            - -config.expand-env=true
-            - -log-config-reverse-order
-          ports:
-            - name: http-metrics
-              containerPort: 3100
-              protocol: TCP
-            - name: grpc
-              containerPort: 9095
-              protocol: TCP
-            - name: http-memberlist
-              containerPort: 7946
-              protocol: TCP
-          env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-loki/credential.json
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: http-metrics
-            initialDelaySeconds: 30
-            timeoutSeconds: 1
-          volumeMounts:
-            - name: config
-              mountPath: /etc/loki/config
-            - name: runtime-config
-              mountPath: /etc/loki/runtime-config
-            - name: tmp
-              mountPath: /tmp
-            - name: data
-              mountPath: /var/loki
-            - name: sc-rules-volume
-              mountPath: "/rules"
-            - mountPath: /etc/secrets/gsa-loki/
-              name: gsa-loki
-          resources:
-            {}
-        - name: loki-sc-rules
-          image: "kiwigrid/k8s-sidecar:1.30.7"
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: METHOD
-              value: WATCH
-            - name: LABEL
-              value: "loki_rule"
-            - name: FOLDER
-              value: "/rules"
-            - name: RESOURCE
-              value: "both"
-            - name: WATCH_SERVER_TIMEOUT
-              value: "60"
-            - name: WATCH_CLIENT_TIMEOUT
-              value: "60"
-            - name: LOG_LEVEL
-              value: "INFO"
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - name: sc-rules-volume
-              mountPath: "/rules"
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/component: backend
-                  app.kubernetes.io/instance: loki
-                  app.kubernetes.io/name: loki
-              topologyKey: kubernetes.io/hostname
-            weight: 1
-          requiredDuringSchedulingIgnoredDuringExecution: []
-      volumes:
-        - name: tmp
-          emptyDir: {}
-        - name: config
-          configMap:
-            name: loki
-            items:
-              - key: "config.yaml"
-                path: "config.yaml"
-        - name: runtime-config
-          configMap:
-            name: loki-runtime
-        - name: sc-rules-volume
-          emptyDir: {}
-        - name: gsa-loki
-          secret:
-            secretName: gsa-loki
-  volumeClaimTemplates:
-    - apiVersion: v1
-      kind: PersistentVolumeClaim
-      metadata:
-        name: data
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: "10Gi"
 ---
 # Source: loki/charts/loki/templates/chunks-cache/statefulset-chunks-cache.yaml
 apiVersion: apps/v1
@@ -1339,9 +823,6 @@ spec:
             - -v
             - -u 11211
           env:
-              
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-loki/credential.json
           envFrom:
           securityContext:
             allowPrivilegeEscalation: false
@@ -1472,9 +953,6 @@ spec:
             - -v
             - -u 11211
           env:
-              
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-loki/credential.json
           envFrom:
           securityContext:
             allowPrivilegeEscalation: false
@@ -1531,42 +1009,45 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
 ---
-# Source: loki/charts/loki/templates/write/statefulset-write.yaml
+# Source: loki/charts/loki/templates/single-binary/statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: loki-write
+  name: loki
   namespace: loki
   labels:
     helm.sh/chart: loki-6.35.1
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: loki
     app.kubernetes.io/version: "3.5.3"
-    app.kubernetes.io/component: write
+    app.kubernetes.io/component: single-binary
     app.kubernetes.io/part-of: memberlist
 spec:
-  replicas: 3
+  replicas: 1
   podManagementPolicy: Parallel
   updateStrategy:
     rollingUpdate:
       partition: 0
-  serviceName: loki-write-headless
+  serviceName: loki-headless
   revisionHistoryLimit: 10
+  
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
   selector:
     matchLabels:
       app.kubernetes.io/name: loki
       app.kubernetes.io/instance: loki
-      app.kubernetes.io/component: write
+      app.kubernetes.io/component: single-binary
   template:
     metadata:
       annotations:
-        checksum/config: f88c0bc3c1f59a4d27fa296759f8c3342d23bd1459db9f2f91cfe70ef9535bfa
+        checksum/config: 686b796999c85caee3cca960bb1d594d418e011a3fdaa09d92f40389354c08a8
+        kubectl.kubernetes.io/default-container: "loki"
       labels:
-        helm.sh/chart: loki-6.35.1
         app.kubernetes.io/name: loki
         app.kubernetes.io/instance: loki
-        app.kubernetes.io/version: "3.5.3"
-        app.kubernetes.io/component: write
+        app.kubernetes.io/component: single-binary
         app.kubernetes.io/part-of: memberlist
     spec:
       serviceAccountName: loki
@@ -1578,16 +1059,14 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      terminationGracePeriodSeconds: 300
+      terminationGracePeriodSeconds: 30
       containers:
         - name: loki
           image: docker.io/grafana/loki:3.5.3
           imagePullPolicy: IfNotPresent
           args:
             - -config.file=/etc/loki/config/config.yaml
-            - -target=write
-            - -config.expand-env=true
-            - -log-config-reverse-order
+            - -target=all
           ports:
             - name: http-metrics
               containerPort: 3100
@@ -1598,9 +1077,6 @@ spec:
             - name: http-memberlist
               containerPort: 7946
               protocol: TCP
-          env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-loki/credential.json
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -1614,29 +1090,60 @@ spec:
             initialDelaySeconds: 30
             timeoutSeconds: 1
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: config
               mountPath: /etc/loki/config
             - name: runtime-config
               mountPath: /etc/loki/runtime-config
-            - name: data
+            - name: storage
               mountPath: /var/loki
-            - mountPath: /etc/secrets/gsa-loki/
-              name: gsa-loki
+            - name: sc-rules-volume
+              mountPath: "/rules"
           resources:
             {}
+        - name: loki-sc-rules
+          image: "kiwigrid/k8s-sidecar:1.30.7"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: METHOD
+              value: WATCH
+            - name: LABEL
+              value: "loki_rule"
+            - name: FOLDER
+              value: "/rules"
+            - name: RESOURCE
+              value: "both"
+            - name: WATCH_SERVER_TIMEOUT
+              value: "60"
+            - name: WATCH_CLIENT_TIMEOUT
+              value: "60"
+            - name: LOG_LEVEL
+              value: "INFO"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: sc-rules-volume
+              mountPath: "/rules"
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - podAffinityTerm:
               labelSelector:
                 matchLabels:
-                  app.kubernetes.io/component: write
+                  app.kubernetes.io/component: single-binary
                   app.kubernetes.io/instance: loki
                   app.kubernetes.io/name: loki
               topologyKey: kubernetes.io/hostname
             weight: 1
           requiredDuringSchedulingIgnoredDuringExecution: []
       volumes:
+        - name: tmp
+          emptyDir: {}
         - name: config
           configMap:
             name: loki
@@ -1646,14 +1153,13 @@ spec:
         - name: runtime-config
           configMap:
             name: loki-runtime
-        - name: gsa-loki
-          secret:
-            secretName: gsa-loki
+        - name: sc-rules-volume
+          emptyDir: {}
   volumeClaimTemplates:
     - apiVersion: v1
       kind: PersistentVolumeClaim
       metadata:
-        name: data
+        name: storage
       spec:
         accessModes:
           - ReadWriteOnce

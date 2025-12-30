@@ -114,3 +114,9 @@ variable "mimir_nfs_uid" {
   description = "UID of the NAS user account for Mimir NFS access"
   type        = number
 }
+
+variable "nfs_server" {
+  description = "NFS server hostname or IP address"
+  type        = string
+  default     = "raconteur.local.symmatree.com"
+}

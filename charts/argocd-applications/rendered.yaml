@@ -486,13 +486,6 @@ spec:
       valuesObject:
         vault_name: 'placeholder'
         cluster_name: 'placeholder'
-        loki:
-          loki:
-            storage:
-              bucketNames:
-                chunks: 'placeholder'
-                ruler: 'placeholder'
-                admin: 'placeholder'
   destination:
     server: https://kubernetes.default.svc
     namespace: loki
@@ -525,17 +518,6 @@ spec:
         vault_name: 'placeholder'
         cluster_name: 'placeholder'
         mimir-distributed:
-          mimir:
-            structuredConfig:
-              alertmanager_storage:
-                gcs:
-                  bucket_name: 'placeholder'
-              blocks_storage:
-                gcs:
-                  bucket_name: 'placeholder'
-              ruler_storage:
-                gcs:
-                  bucket_name: 'placeholder'
           gateway:
             ingress:
               hosts:
@@ -557,6 +539,47 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+---
+# Source: argocd-applications/templates/nfs-csi-driver-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nfs-csi-driver
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://kubernetes-csi.github.io/csi-driver-nfs
+    targetRevision: latest
+    chart: csi-driver-nfs
+    helm:
+      valuesObject:
+        enableSnapshotter: false
+        storageClasses:
+          - name: nfs-loki
+            parameters:
+              server: 'placeholder'
+              share: 'placeholder'
+            reclaimPolicy: Retain
+            volumeBindingMode: Immediate
+            mountOptions:
+              - uid=placeholder
+          - name: nfs-mimir
+            parameters:
+              server: 'placeholder'
+              share: 'placeholder'
+            reclaimPolicy: Retain
+            volumeBindingMode: Immediate
+            mountOptions:
+              - uid=placeholder
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
 ---
 # Source: argocd-applications/templates/node-exporter-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1

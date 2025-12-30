@@ -30,6 +30,7 @@ module "cluster" {
   mimir_nfs_path    = var.mimir_nfs_path
   loki_nfs_uid      = var.loki_nfs_uid
   mimir_nfs_uid     = var.mimir_nfs_uid
+  nfs_server        = var.nfs_server
 }
 
 output "talosconfig" {

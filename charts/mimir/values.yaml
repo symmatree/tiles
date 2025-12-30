@@ -1,15 +1,6 @@
 mimir-distributed:
   global:
-    extraVolumes:
-      - name: gsa-mimir
-        secret:
-          secretName: gsa-mimir
-    extraEnv:
-      - name: GOOGLE_APPLICATION_CREDENTIALS
-        value: /etc/secrets/gsa-mimir/credential.json
-    extraVolumeMounts:
-      - name: gsa-mimir
-        mountPath: /etc/secrets/gsa-mimir/
+    podLabels: {}
 
   mimir:
     structuredConfig:
@@ -18,19 +9,15 @@ mimir-distributed:
         enabled: true
       common:
         storage:
-          backend: gcs
+          backend: filesystem
       alertmanager_storage:
-        backend: gcs
-        gcs:
-          bucket_name: mimir-am-bucket-placeholder
+        backend: filesystem
       blocks_storage:
-        backend: gcs
-        gcs:
-          bucket_name: mimir-blocks-bucket-placeholder
+        backend: filesystem
       ruler_storage:
-        backend: gcs
-        gcs:
-          bucket_name: mimir-ruler-bucket-placeholder
+        backend: filesystem
+      filesystem:
+        directory: /mimir/storage
 
   distributor:
     resources:
@@ -47,7 +34,7 @@ mimir-distributed:
     statefulSet:
       enabled: true
     persistentVolume:
-      storageClass: "local-path"
+      storageClass: "nfs-mimir"
       enableRetentionPolicy: true
       whenDeleted: Delete
       whenScaled: Delete
@@ -70,7 +57,7 @@ mimir-distributed:
 
   compactor:
     persistentVolume:
-      storageClass: "local-path"
+      storageClass: "nfs-mimir"
       enableRetentionPolicy: true
       whenDeleted: Delete
       whenScaled: Delete
@@ -82,7 +69,7 @@ mimir-distributed:
         cpu: null
         memory: 128Mi
     persistentVolume:
-      storageClass: "local-path"
+      storageClass: "nfs-mimir"
       enableRetentionPolicy: true
       whenDeleted: Delete
       whenScaled: Delete
@@ -170,7 +157,7 @@ mimir-distributed:
       requests:
         cpu: null
     persistentVolume:
-      storageClass: "local-path"
+      storageClass: "nfs-mimir"
       enableRetentionPolicy: true
       whenDeleted: Delete
       whenScaled: Delete
