@@ -14,3 +14,6 @@ talos_schematic_extra_kernel_args = [
   "vga=792",
   "-talos.halt_if_installed"
 ]
+
+loki_nfs_uid  = 1052
+mimir_nfs_uid = 1051

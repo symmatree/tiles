@@ -29,7 +29,5 @@ virtual_machines = {
   }
 }
 
-loki_nfs_path  = "/volume1/tiles-test-loki"
-mimir_nfs_path = "/volume1/tiles-test-mimir"
-loki_nfs_uid   = 1024 # Replace with actual UID from Synology after creating tiles-loki user
-mimir_nfs_uid  = 1025 # Replace with actual UID from Synology after creating tiles-mimir user
+loki_nfs_path  = "/tiles-test-loki"
+mimir_nfs_path = "/tiles-test-mimir"

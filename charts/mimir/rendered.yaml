@@ -3172,16 +3172,6 @@ webhooks:
     sideEffects: None
     failurePolicy: Fail
 ---
-# Source: mimir/templates/gsa-mimir-secret.yaml
-apiVersion: onepassword.com/v1
-kind: OnePasswordItem
-metadata:
-  name: gsa-mimir
-  namespace: "mimir"
-type: Opaque
-spec:
-  itemPath: vaults/placeholder/items/placeholder-gsa-mimir
----
 # Source: mimir/charts/mimir-distributed/templates/smoke-test/smoke-test-job.yaml
 apiVersion: batch/v1
 kind: Job

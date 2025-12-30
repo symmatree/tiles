@@ -33,11 +33,11 @@ On the Synology NAS (raconteur.local.symmatree.com):
    - **Note on Kerberos:** Kerberos authentication (krb5) is optional but heavyweight - it requires a Key Distribution Center (KDC), service principals, keytab files, and client configuration on all Kubernetes nodes. For a trusted on-prem network, standard NFS with `sys` security (user ID-based) is typically sufficient and much simpler. Kerberos is mainly useful for untrusted networks or strict compliance requirements.
 
 2. **Create Shared Folders:**
-   - Create folder: `/volume1/tiles-loki` (or appropriate volume)
-   - Create folder: `/volume1/tiles-test-loki` (or appropriate volume)
-   - Create folder: `/volume1/tiles-mimir`
-   - Create folder: `/volume1/tiles-test-mimir`
-   - These are regular NAS shared folders, not special "NFS folders"
+   - Create shared folder: `tiles-loki` (will be at `/volume1/tiles-loki` or appropriate volume on the filesystem)
+   - Create shared folder: `tiles-test-loki` (will be at `/volume1/tiles-test-loki` or appropriate volume on the filesystem)
+   - Create shared folder: `tiles-mimir` (will be at `/volume1/tiles-mimir` or appropriate volume on the filesystem)
+   - Create shared folder: `tiles-test-mimir` (will be at `/volume1/tiles-test-mimir` or appropriate volume on the filesystem)
+   - **Important:** The NFS export path will be just the share name (e.g., `/tiles-loki`), not the full volume path. The shared folder name is what gets exported via NFS.
 
 3. **Create Separate NAS User Accounts:**
    - Create user: `tiles-loki-sa` (for Loki storage access)
@@ -84,7 +84,7 @@ On the Synology NAS (raconteur.local.symmatree.com):
 
    For each folder, create an NFS rule with the following settings. Note: Once NFS rules are created, access is typically restricted to only the IPs/CIDRs specified in the rules.
 
-   - **Folder:** `/volume1/tiles-loki` (prod) and `/volume1/tiles-test-loki` (test)
+   - **Folder:** Select the shared folder `tiles-loki` (prod) or `tiles-test-loki` (test) from the dropdown
      - Click "Create" to add a new NFS rule
      - **Hostname/IP (CIDR)**: Use one of these options:
        - **Option 1 (Recommended)**: Single CIDR covering both clusters: `10.0.128.0/17`
@@ -99,16 +99,21 @@ On the Synology NAS (raconteur.local.symmatree.com):
      - **Allow connections from non-privileged ports**: ✓ Checked (required for Kubernetes pods)
      - **Allow users to access mounted subfolders**: ✓ Checked (needed for nested directories)
 
-   - **Folder:** `/volume1/tiles-mimir` (prod) and `/volume1/tiles-test-mimir` (test)
+   - **Folder:** Select the shared folder `tiles-mimir` (prod) or `tiles-test-mimir` (test) from the dropdown
      - Create a separate NFS rule with the same settings as above
      - **Hostname/IP (CIDR)**: Use the same CIDR(s) as configured for the Loki folders above
 
    **User Restriction (Folder Permissions):**
 
    User access restriction is configured separately via folder permissions (not in the NFS rule):
-   - For `/volume1/tiles-loki`: Grant `tiles-loki-sa` user Read/Write permissions, do NOT grant `tiles-mimir-sa` any access
-   - For `/volume1/tiles-mimir`: Grant `tiles-mimir-sa` user Read/Write permissions, do NOT grant `tiles-loki-sa` any access
+   - For shared folder `tiles-loki`: Grant `tiles-loki-sa` user Read/Write permissions, do NOT grant `tiles-mimir-sa` any access
+   - For shared folder `tiles-mimir`: Grant `tiles-mimir-sa` user Read/Write permissions, do NOT grant `tiles-loki-sa` any access
    - This ensures each service can only access its own storage folder
+
+   **Note on NFS Export Path:**
+   - Synology exports shared folders by their share name, not the full volume path
+   - If you create a shared folder named `tiles-loki`, Synology will export it as `/tiles-loki` (not `/volume1/tiles-loki`)
+   - The NFS path in your Terraform configuration should match the export path: `/tiles-loki`, `/tiles-test-loki`, `/tiles-mimir`, `/tiles-test-mimir`
 
    **Note:**
    - NFS rules restrict access by IP/CIDR - only your cluster nodes will be able to mount these shares
@@ -170,8 +175,8 @@ The template file has been created at `charts/argocd-applications/templates/nfs-
 Yes, you need separate storage classes for Loki and Mimir because:
 
 - Each StorageClass has static parameters (server and share/path)
-- Loki uses `/volume1/tiles-loki` (or `/volume1/tiles-test-loki` for test)
-- Mimir uses `/volume1/tiles-mimir` (or `/volume1/tiles-test-mimir` for test)
+- Loki uses `/tiles-loki` (or `/tiles-test-loki` for test) - the NFS export path (share name)
+- Mimir uses `/tiles-mimir` (or `/tiles-test-mimir` for test) - the NFS export path (share name)
 - These are different NFS export paths, so they require different StorageClasses
 - Multiple PVCs can use the same StorageClass, but each StorageClass points to one specific NFS path
 
@@ -191,143 +196,47 @@ Storage classes are created by the NFS CSI driver Helm chart, so no Terraform ou
 
 ### 1. Loki Configuration
 
-**File: `charts/loki/values.yaml`**
+**File: `charts/loki/values.yaml`** - ✅ **Completed**
 
-Changes needed:
-
-```yaml
-loki:
-  global:
-    # Remove GCS service account volume
-    # extraVolumes:
-    #   - name: gsa-loki
-    #     secret:
-    #       secretName: gsa-loki
-    # extraEnv:
-    #   - name: GOOGLE_APPLICATION_CREDENTIALS
-    #     value: /etc/secrets/gsa-loki/credential.json
-    # extraVolumeMounts:
-    #   - name: gsa-loki
-    #     mountPath: /etc/secrets/gsa-loki/
-
-  loki:
-    schemaConfig:
-      configs:
-        - from: 2024-04-01
-          store: tsdb
-          object_store: filesystem  # Changed from gcs
-          schema: v13
-          index:
-            prefix: loki_index_
-            period: 24h
-
-    storage:
-      type: "filesystem"  # Changed from gcs
-      # Remove bucketNames section
-      # bucketNames:
-      #   chunks: chunks-placeholder
-      #   ruler: ruler-placeholder
-      #   admin: admin-placeholder
-      # Remove gcs section
-      # gcs:
-      #   chunkBufferSize: 67108864
-
-    # Add filesystem storage configuration
-    filesystem:
-      directory: /loki/storage  # Path where PVCs will be mounted
-
-  # Update storage classes for components that use persistent volumes
-  read:
-    persistentVolume:
-      storageClass: "nfs-loki"  # Changed from local-path
-      size: 100Gi  # Adjust as needed
-
-  write:
-    persistentVolume:
-      storageClass: "nfs-loki"  # Changed from local-path
-      size: 100Gi  # Adjust as needed
-```
+- Changed deployment mode from `SimpleScalable` to `SingleBinary` (required for filesystem storage)
+- Changed storage backend from `gcs` to `filesystem`
+- Updated storage class to `nfs-loki` for persistent volumes
+- Removed GCS service account volume mounts and environment variables
+- See the file for complete configuration
 
 ### 2. Mimir Configuration
 
-**File: `charts/mimir/values.yaml`**
+**File: `charts/mimir/values.yaml`** - ✅ **Completed**
 
-Changes needed:
+- Changed all storage backends from `gcs` to `filesystem` (common, alertmanager_storage, blocks_storage, ruler_storage)
+- Updated storage class to `nfs-mimir` for all components with persistent volumes
+- Removed GCS service account volume mounts and environment variables
+- Added `global.podLabels: {}` to fix template nil pointer error
+- See the file for complete configuration
 
-```yaml
-mimir-distributed:
-  global:
-    # Remove GCS service account volume
-    # extraVolumes:
-    #   - name: gsa-mimir
-    #     secret:
-    #       secretName: gsa-mimir
-    # extraEnv:
-    #   - name: GOOGLE_APPLICATION_CREDENTIALS
-    #     value: /etc/secrets/gsa-mimir/credential.json
-    # extraVolumeMounts:
-    #   - name: gsa-mimir
-    #     mountPath: /etc/secrets/gsa-mimir/
+### 3. Remove GCS Service Account Secret Templates
 
-  mimir:
-    structuredConfig:
-      common:
-        storage:
-          backend: filesystem  # Changed from gcs
+**Files removed:**
 
-      alertmanager_storage:
-        backend: filesystem  # Changed from gcs
-        # Remove gcs section
-        # gcs:
-        #   bucket_name: mimir-am-bucket-placeholder
+- `charts/loki/templates/gsa-loki-secret.yaml` - ✅ **Deleted**
+- `charts/mimir/templates/gsa-mimir-secret.yaml` - ✅ **Deleted**
 
-      blocks_storage:
-        backend: filesystem  # Changed from gcs
-        # Remove gcs section
-        # gcs:
-        #   bucket_name: mimir-blocks-bucket-placeholder
+These templates created Kubernetes secrets from 1Password items for GCS service account credentials, which are no longer needed with filesystem storage.
 
-      ruler_storage:
-        backend: filesystem  # Changed from gcs
-        # Remove gcs section
-        # gcs:
-        #   bucket_name: mimir-ruler-bucket-placeholder
+### 4. Update Application Manifests
 
-      # Add filesystem storage paths
-      filesystem:
-        directory: /mimir/storage
+**Files updated:**
 
-  # Update storage classes for components with persistent volumes
-  alertmanager:
-    persistentVolume:
-      storageClass: "nfs-mimir"  # Changed from local-path
-      size: 10Gi
+- `charts/loki/application.yaml` - ✅ **Completed** - Removed GCS bucket references from valuesObject
+- `charts/mimir/application.yaml` - ✅ **Completed** - Removed GCS bucket references from valuesObject
 
-  compactor:
-    persistentVolume:
-      storageClass: "nfs-mimir"  # Changed from local-path
-      size: 50Gi  # Compactor needs more space
-
-  ingester:
-    persistentVolume:
-      storageClass: "nfs-mimir"  # Changed from local-path
-      size: 50Gi
-
-  store_gateway:
-    persistentVolume:
-      storageClass: "nfs-mimir"  # Changed from local-path
-      size: 20Gi
-```
-
-### 3. Update Application Manifests
-
-If using ArgoCD Application resources, ensure the values are properly templated. The placeholder values should be replaced during deployment.
+The ArgoCD Application manifests have been updated to remove GCS bucket references. The values are properly templated and will be replaced during deployment.
 
 ## Migration Steps
 
 ### 1. Set up NFS on Synology
 
-Follow the prerequisites section above to:
+✅ **Completed** - Follow the prerequisites section above to:
 
 - Create shared folders and NAS user accounts
 - Configure NFS exports with IP restrictions
@@ -335,33 +244,32 @@ Follow the prerequisites section above to:
 
 ### 2. Update Terraform
 
-1. **Add NFS path variables to `tf/nodes/test.auto.tfvars` and `tf/nodes/prod.auto.tfvars`:**
-   - Set `loki_nfs_path` and `mimir_nfs_path` values
+✅ **Completed** - All Terraform changes have been made:
 
-2. **Remove GCS resources from Terraform:**
-   - Remove `module.loki_buckets` and related resources from `tf/modules/k8s-cluster/loki.tf`
-   - Remove `module.mimir_buckets` and related resources from `tf/modules/k8s-cluster/mimir.tf`
-   - Remove GCS service account resources
+1. **NFS path variables added:**
+   - `tf/nodes/test.auto.tfvars` - Contains `loki_nfs_path`, `mimir_nfs_path`, `loki_nfs_uid`, `mimir_nfs_uid` with actual values
+   - `tf/nodes/prod.auto.tfvars` - Contains `loki_nfs_path`, `mimir_nfs_path`, `loki_nfs_uid`, `mimir_nfs_uid` with actual values
 
-3. **Apply Terraform changes via GitHub workflow:**
-   - Terraform will update the `misc-config` 1Password item with the new NFS paths
-   - The bootstrap workflow will load these values for ArgoCD
+2. **GCS resources removed:**
+   - `tf/modules/k8s-cluster/loki.tf` - GCS resources removed, only tenant auth secrets remain
+   - `tf/modules/k8s-cluster/mimir.tf` - GCS resources removed, file is empty
+   - `tf/modules/k8s-cluster/main.tf` - GCS service account data source removed
+
+3. **Terraform variables and outputs:**
+   - NFS variables added to `tf/nodes/variables.tf`
+   - NFS values plumbed through `tf/nodes/cluster.tf` → `tf/modules/talos-cluster/main.tf` → 1Password `misc-config`
+   - `all_node_ips` output added for NFS export configuration
+
+**Next:** Apply Terraform changes via GitHub workflow. Terraform will update the `misc-config` 1Password item with the new NFS paths, and the bootstrap workflow will load these values for ArgoCD.
 
 ### 3. Update Helm Charts
 
-1. **Update `charts/loki/values.yaml`:**
-   - Change storage backend from `gcs` to `filesystem`
-   - Update storage classes to `nfs-loki`
-   - Remove GCS service account volume mounts
+✅ **Completed** - All Helm chart changes have been made:
 
-2. **Update `charts/mimir/values.yaml`:**
-   - Change storage backend from `gcs` to `filesystem`
-   - Update storage classes to `nfs-mimir`
-   - Remove GCS service account volume mounts
-
-3. **Create NFS CSI driver ArgoCD application:**
-   - Add `charts/argocd-applications/templates/nfs-csi-driver-application.yaml`
-   - The `charts/argocd-applications/application.yaml.tmpl` already includes the NFS configuration values
+1. **Loki:** `charts/loki/values.yaml` - Updated to SingleBinary mode with filesystem storage and NFS storage class
+2. **Mimir:** `charts/mimir/values.yaml` - Updated to filesystem storage with NFS storage class
+3. **NFS CSI driver:** `charts/argocd-applications/templates/nfs-csi-driver-application.yaml` - Created with storage classes for Loki and Mimir
+4. **ArgoCD values:** `charts/argocd-applications/application.yaml.tmpl` - Updated to include NFS configuration values
 
 ### 4. Deploy via GitOps
 

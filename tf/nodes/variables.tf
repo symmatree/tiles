@@ -96,12 +96,12 @@ variable "control_plane_vip" {
 }
 
 variable "loki_nfs_path" {
-  description = "NFS path for Loki storage (e.g., /volume1/tiles-loki or /volume1/tiles-test-loki)"
+  description = "NFS export path for Loki storage (share name, e.g., /tiles-loki or /tiles-test-loki). This should match the Synology NFS export path, which is typically just the share name, not the full volume path."
   type        = string
 }
 
 variable "mimir_nfs_path" {
-  description = "NFS path for Mimir storage (e.g., /volume1/tiles-mimir or /volume1/tiles-test-mimir)"
+  description = "NFS export path for Mimir storage (share name, e.g., /tiles-mimir or /tiles-test-mimir). This should match the Synology NFS export path, which is typically just the share name, not the full volume path."
   type        = string
 }
 

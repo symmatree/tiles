@@ -1167,16 +1167,6 @@ spec:
           requests:
             storage: "10Gi"
 ---
-# Source: loki/templates/gsa-loki-secret.yaml
-apiVersion: onepassword.com/v1
-kind: OnePasswordItem
-metadata:
-  name: gsa-loki
-  namespace: "loki"
-type: Opaque
-spec:
-  itemPath: vaults/placeholder/items/placeholder-gsa-loki
----
 # Source: loki/charts/loki/templates/monitoring/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
