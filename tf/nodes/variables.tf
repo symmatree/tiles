@@ -94,3 +94,29 @@ variable "control_plane_vip" {
   description = "Control plane VIP address"
   type        = string
 }
+
+variable "loki_nfs_path" {
+  description = "NFS export path for Loki storage (share name, e.g., /tiles-loki or /tiles-test-loki). This should match the Synology NFS export path, which is typically just the share name, not the full volume path."
+  type        = string
+}
+
+variable "mimir_nfs_path" {
+  description = "NFS export path for Mimir storage (share name, e.g., /tiles-mimir or /tiles-test-mimir). This should match the Synology NFS export path, which is typically just the share name, not the full volume path."
+  type        = string
+}
+
+variable "loki_nfs_uid" {
+  description = "UID of the NAS user account for Loki NFS access"
+  type        = number
+}
+
+variable "mimir_nfs_uid" {
+  description = "UID of the NAS user account for Mimir NFS access"
+  type        = number
+}
+
+variable "nfs_server" {
+  description = "NFS server hostname or IP address"
+  type        = string
+  default     = "raconteur.local.symmatree.com"
+}

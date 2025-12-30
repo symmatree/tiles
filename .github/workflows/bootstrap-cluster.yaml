@@ -74,21 +74,16 @@ jobs:
         uses: 1password/load-secrets-action@v3
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
-          GCP_TILES_TF_SA_EMAIL: "op://tiles-secrets/gcp_tiles_tf_sa/username"
-          GCP_TILES_TF_SA_KEY: "op://tiles-secrets/gcp_tiles_tf_sa/password"
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
           KUBECONFIG_SECRET: ${{ steps.kubeconfig_secret.outputs.secret_path }}
+          WORKLOAD_IDENTITY_PROVIDER: "op://tiles-secrets/gh_oidc_workload_identity/workload_identity_provider"
+          SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
 
       - name: Authenticate to Google Cloud
-        run: |
-          set -euo pipefail
-          echo '${{ steps.load_secrets.outputs.GCP_TILES_TF_SA_KEY }}' > "${RUNNER_TEMP}/gcp-sa-key.json"
-          PROJECT_ID=$(jq -r '.project_id' "${RUNNER_TEMP}/gcp-sa-key.json")
-          {
-            echo "GOOGLE_APPLICATION_CREDENTIALS=${RUNNER_TEMP}/gcp-sa-key.json";
-            echo "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}";
-            echo "project_id=${PROJECT_ID}";
-          }>> "$GITHUB_ENV";
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
 
       - uses: ./.github/actions/helm-setup
       - uses: ./.github/actions/wg-quick
@@ -116,12 +111,11 @@ jobs:
           cluster_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_name"
           external_ip_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/external_ip_cidr"
           vault_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/vault_name"
-          loki_bucket_chunks: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_chunks"
-          loki_bucket_ruler: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_ruler"
-          loki_bucket_admin: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_bucket_admin"
-          mimir_bucket_blocks: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_blocks"
-          mimir_bucket_ruler: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_ruler"
-          mimir_bucket_alertmanager: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_alertmanager"
+          loki_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_nfs_path"
+          mimir_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_nfs_path"
+          loki_nfs_uid: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_nfs_uid"
+          mimir_nfs_uid: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_nfs_uid"
+          nfs_server: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/nfs_server"
           onepassword_operator_token: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-operator/credential"
           onepassword_connect_credentials: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
       - name: Bootstrap cluster

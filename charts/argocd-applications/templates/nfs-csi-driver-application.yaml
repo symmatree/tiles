@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nfs-csi-driver
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://kubernetes-csi.github.io/csi-driver-nfs
+    targetRevision: latest
+    chart: csi-driver-nfs
+    helm:
+      valuesObject:
+        enableSnapshotter: false
+        storageClasses:
+          - name: nfs-loki
+            parameters:
+              server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+              share: '{{ required ".Values.loki_nfs_path is required" .Values.loki_nfs_path }}'
+            reclaimPolicy: Retain
+            volumeBindingMode: Immediate
+            mountOptions:
+              - uid={{ required ".Values.loki_nfs_uid is required" .Values.loki_nfs_uid }}
+          - name: nfs-mimir
+            parameters:
+              server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+              share: '{{ required ".Values.mimir_nfs_path is required" .Values.mimir_nfs_path }}'
+            reclaimPolicy: Retain
+            volumeBindingMode: Immediate
+            mountOptions:
+              - uid={{ required ".Values.mimir_nfs_uid is required" .Values.mimir_nfs_uid }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

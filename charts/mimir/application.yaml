@@ -15,17 +15,6 @@ spec:
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         mimir-distributed:
-          mimir:
-            structuredConfig:
-              alertmanager_storage:
-                gcs:
-                  bucket_name: '{{ required ".Values.mimir_bucket_alertmanager is required" .Values.mimir_bucket_alertmanager }}'
-              blocks_storage:
-                gcs:
-                  bucket_name: '{{ required ".Values.mimir_bucket_blocks is required" .Values.mimir_bucket_blocks }}'
-              ruler_storage:
-                gcs:
-                  bucket_name: '{{ required ".Values.mimir_bucket_ruler is required" .Values.mimir_bucket_ruler }}'
           gateway:
             ingress:
               hosts:

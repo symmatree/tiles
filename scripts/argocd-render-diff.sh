@@ -123,7 +123,7 @@ for app_name in ${APP_NAMES}; do
 	echo "" >>"${diff_output}"
 
 	# Run the diff using argocd app diff with --local flag
-	# This works for helm, plugin (tanka), and other source types
+	# This works for helm, plugins (tanka), and other source types
 	# The --local flag tells argocd to use the local path instead of fetching from git
 	set +e
 	argocd app diff "${app_name}" --local "${REPO_ROOT}/${path}" \

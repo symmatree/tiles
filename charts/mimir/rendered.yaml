@@ -471,22 +471,18 @@ data:
       external_url: /alertmanager
       fallback_config_file: /configs/alertmanager_fallback_config.yaml
     alertmanager_storage:
-      backend: gcs
-      gcs:
-        bucket_name: mimir-am-bucket-placeholder
+      backend: filesystem
     blocks_storage:
-      backend: gcs
+      backend: filesystem
       bucket_store:
         sync_dir: /data/tsdb-sync
-      gcs:
-        bucket_name: mimir-blocks-bucket-placeholder
       tsdb:
         dir: /data/tsdb
         head_compaction_interval: 15m
         wal_replay_concurrency: 3
     common:
       storage:
-        backend: gcs
+        backend: filesystem
     compactor:
       compaction_interval: 30m
       data_dir: /data
@@ -504,6 +500,8 @@ data:
       ring:
         heartbeat_period: 1m
         heartbeat_timeout: 4m
+    filesystem:
+      directory: /mimir/storage
     frontend:
       parallelize_shardable_queries: true
       scheduler_address: mimir-query-scheduler-headless.mimir.svc:9095
@@ -550,9 +548,7 @@ data:
       enable_api: true
       rule_path: /data
     ruler_storage:
-      backend: gcs
-      gcs:
-        bucket_name: mimir-ruler-bucket-placeholder
+      backend: filesystem
     runtime_config:
       file: /var/mimir/runtime.yaml
     store_gateway:
@@ -1530,7 +1526,7 @@ spec:
         app.kubernetes.io/component: distributor
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -1557,9 +1553,6 @@ spec:
             - "-server.grpc.keepalive.max-connection-idle=1m"
             - "-shutdown-delay=90s"
           volumeMounts:
-              
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -1595,8 +1588,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
@@ -1617,9 +1609,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: storage
           emptyDir: {}
         - name: active-queries
@@ -1678,9 +1667,6 @@ spec:
           image: docker.io/nginxinc/nginx-unprivileged:1.29-alpine
           imagePullPolicy: IfNotPresent
           volumeMounts:
-            
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
@@ -1706,10 +1692,6 @@ spec:
               drop:
               - ALL
             readOnlyRootFilesystem: true
-          env:
-              
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
@@ -1737,9 +1719,6 @@ spec:
           emptyDir: {}
         - name: tmp
           emptyDir: {}
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
 ---
 # Source: mimir/charts/mimir-distributed/templates/overrides-exporter/overrides-exporter-dep.yaml
 apiVersion: apps/v1
@@ -1778,7 +1757,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: overrides-exporter
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -1798,9 +1777,6 @@ spec:
             - "-config.expand-env=true"
             - "-config.file=/etc/mimir/mimir.yaml"
           volumeMounts:
-              
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -1838,8 +1814,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
       
       terminationGracePeriodSeconds: 30
       volumes:
@@ -1852,10 +1827,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: storage
           emptyDir: {}
         - name: active-queries
@@ -1901,7 +1872,7 @@ spec:
         app.kubernetes.io/component: querier
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
     spec:
       serviceAccountName: mimir
       securityContext:
@@ -1921,9 +1892,6 @@ spec:
             - "-config.file=/etc/mimir/mimir.yaml"
             - "-querier.store-gateway-client.grpc-max-recv-msg-size=209715200"
           volumeMounts:
-              
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -1959,8 +1927,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
@@ -1981,10 +1948,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: storage
           emptyDir: {}
         - name: active-queries
@@ -2028,7 +1991,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: query-frontend
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2051,9 +2014,6 @@ spec:
             - "-server.grpc.keepalive.max-connection-age=30s"
             - "-shutdown-delay=90s"
           volumeMounts:
-              
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: runtime-config
               mountPath: /var/mimir
             - name: config
@@ -2086,8 +2046,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
@@ -2108,10 +2067,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: storage
           emptyDir: {}
         - name: active-queries
@@ -2154,7 +2109,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: query-scheduler
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
     spec:
       serviceAccountName: mimir
       securityContext:
@@ -2173,9 +2128,6 @@ spec:
             - "-config.expand-env=true"
             - "-config.file=/etc/mimir/mimir.yaml"
           volumeMounts:
-              
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: runtime-config
               mountPath: /var/mimir
             - name: config
@@ -2208,8 +2160,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
@@ -2230,10 +2181,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: storage
           emptyDir: {}
         - name: active-queries
@@ -2278,7 +2225,7 @@ spec:
         app.kubernetes.io/component: ruler
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2299,9 +2246,6 @@ spec:
             - "-config.file=/etc/mimir/mimir.yaml"
             - "-distributor.remote-timeout=10s"
           volumeMounts:
-              
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -2337,8 +2281,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
@@ -2359,10 +2302,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: storage
           emptyDir: {}
         - name: active-queries
@@ -2403,7 +2342,7 @@ spec:
       metadata:
         name: storage
       spec:
-        storageClassName: local-path
+        storageClassName: nfs-mimir
         accessModes:
           - ReadWriteOnce
         resources:
@@ -2420,7 +2359,7 @@ spec:
         app.kubernetes.io/component: alertmanager
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
         checksum/alertmanager-fallback-config: 54a9a1d0fb49e4972929bca4c416e4895fdab7c3c25a37efcfec07d5d6d2bf36
       namespace: "mimir"
     spec:
@@ -2459,10 +2398,6 @@ spec:
         - name: alertmanager-fallback-config
           configMap:
             name: mimir-alertmanager-fallback-config
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
       containers:
         
         - env:
@@ -2489,9 +2424,6 @@ spec:
             # needs to be higher to avoid connections being closed abruptly.
             - "-server.http-idle-timeout=6m"
           volumeMounts:
-            
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -2531,8 +2463,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
 ---
 # Source: mimir/charts/mimir-distributed/templates/compactor/compactor-statefulset.yaml
 apiVersion: apps/v1
@@ -2570,7 +2501,7 @@ spec:
       metadata:
         name: storage
       spec:
-        storageClassName: "local-path"
+        storageClassName: "nfs-mimir"
         accessModes:
           - ReadWriteOnce
         resources:
@@ -2587,7 +2518,7 @@ spec:
         app.kubernetes.io/component: compactor
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2618,10 +2549,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: active-queries
           emptyDir: {}
       containers:
@@ -2633,9 +2560,6 @@ spec:
             - "-config.expand-env=true"
             - "-config.file=/etc/mimir/mimir.yaml"
           volumeMounts:
-            
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -2672,8 +2596,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
 ---
 # Source: mimir/charts/mimir-distributed/templates/ingester/ingester-statefulset.yaml
 apiVersion: apps/v1
@@ -2711,7 +2634,7 @@ spec:
       metadata:
         name: storage
       spec:
-        storageClassName: local-path
+        storageClassName: nfs-mimir
         accessModes:
           - ReadWriteOnce
         resources:
@@ -2728,7 +2651,7 @@ spec:
         app.kubernetes.io/component: ingester
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2771,10 +2694,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: active-queries
           emptyDir: {}
       containers:
@@ -2789,9 +2708,6 @@ spec:
             - "-server.grpc-max-concurrent-streams=500"
             - "-memberlist.abort-if-fast-join-fails=true"
           volumeMounts:
-            
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -2827,8 +2743,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
+            []
 ---
 # Source: mimir/charts/mimir-distributed/templates/kafka/kafka-statefulset.yaml
 apiVersion: apps/v1
@@ -2863,7 +2778,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: kafka
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2999,7 +2914,7 @@ spec:
       metadata:
         name: storage
       spec:
-        storageClassName: local-path
+        storageClassName: nfs-mimir
         accessModes:
           - ReadWriteOnce
         resources:
@@ -3016,7 +2931,7 @@ spec:
         app.kubernetes.io/component: store-gateway
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: c22243cecc5615f36c5c083b23be36edbf757d3c0245d9d71313cf328c7f885a
+        checksum/config: d758d632d180ff38e0c16007ed7b8c4d15b9eb61c6e2f5862a16f0ac7088fe99
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -3047,10 +2962,6 @@ spec:
         - name: runtime-config
           configMap:
             name: mimir-runtime
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir
         - name: active-queries
           emptyDir: {}
       containers:
@@ -3063,9 +2974,6 @@ spec:
             - "-config.file=/etc/mimir/mimir.yaml"
             - "-server.grpc-max-send-msg-size-bytes=209715200"
           volumeMounts:
-            
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
             - name: config
               mountPath: /etc/mimir
             - name: runtime-config
@@ -3103,8 +3011,6 @@ spec:
           env:
             - name: GOMEMLIMIT
               value: "536870912"
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
 ---
 # Source: mimir/charts/mimir-distributed/charts/rollout_operator/templates/prepare-downscale-webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -3266,16 +3172,6 @@ webhooks:
     sideEffects: None
     failurePolicy: Fail
 ---
-# Source: mimir/templates/gsa-mimir-secret.yaml
-apiVersion: onepassword.com/v1
-kind: OnePasswordItem
-metadata:
-  name: gsa-mimir
-  namespace: "mimir"
-type: Opaque
-spec:
-  itemPath: vaults/placeholder/items/placeholder-gsa-mimir
----
 # Source: mimir/charts/mimir-distributed/templates/smoke-test/smoke-test-job.yaml
 apiVersion: batch/v1
 kind: Job
@@ -3331,15 +3227,5 @@ spec:
             - "-tests.write-read-series-test.max-query-age=48h"
             - "-server.http-listen-port=8080"
           volumeMounts:
-              
-            - mountPath: /etc/secrets/gsa-mimir/
-              name: gsa-mimir
-          env:
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /etc/secrets/gsa-mimir/credential.json
       restartPolicy: OnFailure
       volumes:
-        
-        - name: gsa-mimir
-          secret:
-            secretName: gsa-mimir

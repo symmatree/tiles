@@ -1,8 +1,12 @@
-gcp_project_id  = "symm-custodes"
+seed_project_id = "symm-custodes"
 gcp_region      = "us-central1"
 gcp_owner_email = "seth.porter@gmail.com"
 
-github_owner = "symmatree"
+# Enterprise foundation variables
+gcp_essential_contacts_email = "symmetry@pobox.com"
+
+github_owner      = "symmatree"
+github_repository = "symmatree/tiles"
 
 onepassword_vault_name = "tiles-secrets"
 

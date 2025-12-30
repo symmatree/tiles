@@ -66,3 +66,6 @@ virtual_machines = {
     ip_address        = "10.0.128.23"
   }
 }
+
+loki_nfs_path  = "/tiles-loki"
+mimir_nfs_path = "/tiles-mimir"

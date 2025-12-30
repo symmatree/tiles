@@ -20,12 +20,11 @@ spec:
         external_ip_cidr: "${external_ip_cidr}"
         vault_name: "${vault_name}"
         project_id: "${project_id}"
-        loki_bucket_chunks: "${loki_bucket_chunks}"
-        loki_bucket_ruler: "${loki_bucket_ruler}"
-        loki_bucket_admin: "${loki_bucket_admin}"
-        mimir_bucket_alertmanager: "${mimir_bucket_alertmanager}"
-        mimir_bucket_blocks: "${mimir_bucket_blocks}"
-        mimir_bucket_ruler: "${mimir_bucket_ruler}"
+        loki_nfs_path: "${loki_nfs_path}"
+        mimir_nfs_path: "${mimir_nfs_path}"
+        loki_nfs_uid: "${loki_nfs_uid}"
+        mimir_nfs_uid: "${mimir_nfs_uid}"
+        nfs_server: "${nfs_server}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
