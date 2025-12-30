@@ -1,13 +1,13 @@
 name: "argocd-pr-diff"
 on:
-  pull_request:
-    paths:
-      # Run when charts or their dependencies change
-      - 'charts/**'
-      - 'tanka/**'
-      - 'scripts/argocd-render-diff.sh'
-      - '.github/workflows/argocd-pr-diff.yaml'
-      - '.github/actions/**'
+  # pull_request:
+  #   paths:
+  #     # Run when charts or their dependencies change
+  #     - 'charts/**'
+  #     - 'tanka/**'
+  #     - 'scripts/argocd-render-diff.sh'
+  #     - '.github/workflows/argocd-pr-diff.yaml'
+  #     - '.github/actions/**'
   workflow_dispatch:
 
 env:
