@@ -44,10 +44,12 @@ module "tiles_id_project" {
 }
 
 # Grant Owner role to tiles-owner group on tiles-id project
+# Note: Using user email directly instead of group to avoid SOLO_GROUP_OWNERS_DISALLOWED error
+# (Google Groups require at least 2 owners). Can switch back to group once group has 2+ owners.
 resource "google_project_iam_member" "tiles_id_owner" {
   project = module.tiles_id_project.project_id
   role    = "roles/owner"
-  member  = "group:tiles-owner@googlegroups.com"
+  member  = "user:${var.gcp_owner_email}"
 }
 
 # Set essential contacts for tiles-id project
@@ -89,10 +91,11 @@ module "tiles_kms_project" {
 }
 
 # Grant Owner role to tiles-owner group on tiles-kms project
+# Note: Using user email directly instead of group to avoid SOLO_GROUP_OWNERS_DISALLOWED error
 resource "google_project_iam_member" "tiles_kms_owner" {
   project = module.tiles_kms_project.project_id
   role    = "roles/owner"
-  member  = "group:tiles-owner@googlegroups.com"
+  member  = "user:${var.gcp_owner_email}"
 }
 
 # Set essential contacts for tiles-kms project
@@ -136,10 +139,11 @@ module "tiles_main_project" {
 }
 
 # Grant Owner role to tiles-owner group on tiles-main project
+# Note: Using user email directly instead of group to avoid SOLO_GROUP_OWNERS_DISALLOWED error
 resource "google_project_iam_member" "tiles_main_owner" {
   project = module.tiles_main_project.project_id
   role    = "roles/owner"
-  member  = "group:tiles-owner@googlegroups.com"
+  member  = "user:${var.gcp_owner_email}"
 }
 
 # Set essential contacts for tiles-main project
@@ -183,10 +187,11 @@ module "tiles_test_main_project" {
 }
 
 # Grant Owner role to tiles-owner group on tiles-test-main project
+# Note: Using user email directly instead of group to avoid SOLO_GROUP_OWNERS_DISALLOWED error
 resource "google_project_iam_member" "tiles_test_main_owner" {
   project = module.tiles_test_main_project.project_id
   role    = "roles/owner"
-  member  = "group:tiles-owner@googlegroups.com"
+  member  = "user:${var.gcp_owner_email}"
 }
 
 # Set essential contacts for tiles-test-main project

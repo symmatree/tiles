@@ -15,6 +15,15 @@ module "gh_oidc" {
   pool_id     = "github-pool"
   provider_id = "github-provider"
 
+  # Map GitHub OIDC claims to attributes (required for attribute conditions)
+  # Override default to include repository mapping for sa_mapping conditions
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+    "attribute.actor"      = "assertion.actor"
+    "attribute.aud"        = "assertion.aud"
+  }
+
   sa_mapping = {
     "tiles-terraform-sa" = {
       sa_name   = "projects/${module.tiles_id_project.project_id}/serviceAccounts/${google_service_account.tiles_terraform_oidc.email}"

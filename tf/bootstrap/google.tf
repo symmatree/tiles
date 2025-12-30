@@ -9,8 +9,10 @@ variable "gcp_region" {
 }
 
 provider "google" {
-  project = var.seed_project_id
-  region  = var.gcp_region
+  project               = var.seed_project_id
+  billing_project       = var.seed_project_id
+  user_project_override = true
+  # region = var.gcp_region
 }
 
 variable "gcp_owner_email" {
@@ -88,6 +90,7 @@ resource "google_project_service" "seed_billing_budgets_api" {
   service = "billingbudgets.googleapis.com"
 
   disable_on_destroy = false
+  depends_on         = [google_project_service.seed_service_usage_api]
 }
 
 resource "google_project_service" "seed_essential_contacts_api" {
@@ -95,7 +98,17 @@ resource "google_project_service" "seed_essential_contacts_api" {
   service = "essentialcontacts.googleapis.com"
 
   disable_on_destroy = false
+  depends_on         = [google_project_service.seed_service_usage_api]
 }
+
+resource "google_project_service" "seed_service_usage_api" {
+  project = var.seed_project_id
+  service = "serviceusage.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+
 
 output "gcp_tiles_tf_sa_email" {
   description = "The email of the Tiles TF service account."
