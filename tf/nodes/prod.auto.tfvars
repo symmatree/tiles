@@ -66,3 +66,8 @@ virtual_machines = {
     ip_address        = "10.0.128.23"
   }
 }
+
+loki_nfs_path  = "/volume1/tiles-loki"
+mimir_nfs_path = "/volume1/tiles-mimir"
+loki_nfs_uid   = 1024  # Replace with actual UID from Synology after creating tiles-loki user
+mimir_nfs_uid  = 1025  # Replace with actual UID from Synology after creating tiles-mimir user

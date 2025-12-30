@@ -117,6 +117,10 @@ jobs:
           mimir_bucket_blocks: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_blocks"
           mimir_bucket_ruler: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_ruler"
           mimir_bucket_alertmanager: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_bucket_alertmanager"
+          loki_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_nfs_path"
+          mimir_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_nfs_path"
+          loki_nfs_uid: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/loki_nfs_uid"
+          mimir_nfs_uid: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/mimir_nfs_uid"
           onepassword_operator_token: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-operator/credential"
           onepassword_connect_credentials: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
       - name: Bootstrap cluster

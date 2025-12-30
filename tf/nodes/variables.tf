@@ -94,3 +94,23 @@ variable "control_plane_vip" {
   description = "Control plane VIP address"
   type        = string
 }
+
+variable "loki_nfs_path" {
+  description = "NFS path for Loki storage (e.g., /volume1/tiles-loki or /volume1/tiles-test-loki)"
+  type        = string
+}
+
+variable "mimir_nfs_path" {
+  description = "NFS path for Mimir storage (e.g., /volume1/tiles-mimir or /volume1/tiles-test-mimir)"
+  type        = string
+}
+
+variable "loki_nfs_uid" {
+  description = "UID of the NAS user account for Loki NFS access"
+  type        = number
+}
+
+variable "mimir_nfs_uid" {
+  description = "UID of the NAS user account for Mimir NFS access"
+  type        = number
+}

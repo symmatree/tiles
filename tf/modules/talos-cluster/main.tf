@@ -222,6 +222,26 @@ variable "gcp_region" {
   type        = string
 }
 
+variable "loki_nfs_path" {
+  description = "NFS path for Loki storage"
+  type        = string
+}
+
+variable "mimir_nfs_path" {
+  description = "NFS path for Mimir storage"
+  type        = string
+}
+
+variable "loki_nfs_uid" {
+  description = "UID of the NAS user account for Loki NFS access"
+  type        = number
+}
+
+variable "mimir_nfs_uid" {
+  description = "UID of the NAS user account for Mimir NFS access"
+  type        = number
+}
+
 module "k8s" {
   source            = "../k8s-cluster"
   main_project_id   = var.main_project_id
@@ -282,6 +302,22 @@ resource "onepassword_item" "misc_config" {
     field {
       label = "mimir_bucket_alertmanager"
       value = module.k8s.mimir_bucket_alertmanager
+    }
+    field {
+      label = "loki_nfs_path"
+      value = var.loki_nfs_path
+    }
+    field {
+      label = "mimir_nfs_path"
+      value = var.mimir_nfs_path
+    }
+    field {
+      label = "loki_nfs_uid"
+      value = tostring(var.loki_nfs_uid)
+    }
+    field {
+      label = "mimir_nfs_uid"
+      value = tostring(var.mimir_nfs_uid)
     }
   }
   section {

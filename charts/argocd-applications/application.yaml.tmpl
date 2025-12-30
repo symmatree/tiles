@@ -26,6 +26,10 @@ spec:
         mimir_bucket_alertmanager: "${mimir_bucket_alertmanager}"
         mimir_bucket_blocks: "${mimir_bucket_blocks}"
         mimir_bucket_ruler: "${mimir_bucket_ruler}"
+        loki_nfs_path: "${loki_nfs_path}"
+        mimir_nfs_path: "${mimir_nfs_path}"
+        loki_nfs_uid: "${loki_nfs_uid}"
+        mimir_nfs_uid: "${mimir_nfs_uid}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

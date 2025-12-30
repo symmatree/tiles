@@ -26,6 +26,10 @@ module "cluster" {
   main_project_id   = local.main_project_id
   kms_project_id    = local.kms_project_id
   gcp_region        = var.gcp_region
+  loki_nfs_path     = var.loki_nfs_path
+  mimir_nfs_path    = var.mimir_nfs_path
+  loki_nfs_uid      = var.loki_nfs_uid
+  mimir_nfs_uid     = var.mimir_nfs_uid
 }
 
 output "talosconfig" {
@@ -69,4 +73,9 @@ output "cluster_endpoint" {
 output "vms_started" {
   description = "Whether VMs are started and cluster is operational"
   value       = module.cluster.vms_started
+}
+
+output "all_node_ips" {
+  description = "All cluster node IP addresses (for NFS access configuration)"
+  value       = [for vm in var.virtual_machines : vm.ip_address]
 }
