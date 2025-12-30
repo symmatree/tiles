@@ -119,9 +119,10 @@ for app_name in ${APP_NAMES}; do
 
 	# Run the diff using argocd app diff with --local flag
 	# This works for helm, plugins (tanka), and other source types
-	# The --local flag tells argocd to use the local path instead of fetching from git
+	# The --local flag should point to the repository root, not the application path
+	# ArgoCD will use the 'path' field from the Application spec to find the app within the repo root
 	set +e
-	argocd app diff "${app_name}" --local "${REPO_ROOT}/${path}" \
+	argocd app diff "${app_name}" --local "${REPO_ROOT}" \
 		--revision "${effective_revision}" | tee -a "${diff_output}" 2>&1
 	diff_exit=$?
 	set -e
@@ -140,7 +141,7 @@ for app_name in ${APP_NAMES}; do
 	render_output="${REPO_ROOT}/${path}/${cluster_name}-rendered.yaml"
 	echo "Rendering manifests to ${render_output}..."
 	set +e
-	argocd app manifests "${app_name}" --local "${REPO_ROOT}/${path}" \
+	argocd app manifests "${app_name}" --local "${REPO_ROOT}" \
 		--revision "${effective_revision}" | tee "${render_output}" 2>&1
 	render_exit=$?
 	set -e
