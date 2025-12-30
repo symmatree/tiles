@@ -6,7 +6,7 @@ metadata:
   name: onepassword-connect-operator
   namespace: onepassword
   labels:
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"
@@ -19,7 +19,7 @@ metadata:
   creationTimestamp: null
   name: onepassword-connect-operator
   labels:
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"
@@ -107,7 +107,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: onepassword-connect-operator
   labels:
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"
@@ -129,7 +129,7 @@ metadata:
   namespace: onepassword
   labels:
     app.kubernetes.io/component: connect
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"
@@ -152,7 +152,7 @@ metadata:
   namespace: onepassword
   labels:
     app.kubernetes.io/component: connect
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"
@@ -279,7 +279,7 @@ metadata:
   namespace: onepassword
   labels:
     app.kubernetes.io/component: operator
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"
@@ -346,7 +346,7 @@ metadata:
   name: onepassword-connect
   namespace: onepassword
   labels:
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"
@@ -362,7 +362,7 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/component: connect
-      helm.sh/chart: connect-2.0.5
+      helm.sh/chart: connect-2.1.1
       app.kubernetes.io/name: connect
       app.kubernetes.io/instance: onepassword
       app.kubernetes.io/version: "1.8.1"
@@ -375,7 +375,7 @@ metadata:
   name: "onepassword-health-check"
   namespace: onepassword
   labels:
-    helm.sh/chart: connect-2.0.5
+    helm.sh/chart: connect-2.1.1
     app.kubernetes.io/name: connect
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.1"

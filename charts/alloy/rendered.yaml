@@ -6,10 +6,10 @@ metadata:
   name: alloy-alloy-operator
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
 ---
@@ -19,7 +19,7 @@ kind: ServiceAccount
 automountServiceAccountToken: true
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.4.1
+    helm.sh/chart: kube-state-metrics-6.4.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
@@ -37,7 +37,7 @@ metadata:
   name: alloy-node-exporter
   namespace: alloy
   labels:
-    helm.sh/chart: node-exporter-4.49.1
+    helm.sh/chart: node-exporter-4.49.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: node-exporter
@@ -1500,7 +1500,7 @@ data:
   self-reporting-metric.prom: |
     # HELP grafana_kubernetes_monitoring_build_info A metric to report the version of the Kubernetes Monitoring Helm chart
     # TYPE grafana_kubernetes_monitoring_build_info gauge
-    grafana_kubernetes_monitoring_build_info{version="3.6.2", namespace="alloy"} 1
+    grafana_kubernetes_monitoring_build_info{version="3.7.1", namespace="alloy"} 1
     # HELP grafana_kubernetes_monitoring_feature_info A metric to report the enabled features of the Kubernetes Monitoring Helm chart
     # TYPE grafana_kubernetes_monitoring_feature_info gauge
     grafana_kubernetes_monitoring_feature_info{deployments="kube-state-metrics,node-exporter", feature="clusterMetrics", sources="controlPlane,kubelet,kubeletResource,cadvisor,kube-state-metrics,node-exporter", version="1.0.0"} 1
@@ -1762,10 +1762,10 @@ kind: ClusterRole
 metadata:
   name: alloy-alloy-operator-alloy-manager
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups:
@@ -1823,7 +1823,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.4.1
+    helm.sh/chart: kube-state-metrics-6.4.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
@@ -1980,10 +1980,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy-alloy-operator-alloy-manager
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -2000,10 +2000,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy-alloy-operator
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -2019,7 +2019,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.4.1
+    helm.sh/chart: kube-state-metrics-6.4.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
@@ -2044,10 +2044,10 @@ metadata:
   name: alloy-alloy-operator-leader-election-role
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups:
@@ -2089,10 +2089,10 @@ metadata:
   name: alloy-alloy-operator-leader-election-rolebinding
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -2110,10 +2110,10 @@ metadata:
   name: alloy-alloy-operator
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
@@ -2137,7 +2137,7 @@ metadata:
   name: alloy-kube-state-metrics
   namespace: alloy
   labels:    
-    helm.sh/chart: kube-state-metrics-6.4.1
+    helm.sh/chart: kube-state-metrics-6.4.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
@@ -2165,7 +2165,7 @@ metadata:
   name: alloy-node-exporter
   namespace: alloy
   labels:
-    helm.sh/chart: node-exporter-4.49.1
+    helm.sh/chart: node-exporter-4.49.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: node-exporter
@@ -2193,7 +2193,7 @@ metadata:
   name: alloy-node-exporter
   namespace: alloy
   labels:
-    helm.sh/chart: node-exporter-4.49.1
+    helm.sh/chart: node-exporter-4.49.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: node-exporter
@@ -2217,7 +2217,7 @@ spec:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
         k8s.grafana.com/logs.job: integrations/node_exporter
       labels:
-        helm.sh/chart: node-exporter-4.49.1
+        helm.sh/chart: node-exporter-4.49.2
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: metrics
         app.kubernetes.io/part-of: node-exporter
@@ -2321,10 +2321,10 @@ metadata:
   name: alloy-alloy-operator
   namespace: alloy
   labels:
-    helm.sh/chart: alloy-operator-0.3.14
+    helm.sh/chart: alloy-operator-0.3.15
     app.kubernetes.io/name: alloy-operator
     app.kubernetes.io/instance: alloy
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: "1.5.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
@@ -2335,10 +2335,10 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: alloy-operator-0.3.14
+        helm.sh/chart: alloy-operator-0.3.15
         app.kubernetes.io/name: alloy-operator
         app.kubernetes.io/instance: alloy
-        app.kubernetes.io/version: "1.5.0"
+        app.kubernetes.io/version: "1.5.1"
         app.kubernetes.io/managed-by: Helm
     spec:
       serviceAccountName: alloy-alloy-operator
@@ -2351,7 +2351,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: alloy-operator
-          image: "ghcr.io/grafana/alloy-operator:1.5.0"
+          image: "ghcr.io/grafana/alloy-operator:1.5.1"
           imagePullPolicy: IfNotPresent
           args:
             - --health-probe-bind-address=:8081
@@ -2397,7 +2397,7 @@ metadata:
   name: alloy-kube-state-metrics
   namespace: alloy
   labels:    
-    helm.sh/chart: kube-state-metrics-6.4.1
+    helm.sh/chart: kube-state-metrics-6.4.2
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
@@ -2417,7 +2417,7 @@ spec:
   template:
     metadata:
       labels:        
-        helm.sh/chart: kube-state-metrics-6.4.1
+        helm.sh/chart: kube-state-metrics-6.4.2
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: metrics
         app.kubernetes.io/part-of: kube-state-metrics
@@ -2503,12 +2503,14 @@ spec:
       create: false
       key: null
       name: null
+    enableHttpServerPort: true
     enableReporting: true
     envFrom: []
     extraArgs: []
     extraEnv: []
     extraPorts: []
     hostAliases: []
+    initialDelaySeconds: 10
     lifecycle: {}
     listenAddr: 0.0.0.0
     listenPort: 12345
@@ -2545,6 +2547,7 @@ spec:
         type: RuntimeDefault
     stabilityLevel: generally-available
     storagePath: /tmp/alloy
+    timeoutSeconds: 1
     uiPathPrefix: /
   configReloader:
     customArgs: []
@@ -2606,9 +2609,11 @@ spec:
     enableStatefulSetAutoDeletePVC: false
     extraAnnotations: {}
     extraContainers: []
+    extraLabels: {}
     hostNetwork: false
     hostPID: false
     initContainers: []
+    minReadySeconds: 10
     nodeSelector:
       kubernetes.io/os: linux
     parallelRollout: true
@@ -2656,8 +2661,120 @@ spec:
     pathType: Prefix
     tls: []
   nameOverride: alloy-metrics
+  networkPolicy:
+    egress:
+    - {}
+    enabled: false
+    flavor: kubernetes
+    ingress:
+    - {}
+    policyTypes:
+    - Ingress
+    - Egress
   rbac:
+    clusterRules:
+    - apiGroups:
+      - ""
+      resources:
+      - nodes
+      - nodes/proxy
+      - nodes/metrics
+      verbs:
+      - get
+      - list
+      - watch
+    - nonResourceURLs:
+      - /metrics
+      verbs:
+      - get
     create: true
+    namespaces: []
+    rules:
+    - apiGroups:
+      - ""
+      - discovery.k8s.io
+      - networking.k8s.io
+      resources:
+      - endpoints
+      - endpointslices
+      - ingresses
+      - pods
+      - services
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - pods
+      - pods/log
+      - namespaces
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.grafana.com
+      resources:
+      - podlogs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - prometheusrules
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - alertmanagerconfigs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - podmonitors
+      - servicemonitors
+      - probes
+      - scrapeconfigs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - events
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - configmaps
+      - secrets
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - apps
+      - extensions
+      resources:
+      - replicasets
+      verbs:
+      - get
+      - list
+      - watch
   service:
     annotations: {}
     clusterIP: ""
@@ -2698,12 +2815,14 @@ spec:
       create: false
       key: null
       name: null
+    enableHttpServerPort: true
     enableReporting: true
     envFrom: []
     extraArgs: []
     extraEnv: []
     extraPorts: []
     hostAliases: []
+    initialDelaySeconds: 10
     lifecycle: {}
     listenAddr: 0.0.0.0
     listenPort: 12345
@@ -2740,6 +2859,7 @@ spec:
         type: RuntimeDefault
     stabilityLevel: generally-available
     storagePath: /tmp/alloy
+    timeoutSeconds: 1
     uiPathPrefix: /
   configReloader:
     customArgs: []
@@ -2801,9 +2921,11 @@ spec:
     enableStatefulSetAutoDeletePVC: false
     extraAnnotations: {}
     extraContainers: []
+    extraLabels: {}
     hostNetwork: false
     hostPID: false
     initContainers: []
+    minReadySeconds: 10
     nodeSelector:
       kubernetes.io/os: linux
     parallelRollout: true
@@ -2851,8 +2973,120 @@ spec:
     pathType: Prefix
     tls: []
   nameOverride: alloy-singleton
+  networkPolicy:
+    egress:
+    - {}
+    enabled: false
+    flavor: kubernetes
+    ingress:
+    - {}
+    policyTypes:
+    - Ingress
+    - Egress
   rbac:
+    clusterRules:
+    - apiGroups:
+      - ""
+      resources:
+      - nodes
+      - nodes/proxy
+      - nodes/metrics
+      verbs:
+      - get
+      - list
+      - watch
+    - nonResourceURLs:
+      - /metrics
+      verbs:
+      - get
     create: true
+    namespaces: []
+    rules:
+    - apiGroups:
+      - ""
+      - discovery.k8s.io
+      - networking.k8s.io
+      resources:
+      - endpoints
+      - endpointslices
+      - ingresses
+      - pods
+      - services
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - pods
+      - pods/log
+      - namespaces
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.grafana.com
+      resources:
+      - podlogs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - prometheusrules
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - alertmanagerconfigs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - podmonitors
+      - servicemonitors
+      - probes
+      - scrapeconfigs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - events
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - configmaps
+      - secrets
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - apps
+      - extensions
+      resources:
+      - replicasets
+      verbs:
+      - get
+      - list
+      - watch
   service:
     annotations: {}
     clusterIP: ""
@@ -2893,12 +3127,14 @@ spec:
       create: false
       key: null
       name: null
+    enableHttpServerPort: true
     enableReporting: true
     envFrom: []
     extraArgs: []
     extraEnv: []
     extraPorts: []
     hostAliases: []
+    initialDelaySeconds: 10
     lifecycle: {}
     listenAddr: 0.0.0.0
     listenPort: 12345
@@ -2933,6 +3169,7 @@ spec:
         type: RuntimeDefault
     stabilityLevel: generally-available
     storagePath: /tmp/alloy
+    timeoutSeconds: 1
     uiPathPrefix: /
   configReloader:
     customArgs: []
@@ -2994,9 +3231,11 @@ spec:
     enableStatefulSetAutoDeletePVC: false
     extraAnnotations: {}
     extraContainers: []
+    extraLabels: {}
     hostNetwork: false
     hostPID: false
     initContainers: []
+    minReadySeconds: 10
     nodeSelector:
       kubernetes.io/os: linux
     parallelRollout: true
@@ -3046,8 +3285,120 @@ spec:
     pathType: Prefix
     tls: []
   nameOverride: alloy-logs
+  networkPolicy:
+    egress:
+    - {}
+    enabled: false
+    flavor: kubernetes
+    ingress:
+    - {}
+    policyTypes:
+    - Ingress
+    - Egress
   rbac:
+    clusterRules:
+    - apiGroups:
+      - ""
+      resources:
+      - nodes
+      - nodes/proxy
+      - nodes/metrics
+      verbs:
+      - get
+      - list
+      - watch
+    - nonResourceURLs:
+      - /metrics
+      verbs:
+      - get
     create: true
+    namespaces: []
+    rules:
+    - apiGroups:
+      - ""
+      - discovery.k8s.io
+      - networking.k8s.io
+      resources:
+      - endpoints
+      - endpointslices
+      - ingresses
+      - pods
+      - services
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - pods
+      - pods/log
+      - namespaces
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.grafana.com
+      resources:
+      - podlogs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - prometheusrules
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - alertmanagerconfigs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - monitoring.coreos.com
+      resources:
+      - podmonitors
+      - servicemonitors
+      - probes
+      - scrapeconfigs
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - events
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - configmaps
+      - secrets
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - apps
+      - extensions
+      resources:
+      - replicasets
+      verbs:
+      - get
+      - list
+      - watch
   service:
     annotations: {}
     clusterIP: ""
@@ -3219,7 +3570,7 @@ metadata:
   labels:
     app.kubernetes.io/name: alloy-k8s-monitoring-add-finalizer
     app.kubernetes.io/instance: alloy
-    helm.sh/chart: k8s-monitoring-3.6.2
+    helm.sh/chart: k8s-monitoring-3.7.1
   annotations:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "15"
@@ -3272,7 +3623,7 @@ metadata:
   labels:
     app.kubernetes.io/name: alloy-k8s-monitoring-remove-alloy-and-finalizer
     app.kubernetes.io/instance: alloy
-    helm.sh/chart: k8s-monitoring-3.6.2
+    helm.sh/chart: k8s-monitoring-3.7.1
   annotations:
     helm.sh/hook: pre-delete
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
