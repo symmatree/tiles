@@ -285,6 +285,10 @@ resource "onepassword_item" "misc_config" {
       value = var.onepassword_vault_name
     }
     field {
+      label = "project_id"
+      value = var.main_project_id
+    }
+    field {
       label = "loki_nfs_path"
       value = var.loki_nfs_path
     }
