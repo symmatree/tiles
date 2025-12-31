@@ -86,7 +86,7 @@ if op item get "${cluster_name:-}-machine-secrets" --vault "${vault_name:-}" --f
 	touch "${SCRIPT_DIR}/.secrets_reused"
 else
 	echo "No existing secrets found, generating new ones (first-time setup)"
-	talosctl gen secrets "$SECRETS_FILE"
+	talosctl gen secrets --output-file "$SECRETS_FILE"
 	rm -f "${SCRIPT_DIR}/.secrets_reused"
 fi
 echo "::endgroup::"
