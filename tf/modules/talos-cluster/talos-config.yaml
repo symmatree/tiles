@@ -1,5 +1,4 @@
-# This is modified with dynamic values in main.tf
-# Following https://docs.cilium.io/en/v1.16/installation/k8s-install-helm/
+version: v1alpha1
 cluster:
   network:
     # cilium will become our CNI.
@@ -17,7 +16,6 @@ cluster:
     extraArgs:
       # Listen to more than localhost so we can scrape from Alloy.
       bind-address: 0.0.0.0
-
   proxy:
     # Cilium will replace the proxy
     disabled: true

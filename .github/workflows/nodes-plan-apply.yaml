@@ -141,6 +141,30 @@ jobs:
           plan_file: "${{ runner.temp }}/tfplan-nodes-test.bin"
           txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-test.txt"
 
+      - name: Load Talos config from 1Password - test
+        id: load_talos_config_test
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-test.outcome == 'success' && steps.config.outputs.test_apply == 'true'
+        uses: 1password/load-secrets-action@v3
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          cluster_name: "op://tiles-secrets/tiles-test-misc-config/config/cluster_name"
+          pod_cidr: "op://tiles-secrets/tiles-test-misc-config/config/pod_cidr"
+          service_cidr: "op://tiles-secrets/tiles-test-misc-config/config/service_cidr"
+          control_plane_vip: "op://tiles-secrets/tiles-test-misc-config/config/control_plane_vip"
+          control_plane_vip_link: "op://tiles-secrets/tiles-test-misc-config/config/control_plane_vip_link"
+          talos_install_image: "op://tiles-secrets/tiles-test-misc-config/config/talos_install_image"
+          control_plane_ips: "op://tiles-secrets/tiles-test-misc-config/config/control_plane_ips"
+          bootstrap_ip: "op://tiles-secrets/tiles-test-misc-config/config/bootstrap_ip"
+          worker_ips: "op://tiles-secrets/tiles-test-misc-config/config/worker_ips"
+          vault_name: "op://tiles-secrets/tiles-test-misc-config/config/vault_name"
+
+      - name: Apply Talos configuration - test
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-test.outcome == 'success' && steps.config.outputs.test_apply == 'true'
+        working-directory: "tf/modules/talos-cluster"
+        run: ./apply-talos-config.sh
+
       - name: Terraform plan and apply - prod
         id: tf-prod
         if: steps.charts_only.outputs.run_terraform == 'true'
@@ -150,6 +174,30 @@ jobs:
           apply: ${{ steps.config.outputs.prod_apply }}
           plan_file: "${{ runner.temp }}/tfplan-nodes-prod.bin"
           txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-prod.txt"
+
+      - name: Load Talos config from 1Password - prod
+        id: load_talos_config_prod
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-prod.outcome == 'success' && steps.config.outputs.prod_apply == 'true'
+        uses: 1password/load-secrets-action@v3
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          cluster_name: "op://tiles-secrets/tiles-misc-config/config/cluster_name"
+          pod_cidr: "op://tiles-secrets/tiles-misc-config/config/pod_cidr"
+          service_cidr: "op://tiles-secrets/tiles-misc-config/config/service_cidr"
+          control_plane_vip: "op://tiles-secrets/tiles-misc-config/config/control_plane_vip"
+          control_plane_vip_link: "op://tiles-secrets/tiles-misc-config/config/control_plane_vip_link"
+          talos_install_image: "op://tiles-secrets/tiles-misc-config/config/talos_install_image"
+          control_plane_ips: "op://tiles-secrets/tiles-misc-config/config/control_plane_ips"
+          bootstrap_ip: "op://tiles-secrets/tiles-misc-config/config/bootstrap_ip"
+          worker_ips: "op://tiles-secrets/tiles-misc-config/config/worker_ips"
+          vault_name: "op://tiles-secrets/tiles-misc-config/config/vault_name"
+
+      - name: Apply Talos configuration - prod
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-prod.outcome == 'success' && steps.config.outputs.prod_apply == 'true'
+        working-directory: "tf/modules/talos-cluster"
+        run: ./apply-talos-config.sh
 
       - name: De-wireguard
         if: always()

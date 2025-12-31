@@ -1,0 +1,11 @@
+version: v1alpha1
+cluster:
+  clusterName: ${cluster_name}
+  network:
+    podSubnets:
+      - ${pod_cidr}
+    serviceSubnets:
+      - ${service_cidr}
+machine:
+  install:
+    image: ${talos_install_image}
