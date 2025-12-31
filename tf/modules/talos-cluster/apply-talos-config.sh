@@ -107,6 +107,16 @@ echo "::endgroup::"
 
 echo "::group::Apply machine configurations to control plane nodes"
 for node_ip in "${CONTROL_PLANE_IPS_ARRAY[@]}"; do
+	echo "Waiting for node $node_ip to be ready..."
+	# Wait for node to be reachable (Talos API on port 50000)
+	for i in {1..30}; do
+		if timeout 2 talosctl --talosconfig /dev/null --nodes "$node_ip" version --insecure 2>/dev/null; then
+			break
+		fi
+		echo "  Attempt $i/30: node not ready yet, waiting 5 seconds..."
+		sleep 5
+	done
+
 	echo "Applying config to control plane node: $node_ip"
 	talosctl apply-config \
 		--insecure \
@@ -120,6 +130,16 @@ if [[ -n ${worker_ips:-} ]]; then
 	IFS=',' read -ra WORKER_IPS_ARRAY <<<"$worker_ips"
 	for node_ip in "${WORKER_IPS_ARRAY[@]}"; do
 		if [[ -n $node_ip ]]; then
+			echo "Waiting for node $node_ip to be ready..."
+			# Wait for node to be reachable (Talos API on port 50000)
+			for i in {1..30}; do
+				if timeout 2 talosctl --talosconfig /dev/null --nodes "$node_ip" version --insecure 2>/dev/null; then
+					break
+				fi
+				echo "  Attempt $i/30: node not ready yet, waiting 5 seconds..."
+				sleep 5
+			done
+
 			echo "Applying config to worker node: $node_ip"
 			talosctl apply-config \
 				--insecure \
