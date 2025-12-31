@@ -355,10 +355,6 @@ resource "onepassword_item" "misc_config" {
       label = "worker_ips"
       value = join(",", [for _, vm in var.vms : vm.ip_address if vm.type == "worker"])
     }
-    field {
-      label = "machine_secrets"
-      value = local.machine_secrets
-    }
   }
   section {
     label = "metadata"
