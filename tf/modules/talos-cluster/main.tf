@@ -52,6 +52,11 @@ variable "control_plane_vip" {
   type        = string
 }
 
+variable "control_plane_vip_link" {
+  description = "Network interface name for the control plane VIP (e.g., 'ens18' for virtio-net). Required for Talos v1.12+ which uses Layer2VIPConfig."
+  type        = string
+}
+
 variable "external_ip_cidr" {
   description = "External IP CIDR for the cluster"
   type        = string
@@ -86,35 +91,49 @@ variable "admin_user" {
 
 # Load base configuration from YAML file
 locals {
-  config_path      = "${path.module}/talos-config.yaml"
-  base_config_yaml = file(local.config_path)
-
-  install_image = "factory.talos.dev/installer/${var.talos.schematic}:v${var.talos.version}"
+  config_path       = "${path.module}/talos-config.yaml"
+  base_config_yaml  = file(local.config_path)
+  layer2_vip_config = file("${path.module}/tiles-test-layer2-vip.yaml")
+  install_image     = "factory.talos.dev/installer/${var.talos.schematic}:v${var.talos.version}"
   common_patch = {
-    cluster = {
-      clusterName = var.cluster_name
-      network = {
-        podSubnets     = [var.pod_cidr]
-        serviceSubnets = [var.service_cidr]
+    "version" = "v1alpha1"
+    "cluster" = {
+      "clusterName" = var.cluster_name
+      "network" = {
+        "podSubnets"     = [var.pod_cidr]
+        "serviceSubnets" = [var.service_cidr]
       }
     }
-    machine = {
-      install = { image = local.install_image }
+    "machine" = {
+      "install" = { "image" = local.install_image }
     }
   }
 
-  # Control plane specific configuration with VIP
-  control_plane_patch = {
-    machine = {
-      network = {
-        interfaces = [{
-          deviceSelector = { physical = true }
-          dhcp           = true
-          vip            = { ip = var.control_plane_vip }
-        }]
-      }
-    }
-  }
+  # Control plane specific configuration
+  # Note: VIP configuration is handled separately via Layer2VIPConfig (multi-document style)
+  # The old machine.network.interfaces[].vip syntax was removed in Talos v1.12
+  # control_plane_patch = {
+  #   version = "v1alpha1"
+  #   machine = {
+  #     network = {
+  #       interfaces = [{
+  #         deviceSelector = { physical = true }
+  #         dhcp           = true
+  #       }]
+  #     }
+  #   }
+  # }
+
+  # Layer2VIPConfig document (multi-document style)
+  # See: https://docs.siderolabs.com/talos/v1.12/reference/configuration/network/layer2vipconfig
+  # Encode as JSON (starts with '{') to avoid provider thinking it's a filename
+  # The provider's LoadPatches checks: if no newlines/spaces and doesn't start with '[' or '{', assume filename
+  layer2_vip_config2 = yamlencode({
+    apiVersion = "v1alpha1"
+    kind       = "Layer2VIPConfig"
+    name       = var.control_plane_vip
+    link       = var.control_plane_vip_link
+  })
 }
 
 output "config_path" {
@@ -308,6 +327,34 @@ resource "onepassword_item" "misc_config" {
       label = "nfs_server"
       value = var.nfs_server
     }
+    field {
+      label = "service_cidr"
+      value = var.service_cidr
+    }
+    field {
+      label = "control_plane_vip"
+      value = var.control_plane_vip
+    }
+    field {
+      label = "control_plane_vip_link"
+      value = var.control_plane_vip_link
+    }
+    field {
+      label = "talos_install_image"
+      value = local.install_image
+    }
+    field {
+      label = "control_plane_ips"
+      value = join(",", local.control_ips)
+    }
+    field {
+      label = "bootstrap_ip"
+      value = local.bootstrap_ip
+    }
+    field {
+      label = "worker_ips"
+      value = join(",", [for _, vm in var.vms : vm.ip_address if vm.type == "worker"])
+    }
   }
   section {
     label = "metadata"
@@ -332,9 +379,9 @@ data "talos_machine_configuration" "machineconfig_cp" {
   machine_type     = "controlplane"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
-    # local.base_config_yaml,
-    # yamlencode(local.common_patch),
-    # yamlencode(local.control_plane_patch)
+    local.base_config_yaml,
+    local.layer2_vip_config,
+    # jsonencode(local.common_patch),
   ]
 }
 
@@ -344,8 +391,8 @@ data "talos_machine_configuration" "machineconfig_worker" {
   machine_type     = "worker"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
-    # local.base_config_yaml,
-    # yamlencode(local.common_patch)
+    local.base_config_yaml,
+    # jsonencode(local.common_patch)
   ]
 }
 
