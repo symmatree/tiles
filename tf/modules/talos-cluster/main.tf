@@ -169,29 +169,6 @@ locals {
   machine_secrets = jsonencode(talos_machine_secrets.this.machine_secrets)
 }
 
-resource "onepassword_item" "machine_secrets" {
-  count      = var.start_vms ? 1 : 0
-  vault      = var.onepassword_vault
-  title      = "${var.cluster_name}-machine-secrets"
-  category   = "secure_note"
-  note_value = local.machine_secrets
-  section {
-    label = "metadata"
-    field {
-      label = "source"
-      value = "managed by terraform"
-    }
-    field {
-      label = "root_module"
-      value = basename(abspath(path.root))
-    }
-    field {
-      label = "module"
-      value = basename(abspath(path.module))
-    }
-  }
-}
-
 locals {
   control_ips  = [for _, vm in var.vms : vm.ip_address if vm.type == "control"]
   bootstrap_ip = local.control_ips[0]
