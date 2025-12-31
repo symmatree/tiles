@@ -97,6 +97,12 @@ talosctl gen config "${cluster_name:-}" "https://${control_plane_vip:-}:6443" \
 	--with-examples=false
 
 echo "Generated controlplane.yaml and worker.yaml"
+
+# Configure talosconfig with endpoint (VIP) and node (bootstrap IP)
+# This must be done before bootstrap/kubeconfig commands
+TALOSCONFIG=./talosconfig talosctl config endpoint "https://${control_plane_vip}:6443"
+TALOSCONFIG=./talosconfig talosctl config node "${bootstrap_ip:-}"
+echo "Configured talosconfig with endpoint and node"
 echo "::endgroup::"
 
 echo "::group::Apply machine configurations to control plane nodes"
@@ -129,14 +135,11 @@ echo "::endgroup::"
 echo "::group::Bootstrap cluster and get kubeconfig"
 # Bootstrap is idempotent - talosctl bootstrap will only bootstrap if not already bootstrapped
 # It's safe to call multiple times
-talosctl bootstrap \
-	--nodes "${bootstrap_ip:-}" \
-	--talosconfig talosconfig
+# talosconfig is already configured with endpoint and node above
+talosctl bootstrap --talosconfig talosconfig
 
 # Get kubeconfig (also idempotent - regenerates but doesn't break anything)
-talosctl kubeconfig \
-	--nodes "${bootstrap_ip:-}" \
-	--talosconfig talosconfig
+talosctl kubeconfig --talosconfig talosconfig
 echo "::endgroup::"
 
 echo "::group::Store talosconfig and kubeconfig in 1Password"
