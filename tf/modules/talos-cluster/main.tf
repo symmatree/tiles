@@ -91,10 +91,10 @@ variable "admin_user" {
 
 # Load base configuration from YAML file
 locals {
-  config_path       = "${path.module}/talos-config.yaml"
-  base_config_yaml  = file(local.config_path)
-  layer2_vip_config = file("${path.module}/tiles-test-layer2-vip.yaml")
-  install_image     = "factory.talos.dev/installer/${var.talos.schematic}:v${var.talos.version}"
+  config_path      = "${path.module}/talos-config.yaml"
+  base_config_yaml = file(local.config_path)
+  # layer2_vip_config = file("${path.module}/tiles-test-layer2-vip.yaml")
+  install_image = "factory.talos.dev/installer/${var.talos.schematic}:v${var.talos.version}"
   common_patch = {
     "version" = "v1alpha1"
     "cluster" = {
@@ -380,7 +380,7 @@ data "talos_machine_configuration" "machineconfig_cp" {
   machine_secrets  = talos_machine_secrets.this.machine_secrets
   config_patches = [
     local.base_config_yaml,
-    local.layer2_vip_config,
+    # local.layer2_vip_config,
     # jsonencode(local.common_patch),
   ]
 }
