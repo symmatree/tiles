@@ -159,6 +159,7 @@ jobs:
           bootstrap_ip: "op://tiles-secrets/tiles-test-misc-config/config/bootstrap_ip"
           worker_ips: "op://tiles-secrets/tiles-test-misc-config/config/worker_ips"
           vault_name: "op://tiles-secrets/tiles-test-misc-config/config/vault_name"
+          machine_secrets: "op://tiles-secrets/tiles-test-misc-config/config/machine_secrets"
 
       - name: Apply Talos configuration - test
         if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-test.outcome == 'success' && steps.config.outputs.test_apply == 'true'
@@ -193,10 +194,13 @@ jobs:
           bootstrap_ip: "op://tiles-secrets/tiles-misc-config/config/bootstrap_ip"
           worker_ips: "op://tiles-secrets/tiles-misc-config/config/worker_ips"
           vault_name: "op://tiles-secrets/tiles-misc-config/config/vault_name"
+          machine_secrets: "op://tiles-secrets/tiles-misc-config/config/machine_secrets"
 
       - name: Apply Talos configuration - prod
         if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-prod.outcome == 'success' && steps.config.outputs.prod_apply == 'true'
         working-directory: "tf/modules/talos-cluster"
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
         run: ./apply-talos-config.sh
 
       - name: De-wireguard
