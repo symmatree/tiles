@@ -34,10 +34,10 @@ module "cluster" {
   nfs_server             = var.nfs_server
 }
 
-output "common_patch" {
-  description = "Common patch"
-  value       = module.cluster.common_patch
-}
+# output "common_patch" {
+#   description = "Common patch"
+#   value       = module.cluster.common_patch
+# }
 
 output "talosconfig" {
   description = "Talos client configuration"
