@@ -166,7 +166,7 @@ module "talos-vm" {
 resource "talos_machine_secrets" "this" {}
 
 locals {
-  machine_secrets = yamlencode(talos_machine_secrets.this.machine_secrets)
+  machine_secrets = jsonencode(talos_machine_secrets.this.machine_secrets)
 }
 
 resource "onepassword_item" "machine_secrets" {
