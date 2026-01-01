@@ -212,11 +212,7 @@ op item edit \
 	--vault "$vault_name" \
 	"${cluster_name}-kubeconfig" \
 	"notesPlain=$(cat kubeconfig)" \
-	2>/dev/null || op item create \
-	--vault "$vault_name" \
-	--category "Secure Note" \
-	--title "${cluster_name}-kubeconfig" \
-	"notesPlain=$(cat kubeconfig)" </dev/null
+	</dev/null
 # Workaround for https://www.1password.community/discussions/developers/cli-still-has-a-bug-when-running-op-create-programmatically/23429
 
 echo "Stored talosconfig and kubeconfig in 1Password"
