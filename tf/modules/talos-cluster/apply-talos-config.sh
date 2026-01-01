@@ -47,6 +47,7 @@ echo "::endgroup::"
 
 # Required environment variables (should be loaded from 1Password misc-config)
 required_vars=(
+	"OP_SERVICE_ACCOUNT_TOKEN"
 	"cluster_name"
 	"pod_cidr"
 	"service_cidr"
