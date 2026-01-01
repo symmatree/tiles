@@ -98,10 +98,11 @@ talosctl gen config "${cluster_name:-}" "https://${control_plane_vip:-}:6443" \
 
 echo "Generated controlplane.yaml and worker.yaml"
 
-# Configure talosconfig with endpoint (VIP) and node (bootstrap IP)
+# Configure talosconfig with endpoint and node
+# Use bootstrap IP for endpoint (VIP won't work until after Layer2VIPConfig is applied)
 # This must be done before bootstrap/kubeconfig commands
-TALOSCONFIG=./talosconfig talosctl config endpoint "https://${control_plane_vip}:6443"
-TALOSCONFIG=./talosconfig talosctl config node "${bootstrap_ip:-}"
+TALOSCONFIG=./talosconfig talosctl config endpoint "https://${bootstrap_ip:-}:6443"
+TALOSCONFIG=./talosconfig talosctl config node "${bootstrap_ip:-:-}"
 echo "Configured talosconfig with endpoint and node"
 echo "::endgroup::"
 
