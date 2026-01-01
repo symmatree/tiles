@@ -113,7 +113,7 @@ for node_ip in "${CONTROL_PLANE_IPS_ARRAY[@]}"; do
 		if talosctl apply-config \
 			--insecure \
 			--nodes "$node_ip" \
-			--file controlplane.yaml 2>/dev/null; then
+			--file controlplane.yaml; then
 			echo "Successfully applied config to $node_ip"
 			break
 		fi
@@ -137,7 +137,7 @@ if [[ -n ${worker_ips:-} ]]; then
 				if talosctl apply-config \
 					--insecure \
 					--nodes "$node_ip" \
-					--file worker.yaml 2>/dev/null; then
+					--file worker.yaml; then
 					echo "Successfully applied config to $node_ip"
 					break
 				fi
@@ -160,7 +160,7 @@ echo "::group::Bootstrap cluster and get kubeconfig"
 # Retry loop handles the case where node is in "Booting" state but ready for bootstrap
 echo "Attempting to bootstrap cluster..."
 for attempt in {1..30}; do
-	if talosctl bootstrap --talosconfig talosconfig 2>/dev/null; then
+	if talosctl bootstrap --talosconfig talosconfig; then
 		echo "Successfully bootstrapped cluster"
 		break
 	fi
