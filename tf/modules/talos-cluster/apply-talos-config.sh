@@ -156,24 +156,21 @@ fi
 echo "::endgroup::"
 
 echo "::group::Bootstrap cluster and get kubeconfig"
-# Wait for bootstrap node to be ready after reboot (applying config triggers reboot)
-echo "Waiting for bootstrap node to be ready after config application..."
-for i in {1..60}; do
-	if talosctl --talosconfig talosconfig version 2>/dev/null; then
-		echo "Bootstrap node is ready"
+# Bootstrap is idempotent - talosctl bootstrap will only bootstrap if not already bootstrapped
+# Retry loop handles the case where node is in "Booting" state but ready for bootstrap
+echo "Attempting to bootstrap cluster..."
+for attempt in {1..30}; do
+	if talosctl bootstrap --talosconfig talosconfig 2>/dev/null; then
+		echo "Successfully bootstrapped cluster"
 		break
 	fi
-	if [[ $i -eq 60 ]]; then
-		echo "Error: Bootstrap node did not become ready after 5 minutes" >&2
+	if [[ $attempt -eq 30 ]]; then
+		echo "Error: Failed to bootstrap cluster after 30 attempts" >&2
 		exit 1
 	fi
-	echo "  Attempt $i/60: node not ready yet, waiting 5 seconds..."
-	sleep 5
+	echo "  Attempt $attempt/30 failed, retrying in 10 seconds..."
+	sleep 10
 done
-
-# Bootstrap is idempotent - talosctl bootstrap will only bootstrap if not already bootstrapped
-# It's safe to call multiple times
-talosctl bootstrap --talosconfig talosconfig
 
 # Get kubeconfig (also idempotent - regenerates but doesn't break anything)
 talosctl kubeconfig --talosconfig talosconfig
