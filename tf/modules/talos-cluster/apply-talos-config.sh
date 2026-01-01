@@ -186,7 +186,7 @@ echo "::group::Bootstrap cluster and get kubeconfig"
 # Retry loop handles the case where node is in "Booting" state but ready for bootstrap
 echo "Attempting to bootstrap cluster..."
 for attempt in {1..30}; do
-	if talosctl bootstrap --talosconfig talosconfig; then
+	if talosctl bootstrap --talosconfig talosconfig -n "${bootstrap_ip:-}"; then
 		echo "Successfully bootstrapped cluster"
 		break
 	fi
