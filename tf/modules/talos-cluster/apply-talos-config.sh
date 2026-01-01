@@ -110,6 +110,18 @@ talosctl --talosconfig ./talosconfig config node "${bootstrap_ip:-}"
 echo "Verifying talosconfig endpoint and node:"
 talosctl --talosconfig ./talosconfig config info
 echo "Configured talosconfig with endpoint=${bootstrap_ip} and node=${bootstrap_ip} (NOT using VIP ${control_plane_vip} yet)"
+
+# Store talosconfig
+op item edit \
+	--vault "${vault_name:-}" \
+	"${cluster_name:-}-talosconfig" \
+	"notesPlain=$(cat talosconfig)" \
+	2>/dev/null || op item create \
+	--vault "${vault_name:-}" \
+	--category "Secure Note" \
+	--title "${cluster_name}-talosconfig" \
+	"notesPlain=$(cat talosconfig)"
+
 echo "::endgroup::"
 
 echo "::group::Apply machine configurations to control plane nodes"
@@ -160,17 +172,6 @@ else
 	echo "No worker nodes to configure"
 fi
 echo "::endgroup::"
-
-# Store talosconfig
-op item edit \
-	--vault "${vault_name:-}" \
-	"${cluster_name:-}-talosconfig" \
-	"notesPlain=$(cat talosconfig)" \
-	2>/dev/null || op item create \
-	--vault "${vault_name:-}" \
-	--category "Secure Note" \
-	--title "${cluster_name}-talosconfig" \
-	"notesPlain=$(cat talosconfig)"
 
 echo "::group::Bootstrap cluster and get kubeconfig"
 # Bootstrap is idempotent - talosctl bootstrap will only bootstrap if not already bootstrapped
