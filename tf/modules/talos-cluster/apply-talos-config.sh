@@ -102,8 +102,9 @@ echo "Generated controlplane.yaml and worker.yaml"
 # Configure talosconfig with endpoint and node
 # CRITICAL: Use bootstrap IP for endpoint (VIP doesn't exist until etcd is up and Layer2VIPConfig is applied)
 # The VIP won't work until after the cluster is fully bootstrapped
+# Note: talosctl config endpoint uses the Talos API (port 50000), NOT the Kubernetes API (port 6443)
 # This must be done before bootstrap/kubeconfig commands
-talosctl --talosconfig ./talosconfig config endpoint "https://${bootstrap_ip:-}:6443"
+talosctl --talosconfig ./talosconfig config endpoint "${bootstrap_ip:-}"
 talosctl --talosconfig ./talosconfig config node "${bootstrap_ip:-}"
 
 # Verify the configuration
