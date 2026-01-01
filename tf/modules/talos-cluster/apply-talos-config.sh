@@ -201,12 +201,6 @@ done
 
 # Get kubeconfig (also idempotent - regenerates but doesn't break anything)
 talosctl kubeconfig --talosconfig talosconfig ./kubeconfig --merge=false
-
-# Temporarily replace VIP with bootstrap IP in kubeconfig
-# The VIP won't work until Cilium is installed and the cluster is fully up
-# TODO: Revert this once cluster is fully bootstrapped and VIP is working
-sed -i "s|https://${control_plane_vip:-}:6443|https://${bootstrap_ip:-}:6443|g" ./kubeconfig
-echo "Updated kubeconfig server from VIP (${control_plane_vip}) to bootstrap IP (${bootstrap_ip})"
 echo "::endgroup::"
 
 echo "::group::Store kubeconfig in 1Password"
