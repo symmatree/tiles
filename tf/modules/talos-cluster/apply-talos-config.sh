@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -euxo pipefail
 
 # This script applies Talos configuration after Terraform has created the VMs.
 # It should be run after terraform apply, with environment variables loaded from
@@ -109,10 +109,21 @@ echo "::endgroup::"
 echo "::group::Apply machine configurations to control plane nodes"
 for node_ip in "${CONTROL_PLANE_IPS_ARRAY[@]}"; do
 	echo "Applying config to control plane node: $node_ip"
-	talosctl apply-config \
-		--insecure \
-		--nodes "$node_ip" \
-		--file controlplane.yaml
+	for attempt in {1..10}; do
+		if talosctl apply-config \
+			--insecure \
+			--nodes "$node_ip" \
+			--file controlplane.yaml 2>/dev/null; then
+			echo "Successfully applied config to $node_ip"
+			break
+		fi
+		if [[ $attempt -eq 10 ]]; then
+			echo "Error: Failed to apply config to $node_ip after 10 attempts" >&2
+			exit 1
+		fi
+		echo "  Attempt $attempt/10 failed, retrying in 5 seconds..."
+		sleep 5
+	done
 done
 echo "::endgroup::"
 
@@ -122,10 +133,21 @@ if [[ -n ${worker_ips:-} ]]; then
 	for node_ip in "${WORKER_IPS_ARRAY[@]}"; do
 		if [[ -n $node_ip ]]; then
 			echo "Applying config to worker node: $node_ip"
-			talosctl apply-config \
-				--insecure \
-				--nodes "$node_ip" \
-				--file worker.yaml
+			for attempt in {1..10}; do
+				if talosctl apply-config \
+					--insecure \
+					--nodes "$node_ip" \
+					--file worker.yaml 2>/dev/null; then
+					echo "Successfully applied config to $node_ip"
+					break
+				fi
+				if [[ $attempt -eq 10 ]]; then
+					echo "Error: Failed to apply config to $node_ip after 10 attempts" >&2
+					exit 1
+				fi
+				echo "  Attempt $attempt/10 failed, retrying in 5 seconds..."
+				sleep 5
+			done
 		fi
 	done
 else
