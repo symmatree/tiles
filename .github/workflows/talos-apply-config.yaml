@@ -38,7 +38,7 @@ jobs:
           SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
