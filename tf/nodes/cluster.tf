@@ -21,7 +21,7 @@ module "cluster" {
   pod_cidr               = var.pod_cidr
   service_cidr           = var.service_cidr
   control_plane_vip      = var.control_plane_vip
-  control_plane_vip_link = "enp0s2"
+  control_plane_vip_link = "eth0"
   vms                    = var.virtual_machines
   nodes_to_iso_ids       = local.nodes_to_iso_ids
   main_project_id        = local.main_project_id

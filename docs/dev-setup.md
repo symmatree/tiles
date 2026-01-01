@@ -15,3 +15,12 @@ mv ~/.kube/merged_config ~/.kube/config
 ```
 
 which takes advantage of kubectl's weird ability to merge configs!
+
+## talosconfig
+
+`op read "op://tiles-secrets/tiles-test-talosconfig/notesPlain" > ~/.talos/tiles-test.yaml`
+
+```
+export TALOSCONFIG=~/.talos/tiles-test.yaml
+talosctl -n 10.0.192.11 get addresses
+```
