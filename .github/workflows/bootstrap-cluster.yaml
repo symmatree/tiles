@@ -72,8 +72,6 @@ jobs:
       - name: Load secrets
         id: load_secrets
         uses: 1password/load-secrets-action@v3
-        with:
-          export-env: true
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
@@ -97,6 +95,9 @@ jobs:
           conf_dir: "$HOME"
 
       - name: Setup kubeconfig
+        env:
+          bootstrap_ip: ${{ steps.load_secrets.outputs.bootstrap_ip }}
+          control_plane_vip: ${{ steps.load_secrets.outputs.control_plane_vip }}
         run: |
           set -euo pipefail
           kubeconfig_path="${RUNNER_TEMP}/kubeconfig"
