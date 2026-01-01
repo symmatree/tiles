@@ -102,14 +102,35 @@ echo "Generated controlplane.yaml and worker.yaml"
 # Configure talosconfig with endpoint and node
 # CRITICAL: Use bootstrap IP for endpoint (VIP doesn't exist until etcd is up and Layer2VIPConfig is applied)
 # The VIP won't work until after the cluster is fully bootstrapped
+# Note: talosctl config endpoint uses the Talos API (port 50000), NOT the Kubernetes API (port 6443)
 # This must be done before bootstrap/kubeconfig commands
-talosctl --talosconfig ./talosconfig config endpoint "https://${bootstrap_ip:-}:6443"
+talosctl --talosconfig ./talosconfig config endpoint "${bootstrap_ip:-}"
 talosctl --talosconfig ./talosconfig config node "${bootstrap_ip:-}"
 
 # Verify the configuration
 echo "Verifying talosconfig endpoint and node:"
 talosctl --talosconfig ./talosconfig config info
 echo "Configured talosconfig with endpoint=${bootstrap_ip} and node=${bootstrap_ip} (NOT using VIP ${control_plane_vip} yet)"
+
+# Store talosconfig
+op item edit \
+	--vault "${vault_name:-}" \
+	"${cluster_name:-}-talosconfig" \
+	"notesPlain=$(cat talosconfig)" </dev/null
+# Workaround for https://www.1password.community/discussions/developers/cli-still-has-a-bug-when-running-op-create-programmatically/23429
+
+op item edit \
+	--vault "${vault_name:-}" \
+	"${cluster_name:-}-cp-yaml" \
+	"notesPlain=$(cat controlplane.yaml)" </dev/null
+# Workaround for https://www.1password.community/discussions/developers/cli-still-has-a-bug-when-running-op-create-programmatically/23429
+
+op item edit \
+	--vault "${vault_name:-}" \
+	"${cluster_name:-}-wk-yaml" \
+	"notesPlain=$(cat worker.yaml)" </dev/null
+# Workaround for https://www.1password.community/discussions/developers/cli-still-has-a-bug-when-running-op-create-programmatically/23429
+
 echo "::endgroup::"
 
 echo "::group::Apply machine configurations to control plane nodes"
@@ -161,23 +182,12 @@ else
 fi
 echo "::endgroup::"
 
-# Store talosconfig
-op item edit \
-	--vault "${vault_name:-}" \
-	"${cluster_name:-}-talosconfig" \
-	"notesPlain=$(cat talosconfig)" \
-	2>/dev/null || op item create \
-	--vault "${vault_name:-}" \
-	--category "Secure Note" \
-	--title "${cluster_name}-talosconfig" \
-	"notesPlain=$(cat talosconfig)"
-
 echo "::group::Bootstrap cluster and get kubeconfig"
 # Bootstrap is idempotent - talosctl bootstrap will only bootstrap if not already bootstrapped
 # Retry loop handles the case where node is in "Booting" state but ready for bootstrap
 echo "Attempting to bootstrap cluster..."
 for attempt in {1..30}; do
-	if talosctl bootstrap --talosconfig talosconfig; then
+	if talosctl bootstrap --talosconfig talosconfig -n "${bootstrap_ip:-}"; then
 		echo "Successfully bootstrapped cluster"
 		break
 	fi
@@ -202,11 +212,8 @@ op item edit \
 	--vault "$vault_name" \
 	"${cluster_name}-kubeconfig" \
 	"notesPlain=$(cat kubeconfig)" \
-	2>/dev/null || op item create \
-	--vault "$vault_name" \
-	--category "Secure Note" \
-	--title "${cluster_name}-kubeconfig" \
-	"notesPlain=$(cat kubeconfig)"
+	</dev/null
+# Workaround for https://www.1password.community/discussions/developers/cli-still-has-a-bug-when-running-op-create-programmatically/23429
 
 echo "Stored talosconfig and kubeconfig in 1Password"
 echo "::endgroup::"

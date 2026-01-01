@@ -43,4 +43,6 @@ machine:
     extraKernelArgs:
       # 1024x768 for the dashboard:
       - vga=792
+      # Disable predictable network interface names (use eth0, eth1, etc.)
+      - net.ifnames=0
       - -talos.halt_if_installed
