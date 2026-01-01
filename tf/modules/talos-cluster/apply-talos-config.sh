@@ -102,22 +102,12 @@ echo "Generated controlplane.yaml and worker.yaml"
 # Use bootstrap IP for endpoint (VIP won't work until after Layer2VIPConfig is applied)
 # This must be done before bootstrap/kubeconfig commands
 TALOSCONFIG=./talosconfig talosctl config endpoint "https://${bootstrap_ip:-}:6443"
-TALOSCONFIG=./talosconfig talosctl config node "${bootstrap_ip:-:-}"
+TALOSCONFIG=./talosconfig talosctl config node "${bootstrap_ip:-}"
 echo "Configured talosconfig with endpoint and node"
 echo "::endgroup::"
 
 echo "::group::Apply machine configurations to control plane nodes"
 for node_ip in "${CONTROL_PLANE_IPS_ARRAY[@]}"; do
-	echo "Waiting for node $node_ip to be ready..."
-	# Wait for node to be reachable (Talos API on port 50000)
-	for i in {1..30}; do
-		if timeout 2 talosctl --talosconfig /dev/null --nodes "$node_ip" version --insecure 2>/dev/null; then
-			break
-		fi
-		echo "  Attempt $i/30: node not ready yet, waiting 5 seconds..."
-		sleep 5
-	done
-
 	echo "Applying config to control plane node: $node_ip"
 	talosctl apply-config \
 		--insecure \
@@ -131,16 +121,6 @@ if [[ -n ${worker_ips:-} ]]; then
 	IFS=',' read -ra WORKER_IPS_ARRAY <<<"$worker_ips"
 	for node_ip in "${WORKER_IPS_ARRAY[@]}"; do
 		if [[ -n $node_ip ]]; then
-			echo "Waiting for node $node_ip to be ready..."
-			# Wait for node to be reachable (Talos API on port 50000)
-			for i in {1..30}; do
-				if timeout 2 talosctl --talosconfig /dev/null --nodes "$node_ip" version --insecure 2>/dev/null; then
-					break
-				fi
-				echo "  Attempt $i/30: node not ready yet, waiting 5 seconds..."
-				sleep 5
-			done
-
 			echo "Applying config to worker node: $node_ip"
 			talosctl apply-config \
 				--insecure \
@@ -154,9 +134,23 @@ fi
 echo "::endgroup::"
 
 echo "::group::Bootstrap cluster and get kubeconfig"
+# Wait for bootstrap node to be ready after reboot (applying config triggers reboot)
+echo "Waiting for bootstrap node to be ready after config application..."
+for i in {1..60}; do
+	if talosctl --talosconfig talosconfig version 2>/dev/null; then
+		echo "Bootstrap node is ready"
+		break
+	fi
+	if [[ $i -eq 60 ]]; then
+		echo "Error: Bootstrap node did not become ready after 5 minutes" >&2
+		exit 1
+	fi
+	echo "  Attempt $i/60: node not ready yet, waiting 5 seconds..."
+	sleep 5
+done
+
 # Bootstrap is idempotent - talosctl bootstrap will only bootstrap if not already bootstrapped
 # It's safe to call multiple times
-# talosconfig is already configured with endpoint and node above
 talosctl bootstrap --talosconfig talosconfig
 
 # Get kubeconfig (also idempotent - regenerates but doesn't break anything)
