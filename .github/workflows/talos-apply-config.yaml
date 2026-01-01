@@ -1,0 +1,98 @@
+name: "talos-apply-config"
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        required: true
+        options:
+          - test
+          - prod
+
+env:
+  TF_IN_AUTOMATION: "true"
+  OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+
+concurrency:
+  group: ${{ github.repository }}-talos-apply-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  apply-talos-config:
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - uses: "actions/checkout@v6"
+
+      - name: Load secrets
+        id: load_secrets
+        uses: 1password/load-secrets-action@v3
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
+          WORKLOAD_IDENTITY_PROVIDER: "op://tiles-secrets/gh_oidc_workload_identity/workload_identity_provider"
+          SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
+
+      - uses: ./.github/actions/wg-quick
+        id: wireguard
+        with:
+          wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
+          conf_dir: "$HOME"
+
+      - name: Determine secret paths
+        id: secret_paths
+        run: |
+          if [ "${{ github.event.inputs.environment }}" == "test" ]; then
+            echo "misc_config_prefix=op://tiles-secrets/tiles-test-misc-config/config/" >> "$GITHUB_OUTPUT"
+            echo "machine_secrets_path=op://tiles-secrets/tiles-test-machine-secrets/notesPlain" >> "$GITHUB_OUTPUT"
+          else
+            echo "misc_config_prefix=op://tiles-secrets/tiles-misc-config/config/" >> "$GITHUB_OUTPUT"
+            echo "machine_secrets_path=op://tiles-secrets/tiles-machine-secrets/notesPlain" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Load Talos config from 1Password
+        id: load_talos_config
+        uses: 1password/load-secrets-action@v3
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          cluster_name: "${{ steps.secret_paths.outputs.misc_config_prefix }}cluster_name"
+          pod_cidr: "${{ steps.secret_paths.outputs.misc_config_prefix }}pod_cidr"
+          service_cidr: "${{ steps.secret_paths.outputs.misc_config_prefix }}service_cidr"
+          control_plane_vip: "${{ steps.secret_paths.outputs.misc_config_prefix }}control_plane_vip"
+          control_plane_vip_link: "${{ steps.secret_paths.outputs.misc_config_prefix }}control_plane_vip_link"
+          talos_install_image: "${{ steps.secret_paths.outputs.misc_config_prefix }}talos_install_image"
+          control_plane_ips: "${{ steps.secret_paths.outputs.misc_config_prefix }}control_plane_ips"
+          bootstrap_ip: "${{ steps.secret_paths.outputs.misc_config_prefix }}bootstrap_ip"
+          worker_ips: "${{ steps.secret_paths.outputs.misc_config_prefix }}worker_ips"
+          vault_name: "${{ steps.secret_paths.outputs.misc_config_prefix }}vault_name"
+          machine_secrets: "${{ steps.secret_paths.outputs.machine_secrets_path }}"
+
+      - name: Apply Talos configuration
+        working-directory: "tf/modules/talos-cluster"
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+        run: ./apply-talos-config.sh
+
+      - name: De-wireguard
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -z "${{ steps.wireguard.outputs.wg_connected }}" ]; then
+            echo "No Wireguard connection established, skipping disconnection."
+            exit 0
+          fi
+          echo "Disconnecting Wireguard..."
+          time sudo wg-quick down "$HOME/wg0.conf" || true
+          echo "Disconnected"
