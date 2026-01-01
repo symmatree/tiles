@@ -115,12 +115,8 @@ echo "Configured talosconfig with endpoint=${bootstrap_ip} and node=${bootstrap_
 op item edit \
 	--vault "${vault_name:-}" \
 	"${cluster_name:-}-talosconfig" \
-	"notesPlain=$(cat talosconfig)" \
-	2>/dev/null || op item create \
-	--vault "${vault_name:-}" \
-	--category "Secure Note" \
-	--title "${cluster_name}-talosconfig" \
-	"notesPlain=$(cat talosconfig)"
+	"notesPlain=$(cat talosconfig)" </dev/null
+# Workaround for https://www.1password.community/discussions/developers/cli-still-has-a-bug-when-running-op-create-programmatically/23429
 
 echo "::endgroup::"
 
