@@ -36,10 +36,14 @@ spec:
               - vers=4.1
   destination:
     server: https://kubernetes.default.svc
-    namespace: kube-system
+    namespace: nfs-csi-driver
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
+      - CreateNamespace=true
       - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline

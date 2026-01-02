@@ -38,7 +38,7 @@ spec:
               embed: true
           - name: localLoki
             type: loki
-            url: http://loki-gateway.loki.svc/loki/api/v1/push
+            url: http://loki.loki.svc/loki/api/v1/push
             tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
             secret:
               # This is just the tenant name

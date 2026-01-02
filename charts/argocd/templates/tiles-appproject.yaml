@@ -23,3 +23,21 @@ spec:
       kind: "CustomResourceDefinition"
   orphanedResources:
     warn: true
+    ignore:
+      # Argocd:
+      # app-of-apps, we install directly:
+      - kind: Application
+        name: argocd-applications
+      # Generated at runtime
+      - kind: Secret
+        name: argocd-initial-admin-secret
+      # Generated at runtime
+      - kind: Secret
+        name: argocd-redis
+      # cert-manager
+      - kind: Secret
+        name: cert-manager-webhook-ca
+      - kind: Secret
+        name: lets-encrypt-real
+      - kind: Secret
+        name: lets-encrypt-staging
