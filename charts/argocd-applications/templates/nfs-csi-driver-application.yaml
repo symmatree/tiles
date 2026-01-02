@@ -5,7 +5,7 @@ metadata:
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
-    repoURL: https://kubernetes-csi.github.io
+    repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
     targetRevision: "4.12.1"
     chart: csi-driver-nfs
     helm:

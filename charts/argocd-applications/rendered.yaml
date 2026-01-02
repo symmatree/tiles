@@ -1152,7 +1152,7 @@ metadata:
 spec:
   project: 'placeholder'
   source:
-    repoURL: https://kubernetes-csi.github.io
+    repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
     targetRevision: "4.12.1"
     chart: csi-driver-nfs
     helm:
