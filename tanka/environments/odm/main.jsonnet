@@ -27,7 +27,7 @@ local odm = {
 {
 local postgresPvc = kPersistentVolumeClaim.new(name="odm-postgres")
 + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
-+ kPersistentVolumeClaim.spec.resources.withRequests({ storgage: "10Gi" })
++ kPersistentVolumeClaim.spec.resources.withRequests({ storage: "10Gi" })
 + kPersistentVolumeClaim.spec.withStorageClassName('local-path'),
 postgresPvc: postgresPvc,
 
