@@ -14,7 +14,7 @@ virtual_machines = {
     proxmox_node_name = "nuc-g3p-2"
     vm_id             = 7411
     cores             = 2
-    ram_mb            = 4096
+    ram_mb            = 5120
     mac_address       = "bc:24:11:d0:74:11"
     ip_address        = "10.0.192.11"
   },
