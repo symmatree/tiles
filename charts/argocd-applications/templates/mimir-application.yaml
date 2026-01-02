@@ -26,7 +26,7 @@ spec:
             kind: ConfigMap
             metadata:
               name: mimir-data-source
-              namespace: "{{ .Release.Namespace }}"
+              namespace: "mimir"
               labels:
                 grafana_datasource: "1"
             data:
@@ -50,7 +50,7 @@ spec:
             kind: ConfigMap
             metadata:
               name: alertmanager-data-source
-              namespace: "{{ .Release.Namespace }}"
+              namespace: "mimir"
               labels:
                 grafana_datasource: "1"
             data:
