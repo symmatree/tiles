@@ -71,7 +71,6 @@ data:
       storage:
         filesystem:
           chunks_directory: /var/loki/chunks
-          directory: /loki/storage
           rules_directory: /var/loki/rules
     frontend:
       scheduler_address: ""
@@ -1075,7 +1074,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: b9b492c0de69a2a35074649f7571ee343c0684e4aaf9282d399cda34310aace4
+        checksum/config: d30b5a2582400947767e761bd2b4c9864cfe3ea4af6973b5fe3b5fff3f2961a5
         storage/size: "10Gi"
         kubectl.kubernetes.io/default-container: "loki"
       labels:
