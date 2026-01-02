@@ -24,7 +24,7 @@ libMonResources.new(
   },
   {
     folder: 'Kubernetes',
-    namespace: 'kubernetes-mixin',
+    namespace: 'alloy',
     dashboardsToDrop: [
       'proxy',
     ],
