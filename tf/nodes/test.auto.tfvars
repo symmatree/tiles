@@ -29,5 +29,6 @@ virtual_machines = {
   }
 }
 
-loki_nfs_path  = "/tiles-test-loki"
-mimir_nfs_path = "/tiles-test-mimir"
+# It's a shame the internal volume leaks here
+loki_nfs_path  = "/volume2/tiles-test-loki"
+mimir_nfs_path = "/volume2/tiles-test-mimir"
