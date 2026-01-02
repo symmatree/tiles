@@ -27,8 +27,13 @@ data:
 
       generate:
         command:
-          - "sh"
-          - "-c"
-          - /home/argocd/cmp-server/plugins/tk show environments/${ARGOCD_ENV_TK_ENV} --dangerous-allow-redirect --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
+          - /home/argocd/cmp-server/plugins/generate.sh
       discover:
         fileName: "./environments/*/main.jsonnet"
+  generate.sh: |
+    #!/bin/sh
+    set -euo pipefail
+    /home/argocd/cmp-server/plugins/tk show \
+      "environments/${ARGOCD_ENV_TK_ENV}" \
+      --dangerous-allow-redirect \
+      --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"

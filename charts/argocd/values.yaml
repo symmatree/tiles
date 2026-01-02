@@ -535,7 +535,8 @@ argo-cd:
             cd /home/argocd/cmp-server/plugins && \
             curl -Lo jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.6.0/jb-linux-amd64" && \
             curl -Lo tk "https://github.com/grafana/tanka/releases/download/v0.32.0/tk-linux-amd64" && \
-            chmod +x jb tk && \
+            cp /mnt/cmp-tanka/generate.sh generate.sh && \
+            chmod +x jb tk generate.sh && \
             /var/run/argocd/argocd-cmp-server
         securityContext:
           runAsNonRoot: true
@@ -547,6 +548,8 @@ argo-cd:
             name: plugins
           - mountPath: /home/argocd/cmp-server/config/plugin.yaml
             subPath: plugin.yaml
+            name: cmp-tanka
+          - mountPath: /mnt/cmp-tanka
             name: cmp-tanka
     volumes:
       - name: cmp-tanka

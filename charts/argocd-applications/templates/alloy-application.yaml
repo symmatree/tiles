@@ -5,9 +5,9 @@ metadata:
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
-    repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
-    path: charts/alloy
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: "3.7.1"
+    chart: k8s-monitoring
     helm:
       valuesObject:
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
@@ -27,7 +27,6 @@ spec:
         cluster:
           name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
 
-        # Arrays don't value-merge so we have to do it all here.
         destinations:
           - name: localMimir
             type: prometheus

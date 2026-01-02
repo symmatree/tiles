@@ -741,11 +741,16 @@ data:
 
       generate:
         command:
-          - "sh"
-          - "-c"
-          - /home/argocd/cmp-server/plugins/tk show environments/${ARGOCD_ENV_TK_ENV} --dangerous-allow-redirect --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
+          - /home/argocd/cmp-server/plugins/generate.sh
       discover:
         fileName: "./environments/*/main.jsonnet"
+  generate.sh: |
+    #!/bin/sh
+    set -euo pipefail
+    /home/argocd/cmp-server/plugins/tk show \
+      "environments/${ARGOCD_ENV_TK_ENV}" \
+      --dangerous-allow-redirect \
+      --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -2388,7 +2393,8 @@ spec:
           cd /home/argocd/cmp-server/plugins && \
           curl -Lo jb "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.6.0/jb-linux-amd64" && \
           curl -Lo tk "https://github.com/grafana/tanka/releases/download/v0.32.0/tk-linux-amd64" && \
-          chmod +x jb tk && \
+          cp /mnt/cmp-tanka/generate.sh generate.sh && \
+          chmod +x jb tk generate.sh && \
           /var/run/argocd/argocd-cmp-server
         image: prontotools/alpine-git-curl:latest
         name: tanka
@@ -2403,6 +2409,8 @@ spec:
         - mountPath: /home/argocd/cmp-server/config/plugin.yaml
           name: cmp-tanka
           subPath: plugin.yaml
+        - mountPath: /mnt/cmp-tanka
+          name: cmp-tanka
       initContainers:
       - command:
         - /bin/cp
