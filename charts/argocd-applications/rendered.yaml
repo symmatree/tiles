@@ -1058,7 +1058,7 @@ spec:
         kafka:
           resources:
             requests:
-              cpu: null
+              cpu: 100m
               memory: 128Mi
         chunks-cache:
           enabled: false
@@ -1089,25 +1089,25 @@ spec:
             limits:
               memory: 128Mi
             requests:
-              cpu: null
+              cpu: 50m
               memory: 128Mi
 
         querier:
           replicas: 1
           resources:
             requests:
-              cpu: null
+              cpu: 50m
           terminationGracePeriodSeconds: 60
         query_scheduler:
           resources:
             requests:
-              cpu: null
+              cpu: 50m
               memory: 128Mi
         query_frontend:
           replicas: 1
           resources:
             requests:
-              cpu: null
+              cpu: 50m
           terminationGracePeriodSeconds: 60
 
         ruler:
