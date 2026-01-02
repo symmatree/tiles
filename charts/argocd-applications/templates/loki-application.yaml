@@ -38,6 +38,8 @@ spec:
             - -config.expand-env=true
             - -log-config-reverse-order
         loki:
+          commonConfig:
+            replication_factor: 1
           schemaConfig:
             configs:
               - from: 2024-04-01
@@ -62,6 +64,8 @@ spec:
           querier:
             # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
             max_concurrent: 4
+          extraMemberlistConfig:
+            cluster_label: loki
 
         deploymentMode: SingleBinary
         monitoring:
