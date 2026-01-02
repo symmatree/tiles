@@ -50,7 +50,7 @@ spec:
             kind: Probe
             metadata:
               name: hubitat-http
-              namespace: "{{ .Release.Namespace }}"
+              namespace: "alloy"
             spec:
               interval: 30s
               module: http_2xx
@@ -65,7 +65,7 @@ spec:
             kind: Probe
             metadata:
               name: raconteur-syno-ui
-              namespace: "{{ .Release.Namespace }}"
+              namespace: "alloy"
             spec:
               interval: 30s
               module: http_2xx
@@ -80,7 +80,7 @@ spec:
             kind: Probe
             metadata:
               name: morpheus-ui
-              namespace: "{{ .Release.Namespace }}"
+              namespace: "alloy"
             spec:
               interval: 30s
               module: http_2xx

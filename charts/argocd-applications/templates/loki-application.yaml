@@ -17,7 +17,7 @@ spec:
             kind: ConfigMap
             metadata:
               name: loki-data-source
-              namespace: "{{ .Release.Namespace }}"
+              namespace: "loki"
               labels:
                 grafana_datasource: "1"
             data:
