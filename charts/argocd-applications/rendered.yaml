@@ -803,6 +803,8 @@ spec:
             - -config.expand-env=true
             - -log-config-reverse-order
         loki:
+          commonConfig:
+            replication_factor: 1
           schemaConfig:
             configs:
               - from: 2024-04-01
@@ -827,6 +829,8 @@ spec:
           querier:
             # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
             max_concurrent: 4
+          extraMemberlistConfig:
+            cluster_label: loki
 
         deploymentMode: SingleBinary
         monitoring:
@@ -1228,6 +1232,42 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+---
+# Source: argocd-applications/templates/odm-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: odm
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: odm
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: odm
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
 ---
 # Source: argocd-applications/templates/onepassword-application.yaml
 apiVersion: argoproj.io/v1alpha1
