@@ -796,6 +796,7 @@ spec:
                     isDefault: false
                     jsonData:
                       httpHeaderName1: X-Scope-OrgID
+                    secureJsonData:
                       httpHeaderValue1: "placeholder"
         global:
           extraArgs:
