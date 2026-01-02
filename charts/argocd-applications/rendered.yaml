@@ -827,36 +827,8 @@ spec:
           querier:
             # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
             max_concurrent: 4
-        gateway:
-          # basicAuth:
-          #   enabled: true
-          #   existingSecret: loki-tenant-auth
-          replicas: 1
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 3
-            periodSeconds: 3
-        #gateway:
-        #  ingress:
-        #    enabled: true
-        #    hosts:
-        #      - host: FIXME
-        #        paths:
-        #          - path: /
-        #            pathType: Prefix
 
         deploymentMode: SingleBinary
-        backend:
-          replicas: 0
-        read:
-          replicas: 0
-        write:
-          replicas: 0
-        chunksCache:
-          # Down from default of 8GB
-          allocatedMemory: 1024
         monitoring:
           dashboards:
             enabled: false
@@ -879,20 +851,19 @@ spec:
           persistentVolume:
             storageClass: "nfs-loki"
             size: 100Gi
-          affinity:
-            podAntiAffinity:
-              # Overridden to change from required to preferred
-              preferredDuringSchedulingIgnoredDuringExecution:
-                - weight: 1
-                  podAffinityTerm:
-                    labelSelector:
-                      matchLabels:
-                        app.kubernetes.io/component: single-binary
-                        app.kubernetes.io/name: loki
-                        app.kubernetes.io/instance: loki
-                    topologyKey: kubernetes.io/hostname
-              requiredDuringSchedulingIgnoredDuringExecution: []
 
+        gateway:
+          replicas: 0
+        backend:
+          replicas: 0
+        read:
+          replicas: 0
+        write:
+          replicas: 0
+        chunksCache:
+          replicas: 0
+        resultsCache:
+          replicas: 0
         ingester:
           replicas: 0
         querier:
