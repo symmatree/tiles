@@ -79,8 +79,6 @@ spec:
             common:
               storage:
                 backend: filesystem
-                filesystem:
-                  directory: /mimir/storage
             alertmanager_storage:
               backend: filesystem
             blocks_storage:

@@ -52,7 +52,7 @@ spec:
             kind: Probe
             metadata:
               name: hubitat-http
-              namespace: "argocd-applications"
+              namespace: "alloy"
             spec:
               interval: 30s
               module: http_2xx
@@ -67,7 +67,7 @@ spec:
             kind: Probe
             metadata:
               name: raconteur-syno-ui
-              namespace: "argocd-applications"
+              namespace: "alloy"
             spec:
               interval: 30s
               module: http_2xx
@@ -82,7 +82,7 @@ spec:
             kind: Probe
             metadata:
               name: morpheus-ui
-              namespace: "argocd-applications"
+              namespace: "alloy"
             spec:
               interval: 30s
               module: http_2xx
@@ -627,7 +627,7 @@ spec:
           - apiVersion: onepassword.com/v1
             kind: OnePasswordItem
             metadata:
-              namespace: "argocd-applications"
+              namespace: "grafana"
               name: github-data-source-secret
               labels:
                 grafana_datasource: "1"
@@ -637,7 +637,7 @@ spec:
           - apiVersion: onepassword.com/v1
             kind: OnePasswordItem
             metadata:
-              namespace: "argocd-applications"
+              namespace: "grafana"
               name: grafana-admin-user
             type: Opaque
             spec:
@@ -782,7 +782,7 @@ spec:
             kind: ConfigMap
             metadata:
               name: loki-data-source
-              namespace: "argocd-applications"
+              namespace: "loki"
               labels:
                 grafana_datasource: "1"
             data:
@@ -925,7 +925,7 @@ spec:
             kind: ConfigMap
             metadata:
               name: mimir-data-source
-              namespace: "argocd-applications"
+              namespace: "mimir"
               labels:
                 grafana_datasource: "1"
             data:
@@ -949,7 +949,7 @@ spec:
             kind: ConfigMap
             metadata:
               name: alertmanager-data-source
-              namespace: "argocd-applications"
+              namespace: "mimir"
               labels:
                 grafana_datasource: "1"
             data:
@@ -978,8 +978,6 @@ spec:
             common:
               storage:
                 backend: filesystem
-                filesystem:
-                  directory: /mimir/storage
             alertmanager_storage:
               backend: filesystem
             blocks_storage:
