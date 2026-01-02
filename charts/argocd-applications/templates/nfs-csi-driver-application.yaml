@@ -19,6 +19,8 @@ spec:
             reclaimPolicy: Retain
             volumeBindingMode: Immediate
             mountOptions:
+              # 4.1 avoids nolock
+              - nfsvers=4.1
               - uid={{ required ".Values.loki_nfs_uid is required" .Values.loki_nfs_uid }}
           - name: nfs-mimir
             parameters:
@@ -27,6 +29,8 @@ spec:
             reclaimPolicy: Retain
             volumeBindingMode: Immediate
             mountOptions:
+              # 4.1 avoids nolock
+              - nfsvers=4.1
               - uid={{ required ".Values.mimir_nfs_uid is required" .Values.mimir_nfs_uid }}
   destination:
     server: https://kubernetes.default.svc
