@@ -3420,56 +3420,56 @@ spec:
     relabelings: []
     tlsConfig: {}
 ---
-# Source: alloy/templates/external-probers.yaml
+# Source: alloy/charts/k8s-monitoring/templates/extra-objects.yaml
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
   name: hubitat-http
-  namespace: "alloy"
+  namespace: 'alloy'
 spec:
   interval: 30s
   module: http_2xx
   prober:
-    url: alloy-alloy-metrics-cluster.alloy.svc:12345
     path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+    url: alloy-alloy-metrics-cluster.alloy.svc:12345
   targets:
     staticConfig:
       static:
-        - http://hubitat.local.symmatree.com
+      - http://hubitat.local.symmatree.com
 ---
-# Source: alloy/templates/external-probers.yaml
+# Source: alloy/charts/k8s-monitoring/templates/extra-objects.yaml
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
   name: raconteur-syno-ui
-  namespace: "alloy"
+  namespace: 'alloy'
 spec:
   interval: 30s
   module: http_2xx
   prober:
-    url: alloy-alloy-metrics-cluster.alloy.svc:12345
     path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+    url: alloy-alloy-metrics-cluster.alloy.svc:12345
   targets:
     staticConfig:
       static:
-        - https://raconteur.ad.local.symmatree.com:5001/
+      - https://raconteur.ad.local.symmatree.com:5001/
 ---
-# Source: alloy/templates/external-probers.yaml
+# Source: alloy/charts/k8s-monitoring/templates/extra-objects.yaml
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
   name: morpheus-ui
-  namespace: "alloy"
+  namespace: 'alloy'
 spec:
   interval: 30s
   module: http_2xx
   prober:
-    url: alloy-alloy-metrics-cluster.alloy.svc:12345
     path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+    url: alloy-alloy-metrics-cluster.alloy.svc:12345
   targets:
     staticConfig:
       static:
-        - https://morpheus.local.symmatree.com/
+      - https://morpheus.local.symmatree.com/
 ---
 # Source: alloy/charts/k8s-monitoring/templates/hooks/post-install_add-finalizer.yaml
 apiVersion: v1

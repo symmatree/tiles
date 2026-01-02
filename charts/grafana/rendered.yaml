@@ -423,27 +423,27 @@ spec:
                 port:
                   number: 80
 ---
-# Source: grafana/templates/github-data-source-secret.yaml
+# Source: grafana/charts/grafana/templates/extra-manifests.yaml
 apiVersion: onepassword.com/v1
 kind: OnePasswordItem
 metadata:
-  namespace: "grafana"
-  name: github-data-source-secret
   labels:
     grafana_datasource: "1"
-type: Opaque
+  name: github-data-source-secret
+  namespace: 'grafana'
 spec:
-  itemPath: "vaults/placeholder/items/grafana-github-token"
+  itemPath: vaults//items/grafana-github-token
+type: Opaque
 ---
-# Source: grafana/templates/grafana-admin-user.yaml
+# Source: grafana/charts/grafana/templates/extra-manifests.yaml
 apiVersion: onepassword.com/v1
 kind: OnePasswordItem
 metadata:
-  namespace: "grafana"
   name: grafana-admin-user
-type: Opaque
+  namespace: 'grafana'
 spec:
-  itemPath: "vaults/placeholder/items/grafana-admin-user"
+  itemPath: vaults//items/grafana-admin-user
+type: Opaque
 ---
 # Source: grafana/charts/grafana/templates/tests/test-serviceaccount.yaml
 apiVersion: v1

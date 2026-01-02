@@ -448,12 +448,17 @@ metadata:
 spec:
   project: 'placeholder'
   source:
-    repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
-    path: charts/local-path-provisioner
+    chart: local-path-provisioner
+    repoURL: https://charts.containeroo.ch
+    targetRevision: "0.0.32"
     helm:
-      valueFiles:
-        - values.yaml
+      valuesObject:
+        storageClass:
+          create: true
+          defaultClass: true
+          name: local-path
+          reclaimPolicy: Delete
+          volumeBindingMode: WaitForFirstConsumer
   destination:
     server: https://kubernetes.default.svc
     namespace: local-path-provisioner

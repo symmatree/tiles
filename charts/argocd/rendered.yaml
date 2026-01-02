@@ -3645,6 +3645,7 @@ spec:
   description: 'placeholder Project'
   sourceRepos:
     - https://github.com/symmatree/tiles.git
+    - https://kubernetes-csi.github.io/csi-driver-nfs
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"

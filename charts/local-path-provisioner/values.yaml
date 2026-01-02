@@ -1,8 +1,0 @@
-# Default values for local-path-provisioner
-local-path-provisioner:
-  storageClass:
-    create: true
-    defaultClass: true
-    name: local-path
-    reclaimPolicy: Delete
-    volumeBindingMode: WaitForFirstConsumer
