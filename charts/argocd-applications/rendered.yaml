@@ -7,9 +7,9 @@ metadata:
 spec:
   project: 'placeholder'
   source:
-    repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
-    path: charts/alloy
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: "3.7.1"
+    chart: k8s-monitoring
     helm:
       valuesObject:
         vault_name: 'placeholder'
@@ -29,7 +29,6 @@ spec:
         cluster:
           name: 'placeholder'
 
-        # Arrays don't value-merge so we have to do it all here.
         destinations:
           - name: localMimir
             type: prometheus
@@ -793,7 +792,7 @@ spec:
                   - name: Loki
                     uid: loki
                     type: loki
-                    url: http://loki-gateway.loki.svc
+                    url: http://loki.loki.svc
                     isDefault: false
                     jsonData:
                       httpHeaderName1: X-Scope-OrgID
@@ -1153,8 +1152,8 @@ metadata:
 spec:
   project: 'placeholder'
   source:
-    repoURL: https://kubernetes-csi.github.io/csi-driver-nfs
-    targetRevision: latest
+    repoURL: https://kubernetes-csi.github.io
+    targetRevision: "4.12.1"
     chart: csi-driver-nfs
     helm:
       valuesObject:

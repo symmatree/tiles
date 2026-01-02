@@ -27,7 +27,7 @@ spec:
                   - name: Loki
                     uid: loki
                     type: loki
-                    url: http://loki-gateway.loki.svc
+                    url: http://loki.loki.svc
                     isDefault: false
                     jsonData:
                       httpHeaderName1: X-Scope-OrgID
