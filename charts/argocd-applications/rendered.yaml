@@ -40,7 +40,7 @@ spec:
               embed: true
           - name: localLoki
             type: loki
-            url: http://loki-gateway.loki.svc/loki/api/v1/push
+            url: http://loki.loki.svc/loki/api/v1/push
             tenantId: 'placeholder'
             secret:
               # This is just the tenant name
@@ -1181,13 +1181,17 @@ spec:
               - vers=4.1
   destination:
     server: https://kubernetes.default.svc
-    namespace: kube-system
+    namespace: nfs-csi-driver
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
+      - CreateNamespace=true
       - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
 ---
 # Source: argocd-applications/templates/node-exporter-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
