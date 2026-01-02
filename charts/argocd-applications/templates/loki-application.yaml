@@ -82,12 +82,12 @@ spec:
         singleBinary:
           replicas: 1
           enableStatefulSetAutoDeletePVC: true
-          persistentVolume:
+          persistence:
             storageClass: "nfs-loki"
             size: 100Gi
 
         gateway:
-          replicas: 0
+          enabled: false
         backend:
           replicas: 0
         read:
@@ -95,9 +95,9 @@ spec:
         write:
           replicas: 0
         chunksCache:
-          replicas: 0
+          enabled: false
         resultsCache:
-          replicas: 0
+          enabled: false
         ingester:
           replicas: 0
         querier:

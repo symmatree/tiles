@@ -847,12 +847,12 @@ spec:
         singleBinary:
           replicas: 1
           enableStatefulSetAutoDeletePVC: true
-          persistentVolume:
+          persistence:
             storageClass: "nfs-loki"
             size: 100Gi
 
         gateway:
-          replicas: 0
+          enabled: false
         backend:
           replicas: 0
         read:
@@ -860,9 +860,9 @@ spec:
         write:
           replicas: 0
         chunksCache:
-          replicas: 0
+          enabled: false
         resultsCache:
-          replicas: 0
+          enabled: false
         ingester:
           replicas: 0
         querier:
@@ -1164,6 +1164,8 @@ spec:
             reclaimPolicy: Retain
             volumeBindingMode: Immediate
             mountOptions:
+              # 4.1 avoids nolock
+              - nfsvers=4.1
               - uid=placeholder
           - name: nfs-mimir
             parameters:
@@ -1172,6 +1174,8 @@ spec:
             reclaimPolicy: Retain
             volumeBindingMode: Immediate
             mountOptions:
+              # 4.1 avoids nolock
+              - nfsvers=4.1
               - uid=placeholder
   destination:
     server: https://kubernetes.default.svc
