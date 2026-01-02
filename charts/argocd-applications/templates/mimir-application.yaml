@@ -216,13 +216,13 @@ spec:
           terminationGracePeriodSeconds: 60
           resources:
             requests:
-              cpu: null
+              cpu: 100m
         store_gateway:
           zoneAwareReplication:
             enabled: false
           resources:
             requests:
-              cpu: null
+              cpu: 100m
           persistentVolume:
             storageClass: "nfs-mimir"
             enableRetentionPolicy: true

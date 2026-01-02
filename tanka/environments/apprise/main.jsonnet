@@ -2,7 +2,17 @@ local k_util = import 'github.com/grafana/jsonnet-libs/ksonnet-util/util.libsonn
 local k = import 'k.libsonnet';
 local op = import 'op.libsonnet';
 
-local APP = std.parseJson(std.extVar('ARGOCD_APP_PARAMETERS'));
+local APP_VARS = std.parseJson(std.extVar('ARGOCD_APP_PARAMETERS'));
+local isString(v) = std.objectHas(v, 'string');
+local isMap(v) = std.objectHas(v, 'map');
+local APP = {
+  [v.name]: v.string
+  for v in std.filter(isString, APP_VARS)
+} + {
+  [v.name]: v.map
+  for v in std.filter(isMap, APP_VARS)
+};
+
 // assert APP.vault_name != null && APP.vault_name != "";
 // assert APP.cluster_name != null && APP.cluster_name != "";
 // assert APP.app_settings.apprise_env != null && APP.app_settings.apprise_env != "";
