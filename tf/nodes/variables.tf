@@ -118,5 +118,5 @@ variable "mimir_nfs_uid" {
 variable "nfs_server" {
   description = "NFS server hostname or IP address"
   type        = string
-  default     = "raconteur.local.symmatree.com"
+  default     = "raconteur.ad.local.symmatree.com"
 }

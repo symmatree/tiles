@@ -89,14 +89,14 @@ spec:
         distributor:
           resources:
             requests:
-              cpu: null
+              cpu: 50m
               memory: 128Mi
         alertmanager:
           zoneAwareReplication:
             enabled: false
           resources:
             requests:
-              cpu: null
+              cpu: 10m
               memory: 128Mi
           statefulSet:
             enabled: true
@@ -133,7 +133,7 @@ spec:
         ingester:
           resources:
             requests:
-              cpu: null
+              cpu: 10m
               memory: 128Mi
           persistentVolume:
             storageClass: "nfs-mimir"

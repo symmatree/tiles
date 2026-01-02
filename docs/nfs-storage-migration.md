@@ -25,7 +25,7 @@ Loki and Mimir require a shared filesystem that supports ReadWriteMany (RWX) acc
 
 ### 1. Synology NFS Setup
 
-On the Synology NAS (raconteur.local.symmatree.com):
+On the Synology NAS (raconteur.ad.local.symmatree.com):
 
 1. **Enable NFS Service:**
    - DSM → Control Panel → File Services → NFS
