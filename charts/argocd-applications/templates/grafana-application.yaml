@@ -1,1 +1,108 @@
-../../grafana/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: "10.4.2"
+    chart: grafana
+    helm:
+      valuesObject:
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        global:
+          extraEnv:
+            - name: SSL_CERT_FILE
+              value: /etc/ssl/certs/ca-certificates.crt
+          extraVolumes:
+            - name: ca-certificates
+              configMap:
+                name: trust-bundle
+          extraVolumeMounts:
+            - name: ca-certificates
+              mountPath: /etc/ssl/certs
+              readOnly: true
+        ingress:
+          hosts:
+            - 'borgmon.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+          tls:
+            - secretName: grafana-tls
+              hosts:
+                - 'borgmon.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+          enabled: true
+          ingressClassName: cilium
+          annotations:
+            cert-manager.io/cluster-issuer: real-cert
+
+        extraObjects:
+          - apiVersion: onepassword.com/v1
+            kind: OnePasswordItem
+            metadata:
+              namespace: "{{ .Release.Namespace }}"
+              name: github-data-source-secret
+              labels:
+                grafana_datasource: "1"
+            type: Opaque
+            spec:
+              itemPath: "vaults/{{.Values.vault_name}}/items/grafana-github-token"
+          - apiVersion: onepassword.com/v1
+            kind: OnePasswordItem
+            metadata:
+              namespace: "{{ .Release.Namespace }}"
+              name: grafana-admin-user
+            type: Opaque
+            spec:
+              itemPath: "vaults/{{.Values.vault_name}}/items/grafana-admin-user"
+
+        # https://github.com/grafana/helm-charts/blob/grafana-8.13.1/charts/grafana/values.yaml
+        configMapAnnotations:
+          argocd.argoproj.io/sync-options: Replace=true
+        persistence:
+          enabled: true
+        admin:
+          existingSecret: grafana-admin-user
+          userKey: username
+          passwordKey: password
+        plugins:
+          - grafana-github-datasource
+          - grafana-lokiexplore-app
+          # - grafana-metricsdrilldown-app
+          # - grafana-mqtt-datasource
+        initChownData:
+          enabled: false
+          # Ref https://github.com/grafana/helm-charts/issues/752 for tradeoff
+          # between this and outright disabling.
+          # This is the user grafana uses, just empirically.
+          securityContext:
+            runAsUser: 472
+            runAsGroup: 472
+        sidecar:
+          dashboards:
+            enabled: true
+            searchNamespace: ALL
+            folderAnnotation: k8s-sidecar-target-directory
+            provider:
+              folderUid: sidecar
+              folder: Sidecar
+              allowUiUpdates: true
+              foldersFromFilesStructure: true
+          datasources:
+            enabled: true
+            searchNamespace: ALL
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grafana
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+        trust-bundle: enabled

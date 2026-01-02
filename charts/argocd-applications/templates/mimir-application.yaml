@@ -1,1 +1,246 @@
-../../mimir/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mimir
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: "6.0.5"
+    chart: mimir-distributed
+    helm:
+      valuesObject:
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        gateway:
+          enabled: true
+          ingress:
+            hosts:
+              - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            tls:
+              - secretName: mimir-tls
+                hosts:
+                  - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+        extraObjects:
+          - apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: mimir-data-source
+              namespace: "{{ .Release.Namespace }}"
+              labels:
+                grafana_datasource: "1"
+            data:
+              datasource.yaml: |-
+                apiVersion: 1
+                datasources:
+                  - name: Mimir
+                    uid: prom
+                    type: prometheus
+                    url: http://mimir-gateway.mimir.svc/prometheus
+                    isDefault: true
+                    jsonData:
+                      prometheusType: Mimir
+                      alertmanagerUid: alertmanager
+                      httpHeaderName1: X-Scope-OrgID
+                    secureJsonData:
+                      tlsCACert: $__file{/etc/ssl/certs/ca-certificates.crt}
+                      httpHeaderValue1: "{{ .Values.cluster_name }}"
+
+          - apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: alertmanager-data-source
+              namespace: "{{ .Release.Namespace }}"
+              labels:
+                grafana_datasource: "1"
+            data:
+              datasource.yaml: |-
+                apiVersion: 1
+                datasources:
+                  - name: Mimir Alertmanager
+                    uid: alertmanager
+                    type: alertmanager
+                    url: http://mimir-gateway.mimir.svc/
+                    jsonData:
+                      implementation: mimir
+                      handleGrafanaManagedAlerts: true
+                      httpHeaderName1: X-Scope-OrgID
+                    secureJsonData:
+                      httpHeaderValue1: "{{ .Values.cluster_name }}"
+
+        global:
+          podLabels: {}
+
+        mimir:
+          structuredConfig:
+            multitenancy_enabled: true
+            tenant_federation:
+              enabled: true
+            common:
+              storage:
+                backend: filesystem
+                filesystem:
+                  directory: /mimir/storage
+            alertmanager_storage:
+              backend: filesystem
+            blocks_storage:
+              backend: filesystem
+            ruler_storage:
+              backend: filesystem
+
+        distributor:
+          resources:
+            requests:
+              cpu: null
+              memory: 128Mi
+        alertmanager:
+          zoneAwareReplication:
+            enabled: false
+          resources:
+            requests:
+              cpu: null
+              memory: 128Mi
+          statefulSet:
+            enabled: true
+          persistentVolume:
+            storageClass: "nfs-mimir"
+            enableRetentionPolicy: true
+            whenDeleted: Delete
+            whenScaled: Delete
+          terminationGracePeriodSeconds: 60
+          extraContainers:
+            - name: alert-forward
+              # Pull-always since we build daily with security patches.
+              imagePullPolicy: Always
+              image: "ghcr.io/symmatree/tiles/mimir-webhook:main"
+              ports:
+                - name: webhook
+                  containerPort: 3000
+                  protocol: TCP
+              env:
+                - name: APPRISE_URL
+                  # Trailing slash is required
+                  value: http://apprise.apprise.svc:8000/notify/
+                - name: APPRISE_KEY
+                  value: apprise
+
+        compactor:
+          persistentVolume:
+            storageClass: "nfs-mimir"
+            enableRetentionPolicy: true
+            whenDeleted: Delete
+            whenScaled: Delete
+          terminationGracePeriodSeconds: 60
+
+        ingester:
+          resources:
+            requests:
+              cpu: null
+              memory: 128Mi
+          persistentVolume:
+            storageClass: "nfs-mimir"
+            enableRetentionPolicy: true
+            whenDeleted: Delete
+            whenScaled: Delete
+          terminationGracePeriodSeconds: 60
+          replicas: 2
+          zoneAwareReplication:
+            enabled: false
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 1
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/component: ingester
+                        app.kubernetes.io/name: mimir
+                        app.kubernetes.io/instance: mimir
+                    topologyKey: kubernetes.io/hostname
+              requiredDuringSchedulingIgnoredDuringExecution: []
+        kafka:
+          resources:
+            requests:
+              cpu: null
+              memory: 128Mi
+        chunks-cache:
+          enabled: false
+          replicas: 1
+          # allocated memory in MB
+          allocatedMemory: 512
+        index-cache:
+          enabled: false
+          replicas: 1
+          allocatedMemory: 128
+
+        metadata-cache:
+          enabled: false
+          replicas: 1
+          allocatedMemory: 128
+
+        results-cache:
+          enabled: false
+          replicas: 1
+          allocatedMemory: 128
+
+        minio:
+          enabled: false
+
+        overrides_exporter:
+          replicas: 1
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: null
+              memory: 128Mi
+
+        querier:
+          replicas: 1
+          resources:
+            requests:
+              cpu: null
+          terminationGracePeriodSeconds: 60
+        query_scheduler:
+          resources:
+            requests:
+              cpu: null
+              memory: 128Mi
+        query_frontend:
+          replicas: 1
+          resources:
+            requests:
+              cpu: null
+          terminationGracePeriodSeconds: 60
+
+        ruler:
+          replicas: 1
+          terminationGracePeriodSeconds: 60
+          resources:
+            requests:
+              cpu: null
+        store_gateway:
+          zoneAwareReplication:
+            enabled: false
+          resources:
+            requests:
+              cpu: null
+          persistentVolume:
+            storageClass: "nfs-mimir"
+            enableRetentionPolicy: true
+            whenDeleted: Delete
+            whenScaled: Delete
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mimir
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline

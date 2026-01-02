@@ -7,6 +7,9 @@ spec:
   description: '{{ required ".Values.cluster_name is required" .Values.cluster_name }} Project'
   sourceRepos:
     - https://github.com/symmatree/tiles.git
+    - https://kubernetes-csi.github.io/csi-driver-nfs
+    - https://charts.containeroo.ch
+    - https://grafana.github.io/helm-charts
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"
