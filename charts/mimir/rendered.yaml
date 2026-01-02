@@ -483,6 +483,8 @@ data:
     common:
       storage:
         backend: filesystem
+        filesystem:
+          directory: /mimir/storage
     compactor:
       compaction_interval: 30m
       data_dir: /data
@@ -500,8 +502,6 @@ data:
       ring:
         heartbeat_period: 1m
         heartbeat_timeout: 4m
-    filesystem:
-      directory: /mimir/storage
     frontend:
       parallelize_shardable_queries: true
       scheduler_address: mimir-query-scheduler-headless.mimir.svc:9095
@@ -1531,7 +1531,7 @@ spec:
         app.kubernetes.io/component: distributor
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -1762,7 +1762,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: overrides-exporter
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -1877,7 +1877,7 @@ spec:
         app.kubernetes.io/component: querier
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
     spec:
       serviceAccountName: mimir
       securityContext:
@@ -1996,7 +1996,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: query-frontend
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2114,7 +2114,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: query-scheduler
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
     spec:
       serviceAccountName: mimir
       securityContext:
@@ -2230,7 +2230,7 @@ spec:
         app.kubernetes.io/component: ruler
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2364,7 +2364,7 @@ spec:
         app.kubernetes.io/component: alertmanager
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
         checksum/alertmanager-fallback-config: c9a82c9ebae64aab54b17778058698c142efa6dd35414f1c3da77017fe002bee
       namespace: "mimir"
     spec:
@@ -2523,7 +2523,7 @@ spec:
         app.kubernetes.io/component: compactor
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2656,7 +2656,7 @@ spec:
         app.kubernetes.io/component: ingester
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2784,7 +2784,7 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: kafka
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
@@ -2937,7 +2937,7 @@ spec:
         app.kubernetes.io/component: store-gateway
         app.kubernetes.io/part-of: memberlist
       annotations:
-        checksum/config: 06adfcbc9e7da2f7e693e918343e15f11a77294a96c437c85e4421c5fac5ca59
+        checksum/config: 1bf590481859ea6704cd7ba0637ebde13de6b3747cd58ba90d294e7ccc7cad77
       namespace: "mimir"
     spec:
       serviceAccountName: mimir
