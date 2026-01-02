@@ -1166,8 +1166,8 @@ spec:
             mountOptions:
               # NFSv4.1 has built-in locking, avoids rpc.statd requirement
               # vers=4.1 is shorthand for vers=4,minorversion=1
+              # Server uses squash_all, so no uid mapping needed
               - vers=4.1
-              - uid=placeholder
           - name: nfs-mimir
             parameters:
               server: 'placeholder'
@@ -1177,8 +1177,8 @@ spec:
             mountOptions:
               # NFSv4.1 has built-in locking, avoids rpc.statd requirement
               # vers=4.1 is shorthand for vers=4,minorversion=1
+              # Server uses squash_all, so no uid mapping needed
               - vers=4.1
-              - uid=placeholder
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system

@@ -93,7 +93,7 @@ On the Synology NAS (raconteur.ad.local.symmatree.com):
          - For prod folders: `10.0.128.0/24` (covers 10.0.128.11-13, 10.0.128.21-23)
          - For test folders: `10.0.192.0/24` (covers 10.0.192.11, 10.0.192.21)
      - **Privilege**: Read/Write
-     - **Squash**: No mapping (preserves user IDs for mount option mapping)
+     - **Squash**: Map all users to admin (simplifies access, no UID mapping needed)
      - **Security**: `sys` (standard user ID-based authentication)
      - **Enable asynchronous**: ✓ Checked (improves performance)
      - **Allow connections from non-privileged ports**: ✓ Checked (required for Kubernetes pods)
@@ -123,26 +123,15 @@ On the Synology NAS (raconteur.ad.local.symmatree.com):
 
 ### UID Mapping Configuration
 
-NFS `sys` security uses UID for file permissions and ownership. The NFS CSI driver supports mount options to map the pod's UID to the NAS user account UID, so you don't need to change the pod's security context.
+With NFSv4.1 and `squash_all` configured on the server, all users are mapped to the admin user on the NAS. This simplifies the setup by eliminating the need for UID mapping configuration.
 
-Loki runs as UID 10001 by default (a non-root user for security, but not a hard requirement). Mimir also uses UID 10001. Instead of changing the pod UID, configure the StorageClass to use NFS mount options that map UID 10001 to the NAS user account UID.
+**StorageClass Mount Options:**
 
-**Find NAS User UIDs:**
-
-1. In Synology DSM, go to Control Panel → User & Group
-2. Click on `tiles-loki` user → Edit → Advanced
-3. Note the UID (Synology typically assigns sequential UIDs starting from 1024)
-4. Repeat for `tiles-mimir` user (it will have a different UID)
-
-**Configure StorageClass Mount Options:**
-
-The storage class configuration with mount options is defined in `charts/argocd-applications/templates/nfs-csi-driver-application.yaml`. It configures two storage classes (`nfs-loki` and `nfs-mimir`) that use mount options to map the pod's UID (10001) to the NAS user account UID at mount time, so the pods can continue running as UID 10001 while accessing files as the NAS user.
-
-The UIDs need to be added to the 1Password misc-config and passed through the bootstrap process (see below).
+The storage class configuration is defined in `charts/argocd-applications/templates/nfs-csi-driver-application.yaml`. It configures two storage classes (`nfs-loki` and `nfs-mimir`) that use NFSv4.1 with built-in locking (no `rpc.statd` required). No UID mapping mount options are needed since the server handles all user mapping via `squash_all`.
 
 **Note on Value Propagation:**
 
-The NFS configuration values (`loki_nfs_path`, `mimir_nfs_path`, `loki_nfs_uid`, `mimir_nfs_uid`, and `nfs_server`) are stored in the `{cluster}-misc-config` 1Password item. These values propagate from Terraform → 1Password → GitHub Actions workflow → ArgoCD → Helm, where they're used in the NFS CSI driver application template. After creating the NAS users and noting their UIDs, ensure these fields are set in the 1Password item (Terraform will create/update them automatically).
+The NFS configuration values (`loki_nfs_path`, `mimir_nfs_path`, and `nfs_server`) are stored in the `{cluster}-misc-config` 1Password item. These values propagate from Terraform → 1Password → GitHub Actions workflow → ArgoCD → Helm, where they're used in the NFS CSI driver application template.
 
 ## Terraform Changes
 
