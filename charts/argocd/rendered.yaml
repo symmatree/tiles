@@ -747,6 +747,15 @@ data:
   generate.sh: |
     #!/bin/sh
     set -euo pipefail
+    if [ -z "${ARGOCD_ENV_TK_ENV:-}" ]; then
+      echo "ARGOCD_ENV_TK_ENV is not set" >&2
+      exit 1
+    fi
+    if [ -z "${ARGOCD_APP_PARAMETERS:-}" ]; then
+      echo "ARGOCD_APP_PARAMETERS is not set" >&2
+      exit 1
+    fi
+    echo "Generating tanka environment ${ARGOCD_ENV_TK_ENV}\n  with parameters:\n\n${ARGOCD_APP_PARAMETERS}" >&2
     /home/argocd/cmp-server/plugins/tk show \
       "environments/${ARGOCD_ENV_TK_ENV}" \
       --dangerous-allow-redirect \
@@ -3653,7 +3662,7 @@ spec:
   description: 'placeholder Project'
   sourceRepos:
     - https://github.com/symmatree/tiles.git
-    - https://kubernetes-csi.github.io/csi-driver-nfs
+    - https://kubernetes-csi.github.io
     - https://charts.containeroo.ch
     - https://grafana.github.io/helm-charts
   destinations:

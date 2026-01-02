@@ -63,8 +63,8 @@ jobs:
             exit 0
           fi
 
-          # Check if any file is outside charts/
-          NON_CHARTS_FILES=$(echo "${CHANGED_FILES}" | grep -v "^charts/" || true)
+          # Check if any file is outside charts/ or tanka/
+          NON_CHARTS_FILES=$(echo "${CHANGED_FILES}" | grep -v "(^charts/)|(^tanka/)" || true)
 
           if [ -n "${NON_CHARTS_FILES}" ]; then
             echo "Found changes outside charts/ directory:"
