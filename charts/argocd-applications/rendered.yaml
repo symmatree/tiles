@@ -40,7 +40,7 @@ spec:
               embed: true
           - name: localLoki
             type: loki
-            url: http://loki.loki.svc/loki/api/v1/push
+            url: http://loki.loki.svc:3100/loki/api/v1/push
             tenantId: 'placeholder'
             secret:
               # This is just the tenant name
@@ -792,7 +792,7 @@ spec:
                   - name: Loki
                     uid: loki
                     type: loki
-                    url: http://loki.loki.svc
+                    url: http://loki.loki.svc:3100
                     isDefault: false
                     jsonData:
                       httpHeaderName1: X-Scope-OrgID
@@ -1191,7 +1191,8 @@ spec:
       - ServerSideApply=true
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/warn: baseline
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/enforce: privileged
 ---
 # Source: argocd-applications/templates/node-exporter-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
