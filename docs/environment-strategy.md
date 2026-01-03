@@ -63,7 +63,7 @@ The repository currently implements:
 3. **Side-by-Side Configuration**: Both environment configurations live in the same source tree for easy diffing in PRs
 4. **Tag-Based Deployment**: Git tags (`test` and `prod`) track what's deployed and trigger redeployments
 5. **Promotion Workflow**: Production deployments can be promoted from test-tagged commits or deployed directly
-6. **Shared Code, Different Variables**: Most differences between environments are represented as different `.auto.tfvars` files
+6. **Shared Code, Different Variables**: Most differences between environments are represented as different `.tfvars` files
 
 ### Directory Structure
 
@@ -77,8 +77,8 @@ tf/
     ├── main.tf                   # Shared provider setup
     ├── cluster.tf                # Cluster module (shared, uses variables)
     ├── terraform.tfvars          # Shared defaults
-    ├── test.auto.tfvars          # Test-specific (auto-loaded for test workspace)
-    ├── prod.auto.tfvars          # Prod-specific (auto-loaded for prod workspace)
+    ├── test.tfvars                # Test-specific (explicitly loaded for test workspace)
+    ├── prod.tfvars                # Prod-specific (explicitly loaded for prod workspace)
     ├── variables.tf
     ├── outputs.tf
     ├── versions.tf
@@ -116,7 +116,7 @@ Terraform workspaces are a built-in feature that allows you to maintain multiple
 - **Workspace**: A named context that isolates state (like `test` or `prod`)
 - **State Isolation**: Each workspace has its own state file in the backend
 - **Code Sharing**: All workspaces use the same `.tf` files
-- **Variable Overrides**: Use `.auto.tfvars` files that are workspace-specific
+- **Variable Overrides**: Use `.tfvars` files that are workspace-specific (explicitly loaded via `-var-file`)
 
 ### Directory Structure with Workspaces
 
@@ -126,8 +126,8 @@ tf/nodes/
 ├── variables.tf               # Variable definitions (shared)
 ├── versions.tf                # Backend config (shared, workspace-aware)
 ├── terraform.tfvars           # Shared defaults for both environments
-├── test.auto.tfvars           # Auto-loaded when workspace=test
-├── prod.auto.tfvars           # Auto-loaded when workspace=prod
+├── test.tfvars                # Explicitly loaded when workspace=test
+├── prod.tfvars                # Explicitly loaded when workspace=prod
 ├── cluster.tf                 # Cluster module (shared, uses variables)
 ├── talos-iso.tf              # Shared Talos ISO handling
 ├── remote.tf                 # Remote state configuration
@@ -188,10 +188,12 @@ terraform workspace delete test
 
 ### Variable Loading with Workspaces
 
-Terraform automatically loads `.auto.tfvars` files. The naming convention `{workspace}.auto.tfvars` means:
+Environment-specific variables are loaded explicitly via `-var-file` flags in the workflow. The naming convention `{workspace}.tfvars` means:
 
-- When `workspace = test`: Loads `test.auto.tfvars` automatically
-- When `workspace = prod`: Loads `prod.auto.tfvars` automatically
+- When `workspace = test`: Explicitly loads `test.tfvars` via `-var-file=test.tfvars`
+- When `workspace = prod`: Explicitly loads `prod.tfvars` via `-var-file=prod.tfvars`
+
+**Note:** Files are named `.tfvars` (not `.auto.tfvars`) to prevent Terraform from automatically loading both files, which would cause conflicts.
 
 **Example files:**
 
@@ -203,7 +205,7 @@ talos_version          = "1.11.5"
 project_id             = "symm-custodes"
 gcp_region             = "us-east1"
 
-# test.auto.tfvars
+# test.tfvars
 cluster_name        = "tiles-test"
 external_ip_cidr    = "10.0.193.0/24"
 pod_cidr            = "10.0.208.0/20"
@@ -213,7 +215,7 @@ start_vms           = true
 apply_configs       = true
 run_bootstrap       = true
 
-# prod.auto.tfvars
+# prod.tfvars
 cluster_name        = "tiles"
 external_ip_cidr    = "10.0.129.0/24"
 pod_cidr            = "10.0.144.0/20"
@@ -226,22 +228,22 @@ run_bootstrap       = false
 
 ### Resource Creation
 
-The current implementation uses a single `cluster` module that is instantiated once per workspace. Environment-specific configuration is provided via `.auto.tfvars` files:
+The current implementation uses a single `cluster` module that is instantiated once per workspace. Environment-specific configuration is provided via `.tfvars` files:
 
 ```hcl
 # cluster.tf (shared across workspaces)
 module "cluster" {
   source = "../modules/talos-cluster"
-  cluster_name = var.cluster_name  # From .auto.tfvars
-  vms = var.virtual_machines       # From .auto.tfvars
+  cluster_name = var.cluster_name  # From .tfvars
+  vms = var.virtual_machines       # From .tfvars
   # ... other config from variables
 }
 ```
 
-Each workspace loads its corresponding `.auto.tfvars` file automatically:
+Each workspace explicitly loads its corresponding `.tfvars` file via `-var-file`:
 
-- `test` workspace → `test.auto.tfvars`
-- `prod` workspace → `prod.auto.tfvars`
+- `test` workspace → `test.tfvars` (loaded with `-var-file=test.tfvars`)
+- `prod` workspace → `prod.tfvars` (loaded with `-var-file=prod.tfvars`)
 
 ### GitHub Actions Workflow with Workspaces
 
@@ -330,11 +332,11 @@ Workspaces were selected for this implementation because:
 
 1. **Single Source of Truth**: All code in one place, easier to keep in sync
 2. **Less Duplication**: Provider setup, modules, shared logic defined once
-3. **Easy Comparison**: Can diff test vs prod by just comparing `.auto.tfvars` files
+3. **Easy Comparison**: Can diff test vs prod by just comparing `.tfvars` files
 4. **Simpler Refactoring**: Changes to shared code automatically affect both environments
 5. **Built-in Feature**: No need for symlinks or custom tooling
 6. **State Isolation**: Each workspace has its own state, preventing cross-contamination
-7. **PR Review**: All changes show up in one PR, making it easy to see what differs between test and prod in the `.auto.tfvars` files
+7. **PR Review**: All changes show up in one PR, making it easy to see what differs between test and prod in the `.tfvars` files
 
 **Trade-offs:**
 
@@ -462,7 +464,7 @@ run_bootstrap        = false  # Manual bootstrap for prod
 
 **Decisions:**
 
-- **A7**: VM configurations are defined as data structures in `.auto.tfvars` files (not separate `.tf` files)
+- **A7**: VM configurations are defined as data structures in `.tfvars` files (not separate `.tf` files)
 - **A8**: Talos schematic configuration remains in shared code; workspace-specific overrides can be provided via variables if needed for testing schematic changes
 
 ### Tag Management
@@ -505,7 +507,7 @@ PRs automatically run Terraform plan for both environments:
 - Both test and prod workspaces are planned
 - Plan outputs are attached to PR comments via the `attach-outputs` action
 - Changes to shared code (modules, bootstrap) affect both environments
-- Changes to environment-specific configs show in their respective `.auto.tfvars` files
+- Changes to environment-specific configs show in their respective `.tfvars` files
 - Reviewers can see what will change in both test and prod
 
 ## Suggested Refinements
