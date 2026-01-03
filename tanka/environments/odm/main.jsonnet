@@ -85,10 +85,8 @@ local datasetsPv = kPersistentVolume.new("odm-datasets")
 + kPersistentVolume.spec.withCapacity({ storage: "100Gi" })
 + kPersistentVolume.spec.withAccessModes(['ReadWriteOnce'])
 + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy("Retain")
-+ kPersistentVolume.spec.withNfs({
-  server: APP.app_settings.nfs_server,
-  path: APP.app_settings.datasets_nfs_path + "/webodm-media-" + APP.cluster_name,
-}),
++ kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
++ kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + "/webodm-media-" + APP.cluster_name),
 datasetsPv: datasetsPv,
 
 local datasetsPvc = kPersistentVolumeClaim.new("odm-datasets")
