@@ -218,24 +218,14 @@ variable "gcp_region" {
   type        = string
 }
 
-variable "loki_nfs_path" {
-  description = "NFS path for Loki storage"
+variable "cluster_nfs_path" {
+  description = "NFS path for the cluster's shared NFS storage"
   type        = string
 }
 
-variable "mimir_nfs_path" {
-  description = "NFS path for Mimir storage"
+variable "datasets_nfs_path" {
+  description = "NFS export path for the datasets share"
   type        = string
-}
-
-variable "loki_nfs_uid" {
-  description = "UID of the NAS user account for Loki NFS access"
-  type        = number
-}
-
-variable "mimir_nfs_uid" {
-  description = "UID of the NAS user account for Mimir NFS access"
-  type        = number
 }
 
 variable "nfs_server" {
@@ -285,20 +275,12 @@ resource "onepassword_item" "misc_config" {
       value = var.main_project_id
     }
     field {
-      label = "loki_nfs_path"
-      value = var.loki_nfs_path
+      label = "cluster_nfs_path"
+      value = var.cluster_nfs_path
     }
     field {
-      label = "mimir_nfs_path"
-      value = var.mimir_nfs_path
-    }
-    field {
-      label = "loki_nfs_uid"
-      value = tostring(var.loki_nfs_uid)
-    }
-    field {
-      label = "mimir_nfs_uid"
-      value = tostring(var.mimir_nfs_uid)
+      label = "datasets_nfs_path"
+      value = var.datasets_nfs_path
     }
     field {
       label = "nfs_server"

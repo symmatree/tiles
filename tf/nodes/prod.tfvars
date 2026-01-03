@@ -68,5 +68,4 @@ virtual_machines = {
 }
 
 # It's a shame the internal volume leaks here
-loki_nfs_path  = "/volume2/tiles-loki"
-mimir_nfs_path = "/volume2/tiles-mimir"
+cluster_nfs_path = "/volume2/tiles"

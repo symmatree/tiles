@@ -798,6 +798,34 @@ spec:
                       httpHeaderName1: X-Scope-OrgID
                     secureJsonData:
                       httpHeaderValue1: "placeholder"
+
+          - apiVersion: v1
+            kind: PersistentVolume
+            metadata:
+              name: loki-loki-data
+            spec:
+              capacity:
+                storage: 100Gi
+              accessModes:
+                - ReadWriteMany
+              persistentVolumeReclaimPolicy: Retain
+              nfs:
+                server: 'placeholder'
+                path: 'placeholder/loki-data'
+
+          - apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: loki-loki-data
+              namespace: "loki"
+            spec:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                requests:
+                  storage: 100Gi
+              volumeName: loki-loki-data
+              storageClassName: ""
         global:
           extraArgs:
             - -config.expand-env=true
@@ -848,13 +876,13 @@ spec:
         minio:
           enabled: false
 
+        # NFS storage architecture: see docs/nfs-storage-architecture.md
         # Single binary mode configuration
         singleBinary:
           replicas: 1
           enableStatefulSetAutoDeletePVC: true
           persistence:
-            storageClass: "nfs-loki"
-            size: 100Gi
+            existingClaim: loki-loki-data
 
         gateway:
           enabled: false
@@ -925,6 +953,7 @@ spec:
               - secretName: mimir-tls
                 hosts:
                   - 'mimir.placeholder.symmatree.com'
+        # NFS storage architecture: see docs/nfs-storage-architecture.md
         extraObjects:
           - apiVersion: v1
             kind: ConfigMap
@@ -972,8 +1001,43 @@ spec:
                     secureJsonData:
                       httpHeaderValue1: "placeholder"
 
+          - apiVersion: v1
+            kind: PersistentVolume
+            metadata:
+              name: mimir-mimir-data
+            spec:
+              capacity:
+                storage: 100Gi
+              accessModes:
+                - ReadWriteMany
+              persistentVolumeReclaimPolicy: Retain
+              nfs:
+                server: 'placeholder'
+                path: 'placeholder/mimir-data'
+
+          - apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: mimir-mimir-data
+              namespace: "mimir"
+            spec:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                requests:
+                  storage: 100Gi
+              volumeName: mimir-mimir-data
+              storageClassName: ""
+
         global:
           podLabels: {}
+          extraVolumes:
+            - name: mimir-shared-storage
+              persistentVolumeClaim:
+                claimName: mimir-mimir-data
+          extraVolumeMounts:
+            - name: mimir-shared-storage
+              mountPath: /mnt/mimir-nfs
 
         mimir:
           structuredConfig:
@@ -985,20 +1049,24 @@ spec:
             common:
               storage:
                 backend: filesystem
+                # Set to read-only root path as safety check - will fail if any component
+                # tries to use common.storage instead of explicit storage configs
                 filesystem:
-                  dir: /data/common
-            alertmanager_storage:
-              backend: filesystem
-              filesystem:
-                dir: /data/alertmanager
+                  dir: /
+            # Shared storage - mounted at /mnt/mimir-nfs via global extraVolumes
+            # All components can access these paths for long-term storage
             blocks_storage:
               backend: filesystem
               filesystem:
-                dir: /data/blocks
+                dir: /mnt/mimir-nfs/blocks
             ruler_storage:
               backend: filesystem
               filesystem:
-                dir: /data/ruler
+                dir: /mnt/mimir-nfs/ruler
+            alertmanager_storage:
+              backend: filesystem
+              filesystem:
+                dir: /mnt/mimir-nfs/alertmanager
 
         distributor:
           resources:
@@ -1014,11 +1082,6 @@ spec:
               memory: 128Mi
           statefulSet:
             enabled: true
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
           terminationGracePeriodSeconds: 60
           extraContainers:
             - name: alert-forward
@@ -1037,11 +1100,6 @@ spec:
                   value: apprise
 
         compactor:
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
           terminationGracePeriodSeconds: 60
 
         ingester:
@@ -1049,11 +1107,6 @@ spec:
             requests:
               cpu: 10m
               memory: 128Mi
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
           terminationGracePeriodSeconds: 60
           replicas: 2
           zoneAwareReplication:
@@ -1137,11 +1190,6 @@ spec:
           resources:
             requests:
               cpu: 100m
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
 
   destination:
     server: https://kubernetes.default.svc
@@ -1170,36 +1218,15 @@ spec:
     chart: csi-driver-nfs
     helm:
       valuesObject:
+        # NFS storage architecture: see docs/nfs-storage-architecture.md
         enableSnapshotter: false
         storageClasses:
-          - name: nfs-loki
+          - name: cluster-nfs
             parameters:
               server: 'placeholder'
               share: 'placeholder'
-            reclaimPolicy: Retain
-            volumeBindingMode: Immediate
-            mountOptions:
-              # NFSv4.1 has built-in locking, avoids rpc.statd requirement
-              # vers=4.1 is shorthand for vers=4,minorversion=1
-              # Server uses squash_all, so no uid mapping needed
-              - vers=4.1
-          - name: nfs-mimir
-            parameters:
-              server: 'placeholder'
-              share: 'placeholder'
-            reclaimPolicy: Retain
-            volumeBindingMode: Immediate
-            mountOptions:
-              # NFSv4.1 has built-in locking, avoids rpc.statd requirement
-              # vers=4.1 is shorthand for vers=4,minorversion=1
-              # Server uses squash_all, so no uid mapping needed
-              - vers=4.1
-          - name: nfs-datasets
-            parameters:
-              server: 'placeholder'
-              share: /volume2/datasets
-            reclaimPolicy: Retain
-            volumeBindingMode: Immediate
+            reclaimPolicy: Delete
+            volumeBindingMode: WaitForFirstConsumer
             mountOptions:
               # NFSv4.1 has built-in locking, avoids rpc.statd requirement
               # vers=4.1 is shorthand for vers=4,minorversion=1
@@ -1277,6 +1304,8 @@ spec:
         - name: app_settings
           map:
             webOdmIngressHost: 'odm.placeholder.symmatree.com'
+            nfs_server: 'placeholder'
+            datasets_nfs_path: 'placeholder'
   destination:
     server: https://kubernetes.default.svc
     namespace: odm
