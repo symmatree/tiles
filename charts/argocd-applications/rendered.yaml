@@ -985,12 +985,20 @@ spec:
             common:
               storage:
                 backend: filesystem
+                filesystem:
+                  dir: /data/common
             alertmanager_storage:
               backend: filesystem
+              filesystem:
+                dir: /data/alertmanager
             blocks_storage:
               backend: filesystem
+              filesystem:
+                dir: /data/blocks
             ruler_storage:
               backend: filesystem
+              filesystem:
+                dir: /data/ruler
 
         distributor:
           resources:
