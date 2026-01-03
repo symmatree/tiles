@@ -31,12 +31,6 @@ resource "google_service_account" "tiles-tf" {
   display_name = "Tiles TF Service Account"
 }
 
-resource "google_service_account_key" "tiles-tf" {
-  service_account_id = google_service_account.tiles-tf.name
-  public_key_type    = "TYPE_X509_PEM_FILE"
-  private_key_type   = "TYPE_GOOGLE_CREDENTIALS_FILE"
-}
-
 resource "google_service_account_iam_member" "self_impersonate" {
   service_account_id = google_service_account.tiles-tf.id
   role               = "roles/iam.serviceAccountTokenCreator"
