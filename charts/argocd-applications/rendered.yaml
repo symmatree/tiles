@@ -826,17 +826,6 @@ spec:
                   storage: 100Gi
               volumeName: loki-loki-data
               storageClassName: ""
-        global:
-          extraArgs:
-            - -config.expand-env=true
-            - -log-config-reverse-order
-          extraVolumes:
-            - name: loki-shared-storage
-              persistentVolumeClaim:
-                claimName: loki-loki-data
-          extraVolumeMounts:
-            - name: loki-shared-storage
-              mountPath: /mnt/loki-nfs
         loki:
           commonConfig:
             replication_factor: 1
@@ -893,6 +882,16 @@ spec:
           enableStatefulSetAutoDeletePVC: true
           persistence:
             enabled: false
+          extraArgs:
+            - -config.expand-env=true
+            - -log-config-reverse-order
+          extraVolumes:
+            - name: loki-shared-storage
+              persistentVolumeClaim:
+                claimName: loki-loki-data
+          extraVolumeMounts:
+            - name: loki-shared-storage
+              mountPath: /mnt/loki-nfs
 
         gateway:
           enabled: false
