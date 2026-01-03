@@ -42,7 +42,7 @@ runs:
         set -euo pipefail
         mkdir -p "$(dirname "${TXT_OUTPUT_FILE}")"
         set +e
-        terraform plan -detailed-exitcode -lock-timeout=5m -input=false -out="${PLAN_FILE}"
+        terraform plan -detailed-exitcode -lock-timeout=5m -input=false -var-file="${{ inputs.workspace }}.tfvars" -out="${PLAN_FILE}"
         PLAN_EXIT_CODE=$?
         set -e
         echo "Terraform plan exited with code: ${PLAN_EXIT_CODE}"

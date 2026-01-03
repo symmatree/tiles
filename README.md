@@ -52,7 +52,7 @@ To reset the tiles-test cluster and rebuild the Proxmox nodes:
 
 3. **Recreate the cluster** by running terraform apply (or via the GitHub Actions workflow):
    ```bash
-   terraform apply
+   terraform apply -var-file=test.tfvars
    ```
 
    The VMs will be recreated with fresh Talos installations. The cluster module will automatically:
