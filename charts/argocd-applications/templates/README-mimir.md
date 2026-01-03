@@ -11,3 +11,7 @@ This is pretty stock, but a few decisions:
 * Does not do its own scraping, expects to have metrics pushed to it from Alloy.
 * Gets Rules pushed to it by Alloy; evaluates and sends alerts.
 * Notifications go through a sidecar pod that accepts a webhook call and formats it to push to AppRise.
+
+## Configuration
+
+* **Tenant Limits**: The `max_rules_per_rule_group` limit is set to 50 to accommodate rule groups with up to 50 rules per group. This was increased from the default of 20 to support actual workload requirements (observed: 26 rules) with headroom for future growth.
