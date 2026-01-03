@@ -23,7 +23,7 @@ output "schematic_id" {
 }
 
 locals {
-  filename = "talos-v${var.talos_version}-${var.talos_variant}-${var.talos_arch}-${talos_image_factory_schematic.this.id}.iso"
+  filename = "talos-${var.cluster_code}-v${var.talos_version}-${var.talos_variant}-${var.talos_arch}-${talos_image_factory_schematic.this.id}.iso"
 }
 
 # Download Talos ISOs to each Proxmox node

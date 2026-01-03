@@ -49,7 +49,7 @@ local postgresInitScripts = kConfigMap.new('postgres-init-scripts')
 postgresInitScripts: postgresInitScripts,
 
 local postgresDeployment = kDeployment.new("postgres", containers=[
-  kContainer.new('postgres', image='postgis/postgis:16-3.4')
+  kContainer.new('postgres', image='postgis/postgis:17-3.6-alpine')
   + kContainer.withPortsMixin([kPort.newNamed(5432, 'tcp')])
   + kContainer.withEnvMixin([
     kEnvVar.new('POSTGRES_HOST_AUTH_METHOD', 'trust'),
@@ -68,7 +68,7 @@ local brokerLabels = {
   name: 'redis-broker',
 },
 local brokerDeployment = kDeployment.new("redis-broker", containers=[
-  kContainer.new('broker', image='bitnami/redis:7.0-debian-12')
+  kContainer.new('broker', image='bitnami/redis:latest')
   + kContainer.withPortsMixin([kPort.newNamed(6379, 'tcp')])
   + kContainer.withEnvMixin([
     kEnvVar.new('ALLOW_EMPTY_PASSWORD', 'yes'),
@@ -116,8 +116,10 @@ kContainer.new('webodm-worker', image='opendronemap/webodm_webapp')
       + " -- /webodm/worker.sh start";
     "chmod +x /webodm/*.sh && /bin/bash -c \"" + innerCommand + "\""]),
 ],
-local webOdmDeployment = kDeployment.new("webodm", containers=webOdmContainers, podLabels={ app: 'webodm' })
-+ kDeployment.spec.template.metadata.withLabels({ app: 'webodm' })
+local webOdmLabels = { app: 'webodm' },
+local webOdmDeployment = kDeployment.new("webodm", containers=webOdmContainers, podLabels=webOdmLabels)
++ kDeployment.spec.selector.withMatchLabels(webOdmLabels)
++ kDeployment.spec.template.metadata.withLabels(webOdmLabels)
 + k_util.pvcVolumeMount(datasetsPvc.metadata.name, '/webodm/app/media', volumeMountMixin=kVolumeMount.withSubPath('webodm-media')),
 webOdmDeployment: webOdmDeployment,
 local webOdmService = k_util.serviceFor(webOdmDeployment),
