@@ -21,6 +21,7 @@ spec:
               - secretName: mimir-tls
                 hosts:
                   - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+        # NFS storage architecture: see docs/nfs-storage-architecture.md
         extraObjects:
           - apiVersion: v1
             kind: ConfigMap
@@ -69,9 +70,23 @@ spec:
                       httpHeaderValue1: "{{ .Values.cluster_name }}"
 
           - apiVersion: v1
+            kind: PersistentVolume
+            metadata:
+              name: mimir-mimir-data
+            spec:
+              capacity:
+                storage: 100Gi
+              accessModes:
+                - ReadWriteMany
+              persistentVolumeReclaimPolicy: Retain
+              nfs:
+                server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+                path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}/mimir-data'
+
+          - apiVersion: v1
             kind: PersistentVolumeClaim
             metadata:
-              name: mimir-shared-storage
+              name: mimir-mimir-data
               namespace: "mimir"
             spec:
               accessModes:
@@ -79,14 +94,15 @@ spec:
               resources:
                 requests:
                   storage: 100Gi
-              storageClassName: nfs-mimir
+              volumeName: mimir-mimir-data
+              storageClassName: ""
 
         global:
           podLabels: {}
           extraVolumes:
             - name: mimir-shared-storage
               persistentVolumeClaim:
-                claimName: mimir-shared-storage
+                claimName: mimir-mimir-data
           extraVolumeMounts:
             - name: mimir-shared-storage
               mountPath: /mnt/mimir-nfs
@@ -134,11 +150,6 @@ spec:
               memory: 128Mi
           statefulSet:
             enabled: true
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
           terminationGracePeriodSeconds: 60
           extraContainers:
             - name: alert-forward

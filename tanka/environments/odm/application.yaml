@@ -20,6 +20,8 @@ spec:
         - name: app_settings
           map:
             webOdmIngressHost: 'odm.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            nfs_server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+            datasets_nfs_path: '{{ required ".Values.datasets_nfs_path is required" .Values.datasets_nfs_path }}'
   destination:
     server: https://kubernetes.default.svc
     namespace: odm

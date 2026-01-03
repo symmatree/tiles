@@ -20,10 +20,8 @@ spec:
         external_ip_cidr: "${external_ip_cidr}"
         vault_name: "${vault_name}"
         project_id: "${project_id}"
-        loki_nfs_path: "${loki_nfs_path}"
-        mimir_nfs_path: "${mimir_nfs_path}"
-        loki_nfs_uid: "${loki_nfs_uid}"
-        mimir_nfs_uid: "${mimir_nfs_uid}"
+        cluster_nfs_path: "${cluster_nfs_path}"
+        datasets_nfs_path: "${datasets_nfs_path}"
         nfs_server: "${nfs_server}"
   destination:
     server: https://kubernetes.default.svc

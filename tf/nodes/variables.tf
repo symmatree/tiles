@@ -95,24 +95,14 @@ variable "control_plane_vip" {
   type        = string
 }
 
-variable "loki_nfs_path" {
-  description = "NFS export path for Loki storage (share name, e.g., /tiles-loki or /tiles-test-loki). This should match the Synology NFS export path, which is typically just the share name, not the full volume path."
+variable "cluster_nfs_path" {
+  description = "NFS export path for the cluster's shared NFS storage (e.g., /volume2/tiles or /volume2/tiles-test). This should match the Synology NFS export path, which includes the volume name."
   type        = string
 }
 
-variable "mimir_nfs_path" {
-  description = "NFS export path for Mimir storage (share name, e.g., /tiles-mimir or /tiles-test-mimir). This should match the Synology NFS export path, which is typically just the share name, not the full volume path."
+variable "datasets_nfs_path" {
+  description = "NFS export path for the datasets share (e.g., /volume2/datasets). This is common to both clusters."
   type        = string
-}
-
-variable "loki_nfs_uid" {
-  description = "UID of the NAS user account for Loki NFS access"
-  type        = number
-}
-
-variable "mimir_nfs_uid" {
-  description = "UID of the NAS user account for Mimir NFS access"
-  type        = number
 }
 
 variable "nfs_server" {

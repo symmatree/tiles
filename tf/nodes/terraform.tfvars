@@ -15,5 +15,4 @@ talos_schematic_extra_kernel_args = [
   "-talos.halt_if_installed"
 ]
 
-loki_nfs_uid  = 1052
-mimir_nfs_uid = 1051
+datasets_nfs_path = "/volume2/datasets"

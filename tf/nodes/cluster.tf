@@ -27,10 +27,8 @@ module "cluster" {
   main_project_id        = local.main_project_id
   kms_project_id         = local.kms_project_id
   gcp_region             = var.gcp_region
-  loki_nfs_path          = var.loki_nfs_path
-  mimir_nfs_path         = var.mimir_nfs_path
-  loki_nfs_uid           = var.loki_nfs_uid
-  mimir_nfs_uid          = var.mimir_nfs_uid
+  cluster_nfs_path       = var.cluster_nfs_path
+  datasets_nfs_path      = var.datasets_nfs_path
   nfs_server             = var.nfs_server
 }
 

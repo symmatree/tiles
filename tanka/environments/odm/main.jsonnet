@@ -15,6 +15,7 @@ local APP = {
 
 local odm = {
 
+  local kPersistentVolume = k.core.v1.persistentVolume,
   local kPersistentVolumeClaim = k.core.v1.persistentVolumeClaim,
   local kDeployment = k.apps.v1.deployment,
   local kContainer = k.core.v1.container,
@@ -79,10 +80,22 @@ brokerDeployment: brokerDeployment,
 local brokerService = k_util.serviceFor(brokerDeployment),
 brokerService: brokerService,
 
+// NFS storage architecture: see docs/nfs-storage-architecture.md
+local datasetsPv = kPersistentVolume.new("odm-datasets")
++ kPersistentVolume.spec.withCapacity({ storage: "100Gi" })
++ kPersistentVolume.spec.withAccessModes(['ReadWriteOnce'])
++ kPersistentVolume.spec.withPersistentVolumeReclaimPolicy("Retain")
++ kPersistentVolume.spec.withNfs({
+  server: APP.app_settings.nfs_server,
+  path: APP.app_settings.datasets_nfs_path + "/webodm-media-" + APP.cluster_name,
+}),
+datasetsPv: datasetsPv,
+
 local datasetsPvc = kPersistentVolumeClaim.new("odm-datasets")
 + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
 + kPersistentVolumeClaim.spec.resources.withRequests({ storage: "100Gi" })
-+ kPersistentVolumeClaim.spec.withStorageClassName('nfs-datasets'),
++ kPersistentVolumeClaim.spec.withVolumeName("odm-datasets")
++ kPersistentVolumeClaim.spec.withStorageClassName(""),
 datasetsPvc: datasetsPvc,
 
 local redisEndpoint = brokerService.metadata.name + ':' + brokerService.spec.ports[0].port,

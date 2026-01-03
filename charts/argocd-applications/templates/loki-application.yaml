@@ -33,6 +33,34 @@ spec:
                       httpHeaderName1: X-Scope-OrgID
                     secureJsonData:
                       httpHeaderValue1: "{{ .Values.cluster_name }}"
+
+          - apiVersion: v1
+            kind: PersistentVolume
+            metadata:
+              name: loki-loki-data
+            spec:
+              capacity:
+                storage: 100Gi
+              accessModes:
+                - ReadWriteMany
+              persistentVolumeReclaimPolicy: Retain
+              nfs:
+                server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+                path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}/loki-data'
+
+          - apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: loki-loki-data
+              namespace: "loki"
+            spec:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                requests:
+                  storage: 100Gi
+              volumeName: loki-loki-data
+              storageClassName: ""
         global:
           extraArgs:
             - -config.expand-env=true
@@ -83,13 +111,13 @@ spec:
         minio:
           enabled: false
 
+        # NFS storage architecture: see docs/nfs-storage-architecture.md
         # Single binary mode configuration
         singleBinary:
           replicas: 1
           enableStatefulSetAutoDeletePVC: true
           persistence:
-            storageClass: "nfs-loki"
-            size: 100Gi
+            existingClaim: loki-loki-data
 
         gateway:
           enabled: false
