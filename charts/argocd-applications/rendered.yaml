@@ -972,8 +972,28 @@ spec:
                     secureJsonData:
                       httpHeaderValue1: "placeholder"
 
+          - apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: mimir-shared-storage
+              namespace: "mimir"
+            spec:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                requests:
+                  storage: 100Gi
+              storageClassName: nfs-mimir
+
         global:
           podLabels: {}
+          extraVolumes:
+            - name: mimir-shared-storage
+              persistentVolumeClaim:
+                claimName: mimir-shared-storage
+          extraVolumeMounts:
+            - name: mimir-shared-storage
+              mountPath: /mnt/mimir-nfs
 
         mimir:
           structuredConfig:
@@ -985,20 +1005,24 @@ spec:
             common:
               storage:
                 backend: filesystem
+                # Set to read-only root path as safety check - will fail if any component
+                # tries to use common.storage instead of explicit storage configs
                 filesystem:
-                  dir: /data/common
-            alertmanager_storage:
-              backend: filesystem
-              filesystem:
-                dir: /data/alertmanager
+                  dir: /
+            # Shared storage - mounted at /mnt/mimir-nfs via global extraVolumes
+            # All components can access these paths for long-term storage
             blocks_storage:
               backend: filesystem
               filesystem:
-                dir: /data/blocks
+                dir: /mnt/mimir-nfs/blocks
             ruler_storage:
               backend: filesystem
               filesystem:
-                dir: /data/ruler
+                dir: /mnt/mimir-nfs/ruler
+            alertmanager_storage:
+              backend: filesystem
+              filesystem:
+                dir: /mnt/mimir-nfs/alertmanager
 
         distributor:
           resources:
@@ -1037,11 +1061,6 @@ spec:
                   value: apprise
 
         compactor:
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
           terminationGracePeriodSeconds: 60
 
         ingester:
@@ -1049,11 +1068,6 @@ spec:
             requests:
               cpu: 10m
               memory: 128Mi
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
           terminationGracePeriodSeconds: 60
           replicas: 2
           zoneAwareReplication:
@@ -1137,11 +1151,6 @@ spec:
           resources:
             requests:
               cpu: 100m
-          persistentVolume:
-            storageClass: "nfs-mimir"
-            enableRetentionPolicy: true
-            whenDeleted: Delete
-            whenScaled: Delete
 
   destination:
     server: https://kubernetes.default.svc
