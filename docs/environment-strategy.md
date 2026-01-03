@@ -277,7 +277,7 @@ jobs:
 
       - name: Terraform plan
         working-directory: tf/nodes
-        run: terraform plan -lock-timeout=5m -input=false
+        run: terraform plan -lock-timeout=5m -input=false -var-file=test.tfvars
 
       - name: Terraform apply
         working-directory: tf/nodes
@@ -312,7 +312,7 @@ jobs:
 
       - name: Terraform plan
         working-directory: tf/nodes
-        run: terraform plan -lock-timeout=5m -input=false
+        run: terraform plan -lock-timeout=5m -input=false -var-file=prod.tfvars
 
       - name: Terraform apply
         working-directory: tf/nodes
