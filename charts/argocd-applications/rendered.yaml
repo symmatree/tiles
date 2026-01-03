@@ -1184,6 +1184,17 @@ spec:
               # vers=4.1 is shorthand for vers=4,minorversion=1
               # Server uses squash_all, so no uid mapping needed
               - vers=4.1
+          - name: nfs-datasets
+            parameters:
+              server: 'placeholder'
+              share: /volume2/datasets
+            reclaimPolicy: Retain
+            volumeBindingMode: Immediate
+            mountOptions:
+              # NFSv4.1 has built-in locking, avoids rpc.statd requirement
+              # vers=4.1 is shorthand for vers=4,minorversion=1
+              # Server uses squash_all, so no uid mapping needed
+              - vers=4.1
   destination:
     server: https://kubernetes.default.svc
     namespace: nfs-csi-driver
@@ -1254,7 +1265,8 @@ spec:
         - name: vault_name
           string: 'placeholder'
         - name: app_settings
-          map: {}
+          map:
+            webOdmIngressHost: 'odm.placeholder.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: odm

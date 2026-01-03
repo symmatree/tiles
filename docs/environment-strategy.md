@@ -17,14 +17,14 @@ This document describes the strategy for managing two parallel Terraform environ
 
 2. **Merge to `main`**
    - Upon merge, the workflow automatically:
-     - Pushes the `test` tag to the merged commit
+     - Updates the `test` tag to point to the merged commit
      - Deploys to the test environment (Terraform apply)
 
 3. **Deploy to Production**
    - Manually trigger the `nodes-plan-apply` workflow via `workflow_dispatch`
    - Select `environment: prod` and `apply: true`
    - The workflow will:
-     - Push the `prod` tag to the current commit (or promote from test tag if on test)
+     - Update the `prod` tag to point to the current commit
      - Deploy to the production environment (Terraform apply)
 
 4. **ArgoCD Deployment**
@@ -355,12 +355,12 @@ The deployment workflow is implemented in `.github/workflows/nodes-plan-apply.ya
 
 #### Automatic Tag Pushing
 
-Tags are automatically pushed by the `configure-deployment` action when deploying to an environment:
+Tags are automatically updated by the `configure-deployment` action when deploying to an environment:
 
-- **Test tag**: Pushed when deploying to test (unless already on test tag)
-- **Prod tag**: Pushed when deploying to prod (unless already on prod tag)
+- **Test tag**: Updated to point to current commit when deploying to test (unless already on test tag)
+- **Prod tag**: Updated to point to current commit when deploying to prod (unless already on prod tag)
 - Tags are force-updated to point to the current commit being deployed
-- Tag pushing happens before Terraform operations, ensuring tags always reflect what's deployed
+- Tag updates happen before Terraform operations, ensuring tags always reflect what's deployed
 
 #### Deployment Logic
 
@@ -372,11 +372,11 @@ The `configure-deployment` action determines:
 
 **Deployment scenarios:**
 
-- Push to main → Push test tag, deploy test
-- Push to test tag → Deploy test (no tag push)
-- Push to prod tag → Deploy prod (no tag push)
-- Manual: target test → Push test tag (if not on test tag), deploy test
-- Manual: target prod → Push prod tag (if on test tag or main), deploy prod
+- Push to main → Update test tag to point to main, deploy test
+- Push to test tag → Deploy test (no tag update)
+- Push to prod tag → Deploy prod (no tag update)
+- Manual: target test → Update test tag to point to current commit (unless already on test tag), deploy test
+- Manual: target prod → Update prod tag to point to current commit (unless already on prod tag), deploy prod
 
 #### Terraform Operations
 
@@ -474,11 +474,11 @@ run_bootstrap        = false  # Manual bootstrap for prod
 
 **Tag Behavior**:
 
-- Tags are force-updated (`git tag -f`) to avoid tag conflicts
+- Tags are force-updated (`git tag -f`) to point to the desired commit
 - Tags are pushed with `git push -f origin <tag>` to update remote
 - The workflow has `contents: write` permission to create/update tags
-- Tags are pushed automatically when deploying to an environment
-- Tags are only pushed if not already on that tag (prevents unnecessary pushes)
+- Tags are updated automatically when deploying to an environment
+- Tags are only updated if not already pointing to the current commit (prevents unnecessary updates)
 
 **Current Implementation**:
 
