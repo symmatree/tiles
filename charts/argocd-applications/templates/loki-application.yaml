@@ -65,6 +65,13 @@ spec:
           extraArgs:
             - -config.expand-env=true
             - -log-config-reverse-order
+          extraVolumes:
+            - name: loki-shared-storage
+              persistentVolumeClaim:
+                claimName: loki-loki-data
+          extraVolumeMounts:
+            - name: loki-shared-storage
+              mountPath: /mnt/loki-nfs
         loki:
           commonConfig:
             replication_factor: 1
@@ -89,6 +96,9 @@ spec:
             enable_api: true
           storage:
             type: "filesystem"
+            filesystem:
+              chunks_directory: /mnt/loki-nfs/chunks
+              rules_directory: /mnt/loki-nfs/rules
           querier:
             # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
             max_concurrent: 4
@@ -117,7 +127,7 @@ spec:
           replicas: 1
           enableStatefulSetAutoDeletePVC: true
           persistence:
-            existingClaim: loki-loki-data
+            enabled: false
 
         gateway:
           enabled: false
