@@ -221,7 +221,6 @@ argo-cd:
           - on-sync-status-unknown
           - on-health-degraded
           - on-sync-failed
-          - on-deleted
       - recipients:
           - slack:tiles
         triggers:
@@ -234,7 +233,6 @@ argo-cd:
         - on-sync-status-unknown
         - on-health-degraded
         - on-sync-failed
-        - on-deleted
         - on-created
         - on-deployed
       trigger.on-deployed: |
