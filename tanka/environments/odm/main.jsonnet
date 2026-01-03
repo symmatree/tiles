@@ -46,13 +46,6 @@ postgresInitScripts: postgresInitScripts,
 local postgresDeployment = kDeployment.new("postgres", containers=[
   kContainer.new('postgres', image='postgis/postgis:16-3.4')
   + kContainer.withPortsMixin([kPort.newNamed(5432, 'tcp')])
-  + kContainer.withVolumeMountsMixin([
-    kVolumeMount.new('dbdata', '/var/lib/postgresql')
-    + kVolumeMount.withSubPath('dbdata')
-    + kVolumeMount.withReadOnly(false),
-    kVolumeMount.new('init-db-scripts', '/docker-entrypoint-initdb.d')
-    + kVolumeMount.withReadOnly(true),
-  ])
   + kContainer.withEnvMixin([
     kEnvVar.new('POSTGRES_HOST_AUTH_METHOD', 'trust'),
   ]),
