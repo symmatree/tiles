@@ -18,7 +18,8 @@ spec:
         - name: vault_name
           string: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         - name: app_settings
-          map: {}
+          map:
+            webOdmIngressHost: 'odm.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: odm

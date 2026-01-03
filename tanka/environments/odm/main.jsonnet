@@ -23,6 +23,11 @@ local odm = {
   local kConfigMap = k.core.v1.configMap,
   local kEnvFromSource = k.core.v1.envFromSource,
   local kEnvVar = k.core.v1.envVar,
+  local kIngress = k.networking.v1.ingress,
+  local kIngressRule = k.networking.v1.ingressRule,
+  local kHttpIngressPath = k.networking.v1.httpIngressPath,
+  local kIngressBackend = k.networking.v1.ingressBackend,
+  local kIngressTLS = k.networking.v1.ingressTLS,
   new()::
 {
 local postgresPvc = kPersistentVolumeClaim.new(name="odm-postgres")
@@ -55,7 +60,161 @@ local postgresDeployment = kDeployment.new("postgres", containers=[
 + k_util.configMapVolumeMount(postgresInitScripts, '/docker-entrypoint-initdb.d'),
 postgresDeployment: postgresDeployment,
 
-postgresService:  k_util.serviceFor(postgresDeployment)
+local postgresService = k_util.serviceFor(postgresDeployment),
+postgresService: postgresService,
+
+local brokerLabels = {
+  app: 'odm',
+  name: 'redis-broker',
+},
+local brokerDeployment = kDeployment.new("redis-broker", containers=[
+  kContainer.new('broker', image='bitnami/redis:7.0-debian-12')
+  + kContainer.withPortsMixin([kPort.newNamed(6379, 'tcp')])
+  + kContainer.withEnvMixin([
+    kEnvVar.new('ALLOW_EMPTY_PASSWORD', 'yes'),
+  ]),
+], podLabels=brokerLabels)
++ kDeployment.spec.template.metadata.withLabels(brokerLabels),
+brokerDeployment: brokerDeployment,
+local brokerService = k_util.serviceFor(brokerDeployment),
+brokerService: brokerService,
+
+local datasetsPvc = kPersistentVolumeClaim.new("odm-datasets")
++ kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
++ kPersistentVolumeClaim.spec.resources.withRequests({ storage: "100Gi" })
++ kPersistentVolumeClaim.spec.withStorageClassName('nfs-datasets'),
+datasetsPvc: datasetsPvc,
+
+local redisEndpoint = brokerService.metadata.name + ':' + brokerService.spec.ports[0].port,
+local webOdmPort = 8000,
+local odmEnv = kContainer.withEnvMixin([
+    kEnvVar.new('WO_BROKER', 'redis://' + redisEndpoint),
+    kEnvVar.new('WO_DATABASE_HOST', postgresService.metadata.name),
+    kEnvVar.new('WO_DATABASE_NAME', 'postgres'),
+    kEnvVar.new('WO_DEBUG', 'no'),
+    kEnvVar.new('WO_DEV', 'no'),
+  ]),
+local webOdmContainers = [
+  kContainer.new('webodm', image='opendronemap/webodm_webapp')
+  + kContainer.withPortsMixin([kPort.newNamed(webOdmPort, 'tcp')])
+  + odmEnv
+  + kContainer.withCommand([
+    '/bin/bash',
+    '-c',
+    local innerCommand = "/webodm/wait-for-postgres.sh " + postgresService.metadata.name
+      + " /webodm/wait-for-it.sh -t 0 " + redisEndpoint
+      + " -- /webodm/start.sh";
+    "chmod +x /webodm/*.sh && /bin/bash -c \"" + innerCommand + "\""]),
+kContainer.new('webodm-worker', image='opendronemap/webodm_webapp')
+  + odmEnv
+  + kContainer.withCommand([
+    '/bin/bash',
+    '-c',
+    local innerCommand = "/webodm/wait-for-postgres.sh " + postgresService.metadata.name
+      + " /webodm/wait-for-it.sh -t 0 " + redisEndpoint
+      + " -- /webodm/wait-for-it.sh -t 0 webodm:" + webOdmPort
+      + " -- /webodm/worker.sh start";
+    "chmod +x /webodm/*.sh && /bin/bash -c \"" + innerCommand + "\""]),
+],
+local webOdmDeployment = kDeployment.new("webodm", containers=webOdmContainers, podLabels={ app: 'webodm' })
++ kDeployment.spec.template.metadata.withLabels({ app: 'webodm' })
++ k_util.pvcVolumeMount(datasetsPvc.metadata.name, '/webodm/app/media', volumeMountMixin=kVolumeMount.withSubPath('webodm-media')),
+webOdmDeployment: webOdmDeployment,
+local webOdmService = k_util.serviceFor(webOdmDeployment),
+webOdmService: webOdmService,
+
+local webOdmIngress = kIngress.new("webodm")
++ kIngress.metadata.withAnnotations({
+  "cert-manager.io/cluster-issuer": "real-cert"
+})
++ kIngress.spec.withIngressClassName("cilium")
++ kIngress.spec.withRulesMixin([
+  kIngressRule.withHost(APP.app_settings.webOdmIngressHost)
+  + kIngressRule.http.withPathsMixin([
+    kHttpIngressPath.withPath('/')
+    + kHttpIngressPath.withPathType('Prefix')
+    + kHttpIngressPath.backend.service.withName(webOdmService.metadata.name)
+      + kHttpIngressPath.backend.service.port.withNumber(webOdmService.spec.ports[0].port)
+  ]),
+])
++ kIngress.spec.withTlsMixin([
+  kIngressTLS.withHosts([APP.app_settings.webOdmIngressHost])
+  + kIngressTLS.withSecretName('webodm-tls'),
+]),
+webOdmIngress: webOdmIngress,
+
+/*
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server
+  namespace: argocd
+  annotations:
+    cert-manager.io/cluster-issuer: "real-cert"
+spec:
+  ingressClassName: cilium
+  rules:
+    - host: argocd.placeholder.symmatree.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80
+  tls:
+    - hosts:
+      - argocd.placeholder.symmatree.com
+      secretName: argocd-server-tls
+*/
+
+
+/*
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeodm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodeodm
+  template:
+    metadata:
+      labels:
+        app: nodeodm
+    spec:
+      containers:
+        - name: nodeodm
+          image: opendronemap/nodeodm
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: data-volume
+              mountPath: /cm/local
+      volumes:
+        - name: data-volume
+          emptyDir: {}
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeodm
+spec:
+  selector:
+    app: nodeodm
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+
+---
+*/
+
+
 }
 };
 
