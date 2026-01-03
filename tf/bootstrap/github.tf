@@ -78,15 +78,6 @@ resource "github_repository_ruleset" "tiles-main" {
   }
 }
 
-locals {
-  sa_mapping = {
-    "tiles" = {
-      sa_name   = google_service_account.tiles-tf.email
-      attribute = "attribute.repository/${var.github_owner}/${github_repository.tiles.name}"
-    }
-  }
-}
-
 module "secret_onepassword_sa_token" {
   source          = "../modules/github-secret"
   repository      = github_repository.tiles.name

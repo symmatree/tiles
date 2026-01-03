@@ -35,74 +35,64 @@ resource "google_service_account" "tiles_terraform_oidc" {
   description  = "Service account for GitHub Actions to run Terraform via OIDC"
 }
 
-# Grant necessary permissions to the service account on tiles-id project
-resource "google_project_iam_member" "tiles_terraform_oidc_id_viewer" {
-  project = module.tiles_id_project.project_id
-  role    = "roles/viewer"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
+# Define project permissions for the OIDC service account
+# Shared roles for tiles-main and tiles-test-main to ensure they stay in sync
+locals {
+  tiles_main_roles = [
+    "roles/editor",
+    "roles/storage.admin",
+    "roles/dns.admin",
+    "roles/resourcemanager.projectIamAdmin",
+    "roles/iam.securityAdmin"
+  ]
+
+  project_permissions = {
+    "tiles-id" = {
+      project_id = module.tiles_id_project.project_id
+      roles      = ["roles/viewer"]
+    }
+    "tiles-kms" = {
+      project_id = module.tiles_kms_project.project_id
+      roles      = ["roles/cloudkms.admin"]
+    }
+    "tiles-main" = {
+      project_id = module.tiles_main_project.project_id
+      roles      = local.tiles_main_roles
+    }
+    "tiles-test-main" = {
+      project_id = module.tiles_test_main_project.project_id
+      roles      = local.tiles_main_roles
+    }
+    "seed" = {
+      project_id = var.seed_project_id
+      roles = [
+        "roles/editor",
+        "roles/storage.admin",
+        "roles/dns.admin",
+        "roles/resourcemanager.projectIamAdmin",
+        "roles/iam.securityAdmin"
+      ]
+    }
+  }
+
+  # Flatten project_permissions into a map keyed by "project-role" for for_each
+  iam_members = merge([
+    for project_key, project_config in local.project_permissions : {
+      for role in project_config.roles : "${project_key}-${role}" => {
+        project_id  = project_config.project_id
+        role        = role
+        project_key = project_key
+      }
+    }
+  ]...)
 }
 
-# Grant necessary permissions to the service account on tiles-kms project
-resource "google_project_iam_member" "tiles_terraform_oidc_kms_admin" {
-  project = module.tiles_kms_project.project_id
-  role    = "roles/cloudkms.admin"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
+# Grant permissions to the OIDC service account on all projects
+resource "google_project_iam_member" "tiles_terraform_oidc" {
+  for_each = local.iam_members
 
-# Grant necessary permissions to the service account on tiles-main project
-resource "google_project_iam_member" "tiles_terraform_oidc_main_editor" {
-  project = module.tiles_main_project.project_id
-  role    = "roles/editor"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-resource "google_project_iam_member" "tiles_terraform_oidc_main_storage_admin" {
-  project = module.tiles_main_project.project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-resource "google_project_iam_member" "tiles_terraform_oidc_main_dns_admin" {
-  project = module.tiles_main_project.project_id
-  role    = "roles/dns.admin"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-# Grant necessary permissions to the service account on tiles-test-main project
-resource "google_project_iam_member" "tiles_terraform_oidc_test_main_editor" {
-  project = module.tiles_test_main_project.project_id
-  role    = "roles/editor"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-resource "google_project_iam_member" "tiles_terraform_oidc_test_main_storage_admin" {
-  project = module.tiles_test_main_project.project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-resource "google_project_iam_member" "tiles_terraform_oidc_test_main_dns_admin" {
-  project = module.tiles_test_main_project.project_id
-  role    = "roles/dns.admin"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-# Also grant permissions on the existing seed project for backwards compatibility
-resource "google_project_iam_member" "tiles_terraform_oidc_seed_editor" {
-  project = var.seed_project_id
-  role    = "roles/editor"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-resource "google_project_iam_member" "tiles_terraform_oidc_seed_storage_admin" {
-  project = var.seed_project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
-}
-
-resource "google_project_iam_member" "tiles_terraform_oidc_seed_dns_admin" {
-  project = var.seed_project_id
-  role    = "roles/dns.admin"
+  project = each.value.project_id
+  role    = each.value.role
   member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
 }
 
