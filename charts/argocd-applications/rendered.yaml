@@ -981,7 +981,7 @@ spec:
             tenant_federation:
               enabled: true
             limits:
-              max_rules_per_rule_group: 50
+              ruler_max_rules_per_rule_group: 50
             common:
               storage:
                 backend: filesystem
