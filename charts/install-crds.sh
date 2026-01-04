@@ -2,12 +2,15 @@
 set -euo pipefail
 
 export PROMETHEUS_OPERATOR_VERSION="v0.86.2"
-export CERT_MANAGER_VERSION="v1.19.1"
-export ARGOCD_VERSION="v3.2.0"
-export TRUST_MANAGER_VERSION="v0.20.2"
+export CERT_MANAGER_VERSION="v1.19.2"
+export ARGOCD_VERSION="v3.2.3"
+export TRUST_MANAGER_VERSION="v0.20.3"
 export ONEPASSWORD_OPERATOR_VERSION="v1.8.1"
 export GATEWAY_API_VERSION="v1.4.0"
 export ALLOY_OPERATOR_VERSION="alloy-operator-0.3.14"
+# Replace external-snapshotter source with CRDs from
+# any real snapshot impl if I ever install one.
+export EXTERNAL_SNAPSHOTTER_VERSION="release-6.0"
 
 set -x
 kubectl apply --server-side -f "https://github.com/grafana/alloy-operator/releases/download/${ALLOY_OPERATOR_VERSION}/collectors.grafana.com_alloy.yaml"
@@ -33,4 +36,8 @@ kubectl apply --server-side -f "https://raw.githubusercontent.com/1Password/onep
 # rollout-operator
 kubectl apply --server-side -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/rollout-operator/crds/replica-templates-custom-resource-definition.yaml
 kubectl apply --server-side -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/rollout-operator/crds/zone-aware-pod-disruption-budget-custom-resource-definition.yaml
+# external-snapshotter (VolumeSnapshot CRDs - needed for NFS CSI driver even if snapshotter is disabled)
+kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml"
+kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml"
+kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
 set +x

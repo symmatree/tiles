@@ -58,6 +58,9 @@ cert-manager:
       kubernetes.io/os: linux
       node-role.kubernetes.io/control-plane: ""
 trust-manager:
+  crds:
+    enabled: false
+    keep: true
   # The trust-manager has a webhook so really useful to have it on control plane.
   tolerations:
     - effect: NoSchedule
