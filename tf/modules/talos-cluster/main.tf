@@ -256,7 +256,7 @@ resource "onepassword_item" "misc_config" {
     }
     field {
       label = "targetRevision"
-      value = "main"
+      value = var.cluster_name == "tiles" ? "prod" : "test"
     }
     field {
       label = "cluster_name"
