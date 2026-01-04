@@ -110,16 +110,10 @@ local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
   + kContainer.withPortsMixin([kPort.newNamed(3000, 'tcp')])
   + kContainer.resources.withRequests({ memory: nodeOdmMemory })
   + kContainer.resources.withLimits({ memory: nodeOdmMemory })
-  + kContainer.withVolumeMountsMixin([
-    kVolumeMount.new('data-volume', '/cm/local'),
-  ]),
 ], podLabels=nodeOdmLabels)
 + kDeployment.spec.selector.withMatchLabels(nodeOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(nodeOdmLabels)
-+ kDeployment.spec.template.spec.withVolumesMixin([
-  kVolume.new('data-volume')
-  + kVolume.withEmptyDir(kEmptyDirVolumeSource.new()),
-]),
++ kDeployment.emptyVolumeMount("working-dir", '/cm/local'),
 nodeOdmDeployment: nodeOdmDeployment,
 local nodeOdmService = k_util.serviceFor(nodeOdmDeployment),
 nodeOdmService: nodeOdmService,
@@ -145,15 +139,11 @@ local webOdmContainers = [
       + " /webodm/wait-for-it.sh -t 0 " + redisEndpoint
       + " -- /webodm/start.sh";
     "chmod +x /webodm/*.sh && /bin/bash -c \"" + innerCommand + "\""])
-  + kContainer.lifecycle.withPostStart(
-    kHandler.withExec(
-      kExecAction.withCommand([
+  + kContainer.lifecycle.postStart.exec.withCommand([
         '/bin/bash',
         '-c',
         '/webodm/wait-for-it.sh -t 60 ' + nodeOdmEndpoint + ' && python manage.py addnode nodeodm 3000 || echo "Warning: Failed to register nodeodm"'
-      ])
-    )
-  ),
+      ]),
 kContainer.new('webodm-worker', image='opendronemap/webodm_webapp')
   + odmEnv
   + kContainer.withCommand([
