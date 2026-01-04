@@ -15,6 +15,45 @@ and restricted tokens where it can. However some are created manually:
 * `proxmox-root` with a `root` service account for the Proxmox cluster
 * `github-tiles-tf-bootstrap` with a Github PAT token granting read-write access
   to lots of Github assets on the containing repo.
+* `tiles-machine-secrets` (or `tiles-test-machine-secrets` for test environment) - Talos machine secrets
+
+## Talos Machine Secrets
+
+Talos machine secrets must be created manually before deploying a new cluster. This is done manually because:
+
+1. **Terraform cannot be used**:** The Terraform Talos provider's `talos_machine_secrets` resource generates secrets, but Talos is unable to load the resulting files. The root cause of this incompatibility is not fully understood.
+
+2. **Script generation is avoided**: We intentionally do not generate secrets in `apply-talos-config.sh` to prevent accidental regeneration, which would break existing clusters.
+
+### Manual Creation Process
+
+For a new cluster, generate and store the secrets as follows:
+
+1. Generate the secrets file locally:
+   ```bash
+   talosctl gen secrets --output-file /tmp/secrets.yaml
+   ```
+
+2. Create an empty 1Password item with the correct name:
+   - For production: `tiles-machine-secrets`
+   - For test: `tiles-test-machine-secrets`
+
+   Create it as a Secure Note in the `tiles-secrets` vault (or appropriate vault for your environment).
+
+3. Populate the item with the generated secrets:
+   ```bash
+   op item edit \
+     --vault tiles-secrets \
+     tiles-machine-secrets \
+     notesPlain="$(cat /tmp/secrets.yaml)"
+   ```
+
+4. Clean up the temporary file:
+   ```bash
+   rm /tmp/secrets.yaml
+   ```
+
+**Important**: These secrets are cluster-specific and must never be regenerated for an existing cluster. The `apply-talos-config.sh` script will reuse existing secrets from 1Password.
 
 ## Runtime / Github Actions
 

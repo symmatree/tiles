@@ -879,9 +879,10 @@ spec:
         # Single binary mode configuration
         singleBinary:
           replicas: 1
-          enableStatefulSetAutoDeletePVC: true
           persistence:
-            enabled: false
+            enabled: true
+            storageClassName: local-path
+            enableStatefulSetAutoDeletePVC: true
           extraArgs:
             - -config.expand-env=true
             - -log-config-reverse-order
