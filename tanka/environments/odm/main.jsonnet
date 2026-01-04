@@ -29,8 +29,14 @@ local odm = {
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
   local kIngressBackend = k.networking.v1.ingressBackend,
   local kIngressTLS = k.networking.v1.ingressTLS,
+  local kVolume = k.core.v1.volume,
+  local kEmptyDirVolumeSource = k.core.v1.emptyDirVolumeSource,
+  local kLifecycle = k.core.v1.lifecycle,
+  local kHandler = k.core.v1.handler,
+  local kExecAction = k.core.v1.execAction,
   new()::
 {
+local nodeOdmMemory = if APP.cluster_name == "tiles" then "6Gi" else "1Gi",
 local postgresPvc = kPersistentVolumeClaim.new(name="odm-postgres")
 + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
 + kPersistentVolumeClaim.spec.resources.withRequests({ storage: "10Gi" })
@@ -96,8 +102,31 @@ local datasetsPvc = kPersistentVolumeClaim.new("odm-datasets")
 + kPersistentVolumeClaim.spec.withStorageClassName(""),
 datasetsPvc: datasetsPvc,
 
+local nodeOdmLabels = {
+  app: 'nodeodm',
+},
+local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
+  kContainer.new('nodeodm', image='opendronemap/nodeodm')
+  + kContainer.withPortsMixin([kPort.newNamed(3000, 'tcp')])
+  + kContainer.resources.withRequests({ memory: nodeOdmMemory })
+  + kContainer.resources.withLimits({ memory: nodeOdmMemory })
+  + kContainer.withVolumeMountsMixin([
+    kVolumeMount.new('data-volume', '/cm/local'),
+  ]),
+], podLabels=nodeOdmLabels)
++ kDeployment.spec.selector.withMatchLabels(nodeOdmLabels)
++ kDeployment.spec.template.metadata.withLabels(nodeOdmLabels)
++ kDeployment.spec.template.spec.withVolumesMixin([
+  kVolume.new('data-volume')
+  + kVolume.withEmptyDir(kEmptyDirVolumeSource.new()),
+]),
+nodeOdmDeployment: nodeOdmDeployment,
+local nodeOdmService = k_util.serviceFor(nodeOdmDeployment),
+nodeOdmService: nodeOdmService,
+
 local redisEndpoint = brokerService.metadata.name + ':' + brokerService.spec.ports[0].port,
 local webOdmPort = 8000,
+local nodeOdmEndpoint = nodeOdmService.metadata.name + ':' + nodeOdmService.spec.ports[0].port,
 local odmEnv = kContainer.withEnvMixin([
     kEnvVar.new('WO_BROKER', 'redis://' + redisEndpoint),
     kEnvVar.new('WO_DATABASE_HOST', postgresService.metadata.name),
@@ -115,7 +144,16 @@ local webOdmContainers = [
     local innerCommand = "/webodm/wait-for-postgres.sh " + postgresService.metadata.name
       + " /webodm/wait-for-it.sh -t 0 " + redisEndpoint
       + " -- /webodm/start.sh";
-    "chmod +x /webodm/*.sh && /bin/bash -c \"" + innerCommand + "\""]),
+    "chmod +x /webodm/*.sh && /bin/bash -c \"" + innerCommand + "\""])
+  + kContainer.lifecycle.withPostStart(
+    kHandler.withExec(
+      kExecAction.withCommand([
+        '/bin/bash',
+        '-c',
+        '/webodm/wait-for-it.sh -t 60 ' + nodeOdmEndpoint + ' && python manage.py addnode nodeodm 3000 || echo "Warning: Failed to register nodeodm"'
+      ])
+    )
+  ),
 kContainer.new('webodm-worker', image='opendronemap/webodm_webapp')
   + odmEnv
   + kContainer.withCommand([
@@ -155,78 +193,6 @@ local webOdmIngress = kIngress.new("webodm")
   + kIngressTLS.withSecretName('webodm-tls'),
 ]),
 webOdmIngress: webOdmIngress,
-
-/*
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: argocd-server
-  namespace: argocd
-  annotations:
-    cert-manager.io/cluster-issuer: "real-cert"
-spec:
-  ingressClassName: cilium
-  rules:
-    - host: argocd.placeholder.symmatree.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: argocd-server
-                port:
-                  number: 80
-  tls:
-    - hosts:
-      - argocd.placeholder.symmatree.com
-      secretName: argocd-server-tls
-*/
-
-
-/*
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nodeodm
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nodeodm
-  template:
-    metadata:
-      labels:
-        app: nodeodm
-    spec:
-      containers:
-        - name: nodeodm
-          image: opendronemap/nodeodm
-          ports:
-            - containerPort: 3000
-          volumeMounts:
-            - name: data-volume
-              mountPath: /cm/local
-      volumes:
-        - name: data-volume
-          emptyDir: {}
-
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: nodeodm
-spec:
-  selector:
-    app: nodeodm
-  ports:
-    - protocol: TCP
-      port: 3000
-      targetPort: 3000
-
----
-*/
-
 
 }
 };
