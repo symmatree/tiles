@@ -67,5 +67,7 @@ virtual_machines = {
   }
 }
 
+metal_amd_nodes = {}
+
 # It's a shame the internal volume leaks here
 cluster_nfs_path = "/volume2/tiles"

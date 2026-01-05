@@ -35,14 +35,21 @@ variable "talos_version" {
   type        = string
 }
 
-variable "talos_variant" {
+variable "talos_vm_variant" {
   description = "Talos Linux variant (e.g., nocloud, metal)"
   type        = string
+  default     = "nocloud"
 }
 
 variable "talos_arch" {
   description = "Talos Linux architecture (e.g., amd64, arm64)"
   type        = string
+}
+
+variable "talos_metal_amd_variant" {
+  description = "Talos Linux variant for bare metal AMD (e.g., metal)"
+  type        = string
+  default     = "metal"
 }
 
 variable "gcp_region" {
@@ -60,6 +67,15 @@ variable "virtual_machines" {
     ram_mb            = number
     mac_address       = string
     ip_address        = string
+  }))
+}
+
+variable "metal_amd_nodes" {
+  description = "List of metal AMD nodes in the cluster"
+  type = map(object({
+    name        = string
+    mac_address = string
+    ip_address  = string
   }))
 }
 
