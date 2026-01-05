@@ -87,3 +87,9 @@ variable "machine_configuration" {
   default     = null
   sensitive   = true
 }
+
+variable "config_patches" {
+  description = "List of config patches to apply (YAML strings or file paths)"
+  type        = list(string)
+  default     = []
+}

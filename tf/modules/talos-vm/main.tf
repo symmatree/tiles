@@ -61,11 +61,10 @@ resource "unifi_user" "vm_client" {
 }
 
 resource "talos_machine_configuration_apply" "this" {
-  count = var.apply_config ? 1 : 0
-
   client_configuration        = var.client_configuration
   machine_configuration_input = var.machine_configuration
   node                        = var.ip_address
+  config_patches              = var.config_patches
 
   depends_on = [proxmox_virtual_environment_vm.main]
 

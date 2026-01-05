@@ -56,7 +56,7 @@ output "metal_amd_iso_url" {
 }
 
 locals {
-  filename = "talos-${var.cluster_code}-v${var.talos_version}-${var.talos_variant}-${var.talos_arch}-${talos_image_factory_schematic.vm.id}.iso"
+  filename = "talos-${var.cluster_code}-v${var.talos_version}-${var.talos_vm_variant}-${var.talos_arch}-${talos_image_factory_schematic.vm.id}.iso"
 }
 
 # Download Talos ISOs to each Proxmox node
@@ -70,7 +70,7 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
   datastore_id = var.proxmox_storage_iso
   node_name    = each.value
 
-  url       = "https://factory.talos.dev/image/${talos_image_factory_schematic.vm.id}/v${var.talos_version}/${var.talos_variant}-${var.talos_arch}.iso"
+  url       = "https://factory.talos.dev/image/${talos_image_factory_schematic.vm.id}/v${var.talos_version}/${var.talos_vm_variant}-${var.talos_arch}.iso"
   file_name = local.filename
   overwrite = true
 }
