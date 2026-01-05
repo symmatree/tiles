@@ -45,18 +45,6 @@ variable "talos_arch" {
   type        = string
 }
 
-variable "talos_schematic_extensions" {
-  description = "List of Talos system extensions to include in the schematic"
-  type        = list(string)
-  default     = ["qemu-guest-agent"]
-}
-
-variable "talos_schematic_extra_kernel_args" {
-  description = "Extra kernel arguments for Talos schematic"
-  type        = list(string)
-  default     = ["vga=792", "-talos.halt_if_installed"]
-}
-
 variable "gcp_region" {
   description = "Google Cloud region"
   type        = string

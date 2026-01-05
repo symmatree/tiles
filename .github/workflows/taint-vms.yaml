@@ -1,0 +1,118 @@
+name: "taint-vms"
+on:
+  workflow_dispatch:
+    inputs:
+      taint_test:
+        description: "Taint VMs in test cluster"
+        type: boolean
+        default: false
+      taint_prod:
+        description: "Taint VMs in prod cluster"
+        type: boolean
+        default: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+
+concurrency:
+  group: ${{ github.repository }}-taint-vms
+  cancel-in-progress: false
+
+jobs:
+  taint-vms:
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - uses: "actions/checkout@v6"
+
+      - name: Load secrets
+        id: load_secrets
+        uses: 1password/load-secrets-action@v3
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
+          WORKLOAD_IDENTITY_PROVIDER: "op://tiles-secrets/gh_oidc_workload_identity/workload_identity_provider"
+          SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
+
+      - uses: "hashicorp/setup-terraform@v3"
+        with:
+          terraform_version: "1.13.3"
+
+      - uses: ./.github/actions/wg-quick
+        id: wireguard
+        with:
+          wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
+          conf_dir: "$HOME"
+
+      - name: Terraform init
+        working-directory: "tf/nodes"
+        run: |
+          set -euo pipefail
+          terraform init
+
+      # Test cluster VM tainting
+      - name: Taint test cluster VMs
+        if: inputs.taint_test == true
+        working-directory: "tf/nodes"
+        run: |
+          set -euo pipefail
+          terraform workspace select test || terraform workspace new test
+          terraform taint 'module.cluster.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
+          terraform taint 'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
+
+      # Prod cluster VM tainting
+      - name: Taint prod cluster VMs
+        if: inputs.taint_prod == true
+        working-directory: "tf/nodes"
+        run: |
+          set -euo pipefail
+          terraform workspace select prod || terraform workspace new prod
+          terraform taint 'module.cluster.module.talos-vm["tiles-cp-1"].proxmox_virtual_environment_vm.main'
+          terraform taint 'module.cluster.module.talos-vm["tiles-cp-2"].proxmox_virtual_environment_vm.main'
+          terraform taint 'module.cluster.module.talos-vm["tiles-cp-3"].proxmox_virtual_environment_vm.main'
+          terraform taint 'module.cluster.module.talos-vm["tiles-wk-1"].proxmox_virtual_environment_vm.main'
+          terraform taint 'module.cluster.module.talos-vm["tiles-wk-2"].proxmox_virtual_environment_vm.main'
+          terraform taint 'module.cluster.module.talos-vm["tiles-wk-3"].proxmox_virtual_environment_vm.main'
+
+      - name: De-wireguard
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -z "${{ steps.wireguard.outputs.wg_connected }}" ]; then
+            echo "No Wireguard connection established, skipping disconnection."
+            exit 0
+          fi
+          echo "Disconnecting Wireguard..."
+          time sudo wg-quick down "$HOME/wg0.conf" || true
+          echo "Disconnected"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Taint VM Workflow Complete"
+            echo ""
+            if [ "${{ inputs.taint_test }}" == "true" ]; then
+              echo "✅ Test cluster VMs tainted"
+            fi
+            if [ "${{ inputs.taint_prod }}" == "true" ]; then
+              echo "✅ Prod cluster VMs tainted"
+            fi
+            if [ "${{ inputs.taint_test }}" != "true" ] && [ "${{ inputs.taint_prod }}" != "true" ]; then
+              echo "ℹ️ No VMs were tainted (both options were false)"
+            fi
+            echo ""
+            echo "**Next steps:**"
+            echo "- Coordinate any bare-metal node resets if needed"
+            echo "- Run terraform apply to recreate the tainted VMs"
+          } >> "$GITHUB_STEP_SUMMARY"
