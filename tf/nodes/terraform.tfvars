@@ -9,10 +9,4 @@ gcp_region             = "us-east1"
 talos_variant = "nocloud"
 talos_arch    = "amd64"
 
-talos_schematic_extensions = ["qemu-guest-agent"]
-talos_schematic_extra_kernel_args = [
-  "vga=792",
-  "-talos.halt_if_installed"
-]
-
 datasets_nfs_path = "/volume2/datasets"

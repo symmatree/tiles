@@ -13,7 +13,7 @@ module "cluster" {
     version   = var.talos_version
     variant   = var.talos_variant
     arch      = var.talos_arch
-    schematic = talos_image_factory_schematic.this.id
+    schematic = talos_image_factory_schematic.vm.id
   }
 
   admin_user             = var.admin_user
