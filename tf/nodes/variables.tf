@@ -67,6 +67,7 @@ variable "virtual_machines" {
     ram_mb            = number
     mac_address       = string
     ip_address        = string
+    taint             = string
   }))
 }
 
@@ -77,6 +78,7 @@ variable "metal_amd_nodes" {
     type        = string
     mac_address = string
     ip_address  = string
+    taint       = string
   }))
 }
 
