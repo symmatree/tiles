@@ -58,18 +58,6 @@ variable "domain_name" {
   default     = "local.symmatree.com."
 }
 
-variable "started" {
-  description = "Whether the VM should be started after creation"
-  type        = bool
-  default     = false
-}
-
-variable "apply_config" {
-  description = "Whether to apply Talos machine configuration"
-  type        = bool
-  default     = false
-}
-
 variable "client_configuration" {
   description = "Talos client configuration for applying machine config"
   type = object({

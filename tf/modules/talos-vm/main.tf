@@ -7,7 +7,6 @@ resource "proxmox_virtual_environment_vm" "main" {
   on_boot       = null
   pool_id       = null
   scsi_hardware = "virtio-scsi-single"
-  started       = var.started
   tags          = []
   vm_id         = var.vm_id
   agent {
