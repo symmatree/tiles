@@ -17,6 +17,7 @@ virtual_machines = {
     ram_mb            = 5120
     mac_address       = "bc:24:11:d0:74:11"
     ip_address        = "10.0.192.11"
+    taint             = ""
   },
   "tiles-test-wk" = {
     type              = "worker"
@@ -26,6 +27,7 @@ virtual_machines = {
     ram_mb            = 8192
     mac_address       = "bc:24:11:d0:74:21"
     ip_address        = "10.0.192.21"
+    taint             = ""
   }
 }
 

@@ -74,6 +74,7 @@ variable "metal_amd_nodes" {
   description = "List of metal AMD nodes in the cluster"
   type = map(object({
     name        = string
+    type        = string
     mac_address = string
     ip_address  = string
   }))

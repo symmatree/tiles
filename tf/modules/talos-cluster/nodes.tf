@@ -54,6 +54,7 @@ module "talos-vm" {
   # Common patch for all nodes (equivalent to common-patch.yaml.tmpl)
   # Install image patch for all nodes
   # Layer2 VIP patch only for control plane nodes (equivalent to layer2-vip-config.yaml.tmpl)
+  # taint as specified
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],
@@ -62,7 +63,20 @@ module "talos-vm" {
         "install" = { "image" = local.vm_install_image }
       }
     })],
-    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : []
+    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
+    each.value.taint != "" ? [yamlencode({
+      "machine" = {
+        "kubelet" = {
+          "registerWithTaints" = [
+            {
+              "key"    = "dedicated"
+              "value"  = each.value.taint
+              "effect" = "NoSchedule"
+            }
+          ]
+        }
+      }
+    })] : []
   )
 }
 
@@ -86,6 +100,19 @@ module "talos-amd-metal" {
         "install" = { "image" = local.metal_amd_install_image }
       }
     })],
-    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : []
+    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
+    each.value.taint != "" ? [yamlencode({
+      "machine" = {
+        "kubelet" = {
+          "registerWithTaints" = [
+            {
+              "key"    = "dedicated"
+              "value"  = each.value.taint
+              "effect" = "NoSchedule"
+            }
+          ]
+        }
+      }
+    })] : []
   )
 }

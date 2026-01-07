@@ -19,6 +19,7 @@ virtual_machines = {
     ram_mb            = 5120
     mac_address       = "bc:24:11:d0:72:11"
     ip_address        = "10.0.128.11"
+    taint             = ""
   },
   "tiles-cp-2" = {
     type              = "control"
@@ -28,6 +29,7 @@ virtual_machines = {
     ram_mb            = 3000
     mac_address       = "bc:24:11:d0:72:12"
     ip_address        = "10.0.128.12"
+    taint             = ""
   },
   "tiles-cp-3" = {
     type              = "control"
@@ -37,6 +39,7 @@ virtual_machines = {
     ram_mb            = 3000
     mac_address       = "bc:24:11:d0:72:13"
     ip_address        = "10.0.128.13"
+    taint             = ""
   },
   "tiles-wk-1" = {
     type              = "worker"
@@ -46,6 +49,7 @@ virtual_machines = {
     ram_mb            = 4096
     mac_address       = "bc:24:11:d0:72:21"
     ip_address        = "10.0.128.21"
+    taint             = ""
   },
   "tiles-wk-2" = {
     type              = "worker"
@@ -55,6 +59,7 @@ virtual_machines = {
     ram_mb            = 6000
     mac_address       = "bc:24:11:d0:72:22"
     ip_address        = "10.0.128.22"
+    taint             = ""
   },
   "tiles-wk-3" = {
     type              = "worker"
@@ -64,10 +69,19 @@ virtual_machines = {
     ram_mb            = 10000
     mac_address       = "bc:24:11:d0:72:23"
     ip_address        = "10.0.128.23"
+    taint             = "nodeodm"
   }
 }
 
-metal_amd_nodes = {}
+metal_amd_nodes = {
+  "lancer" : {
+    name        = "lancer"
+    type        = "worker"
+    mac_address = "84:47:09:75:89:a6"
+    ip_address  = "10.0.128.51"
+    taint       = "nodeodm"
+  }
+}
 
 # It's a shame the internal volume leaks here
 cluster_nfs_path = "/volume2/tiles"
