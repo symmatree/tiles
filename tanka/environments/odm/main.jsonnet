@@ -105,6 +105,12 @@ datasetsPvc: datasetsPvc,
 local nodeOdmLabels = {
   app: 'nodeodm',
 },
+local nodeOdmToleration = {
+  key: 'dedicated',
+  operator: 'Equal',
+  value: 'nodeodm',
+  effect: 'NoSchedule',
+},
 local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
   kContainer.new('nodeodm', image='opendronemap/nodeodm')
   + kContainer.withPortsMixin([kPort.newNamed(3000, 'tcp')])
@@ -113,6 +119,25 @@ local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
 ], podLabels=nodeOdmLabels)
 + kDeployment.spec.selector.withMatchLabels(nodeOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(nodeOdmLabels)
++ kDeployment.spec.template.spec.withTolerationsMixin([nodeOdmToleration])
++ kDeployment.spec.template.spec.withAffinity({
+  nodeAffinity: {
+    preferredDuringSchedulingIgnoredDuringExecution: [
+      {
+        weight: 100,
+        preference: {
+          matchExpressions: [
+            {
+              key: 'kubernetes.io/hostname',
+              operator: 'In',
+              values: ['lancer'],
+            },
+          ],
+        },
+      },
+    ],
+  },
+})
 + kDeployment.emptyVolumeMount("working-dir", '/cm/local'),
 nodeOdmDeployment: nodeOdmDeployment,
 local nodeOdmService = k_util.serviceFor(nodeOdmDeployment),

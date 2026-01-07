@@ -1,7 +1,7 @@
 resource "unifi_user" "metal_client" {
   mac                    = var.mac_address
   name                   = var.name
-  note                   = "${var.description} - ${var.name}"
+  note                   = var.description != null ? "${var.description} - ${var.name}" : var.name
   fixed_ip               = var.ip_address
   local_dns_record       = "${var.name}.${var.domain_name}"
   allow_existing         = true
