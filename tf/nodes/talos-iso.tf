@@ -13,7 +13,7 @@ resource "talos_image_factory_schematic" "vm" {
         systemExtensions = {
           officialExtensions = data.talos_image_factory_extensions_versions.vm.extensions_info.*.name
         }
-        extraKernelArgs = ["vga=792", "-talos.halt_if_installed"]
+        extraKernelArgs = ["vga=792", "net.ifnames=0", "-talos.halt_if_installed"]
       }
     }
   )
@@ -34,7 +34,7 @@ resource "talos_image_factory_schematic" "metal_amd" {
         systemExtensions = {
           officialExtensions = data.talos_image_factory_extensions_versions.metal_amd.extensions_info.*.name
         }
-        extraKernelArgs = ["-talos.halt_if_installed"]
+        extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed"]
       }
     }
   )
