@@ -67,13 +67,9 @@ module "talos-vm" {
     each.value.taint != "" ? [yamlencode({
       "machine" = {
         "kubelet" = {
-          "registerWithTaints" = [
-            {
-              "key"    = "dedicated"
-              "value"  = each.value.taint
-              "effect" = "NoSchedule"
-            }
-          ]
+          "extraArgs" = {
+            "register-with-taints" = "dedicated=${each.value.taint}:NoSchedule"
+          }
         }
       }
     })] : []
@@ -104,13 +100,9 @@ module "talos-amd-metal" {
     each.value.taint != "" ? [yamlencode({
       "machine" = {
         "kubelet" = {
-          "registerWithTaints" = [
-            {
-              "key"    = "dedicated"
-              "value"  = each.value.taint
-              "effect" = "NoSchedule"
-            }
-          ]
+          "extraArgs" = {
+            "register-with-taints" = "dedicated=${each.value.taint}:NoSchedule"
+          }
         }
       }
     })] : []
