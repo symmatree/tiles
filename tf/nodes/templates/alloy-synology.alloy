@@ -1,0 +1,119 @@
+// Alloy configuration for Synology host monitoring
+// Collects node_exporter metrics and system logs, forwarding to OTLP endpoints
+
+// Node exporter for host metrics
+prometheus.exporter.unix "node" {
+  include_mount_points = true
+  include_rapl         = false
+  include_softnet      = true
+  include_textfile     = false
+  include_time         = true
+  include_timex        = true
+  include_vmstat       = true
+  include_zoneinfo     = false
+
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host"
+}
+
+// OTLP HTTP exporter for tiles-test cluster
+otelcol.exporter.otlphttp "tiles_test" {
+  client {
+    endpoint = "${otlp_tiles_test}"
+    headers = {
+      "X-Scope-OrgID" = "tiles-test"
+    }
+  }
+}
+
+// OTLP HTTP exporter for tiles cluster
+otelcol.exporter.otlphttp "tiles" {
+  client {
+    endpoint = "${otlp_tiles}"
+    headers = {
+      "X-Scope-OrgID" = "tiles"
+    }
+  }
+}
+
+// Scrape node exporter metrics and convert to OTLP format
+prometheus.scrape "node" {
+  targets    = prometheus.exporter.unix.node.targets
+  forward_to = [
+    otelcol.receiver.prometheus.tiles_test.receiver,
+    otelcol.receiver.prometheus.tiles.receiver,
+  ]
+}
+
+// Convert Prometheus to OTLP for tiles-test
+otelcol.receiver.prometheus "tiles_test" {
+  output {
+    metrics = [otelcol.exporter.otlphttp.tiles_test.input]
+  }
+}
+
+// Convert Prometheus to OTLP for tiles
+otelcol.receiver.prometheus "tiles" {
+  output {
+    metrics = [otelcol.exporter.otlphttp.tiles.input]
+  }
+}
+
+// Log collection from host
+// Note: Synology DSM uses traditional syslog (not systemd/journalctl)
+// Synology does not use systemd, so journalctl is not available
+// We collect from:
+// - /var/log/messages: Traditional syslog (all system messages)
+// - /var/log/synolog/*.log: Synology's custom application logs
+loki.source.file "syslog" {
+  targets = [
+    {
+      __path__ = "/host/var/log/messages",
+      job      = "synology-syslog",
+      host     = "raconteur",
+    },
+    {
+      __path__ = "/host/var/log/synolog/*.log",
+      job      = "synology-synolog",
+      host     = "raconteur",
+    },
+    // Additional common log locations
+    {
+      __path__ = "/host/var/log/auth.log",
+      job      = "synology-auth",
+      host     = "raconteur",
+    },
+    {
+      __path__ = "/host/var/log/daemon.log",
+      job      = "synology-daemon",
+      host     = "raconteur",
+    },
+  ]
+  forward_to = [
+    loki.write.tiles_test.receiver,
+    loki.write.tiles.receiver,
+  ]
+}
+
+// Loki write for tiles-test
+loki.write "tiles_test" {
+  endpoint {
+    url = "https://otlp.tiles-test.symmatree.com/loki/api/v1/push"
+  }
+  external_labels = {
+    cluster = "tiles-test"
+    host    = "raconteur"
+  }
+}
+
+// Loki write for tiles
+loki.write "tiles" {
+  endpoint {
+    url = "https://otlp.tiles.symmatree.com/loki/api/v1/push"
+  }
+  external_labels = {
+    cluster = "tiles"
+    host    = "raconteur"
+  }
+}

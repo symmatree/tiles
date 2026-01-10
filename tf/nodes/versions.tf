@@ -37,6 +37,10 @@ terraform {
       source  = "loafoe/htpasswd"
       version = ">= 1.0.0"
     }
+    synology = {
+      source  = "synology-community/synology"
+      version = ">= 0.6.7"
+    }
   }
   backend "gcs" {
     bucket = "custodes-tf-state"
