@@ -15,6 +15,13 @@ module "dns-public-zone" {
   type       = "public"
   name       = var.cluster_name
   domain     = "${local.fqdn}."
+  iam_choice = "iam_binding"
+  role       = "roles/dns.admin"
+  members = [
+    "serviceAccount:${google_service_account.external_dns.email}",
+    "serviceAccount:${google_service_account.cert_manager_dns01.email}",
+  ]
+  member = ""
   labels = {
     name    = var.cluster_name
     cluster = var.cluster_name
