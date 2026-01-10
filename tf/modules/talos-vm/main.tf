@@ -4,7 +4,7 @@ resource "proxmox_virtual_environment_vm" "main" {
   description   = "${var.description} - ${var.vm_id} - ${var.name} - ${var.ip_address}"
   name          = var.name
   node_name     = var.node_name
-  on_boot       = null
+  on_boot       = true
   pool_id       = null
   scsi_hardware = "virtio-scsi-single"
   tags          = []
