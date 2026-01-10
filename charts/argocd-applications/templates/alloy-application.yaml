@@ -91,6 +91,31 @@ spec:
                 staticConfig:
                   static:
                     - https://morpheus.local.symmatree.com/
+          - apiVersion: networking.k8s.io/v1
+            kind: Ingress
+            metadata:
+              name: otlp-ingress
+              namespace: "alloy"
+              annotations:
+                cert-manager.io/cluster-issuer: real-cert
+                external-dns.alpha.kubernetes.io/hostname: 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            spec:
+              ingressClassName: cilium
+              tls:
+                - secretName: otlp-tls
+                  hosts:
+                    - 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+              rules:
+                - host: 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+                  http:
+                    paths:
+                      - path: /
+                        pathType: Prefix
+                        backend:
+                          service:
+                            name: alloy-alloy-singleton
+                            port:
+                              number: 4318
         # https://github.com/grafana/k8s-monitoring-helm/blob/main/charts/k8s-monitoring/charts/feature-cluster-metrics/values.yaml
         clusterMetrics:
           enabled: true
@@ -194,10 +219,67 @@ spec:
               address = "http://mimir-gateway.mimir.svc"
               tenant_id = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
             }
+
+            // OTLP HTTP receiver for external metrics and logs
+            otelcol.receiver.otlp "otlp_http" {
+              http {
+                endpoint = "0.0.0.0:4318"
+              }
+
+              output {
+                metrics = [otelcol.processor.attributes.otlp_annotate.input]
+                logs    = [otelcol.processor.attributes.otlp_annotate.input]
+              }
+            }
+
+            // Add network identity annotation (client IP)
+            otelcol.processor.attributes "otlp_annotate" {
+              // Add client IP as a resource attribute
+              // The client IP is available in the connection context
+              action {
+                key    = "network.client.ip"
+                action = "insert"
+                value  = "$attributes[\"net.peer.ip\"]"
+              }
+
+              output {
+                metrics = [otelcol.exporter.prometheusremotewrite.otlp_mimir.input]
+                logs    = [otelcol.exporter.loki.otlp_loki.input]
+              }
+            }
+
+            // Forward metrics to Mimir via Prometheus remote write
+            otelcol.exporter.prometheusremotewrite "otlp_mimir" {
+              endpoint {
+                url = "http://mimir-gateway.mimir.svc/api/v1/push"
+              }
+              headers = {
+                "X-Scope-OrgID" = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
+              }
+            }
+
+            // Forward logs to Loki
+            otelcol.exporter.loki "otlp_loki" {
+              forward_to = [loki.write.otlp_loki.receiver]
+              external_labels = {
+                cluster = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
+              }
+            }
+
+            loki.write "otlp_loki" {
+              endpoint {
+                url = "http://loki.loki.svc:3100/loki/api/v1/push"
+              }
+            }
           enabled: true
           serviceMonitor:
             enabled: true
           alloy:
+            extraPorts:
+              - name: otlp-http
+                port: 4318
+                targetPort: 4318
+                protocol: TCP
             resources: # Set 2025-07-20
               # requests:
               #   memory: 256Mi
