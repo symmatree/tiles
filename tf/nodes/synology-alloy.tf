@@ -8,97 +8,68 @@
 # Please refer to the provider documentation for the correct resource types.
 
 variable "synology_host" {
-  description = "Synology DSM hostname or IP address"
+  description = "Synology DSM hostname or IP address with protocol and port (e.g., https://raconteur.ad.local.symmatree.com:5001)"
   type        = string
-  default     = "raconteur.ad.local.symmatree.com"
 }
 
 # Container project configuration
-# Note: Resource type may vary - check provider documentation
 # Only create in prod workspace to avoid conflicts
 resource "synology_container_project" "alloy" {
-  count       = terraform.workspace == "prod" ? 1 : 0
-  name        = "alloy"
-  description = "Alloy telemetry collector for Synology host metrics and logs"
-
-  # Container configuration
-  container {
-    name  = "alloy"
-    image = "grafana/alloy:latest"
-
-    # Mount host volumes for logs and system information
-    volume {
-      source      = "/var/log"
-      destination = "/host/var/log"
-      type        = "bind"
-      read_only   = true
-    }
-
-    volume {
-      source      = "/proc"
-      destination = "/host/proc"
-      type        = "bind"
-      read_only   = true
-    }
-
-    volume {
-      source      = "/sys"
-      destination = "/host/sys"
-      type        = "bind"
-      read_only   = true
-    }
-
-    volume {
-      source      = "/run"
-      destination = "/host/run"
-      type        = "bind"
-      read_only   = true
-    }
-
-    volume {
-      source      = "/etc"
-      destination = "/host/etc"
-      type        = "bind"
-      read_only   = true
-    }
-
-    # Alloy configuration file
-    volume {
-      source      = "/volume1/docker/alloy/config.alloy"
-      destination = "/etc/alloy/config.alloy"
-      type        = "bind"
-      read_only   = true
-    }
-
-    # Environment variables
-    env = {
-      HOSTNAME = "raconteur"
-    }
-
-    # Network mode - use host network to access host metrics
-    network_mode = "host"
-
-    # Resource limits
-    resources {
-      cpu_limit    = "2"
-      memory_limit = "512M"
-    }
-
-    # Restart policy
-    restart_policy = "unless-stopped"
-  }
-}
-
-# Alloy configuration file
-# Note: The exact resource type may vary depending on the Synology provider implementation
-# This may need to be adjusted to match the actual provider API
-# Only create in prod workspace to avoid conflicts
-resource "synology_file" "alloy_config" {
   count = terraform.workspace == "prod" ? 1 : 0
-  path  = "/volume1/docker/alloy/config.alloy"
-  content = templatefile("${path.root}/templates/alloy-synology.alloy", {
-    otlp_tiles_test = "https://otlp.tiles-test.symmatree.com"
-    otlp_tiles      = "https://otlp.tiles.symmatree.com"
-  })
-  permissions = "0644"
+  name  = "alloy"
+  run   = true
+
+  services = {
+    alloy = {
+      image = "grafana/alloy:latest"
+
+      # Mount host root filesystem for node_exporter
+      # Following node_exporter best practices: mount rootfs at /host
+      volumes = [
+        {
+          type      = "bind"
+          source    = "/"
+          target    = "/host"
+          read_only = true
+          bind = {
+            propagation = "rslave"
+          }
+        },
+      ]
+
+      # Mount Alloy configuration file as a config
+      configs = [
+        {
+          source = "alloy_config"
+          target = "/etc/alloy/config.alloy"
+        }
+      ]
+
+      # Environment variables
+      environment = {
+        HOSTNAME = "raconteur"
+      }
+
+      # Network and PID mode - required for node_exporter
+      network_mode = "host"
+      pid          = "host"
+
+      # Resource limits
+      mem_limit = "512M"
+
+      # Restart policy
+      restart = "unless-stopped"
+    }
+  }
+
+  # Alloy configuration file as a config
+  configs = {
+    alloy_config = {
+      name = "alloy_config"
+      content = templatefile("${path.root}/templates/alloy-synology.alloy", {
+        otlp_tiles_test = "https://otlp.tiles-test.symmatree.com"
+        otlp_tiles      = "https://otlp.tiles.symmatree.com"
+      })
+    }
+  }
 }

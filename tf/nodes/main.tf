@@ -57,9 +57,8 @@ provider "cloudflare" {
 
 provider "synology" {
   # Authentication via SYNOLOGY_USER and SYNOLOGY_PASSWORD environment variables
-  # SYNOLOGY_HOST should also be set (defaults to localhost if not set)
-  # The provider will automatically read these from the environment
-  # host = var.synology_host  # Uncomment if provider supports explicit host config
+  # Host can be set via SYNOLOGY_HOST environment variable or here
+  host = var.synology_host
 }
 
 data "proxmox_virtual_environment_nodes" "nodes" {}

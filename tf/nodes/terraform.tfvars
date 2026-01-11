@@ -6,6 +6,13 @@ project_id             = "symm-custodes"
 gcp_region             = "us-east1"
 
 # Common Talos configuration (shared across all workspaces)
-talos_arch = "amd64"
+talos_arch              = "amd64"
+talos_vm_variant        = "nocloud"
+talos_metal_amd_variant = "metal"
+
+# Network and storage
+unifi_controller_url = "https://morpheus.local.symmatree.com:443"
+nfs_server           = "raconteur.ad.local.symmatree.com"
+synology_host        = "https://raconteur.ad.local.symmatree.com:5001"
 
 datasets_nfs_path = "/volume2/datasets"

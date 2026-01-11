@@ -20,13 +20,11 @@ variable "admin_user" {
 variable "proxmox_storage_iso" {
   description = "Proxmox storage for ISO files"
   type        = string
-  default     = "local"
 }
 
 variable "unifi_controller_url" {
   description = "Unifi Controller URL"
   type        = string
-  default     = "https://morpheus.local.symmatree.com:443"
 }
 
 # Talos configuration
@@ -38,7 +36,6 @@ variable "talos_version" {
 variable "talos_vm_variant" {
   description = "Talos Linux variant (e.g., nocloud, metal)"
   type        = string
-  default     = "nocloud"
 }
 
 variable "talos_arch" {
@@ -49,7 +46,6 @@ variable "talos_arch" {
 variable "talos_metal_amd_variant" {
   description = "Talos Linux variant for bare metal AMD (e.g., metal)"
   type        = string
-  default     = "metal"
 }
 
 variable "gcp_region" {
@@ -115,5 +111,4 @@ variable "datasets_nfs_path" {
 variable "nfs_server" {
   description = "NFS server hostname or IP address"
   type        = string
-  default     = "raconteur.ad.local.symmatree.com"
 }
