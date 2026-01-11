@@ -115,7 +115,7 @@ spec:
                         pathType: Prefix
                         backend:
                           service:
-                            name: alloy-alloy-singleton
+                            name: alloy-application-observability
                             port:
                               number: 4318
         # https://github.com/grafana/k8s-monitoring-helm/blob/main/charts/k8s-monitoring/charts/feature-cluster-metrics/values.yaml
@@ -165,34 +165,34 @@ spec:
           enabled: false
         podLogs:
           enabled: true
-        # applicationObservability:
-        #   enabled: true
-        #   receivers:
-        #     otlp:
-        #       grpc:
-        #         enabled: true
-        #         port: 4317
-        #         includeMetadata: true
-        #       http:
-        #         enabled: true
-        #         port: 4318
-        #         includeMetadata: true
-        #   processors:
-        #     kubernetes_node:
-        #       enabled: true
-        #   connectors:
-        #     spanLogs:
-        #       enabled: true
-        #       roots: true
-        #       spans: false
-        #     spanMetrics:
-        #       enabled: true
-        #   metrics:
-        #     enabled: false
-        #   logs:
-        #     enabled: false
-        #   traces:
-        #     enabled: true
+        applicationObservability:
+          enabled: true
+          receivers:
+            otlp:
+              # grpc:
+              #   enabled: true
+              #   port: 4317
+              #   includeMetadata: true
+              http:
+                enabled: true
+                port: 4318
+                includeMetadata: true
+          processors:
+            kubernetes_node:
+              enabled: true
+          # connectors:
+          #   spanLogs:
+          #     enabled: true
+          #     roots: true
+          #     spans: false
+          #   spanMetrics:
+          #     enabled: true
+          metrics:
+            enabled: true
+          logs:
+            enabled: true
+          traces:
+            enabled: false
         prometheusOperatorObjects:
           enabled: true
           crds:
@@ -221,67 +221,10 @@ spec:
               address = "http://mimir-gateway.mimir.svc"
               tenant_id = "placeholder"
             }
-
-            // OTLP HTTP receiver for external metrics and logs
-            otelcol.receiver.otlp "otlp_http" {
-              http {
-                endpoint = "0.0.0.0:4318"
-              }
-
-              output {
-                metrics = [otelcol.processor.attributes.otlp_annotate.input]
-                logs    = [otelcol.processor.attributes.otlp_annotate.input]
-              }
-            }
-
-            // Add network identity annotation (client IP)
-            otelcol.processor.attributes "otlp_annotate" {
-              // Add client IP as a resource attribute
-              // The client IP is available in the connection context
-              action {
-                key    = "network.client.ip"
-                action = "insert"
-                value  = "$attributes[\"net.peer.ip\"]"
-              }
-
-              output {
-                metrics = [otelcol.exporter.prometheusremotewrite.otlp_mimir.input]
-                logs    = [otelcol.exporter.loki.otlp_loki.input]
-              }
-            }
-
-            // Forward metrics to Mimir via Prometheus remote write
-            otelcol.exporter.prometheusremotewrite "otlp_mimir" {
-              endpoint {
-                url = "http://mimir-gateway.mimir.svc/api/v1/push"
-              }
-              headers = {
-                "X-Scope-OrgID" = "placeholder"
-              }
-            }
-
-            // Forward logs to Loki
-            otelcol.exporter.loki "otlp_loki" {
-              forward_to = [loki.write.otlp_loki.receiver]
-              external_labels = {
-                cluster = "placeholder"
-              }
-            }
-
-            loki.write "otlp_loki" {
-              endpoint {
-                url = "http://loki.loki.svc:3100/loki/api/v1/push"
-              }
-            }
           enabled: true
           serviceMonitor:
             enabled: true
           alloy:
-            extraPorts:
-              - name: otlp-http
-                port: 4318
-                targetPort: 4318
-                protocol: TCP
             resources: # Set 2025-07-20
               # requests:
               #   memory: 256Mi

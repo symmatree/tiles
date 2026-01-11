@@ -55,4 +55,10 @@ provider "cloudflare" {
   api_token = data.onepassword_item.cloudflare_api_token.password
 }
 
+provider "synology" {
+  # Authentication via SYNOLOGY_USER and SYNOLOGY_PASSWORD environment variables
+  # Host can be set via SYNOLOGY_HOST environment variable or here
+  host = var.synology_host
+}
+
 data "proxmox_virtual_environment_nodes" "nodes" {}
