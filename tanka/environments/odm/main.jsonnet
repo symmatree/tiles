@@ -120,9 +120,8 @@ local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
 + kDeployment.spec.selector.withMatchLabels(nodeOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(nodeOdmLabels)
 + kDeployment.spec.template.spec.withTolerationsMixin([nodeOdmToleration])
-+ kDeployment.spec.template.spec.withAffinity({
-  nodeAffinity: {
-    preferredDuringSchedulingIgnoredDuringExecution: [
++ kDeployment.spec.template.spec.affinity.nodeAffinity.withPreferredDuringSchedulingIgnoredDuringExecutionMixin(
+  [
       {
         weight: 100,
         preference: {
@@ -135,9 +134,7 @@ local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
           ],
         },
       },
-    ],
-  },
-})
+    ])
 + kDeployment.emptyVolumeMount("working-dir", '/cm/local'),
 nodeOdmDeployment: nodeOdmDeployment,
 local nodeOdmService = k_util.serviceFor(nodeOdmDeployment),
