@@ -69,6 +69,11 @@ variable "client_configuration" {
   sensitive = true
 }
 
+variable "unifi_network_id" {
+  description = "Unifi network ID for the VM"
+  type        = string
+}
+
 variable "machine_configuration" {
   description = "Talos machine configuration to apply"
   type        = string

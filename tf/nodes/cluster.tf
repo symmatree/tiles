@@ -1,8 +1,11 @@
-
+data "unifi_network" "main" {
+  name = var.unifi_network_name
+}
 
 module "cluster" {
   source                    = "../modules/talos-cluster"
   proxmox_storage_iso       = var.proxmox_storage_iso
+  unifi_network_id          = data.unifi_network.main.id
   cluster_name              = var.cluster_name
   onepassword_vault         = data.onepassword_vault.tf_secrets.uuid
   onepassword_vault_name    = data.onepassword_vault.tf_secrets.name

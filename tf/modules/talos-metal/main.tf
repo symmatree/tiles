@@ -6,6 +6,7 @@ resource "unifi_client" "metal_client" {
   local_dns_record       = "${var.name}.${var.domain_name}"
   allow_existing         = true
   skip_forget_on_destroy = false
+  network_id             = var.unifi_network_id
 }
 
 resource "talos_machine_configuration_apply" "this" {

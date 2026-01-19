@@ -18,6 +18,11 @@ variable "vms" {
   }))
 }
 
+variable "unifi_network_id" {
+  description = "Unifi network ID for the metal node"
+  type        = string
+}
+
 variable "metal_amd_nodes" {
   description = "List of metal AMD nodes in the cluster"
   type = map(object({
