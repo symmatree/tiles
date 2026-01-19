@@ -73,15 +73,7 @@ virtual_machines = {
   }
 }
 
-metal_amd_nodes = {
-  "lancer" : {
-    name        = "lancer"
-    type        = "worker"
-    mac_address = "84:47:09:75:89:a6"
-    ip_address  = "10.0.128.51"
-    taint       = "nodeodm"
-  }
-}
+metal_amd_nodes = {}
 
 # It's a shame the internal volume leaks here
 cluster_nfs_path = "/volume2/tiles"
