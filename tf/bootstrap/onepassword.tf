@@ -18,11 +18,6 @@ data "onepassword_vault" "tf_secrets" {
   name = var.onepassword_vault_name
 }
 
-data "onepassword_item" "unifi_sa" {
-  vault = data.onepassword_vault.tf_secrets.uuid
-  title = "morpheus-terraform"
-}
-
 data "onepassword_item" "proxmox_root_user" {
   vault = data.onepassword_vault.tf_secrets.uuid
   title = "proxmox-root"

@@ -99,6 +99,8 @@ jobs:
           SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
           SYNOLOGY_USER: "op://tiles-secrets/raconteur-login/username"
           SYNOLOGY_PASSWORD: "op://tiles-secrets/raconteur-login/password"
+          UNIFI_USERNAME: "op://tiles-secrets/morpheus-terraform/username"
+          UNIFI_PASSWORD: "op://tiles-secrets/morpheus-terraform/password"
 
       - name: Authenticate to Google Cloud
         if: steps.charts_only.outputs.run_terraform == 'true'
@@ -139,6 +141,8 @@ jobs:
         env:
           SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
+          UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
+          UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "test"
@@ -152,6 +156,8 @@ jobs:
         env:
           SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
+          UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
+          UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "prod"
