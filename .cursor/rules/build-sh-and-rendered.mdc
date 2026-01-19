@@ -4,5 +4,3 @@ alwaysApply: true
 - after modifying anything under charts/, source .zshrc to get brew-installed Helm into the path,
   then run /build.sh to validate and regenerate rendered.yaml files.
 - use rendered.yaml to understand the effects of Helm chart changes.
-- remember the names and first paragraph of the files in docs/ and review them if you need to change
-  anything in their respective areas.

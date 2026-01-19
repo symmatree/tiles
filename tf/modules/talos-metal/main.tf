@@ -1,4 +1,4 @@
-resource "unifi_user" "metal_client" {
+resource "unifi_client" "metal_client" {
   mac                    = var.mac_address
   name                   = var.name
   note                   = var.description != null ? "${var.description} - ${var.name}" : var.name
@@ -14,5 +14,5 @@ resource "talos_machine_configuration_apply" "this" {
   node                        = var.ip_address
   config_patches              = var.config_patches
 
-  depends_on = [unifi_user.metal_client]
+  depends_on = [unifi_client.metal_client]
 }

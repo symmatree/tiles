@@ -120,21 +120,6 @@ local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
 + kDeployment.spec.selector.withMatchLabels(nodeOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(nodeOdmLabels)
 + kDeployment.spec.template.spec.withTolerationsMixin([nodeOdmToleration])
-+ kDeployment.spec.template.spec.affinity.nodeAffinity.withPreferredDuringSchedulingIgnoredDuringExecutionMixin(
-  [
-      {
-        weight: 100,
-        preference: {
-          matchExpressions: [
-            {
-              key: 'kubernetes.io/hostname',
-              operator: 'In',
-              values: ['lancer'],
-            },
-          ],
-        },
-      },
-    ])
 + kDeployment.emptyVolumeMount("working-dir", '/cm/local'),
 nodeOdmDeployment: nodeOdmDeployment,
 local nodeOdmService = k_util.serviceFor(nodeOdmDeployment),
