@@ -46,10 +46,10 @@ resource "proxmox_virtual_environment_vm" "main" {
   operating_system {
     type = "l26"
   }
-  depends_on = [unifi_user.vm_client]
+  depends_on = [unifi_client.vm_client]
 }
 
-resource "unifi_user" "vm_client" {
+resource "unifi_client" "vm_client" {
   mac                    = var.mac_address
   name                   = var.name
   note                   = "${var.description} - ${var.vm_id} - ${var.name}"
