@@ -35,8 +35,7 @@ variable "unifi_controller_url" {
 }
 
 provider "unifi" {
-  username       = data.onepassword_item.unifi_sa.username
-  password       = data.onepassword_item.unifi_sa.password
+  # Authentication via UNIFI_USERNAME and UNIFI_PASSWORD environment variables
   api_url        = var.unifi_controller_url
   allow_insecure = true
 }
