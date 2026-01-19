@@ -23,7 +23,6 @@ resource "github_repository" "tiles" {
   has_issues             = true
   has_wiki               = false
   has_projects           = false
-  has_downloads          = false
   allow_merge_commit     = false
   allow_auto_merge       = true
   allow_rebase_merge     = false
