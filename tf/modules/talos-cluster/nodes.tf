@@ -43,6 +43,7 @@ module "talos-vm" {
   num_cores            = each.value.cores
   ram_mb               = each.value.ram_mb
   mac_address          = each.value.mac_address
+  unifi_network_id     = var.unifi_network_id
   iso_id               = var.nodes_to_iso_ids[each.value.proxmox_node_name]
   ip_address           = each.value.ip_address
   client_configuration = talos_machine_secrets.this.client_configuration
@@ -88,6 +89,7 @@ module "talos-amd-metal" {
     data.talos_machine_configuration.machineconfig_cp.machine_configuration
   : data.talos_machine_configuration.machineconfig_worker.machine_configuration)
 
+  unifi_network_id = var.unifi_network_id
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],

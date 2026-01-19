@@ -25,6 +25,11 @@ variable "domain_name" {
   default     = "local.symmatree.com."
 }
 
+variable "unifi_network_id" {
+  description = "Unifi network ID for the metal node"
+  type        = string
+}
+
 variable "client_configuration" {
   description = "Talos client configuration for applying machine config"
   type = object({
