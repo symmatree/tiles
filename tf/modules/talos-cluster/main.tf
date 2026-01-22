@@ -122,6 +122,10 @@ resource "onepassword_item" "misc_config" {
       value = var.main_project_id
     }
     field {
+      label = "seed_project_id"
+      value = var.seed_project_id
+    }
+    field {
       label = "cluster_nfs_path"
       value = var.cluster_nfs_path
     }

@@ -10,11 +10,10 @@ spec:
     privateKeySecretRef:
       name: lets-encrypt-staging
     solvers:
+      # Solver for cluster's own domain (in main project)
       - selector:
           dnsZones:
             - "{{ .Values.cluster_name }}.symmatree.com"
-            - "ad.local.symmatree.com"
-            - "local.symmatree.com"
         dns01:
           cloudDNS:
             project: "{{ .Values.project_id }}"
@@ -22,6 +21,17 @@ spec:
               # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
               name: cert-manager-dns01-sa-key
               # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
+              key: private_key.json
+      # Solver for ad.local.symmatree.com and local.symmatree.com (in seed project)
+      - selector:
+          dnsZones:
+            - "ad.local.symmatree.com"
+            - "local.symmatree.com"
+        dns01:
+          cloudDNS:
+            project: "{{ .Values.seed_project_id }}"
+            serviceAccountSecretRef:
+              name: cert-manager-dns01-sa-key
               key: private_key.json
 ---
 apiVersion: cert-manager.io/v1
@@ -35,11 +45,10 @@ spec:
     privateKeySecretRef:
       name: lets-encrypt-real
     solvers:
+      # Solver for cluster's own domain (in main project)
       - selector:
           dnsZones:
             - "{{ .Values.cluster_name }}.symmatree.com"
-            - "ad.local.symmatree.com"
-            - "local.symmatree.com"
         dns01:
           cloudDNS:
             project: "{{ .Values.project_id }}"
@@ -47,4 +56,15 @@ spec:
               # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
               name: cert-manager-dns01-sa-key
               # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
+              key: private_key.json
+      # Solver for ad.local.symmatree.com and local.symmatree.com (in seed project)
+      - selector:
+          dnsZones:
+            - "ad.local.symmatree.com"
+            - "local.symmatree.com"
+        dns01:
+          cloudDNS:
+            project: "{{ .Values.seed_project_id }}"
+            serviceAccountSecretRef:
+              name: cert-manager-dns01-sa-key
               key: private_key.json
