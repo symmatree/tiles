@@ -3,7 +3,10 @@ admin_user             = "seth.porter@gmail.com"
 proxmox_storage_iso    = "local"
 talos_version          = "1.12.0"
 project_id             = "symm-custodes"
+seed_project_id        = "symm-custodes"
 gcp_region             = "us-east1"
+dns_zone_ad_local      = "ad-local-symmatree-com"
+dns_zone_local         = "local-symmatree-com"
 
 # Common Talos configuration (shared across all workspaces)
 talos_arch              = "amd64"

@@ -1,0 +1,22 @@
+{{- range .Values.staticCerts }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "{{ .name }}"
+  namespace: "{{ $.Release.Namespace }}"
+spec:
+  dnsNames:
+  - "{{ .name }}{{ .subdomain }}.{{ $.Values.baseDomain }}"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: "{{ $.Values.clusterIssuer }}"
+  secretName: "{{ .name }}-cert"
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  revisionHistoryLimit: 2
+---
+{{- end }}

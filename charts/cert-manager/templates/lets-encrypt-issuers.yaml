@@ -13,6 +13,8 @@ spec:
       - selector:
           dnsZones:
             - "{{ .Values.cluster_name }}.symmatree.com"
+            - "ad.local.symmatree.com"
+            - "local.symmatree.com"
         dns01:
           cloudDNS:
             project: "{{ .Values.project_id }}"
@@ -36,6 +38,8 @@ spec:
       - selector:
           dnsZones:
             - "{{ .Values.cluster_name }}.symmatree.com"
+            - "ad.local.symmatree.com"
+            - "local.symmatree.com"
         dns01:
           cloudDNS:
             project: "{{ .Values.project_id }}"

@@ -63,6 +63,21 @@ variable "nfs_server" {
   type        = string
 }
 
+variable "seed_project_id" {
+  description = "GCP seed project ID (symm-custodes) where shared DNS zones are located"
+  type        = string
+}
+
+variable "dns_zone_ad_local" {
+  description = "DNS zone name for ad.local.symmatree.com in seed project"
+  type        = string
+}
+
+variable "dns_zone_local" {
+  description = "DNS zone name for local.symmatree.com in seed project"
+  type        = string
+}
+
 module "k8s" {
   source            = "../k8s-cluster"
   main_project_id   = var.main_project_id
@@ -71,6 +86,9 @@ module "k8s" {
   cluster_name      = var.cluster_name
   onepassword_vault = var.onepassword_vault
   admin_user        = var.admin_user
+  seed_project_id   = var.seed_project_id
+  dns_zone_ad_local = var.dns_zone_ad_local
+  dns_zone_local    = var.dns_zone_local
 }
 
 resource "onepassword_item" "misc_config" {
