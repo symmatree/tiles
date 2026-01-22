@@ -58,20 +58,22 @@ For a new cluster, generate and store the secrets as follows:
 
 **Important**: These secrets are cluster-specific and must never be regenerated for an existing cluster. The `apply-talos-config.sh` script will reuse existing secrets from 1Password.
 
-### GitHub Tokens
+### GitHub App
 
-GitHub tokens are now managed through Terraform using the `github-app-token` module:
+GitHub authentication is now done via a GitHub App which generates short-lived tokens automatically:
 
-* `github-tiles-tf-bootstrap` - GitHub PAT for Terraform provider (manages repo configuration)
-* `grafana-github-token` - GitHub PAT for Grafana data source (read-only access to repo metrics)
+* `github-app-tiles-tf` - GitHub App credentials (App ID, Installation ID, PEM key)
 
-**See [GitHub Token Rotation Guide](./github-token-rotation.md) for detailed documentation on:**
-* Creating and rotating GitHub tokens
-* Token permissions and scopes
+The GitHub App generates installation tokens (1 hour lifespan) programmatically for:
+
+* Terraform provider authentication (manages repo configuration)
+* Grafana data source (read-only access to repo metrics)
+
+**See [GitHub App Setup Guide](./github-app-setup.md) for detailed documentation on:**
+* Creating and configuring the GitHub App
+* Token generation and automatic refresh
 * Automatic propagation to Kubernetes via 1Password Operator
-* Recovery procedures for expired tokens
-
-The old manual tokens from tales have been migrated to the tiles vault and are now managed via Terraform.
+* Troubleshooting and key rotation
 
 ## Runtime / Github Actions
 
@@ -81,12 +83,14 @@ PAT).
 
 ## Local Terraform `tf/bootstrap`
 
-The `bootstrap` bundle requires two secrets to be injected, and recovers the rest from
+The `bootstrap` bundle requires secrets to be injected, and recovers the rest from
 the 1Password vault:
 
 ```
 eval $(op signon)
 export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential)
-export TF_VAR_github_token=$(op read op://tiles-secrets/github-tiles-tf-bootstrap/password)
+export TF_VAR_github_app_id=$(op read op://tiles-secrets/github-app-tiles-tf/app_details/app_id)
+export TF_VAR_github_app_installation_id=$(op read op://tiles-secrets/github-app-tiles-tf/app_details/installation_id)
+export TF_VAR_github_app_pem_file=$(op read op://tiles-secrets/github-app-tiles-tf/password)
 terraform plan
 ```
