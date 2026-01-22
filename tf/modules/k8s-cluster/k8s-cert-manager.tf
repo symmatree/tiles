@@ -25,6 +25,29 @@ resource "google_dns_managed_zone_iam_member" "cert_manager_dns01_public" {
   member       = "serviceAccount:${google_service_account.cert_manager_dns01.email}"
 }
 
+# Grant project-level permission to list zones in seed project (required for cert-manager to discover zones)
+resource "google_project_iam_member" "cert_manager_dns01_seed_dns_reader" {
+  project = var.seed_project_id
+  role    = "roles/dns.reader"
+  member  = "serviceAccount:${google_service_account.cert_manager_dns01.email}"
+}
+
+# Grant zone-level permission to manage records in ad.local.symmatree.com zone
+resource "google_dns_managed_zone_iam_member" "cert_manager_dns01_ad_local" {
+  project      = var.seed_project_id
+  managed_zone = var.dns_zone_ad_local
+  role         = "roles/dns.admin"
+  member       = "serviceAccount:${google_service_account.cert_manager_dns01.email}"
+}
+
+# Grant zone-level permission to manage records in local.symmatree.com zone
+resource "google_dns_managed_zone_iam_member" "cert_manager_dns01_local" {
+  project      = var.seed_project_id
+  managed_zone = var.dns_zone_local
+  role         = "roles/dns.admin"
+  member       = "serviceAccount:${google_service_account.cert_manager_dns01.email}"
+}
+
 resource "google_service_account_key" "cert_manager_dns01_sa_key" {
   service_account_id = google_service_account.cert_manager_dns01.name
 }

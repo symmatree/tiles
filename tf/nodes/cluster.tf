@@ -31,6 +31,9 @@ module "cluster" {
   cluster_nfs_path       = var.cluster_nfs_path
   datasets_nfs_path      = var.datasets_nfs_path
   nfs_server             = var.nfs_server
+  seed_project_id        = var.seed_project_id
+  dns_zone_ad_local      = var.dns_zone_ad_local
+  dns_zone_local         = var.dns_zone_local
 }
 
 output "talosconfig" {

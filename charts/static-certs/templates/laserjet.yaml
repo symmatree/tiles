@@ -1,0 +1,33 @@
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  name: laserjet-cert-password
+  namespace: "{{ .Release.Namespace }}"
+type: Opaque
+spec:
+  itemPath: vaults/tales-secrets/items/laserjet-cert-password
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: laserjet
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  dnsNames:
+    - laserjet.local.symmatree.com
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: real-cert
+  keystores:
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: laserjet-cert-password
+        key: password
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  secretName: laserjet-cert

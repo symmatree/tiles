@@ -13,9 +13,9 @@ variable "synology_host" {
 }
 
 # Container project configuration
-# Only create in prod workspace to avoid conflicts
+# Unique; run in sbox while iterating and then prod later.
 resource "synology_container_project" "alloy" {
-  count = terraform.workspace == "prod" ? 1 : 0
+  count = terraform.workspace == "sbox" ? 1 : 0
   name  = "alloy"
   run   = true
 

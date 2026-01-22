@@ -1,0 +1,13 @@
+baseDomain: local.symmatree.com
+clusterIssuer: real-cert
+namespace: static-certs
+staticCerts:
+  - name: raconteur
+    subdomain: .ad
+  - name: morpheus
+  - name: homeassistant
+  # - name: laserjet -- requires special care.
+  - name: hubitat
+  # cam is hosted on raconteur.
+  - name: cam
+  - name: photos
