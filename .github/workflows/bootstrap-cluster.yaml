@@ -125,6 +125,7 @@ jobs:
           external_ip_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/external_ip_cidr"
           vault_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/vault_name"
           project_id: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/project_id"
+          seed_project_id: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/seed_project_id"
           cluster_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_nfs_path"
           datasets_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/datasets_nfs_path"
           nfs_server: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/nfs_server"
