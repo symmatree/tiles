@@ -1,0 +1,162 @@
+---
+# Source: static-certs/templates/certificates.helm.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "raconteur"
+  namespace: "static-certs"
+spec:
+  dnsNames:
+  - "raconteur.ad.local.symmatree.com"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: "real-cert"
+  secretName: "raconteur-cert"
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  revisionHistoryLimit: 2
+---
+# Source: static-certs/templates/certificates.helm.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "morpheus"
+  namespace: "static-certs"
+spec:
+  dnsNames:
+  - "morpheus.local.symmatree.com"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: "real-cert"
+  secretName: "morpheus-cert"
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  revisionHistoryLimit: 2
+---
+# Source: static-certs/templates/certificates.helm.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "homeassistant"
+  namespace: "static-certs"
+spec:
+  dnsNames:
+  - "homeassistant.local.symmatree.com"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: "real-cert"
+  secretName: "homeassistant-cert"
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  revisionHistoryLimit: 2
+---
+# Source: static-certs/templates/certificates.helm.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "hubitat"
+  namespace: "static-certs"
+spec:
+  dnsNames:
+  - "hubitat.local.symmatree.com"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: "real-cert"
+  secretName: "hubitat-cert"
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  revisionHistoryLimit: 2
+---
+# Source: static-certs/templates/certificates.helm.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "cam"
+  namespace: "static-certs"
+spec:
+  dnsNames:
+  - "cam.local.symmatree.com"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: "real-cert"
+  secretName: "cam-cert"
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  revisionHistoryLimit: 2
+---
+# Source: static-certs/templates/certificates.helm.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "photos"
+  namespace: "static-certs"
+spec:
+  dnsNames:
+  - "photos.local.symmatree.com"
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: "real-cert"
+  secretName: "photos-cert"
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  revisionHistoryLimit: 2
+---
+# Source: static-certs/templates/laserjet.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: laserjet
+  namespace: "static-certs"
+spec:
+  dnsNames:
+    - laserjet.local.symmatree.com
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: real-cert
+  keystores:
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: laserjet-cert-password
+        key: password
+  privateKey:
+    algorithm: ECDSA
+    encoding: PKCS1
+    rotationPolicy: Always
+    size: 384
+  secretName: laserjet-cert
+---
+# Source: static-certs/templates/laserjet.yaml
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  name: laserjet-cert-password
+  namespace: "static-certs"
+type: Opaque
+spec:
+  itemPath: vaults/tiles-secrets/items/laserjet-cert-password

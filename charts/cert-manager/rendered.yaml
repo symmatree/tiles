@@ -1669,6 +1669,8 @@ spec:
       - selector:
           dnsZones:
             - "placeholder.symmatree.com"
+            - "ad.local.symmatree.com"
+            - "local.symmatree.com"
         dns01:
           cloudDNS:
             project: "placeholder"
@@ -1693,6 +1695,8 @@ spec:
       - selector:
           dnsZones:
             - "placeholder.symmatree.com"
+            - "ad.local.symmatree.com"
+            - "local.symmatree.com"
         dns01:
           cloudDNS:
             project: "placeholder"
