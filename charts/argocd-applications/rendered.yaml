@@ -439,6 +439,7 @@ spec:
       valuesObject:
         cluster_name: 'placeholder'
         project_id: 'placeholder'
+        seed_project_id: 'placeholder'
         vault_name: 'placeholder'
         trust-manager:
           secretTargets:

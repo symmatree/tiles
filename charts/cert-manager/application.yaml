@@ -15,6 +15,7 @@ spec:
       valuesObject:
         cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         project_id: '{{ required ".Values.project_id is required" .Values.project_id }}'
+        seed_project_id: '{{ required ".Values.seed_project_id is required" .Values.seed_project_id }}'
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         trust-manager:
           secretTargets:

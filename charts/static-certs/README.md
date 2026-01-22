@@ -15,6 +15,8 @@ pull the cert and key manually every month:
 
 ```
 export NAME=morpheus
-k get secret -n static-certs ${NAME}-cert -o jsonpath="{.data['tls\.crt']}" | base64 --decode > ${NAME}-cert.crt
-k get secret -n static-certs ${NAME}-cert -o jsonpath="{.data['tls\.key']}" | base64 --decode > ${NAME}-cert.key
+kubectl get secret -n static-certs ${NAME}-cert -o jsonpath="{.data['tls\.crt']}" | base64 --decode > ${NAME}-cert.crt
+kubectl get secret -n static-certs ${NAME}-cert -o jsonpath="{.data['tls\.key']}" | base64 --decode > ${NAME}-cert.key
 ```
+
+Note: If you have `k` aliased to `kubectl`, you can use `k` instead. On macOS, use `base64 -d` instead of `base64 --decode`.
