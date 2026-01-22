@@ -4,6 +4,10 @@ This folder contains various one-off certs that are not associated with
 an ingress. Just leveraging `cert-manager` to manage some certs for
 external resources in my home network.
 
+Required:
+
+* itemPath: vaults/tiles-secrets/items/laserjet-cert-password
+
 ## Manual operation
 
 Until I decide which Unifi-scripting mechanism I hate least, I can just

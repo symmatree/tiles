@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/symmatree/tales.git
-    targetRevision: main
-    path: static-certs
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: charts/static-certs
     helm:
       valueFiles:
         - values.yaml

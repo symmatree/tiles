@@ -5,7 +5,7 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
 type: Opaque
 spec:
-  itemPath: vaults/tales-secrets/items/laserjet-cert-password
+  itemPath: vaults/tiles-secrets/items/laserjet-cert-password
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

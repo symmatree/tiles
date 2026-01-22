@@ -1,4 +1,4 @@
-# tales/external-dns
+# tiles/external-dns
 
 [external-dns](https://github.com/kubernetes-sigs/external-dns)
 
