@@ -39,16 +39,18 @@ resource "synology_container_project" "alloy" {
       image = "grafana/alloy:latest"
 
       # Mount host root filesystem for node_exporter
-      # Following node_exporter best practices: mount rootfs at /host
+      # Using simple bind mount without propagation to avoid Synology error:
+      # "path / is mounted on / but it is not a shared or a slave mount"
+      #
+      # Tradeoff: Existing sub-mounts (like /proc, /sys) will be visible,
+      # but new mounts added to the host after container start won't appear.
+      # This is acceptable for Synology NAS where mounts are relatively static.
       volumes = [
         {
           type      = "bind"
           source    = "/"
           target    = "/host"
           read_only = true
-          bind = {
-            propagation = "rslave"
-          }
         },
       ]
 
