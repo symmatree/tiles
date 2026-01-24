@@ -126,7 +126,7 @@ jobs:
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
-          terraform init
+          terraform init -upgrade
 
       - uses: ./.github/actions/wg-quick
         id: wireguard

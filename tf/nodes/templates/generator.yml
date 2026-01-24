@@ -1,0 +1,68 @@
+auths:
+  synology_v3:
+    version: 3
+    username: "{{ op://tiles-secrets/raconteur-snmp/username }}"
+    security_level: authPriv
+    password: "{{ op://tiles-secrets/raconteur-snmp/password }}"
+    auth_protocol: SHA
+    priv_protocol: AES
+    priv_password: "{{ op://tiles-secrets/raconteur-snmp/PRIVACY_PASSWORD }}"
+
+modules:
+  synology:
+    allow_nonincreasing_oids: true
+    walk:
+      - synoSystem
+      - synoDisk
+      - synoRaid
+      - synoUPS
+      - synologyDiskSMART
+      - synologyService
+      - storageIO
+      - spaceIO
+      - flashCache
+      - synologyiSCSILUN
+      - synologyEbox
+      - synologyHA
+      # - NFS
+      - "1.3.6.1.4.1.6574.107"
+      - synoEthPort
+      - synologyiSCSITarget
+      # - mailplus
+      # UCD-SNMP system metrics
+      - 1.3.6.1.4.1.2021.10.1.5.1  # laLoadInt.1 - 1 minute load average
+      - 1.3.6.1.4.1.2021.10.1.5.2  # laLoadInt.2 - 5 minute load average
+      - 1.3.6.1.4.1.2021.10.1.5.3  # laLoadInt.3 - 15 minute load average
+      - ssCpuUser
+      - ssCpuSystem
+      - ssCpuIdle
+      # UCD-SNMP memory metrics
+      - memTotalSwap
+      # - 1.3.6.1.4.1.2021.4.3.0     # memTotalSwap - Total swap space
+      - memAvailSwap
+      # - 1.3.6.1.4.1.2021.4.4.0     # memAvailSwap - Available swap space
+      - memTotalReal
+      # - 1.3.6.1.4.1.2021.4.5.0     # memTotalReal - Total physical memory
+      - memAvailReal
+      # - 1.3.6.1.4.1.2021.4.6.0     # memAvailReal - Available physical memory
+      - memTotalFree
+      # - 1.3.6.1.4.1.2021.4.11.0    # memTotalFree - Total free memory
+      - memShared
+      # - 1.3.6.1.4.1.2021.4.13.0    # memShared - Shared memory
+      - memBuffer
+      # - 1.3.6.1.4.1.2021.4.14.0    # memBuffer - Buffer memory
+      - memCached
+      # - 1.3.6.1.4.1.2021.4.15.0    # memCached - Cached memory
+      # IF-MIB high-capacity interface metrics
+      - 1.3.6.1.2.1.31.1.1.1.1     # ifName - Interface name
+      - 1.3.6.1.2.1.31.1.1.1.6     # ifHCInOctets - High-capacity input octets
+      - 1.3.6.1.2.1.31.1.1.1.10    # ifHCOutOctets - High-capacity output octets
+      # HOST-RESOURCES-MIB storage metrics
+      - 1.3.6.1.2.1.25.2.3.1.3     # hrStorageDescr - Storage description
+      - 1.3.6.1.2.1.25.2.3.1.4     # hrStorageAllocationUnits - Allocation unit size
+      - 1.3.6.1.2.1.25.2.3.1.5     # hrStorageSize - Total storage size
+      - 1.3.6.1.2.1.25.2.3.1.6     # hrStorageUsed - Used storage
+      # UCD-SNMP disk I/O metrics
+      - 1.3.6.1.4.1.2021.13.15.1.1.2   # diskIODevice - Disk device name
+      - 1.3.6.1.4.1.2021.13.15.1.1.12  # diskIONReadX - Bytes read since boot
+      - 1.3.6.1.4.1.2021.13.15.1.1.13  # diskIONWrittenX - Bytes written since boot
