@@ -23,7 +23,7 @@ module "raconteur_snmp_privacy_password" {
 
   vault_name   = var.onepassword_vault_name
   item_name    = "raconteur-snmp"
-  section_name = "PRIVACY"
+  section_name = "privacy"
   field_name   = "PRIVACY_PASSWORD"
 }
 
