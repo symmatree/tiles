@@ -1,7 +1,7 @@
 // Alloy configuration for Synology host monitoring
-// Collects node_exporter metrics and system logs, forwarding to OTLP endpoints
+// Collects node_exporter metrics, SNMP hardware metrics, and system logs, forwarding to OTLP endpoints
 
-// Node exporter for host metrics
+// Node exporter for host system metrics
 prometheus.exporter.unix "node" {
   include_mount_points = true
   include_rapl         = false
@@ -15,6 +15,20 @@ prometheus.exporter.unix "node" {
   procfs_path = "/host/proc"
   sysfs_path  = "/host/sys"
   rootfs_path = "/host"
+}
+
+// SNMP exporter for Synology hardware metrics (temperatures, fans, disk health, etc.)
+prometheus.exporter.snmp "synology" {
+  config_file = "/etc/snmp_exporter/snmp.yml"
+
+  target "raconteur" {
+    address = "127.0.0.1:161"
+    module  = "synology"
+    labels = {
+      "instance" = "raconteur.ad.local.symmatree.com"
+      "group"    = "synology"
+    }
+  }
 }
 
 // OTLP HTTP exporter for tiles-test cluster
@@ -37,9 +51,18 @@ otelcol.exporter.otlphttp "tiles" {
   }
 }
 
-// Scrape node exporter metrics and convert to OTLP format
+// Scrape node exporter metrics (system performance) and convert to OTLP format
 prometheus.scrape "node" {
   targets    = prometheus.exporter.unix.node.targets
+  forward_to = [
+    otelcol.receiver.prometheus.tiles_test.receiver,
+    otelcol.receiver.prometheus.tiles.receiver,
+  ]
+}
+
+// Scrape SNMP exporter metrics (hardware sensors) and convert to OTLP format
+prometheus.scrape "snmp" {
+  targets    = prometheus.exporter.snmp.synology.targets
   forward_to = [
     otelcol.receiver.prometheus.tiles_test.receiver,
     otelcol.receiver.prometheus.tiles.receiver,

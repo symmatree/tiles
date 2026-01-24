@@ -83,6 +83,12 @@ resource "github_repository_ruleset" "tiles-tags" {
   target      = "tag"
   enforcement = "active"
 
+  bypass_actors {
+    actor_id    = 5
+    actor_type  = "RepositoryRole"
+    bypass_mode = "always"
+  }
+
   conditions {
     ref_name {
       include = ["refs/tags/test", "refs/tags/prod"]
@@ -169,6 +175,12 @@ resource "github_repository_ruleset" "polisher-tags" {
   repository  = github_repository.polisher.name
   target      = "tag"
   enforcement = "active"
+
+  bypass_actors {
+    actor_id    = 5
+    actor_type  = "RepositoryRole"
+    bypass_mode = "always"
+  }
 
   conditions {
     ref_name {
