@@ -56,12 +56,3 @@ output "field_value" {
   value     = local.field.value
   sensitive = true
 }
-
-terraform {
-  required_providers {
-    onepassword = {
-      source  = "1Password/onepassword"
-      version = ">= 2.1"
-    }
-  }
-}
