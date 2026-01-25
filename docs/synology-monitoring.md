@@ -10,7 +10,9 @@ Monitoring is deployed as a single Alloy container on the Synology NAS that coll
 2. **Hardware metrics** via `prometheus.exporter.snmp`: temperatures, fans, disk health, RAID status
 3. **System logs** via `loki.source.file`: syslog, Synology-specific logs, auth logs
 
-All metrics and logs are converted to OTLP format and forwarded to both tiles-test and tiles clusters with consistent labeling from a single collection point (no separate SNMP exporter needed in cluster).
+All metrics and logs are converted to OTLP format and forwarded to both tiles-test and tiles clusters via OTLP HTTP endpoints (`https://otlp.{cluster}.symmatree.com`) with consistent labeling from a single collection point (no separate SNMP exporter needed in cluster).
+
+The OTLP endpoints are exposed via ingress and route to the `alloy-alloy-receiver` service (port 4318) in each cluster's `alloy` namespace. See [`charts/argocd-applications/templates/alloy-application.yaml`](../charts/argocd-applications/templates/alloy-application.yaml) for the ingress configuration.
 
 ## Raconteur Setup
 
@@ -176,18 +178,19 @@ and make it a template as well.)
 
 ### Files
 
-- **tf/nodes/synology-alloy.tf**: Terraform for the Alloy container project on Synology
+- **[tf/nodes/synology-alloy.tf](../tf/nodes/synology-alloy.tf)**: Terraform for the Alloy container project on Synology
   - Fetches SNMP credentials from 1Password
   - Mounts Alloy and SNMP configs
   - Configures host networking and PID mode for metrics collection
+  - Configures OTLP endpoints: `https://otlp.tiles-test.symmatree.com` and `https://otlp.tiles.symmatree.com`
 
-- **tf/nodes/templates/alloy-synology.alloy**: Alloy configuration
+- **[tf/nodes/templates/alloy-synology.alloy](../tf/nodes/templates/alloy-synology.alloy)**: Alloy configuration
   - `prometheus.exporter.unix`: System metrics via node_exporter
   - `prometheus.exporter.snmp`: Hardware metrics via SNMP (temperatures, fans, disk health)
   - `loki.source.file`: Log collection from /var/log
   - Converts all to OTLP format and forwards to tiles-test and tiles clusters
 
-- **tf/nodes/templates/snmp-synology.yml**: SNMP exporter configuration
+- **[tf/nodes/templates/snmp-synology.yml](../tf/nodes/templates/snmp-synology.yml)**: SNMP exporter configuration
   - Defines Synology OID module (1.3.6.1.4.1.6574.*)
   - Configured for SNMPv3 with authentication and privacy
   - Template variables for passwords injected from 1Password

@@ -1,4 +1,5 @@
 # Synology Container Project for Alloy
+# Documentation: docs/synology-monitoring.md
 # This creates a container project on the Synology NAS running Alloy
 # to collect metrics and logs from the Synology host
 #
