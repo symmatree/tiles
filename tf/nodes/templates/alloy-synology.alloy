@@ -1,6 +1,12 @@
 // Alloy configuration for Synology host monitoring
 // Collects node_exporter metrics, SNMP hardware metrics, and system logs, forwarding to OTLP endpoints
 
+// Enable Alloy UI server for debugging and component status
+server {
+  http_listen_address = "0.0.0.0"
+  http_listen_port    = 12345
+}
+
 // Node exporter for host system metrics
 prometheus.exporter.unix "node" {
   procfs_path = "/host/proc"

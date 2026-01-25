@@ -225,41 +225,51 @@ and make it a template as well.)
 
 ### SNMP Scrape Failures
 
-If you see errors like `Failed to scrape Prometheus endpoint` for the SNMP exporter:
+When you see errors like `Failed to scrape Prometheus endpoint` for the SNMP exporter:
 
-1. **Check Alloy component health**: Access the Alloy web UI (if exposed) or check container logs:
-   ```bash
-   # View Alloy logs from Synology Container Manager
-   # Or via SSH if you have access to the container
-   ```
+1. **Check Alloy component health**:
+   - Container uses host networking (`network_mode = "host"`), so Alloy UI is accessible at `http://raconteur.ad.local.symmatree.com:12345` (or the Synology's IP address)
+   - The UI shows component status, including `prometheus.exporter.snmp.synology` health and any errors
+   - View container logs from Synology Container Manager for detailed error messages
+   - If the SNMP exporter component shows as unhealthy or not running in the UI, check:
+     - Component configuration errors (red status in UI)
+     - SNMP config file path and permissions
+     - SNMP exporter component logs in the UI's component detail view
 
-2. **Verify SNMP connection**: Test SNMP connectivity directly from the container:
-   ```bash
-   # If you can exec into the container, test SNMP:
-   snmpwalk -v3 -l authPriv -u <username> -a SHA -A <auth_password> -x AES -X <privacy_password> 127.0.0.1:161 1.3.6.1.4.1.6574.1
-   ```
+2. **Verify SNMP connection**: Test SNMP connectivity directly:
+   - TODO: Determine if `docker exec` or Synology Container Manager provides shell access to the container
+   - TODO: Once access method is known, document the command:
+
+     ```bash
+     snmpwalk -v3 -l authPriv -u <username> -a SHA -A <auth_password> -x AES -X <privacy_password> 127.0.0.1:161 1.3.6.1.4.1.6574.1
+     ```
+
+   - Credentials are in 1Password at `op://tiles-secrets/raconteur-snmp`
 
 3. **Check SNMP config file**: Verify the config file is mounted correctly and auth is referenced:
-   - The `synology` module in `snmp-synology.yml` must reference `auth: synology_v3` to use the SNMPv3 credentials
-   - Verify template variables were replaced correctly (check for `${snmp_username}` placeholders)
-   - **Note**: If the module doesn't have `auth: synology_v3`, the exporter won't know which credentials to use
+   - The `synology` module in `snmp-synology.yml` references `auth: synology_v3` to use the SNMPv3 credentials
+   - Verify template variables were replaced correctly (check for `${snmp_username}` placeholders in the mounted file)
+   - The config is mounted at `/etc/snmp_exporter/snmp.yml` in the container
 
-4. **Enable debug logging**: Add debug logging to Alloy by setting environment variable:
+4. **Enable debug logging**: Add debug logging to Alloy by setting environment variable in `synology-alloy.tf`:
+
    ```hcl
-   # In synology-alloy.tf, add to environment:
    environment = {
      HOSTNAME = "raconteur"
-     ALLOY_LOG_LEVEL = "debug"  # Enable debug logging
+     ALLOY_LOG_LEVEL = "debug"
    }
    ```
 
-5. **Check SNMP exporter metrics endpoint**: The SNMP exporter should expose metrics at `http://localhost:9116/snmp?target=127.0.0.1:161&module=synology` (if the exporter is running as a separate service). However, with Alloy's embedded exporter, check the component status via Alloy's UI or logs.
+   Then redeploy the container project.
 
-6. **Verify SNMP service on Synology**: Ensure SNMP v3 is enabled and listening on port 161:
-   ```bash
-   # From the Synology host (if you have SSH access):
-   netstat -tuln | grep 161
-   # Or check Synology Control Panel > Terminal & SNMP
-   ```
+5. **Check SNMP exporter component**: The SNMP exporter is embedded in Alloy (not a separate service). The `prometheus.exporter.snmp.synology` component exposes targets that are scraped by `prometheus.scrape "snmp"`. Check Alloy logs for SNMP-specific errors.
 
-7. **Check Alloy component status**: The `prometheus.exporter.snmp.synology` component should show healthy targets. Check Alloy's component graph/status page if available.
+6. **Verify SNMP service on Synology**: SNMP v3 is configured on the Synology (see "Raconteur Setup" section). Verify it's listening:
+   - TODO: Determine if SSH access to Synology host is available
+   - TODO: If SSH available, document: `netstat -tuln | grep 161`
+   - Otherwise check: Synology Control Panel > Terminal & SNMP > SNMP tab
+
+7. **Check Alloy component status**:
+   - TODO: Determine if Alloy web UI is accessible and document the URL/port
+   - TODO: If UI accessible, document how to view component graph showing `prometheus.exporter.snmp.synology` status
+   - Otherwise, check container logs for component health messages

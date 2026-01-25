@@ -76,6 +76,12 @@ resource "synology_container_project" "alloy" {
       network_mode = "host"
       pid          = "host"
 
+      # Ports (with host networking, these are directly on the host)
+      ports = [{
+        target    = 12345
+        published = "12345"
+      }]
+
       # Resource limits
       mem_limit = "512M"
 
