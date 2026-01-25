@@ -77,11 +77,11 @@ otelcol.processor.attributes "main" {
   output {
     metrics = [
       otelcol.exporter.otlphttp.tiles_test.input,
-      // otelcol.exporter.otlphttp.tiles.input,
+      otelcol.exporter.otlphttp.tiles.input,
     ]
     logs = [
       otelcol.exporter.otlphttp.tiles_test.input,
-      // otelcol.exporter.otlphttp.tiles.input,
+      otelcol.exporter.otlphttp.tiles.input,
     ]
   }
 }
