@@ -115,7 +115,7 @@ spec:
                         pathType: Prefix
                         backend:
                           service:
-                            name: alloy-application-observability
+                            name: alloy-alloy-receiver
                             port:
                               number: 4318
         # https://github.com/grafana/k8s-monitoring-helm/blob/main/charts/k8s-monitoring/charts/feature-cluster-metrics/values.yaml
