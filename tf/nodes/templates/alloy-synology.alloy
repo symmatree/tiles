@@ -25,8 +25,8 @@ prometheus.exporter.snmp "synology" {
     address = "127.0.0.1:161"
     module  = "synology"
     labels = {
-      "instance" = "raconteur.ad.local.symmatree.com"
-      "group"    = "synology"
+      "instance" = "raconteur.ad.local.symmatree.com",
+      "group"    = "synology",
     }
   }
 }
@@ -36,7 +36,7 @@ otelcol.exporter.otlphttp "tiles_test" {
   client {
     endpoint = "${otlp_tiles_test}"
     headers = {
-      "X-Scope-OrgID" = "tiles-test"
+      "X-Scope-OrgID" = "tiles-test",
     }
   }
 }
@@ -46,7 +46,7 @@ otelcol.exporter.otlphttp "tiles" {
   client {
     endpoint = "${otlp_tiles}"
     headers = {
-      "X-Scope-OrgID" = "tiles"
+      "X-Scope-OrgID" = "tiles",
     }
   }
 }
@@ -54,32 +54,39 @@ otelcol.exporter.otlphttp "tiles" {
 // Scrape node exporter metrics (system performance) and convert to OTLP format
 prometheus.scrape "node" {
   targets    = prometheus.exporter.unix.node.targets
-  forward_to = [
-    otelcol.receiver.prometheus.tiles_test.receiver,
-    otelcol.receiver.prometheus.tiles.receiver,
-  ]
+  forward_to = [otelcol.receiver.prometheus.main.receiver]
 }
 
 // Scrape SNMP exporter metrics (hardware sensors) and convert to OTLP format
 prometheus.scrape "snmp" {
   targets    = prometheus.exporter.snmp.synology.targets
-  forward_to = [
-    otelcol.receiver.prometheus.tiles_test.receiver,
-    otelcol.receiver.prometheus.tiles.receiver,
-  ]
+  forward_to = [otelcol.receiver.prometheus.main.receiver]
 }
 
-// Convert Prometheus to OTLP for tiles-test
-otelcol.receiver.prometheus "tiles_test" {
+// Convert Prometheus to OTLP
+otelcol.receiver.prometheus "main" {
   output {
-    metrics = [otelcol.exporter.otlphttp.tiles_test.input]
+    metrics = [otelcol.processor.attributes.main.input]
   }
 }
 
-// Convert Prometheus to OTLP for tiles
-otelcol.receiver.prometheus "tiles" {
+// Add cluster label to both metrics and logs, forwarding to both clusters
+otelcol.processor.attributes "main" {
+  action {
+    key    = "cluster"
+    value  = "bond"
+    action = "upsert"
+  }
+
   output {
-    metrics = [otelcol.exporter.otlphttp.tiles.input]
+    metrics = [
+      otelcol.exporter.otlphttp.tiles_test.input,
+      otelcol.exporter.otlphttp.tiles.input,
+    ]
+    logs = [
+      otelcol.exporter.otlphttp.tiles_test.input,
+      otelcol.exporter.otlphttp.tiles.input,
+    ]
   }
 }
 
@@ -113,30 +120,12 @@ loki.source.file "syslog" {
       host     = "raconteur",
     },
   ]
-  forward_to = [
-    loki.write.tiles_test.receiver,
-    loki.write.tiles.receiver,
-  ]
+  forward_to = [otelcol.receiver.loki.main.receiver]
 }
 
-// Loki write for tiles-test
-loki.write "tiles_test" {
-  endpoint {
-    url = "https://otlp.tiles-test.symmatree.com/loki/api/v1/push"
-  }
-  external_labels = {
-    cluster = "tiles-test"
-    host    = "raconteur"
-  }
-}
-
-// Loki write for tiles
-loki.write "tiles" {
-  endpoint {
-    url = "https://otlp.tiles.symmatree.com/loki/api/v1/push"
-  }
-  external_labels = {
-    cluster = "tiles"
-    host    = "raconteur"
+// Convert Loki logs to OTLP
+otelcol.receiver.loki "main" {
+  output {
+    logs = [otelcol.processor.attributes.main.input]
   }
 }
