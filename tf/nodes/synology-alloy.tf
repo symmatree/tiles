@@ -67,6 +67,14 @@ resource "synology_container_project" "alloy" {
         }
       ]
 
+      # Command-line arguments
+      # Enable Alloy UI on 0.0.0.0:12345 (default is localhost:12345)
+      command = [
+        "run",
+        "--server.http.listen-addr=0.0.0.0:12345",
+        "/etc/alloy/config.alloy"
+      ]
+
       # Environment variables
       environment = {
         HOSTNAME = "raconteur"
@@ -75,6 +83,12 @@ resource "synology_container_project" "alloy" {
       # Network and PID mode - required for node_exporter
       network_mode = "host"
       pid          = "host"
+
+      # Ports (with host networking, these are directly on the host)
+      ports = [{
+        target    = 12345
+        published = "12345"
+      }]
 
       # Resource limits
       mem_limit = "512M"
