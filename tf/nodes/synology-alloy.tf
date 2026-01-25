@@ -67,6 +67,14 @@ resource "synology_container_project" "alloy" {
         }
       ]
 
+      # Command-line arguments
+      # Enable Alloy UI on 0.0.0.0:12345 (default is localhost:12345)
+      command = [
+        "run",
+        "--server.http.listen-addr=0.0.0.0:12345",
+        "/etc/alloy/config.alloy"
+      ]
+
       # Environment variables
       environment = {
         HOSTNAME = "raconteur"
