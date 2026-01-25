@@ -53,12 +53,6 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 
 ## Prerequisites
 
-### Required Components
-
-- Cilium CNI (must be installed before ArgoCD)
-- cert-manager (for ingress TLS, but ArgoCD can run headless without it initially)
-- external-dns (for ingress DNS, but ArgoCD can run headless without it initially)
-
 ### Required Secrets
 
 - **google-oauth-secret**: Contains `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` for Google OAuth

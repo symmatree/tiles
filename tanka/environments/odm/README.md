@@ -60,12 +60,6 @@ Configuration is managed through the Application's plugin parameters:
 
 ## Prerequisites
 
-### Required Components
-
-- **cert-manager**: Must be installed and configured
-- **external-dns**: Must be running for DNS record creation
-- **NFS Server**: Synology NAS with NFS service enabled and `datasets` share configured
-
 ### Required Infrastructure
 
 - **NFS Share**: `{datasets_nfs_path}/webodm-media-{cluster_name}` must exist on the NFS server

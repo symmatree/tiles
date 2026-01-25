@@ -60,11 +60,6 @@ No environment-specific configuration needed - all certificates use the same bas
 
 ## Prerequisites
 
-### Required Components
-
-- **cert-manager**: Must be installed and configured with `real-cert` ClusterIssuer
-- **external-dns**: Must be running to manage DNS records for ACME challenges
-
 ### Required Secrets
 
 - **laserjet-cert-password**: 1Password item at `vaults/tiles-secrets/items/laserjet-cert-password` (for laserjet certificate special handling)

@@ -68,14 +68,6 @@ Configuration is managed through the Application's `valuesObject`:
 
 ## Prerequisites
 
-### Required Components
-
-- **cert-manager**: Must be installed and configured
-- **external-dns**: Must be running for DNS record creation
-- **OnePassword Operator**: Must be installed and configured
-- **Mimir**: Metrics backend (for metrics dashboards)
-- **Loki**: Logs backend (for log exploration)
-
 ### Required Secrets
 
 - **Admin User**: Stored in 1Password as `grafana-admin-user`

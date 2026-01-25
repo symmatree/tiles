@@ -57,10 +57,6 @@ None - OnePassword Operator is a standalone component that other applications de
 
 ## Prerequisites
 
-### Required Components
-
-None - OnePassword Operator is typically one of the first components installed.
-
 ### Required Secrets
 
 The operator requires two secrets to be created during bootstrap (see Bootstrap section):

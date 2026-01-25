@@ -52,12 +52,6 @@ Configuration is managed through the Application's plugin parameters:
 
 ## Prerequisites
 
-### Required Components
-
-- **cert-manager**: Must be installed and configured
-- **external-dns**: Must be running for DNS record creation
-- **OnePassword Operator**: Must be installed and configured
-
 ### Required Secrets
 
 - **Apprise Env**: Stored in 1Password as `{cluster_name}-apprise-env`

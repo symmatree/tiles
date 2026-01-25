@@ -73,12 +73,6 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 
 ## Prerequisites
 
-### Required Components
-
-- **Cilium**: Must be installed with Gateway API CRDs
-- **OnePassword Operator**: Must be installed and configured
-- **Google Cloud DNS**: DNS zones must exist and be accessible
-
 ### Required Secrets
 
 - **DNS01 Service Account Key**: Stored in 1Password as `{cluster_name}-cert-manager-dns01-sa-key`

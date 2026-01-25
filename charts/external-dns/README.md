@@ -55,11 +55,6 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 
 ## Prerequisites
 
-### Required Components
-
-- **OnePassword Operator**: Must be installed and configured
-- **Google Cloud DNS**: DNS zones must exist and be accessible
-
 ### Required Secrets
 
 - **Google Cloud DNS Service Account Key**: Stored in 1Password as `{cluster_name}-external-dns-clouddns-sa-key`

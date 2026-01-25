@@ -51,11 +51,6 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 
 ## Prerequisites
 
-### Required Components
-
-- **Kubernetes cluster**: With control plane nodes running (Cilium is the first component installed after cluster bootstrap)
-- **CRDs**: Some CRDs may be installed before Cilium (cert-manager CRDs for TLS), but Cilium will install its own CRDs
-
 ### Required Values
 
 - `pod_cidr`: Pod network CIDR range

@@ -31,6 +31,7 @@ See [`docs/nfs-storage-architecture.md`](../../../docs/nfs-storage-architecture.
 ### Multi-tenancy
 
 Loki is configured with multi-tenancy support:
+
 - **Auth Enabled**: `false` (no authentication, but multi-tenancy headers are used)
 - **Tenant ID**: Cluster name (passed via `X-Scope-OrgID` header)
 - **Grafana Integration**: Uses cluster name as tenant ID in datasource configuration
@@ -72,12 +73,6 @@ Configuration is managed through the Application's `valuesObject`:
 - **[Alloy](../README-alloy.md)**: Scrapes logs from cluster components and forwards to Loki
 
 ## Prerequisites
-
-### Required Components
-
-- **NFS Server**: Synology NAS with NFS service enabled and appropriate shares configured
-- **NFS CSI Driver**: Must be installed (for NFS support, though static PV is used)
-- **Local Path Provisioner**: Must be installed for local persistence
 
 ### Required Infrastructure
 
