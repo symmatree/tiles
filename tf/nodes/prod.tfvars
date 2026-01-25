@@ -69,7 +69,7 @@ virtual_machines = {
     ram_mb            = 10000
     mac_address       = "bc:24:11:d0:72:23"
     ip_address        = "10.0.128.23"
-    taint             = "nodeodm"
+    taint             = ""
   }
 }
 
