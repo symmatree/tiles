@@ -3,15 +3,6 @@
 
 // Node exporter for host system metrics
 prometheus.exporter.unix "node" {
-  include_mount_points = true
-  include_rapl         = false
-  include_softnet      = true
-  include_textfile     = false
-  include_time         = true
-  include_timex        = true
-  include_vmstat       = true
-  include_zoneinfo     = false
-
   procfs_path = "/host/proc"
   sysfs_path  = "/host/sys"
   rootfs_path = "/host"
