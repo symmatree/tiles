@@ -220,3 +220,46 @@ and make it a template as well.)
 - Synology application logs (/var/log/synolog/)
 - Authentication logs (/var/log/auth.log)
 - Daemon logs (/var/log/daemon.log)
+
+## Troubleshooting
+
+### SNMP Scrape Failures
+
+If you see errors like `Failed to scrape Prometheus endpoint` for the SNMP exporter:
+
+1. **Check Alloy component health**: Access the Alloy web UI (if exposed) or check container logs:
+   ```bash
+   # View Alloy logs from Synology Container Manager
+   # Or via SSH if you have access to the container
+   ```
+
+2. **Verify SNMP connection**: Test SNMP connectivity directly from the container:
+   ```bash
+   # If you can exec into the container, test SNMP:
+   snmpwalk -v3 -l authPriv -u <username> -a SHA -A <auth_password> -x AES -X <privacy_password> 127.0.0.1:161 1.3.6.1.4.1.6574.1
+   ```
+
+3. **Check SNMP config file**: Verify the config file is mounted correctly and auth is referenced:
+   - The `synology` module in `snmp-synology.yml` must reference `auth: synology_v3` to use the SNMPv3 credentials
+   - Verify template variables were replaced correctly (check for `${snmp_username}` placeholders)
+   - **Note**: If the module doesn't have `auth: synology_v3`, the exporter won't know which credentials to use
+
+4. **Enable debug logging**: Add debug logging to Alloy by setting environment variable:
+   ```hcl
+   # In synology-alloy.tf, add to environment:
+   environment = {
+     HOSTNAME = "raconteur"
+     ALLOY_LOG_LEVEL = "debug"  # Enable debug logging
+   }
+   ```
+
+5. **Check SNMP exporter metrics endpoint**: The SNMP exporter should expose metrics at `http://localhost:9116/snmp?target=127.0.0.1:161&module=synology` (if the exporter is running as a separate service). However, with Alloy's embedded exporter, check the component status via Alloy's UI or logs.
+
+6. **Verify SNMP service on Synology**: Ensure SNMP v3 is enabled and listening on port 161:
+   ```bash
+   # From the Synology host (if you have SSH access):
+   netstat -tuln | grep 161
+   # Or check Synology Control Panel > Terminal & SNMP
+   ```
+
+7. **Check Alloy component status**: The `prometheus.exporter.snmp.synology` component should show healthy targets. Check Alloy's component graph/status page if available.
