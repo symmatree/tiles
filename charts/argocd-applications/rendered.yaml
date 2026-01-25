@@ -169,10 +169,10 @@ spec:
           enabled: true
           receivers:
             otlp:
-              # grpc:
-              #   enabled: true
-              #   port: 4317
-              #   includeMetadata: true
+              grpc:
+                enabled: true
+                port: 4317
+                includeMetadata: true
               http:
                 enabled: true
                 port: 4318
@@ -239,22 +239,22 @@ spec:
               # /var/log/pods and /var/log/containers exist. (Also audit.)
               varlog: true
               dockercontainers: false
-        # alloy-receiver:
-        #   enabled: true
-        #   serviceMonitor:
-        #     enabled: true
-        #   controller:
-        #     type: "deployment"
-        #   alloy:
-        #     extraPorts:
-        #       - name: otlp-grpc
-        #         port: 4317
-        #         targetPort: 4317
-        #         protocol: TCP
-        #       - name: otlp-http
-        #         port: 4318
-        #         targetPort: 4318
-        #         protocol: TCP
+        alloy-receiver:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+          controller:
+            type: "deployment"
+          alloy:
+            extraPorts:
+              - name: otlp-grpc
+                port: 4317
+                targetPort: 4317
+                protocol: TCP
+              - name: otlp-http
+                port: 4318
+                targetPort: 4318
+                protocol: TCP
         integrations:
           alloy:
             instances:
