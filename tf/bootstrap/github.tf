@@ -125,29 +125,18 @@ resource "onepassword_item" "github_app_credentials" {
 }
 
 # Create token for Grafana GitHub data source
-# NOTE: Currently using the same token as Terraform provider for simplicity.
-# For better security (principle of least privilege), create a separate
-# read-only token and pass it via TF_VAR_grafana_github_token.
-# See docs/github-token-rotation.md for details.
+# NOTE: The token is refreshed by scripts/generate-github-app-token.sh which
+# generates GitHub App installation tokens and stores the datasource.yaml configuration.
+# See docs/github-app-setup.md for details.
 module "grafana_github_token" {
   source = "../modules/github-app-token"
 
   vault_uuid        = data.onepassword_vault.tf_secrets.uuid
   token_name        = "grafana-github-token"
-  token_value       = var.github_token # TODO: Use separate read-only token for least privilege
+  token_value       = var.github_token # Initial token value (will be updated by script)
   token_username    = var.github_owner # Store organization/username for build scripts
-  token_description = "GitHub PAT for Grafana GitHub data source - read-only access to repository data"
-
-  expiration_days = 90
-
-  token_permissions = {
-    contents      = "read"
-    metadata      = "read"
-    pull_requests = "read"
-    issues        = "read"
-  }
-
-  token_repositories = [github_repository.tiles.name]
+  token_description = "GitHub token for Grafana GitHub data source - managed by generate-github-app-token.sh"
+  # datasource_yaml is populated by the generate-github-app-token.sh script
 }
 
 

@@ -82,7 +82,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Check required tools
-for cmd in jq openssl curl; do
+for cmd in jq openssl curl envsubst; do
 	if ! command -v "$cmd" &>/dev/null; then
 		echo "Error: Required command '$cmd' not found"
 		exit 1
@@ -156,24 +156,19 @@ fi
 EXPIRES_AT=$(echo "$RESPONSE" | jq -r '.expires_at')
 echo "Token generated successfully (expires at: $EXPIRES_AT)"
 
-# Generate Grafana datasource.yaml configuration
+# Generate Grafana datasource.yaml configuration from template
 # The datasource sidecar expects a Secret with a 'datasource.yaml' key
-DATASOURCE_YAML=$(
-	cat <<EOF
-apiVersion: 1
-datasources:
-  - name: GitHub
-    uid: github
-    type: grafana-github-datasource
-    access: proxy
-    url: https://api.github.com
-    isDefault: false
-    jsonData:
-      githubUrl: https://github.com
-    secureJsonData:
-      token: ${TOKEN}
-EOF
-)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEMPLATE_FILE="${SCRIPT_DIR}/../tf/modules/github-app-token/datasource.yaml.tpl"
+
+if [[ ! -f $TEMPLATE_FILE ]]; then
+	echo "Error: Template file not found: $TEMPLATE_FILE"
+	exit 1
+fi
+
+# Substitute ${token} placeholder with actual token value using envsubst
+export token="$TOKEN"
+DATASOURCE_YAML=$(envsubst <"$TEMPLATE_FILE")
 
 # Store in 1Password
 echo "Storing token and datasource configuration in 1Password vault '${VAULT_NAME}' as '${TOKEN_NAME}'..."

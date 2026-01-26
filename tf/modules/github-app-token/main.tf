@@ -39,31 +39,11 @@ variable "token_description" {
   default     = ""
 }
 
-variable "token_repositories" {
-  description = "List of repositories the token should have access to (empty for all repos)"
-  type        = list(string)
-  default     = []
-}
-
-variable "token_permissions" {
-  description = "Permissions for the token. Map of permission names to access levels (read, write, admin)"
-  type        = map(string)
-  default = {
-    contents      = "read"
-    metadata      = "read"
-    packages      = "read"
-    pull_requests = "read"
-  }
-}
-
-variable "expiration_days" {
-  description = "Number of days until token expires (1-365)"
-  type        = number
-  default     = 90
-  validation {
-    condition     = var.expiration_days >= 1 && var.expiration_days <= 365
-    error_message = "Token expiration must be between 1 and 365 days"
-  }
+# Generate Grafana datasource.yaml configuration from the token
+locals {
+  datasource_yaml = templatefile("${path.module}/datasource.yaml.tpl", {
+    token = var.token_value
+  })
 }
 
 # Store the GitHub token in 1Password
@@ -74,6 +54,16 @@ resource "onepassword_item" "github_token" {
 
   password = var.token_value
   username = var.token_username != "" ? var.token_username : null
+
+  # Store datasource.yaml for Grafana sidecar
+  section {
+    label = "grafana"
+    field {
+      label = "datasource.yaml"
+      value = local.datasource_yaml
+      type  = "CONCEALED"
+    }
+  }
 
   section {
     label = "metadata"
@@ -92,36 +82,6 @@ resource "onepassword_item" "github_token" {
     field {
       label = "module"
       value = basename(abspath(path.module))
-    }
-    field {
-      label = "expiration_days"
-      value = tostring(var.expiration_days)
-    }
-    field {
-      label = "last_rotated"
-      value = plantimestamp()
-    }
-  }
-
-  section {
-    label = "permissions"
-    dynamic "field" {
-      for_each = var.token_permissions
-      content {
-        label = field.key
-        value = field.value
-      }
-    }
-  }
-
-  dynamic "section" {
-    for_each = length(var.token_repositories) > 0 ? [1] : []
-    content {
-      label = "repositories"
-      field {
-        label = "repos"
-        value = join(", ", var.token_repositories)
-      }
     }
   }
 }
