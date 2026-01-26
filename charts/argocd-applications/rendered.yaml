@@ -572,6 +572,40 @@ spec:
     syncOptions:
       - ServerSideApply=true
 ---
+# Source: argocd-applications/templates/coredns-mixin-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: coredns-mixin
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: coredns-mixin
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
 # Source: argocd-applications/templates/external-dns-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
