@@ -13,12 +13,14 @@ prometheus.exporter.snmp "synology" {
   config_file = "/etc/snmp_exporter/snmp.yml"
 
   target "raconteur" {
-    address = "127.0.0.1:161"
+    // address = "127.0.0.1:161"
+    address = "raconteur.ad.local.symmatree.com:161"
+    auth = "synology_v3"
     module  = "synology"
-    labels = {
-      "instance" = "raconteur.ad.local.symmatree.com",
-      "group"    = "synology",
-    }
+    // labels = {
+    //   "instance" = "raconteur.ad.local.symmatree.com",
+    //   "group"    = "synology",
+    // }
   }
 }
 
