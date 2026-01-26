@@ -81,6 +81,15 @@
         }
       },
       "version": "main"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/povilasv/coredns-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "master"
     }
   ],
   "legacyImports": true
