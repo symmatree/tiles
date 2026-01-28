@@ -84,7 +84,7 @@ jobs:
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-1"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-2"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-3"].proxmox_virtual_environment_vm.main'
-          terraform taint 'module.cluster.module.talos-amd-metal["lancer"].talos_machine_configuration_apply.this'
+          # terraform taint 'module.cluster.module.talos-amd-metal["lancer"].talos_machine_configuration_apply.this'
           terraform taint 'module.cluster.talos_machine_bootstrap.this'
 
       - name: De-wireguard
