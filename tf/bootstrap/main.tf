@@ -14,8 +14,9 @@ terraform {
       version = ">= 6.0"
     }
     unifi = {
-      source  = "ubiquiti-community/unifi"
-      version = ">= 0.41.3"
+      source = "ubiquiti-community/unifi"
+      # Freeze at 0.14.3 to avoid apparently broken release.
+      version = "= 0.41.3"
     }
     onepassword = {
       source  = "1Password/onepassword"
