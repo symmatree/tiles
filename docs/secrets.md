@@ -30,17 +30,19 @@ Talos machine secrets must be created manually before deploying a new cluster. T
 For a new cluster, generate and store the secrets as follows:
 
 1. Generate the secrets file locally:
+
    ```bash
    talosctl gen secrets --output-file /tmp/secrets.yaml
    ```
 
 2. Create an empty 1Password item with the correct name:
-   - For production: `tiles-machine-secrets`
-   - For test: `tiles-test-machine-secrets`
+   * For production: `tiles-machine-secrets`
+   * For test: `tiles-test-machine-secrets`
 
    Create it as a Secure Note in the `tiles-secrets` vault (or appropriate vault for your environment).
 
 3. Populate the item with the generated secrets:
+
    ```bash
    op item edit \
      --vault tiles-secrets \
@@ -49,11 +51,29 @@ For a new cluster, generate and store the secrets as follows:
    ```
 
 4. Clean up the temporary file:
+
    ```bash
    rm /tmp/secrets.yaml
    ```
 
 **Important**: These secrets are cluster-specific and must never be regenerated for an existing cluster. The `apply-talos-config.sh` script will reuse existing secrets from 1Password.
+
+### GitHub App
+
+GitHub authentication is now done via a GitHub App which generates short-lived tokens automatically:
+
+* `github-app-tiles-tf` - GitHub App credentials (App ID, Installation ID, PEM key)
+
+The GitHub App generates installation tokens (1 hour lifespan) programmatically for:
+
+* Terraform provider authentication (manages repo configuration)
+* Grafana data source (read-only access to repo metrics)
+
+**See [GitHub App Setup Guide](./github-app-setup.md) for detailed documentation on:**
+* Creating and configuring the GitHub App
+* Token generation and automatic refresh
+* Automatic propagation to Kubernetes via 1Password Operator
+* Troubleshooting and key rotation
 
 ## Runtime / Github Actions
 
@@ -63,12 +83,14 @@ PAT).
 
 ## Local Terraform `tf/bootstrap`
 
-The `bootstrap` bundle requires two secrets to be injected, and recovers the rest from
+The `bootstrap` bundle requires secrets to be injected, and recovers the rest from
 the 1Password vault:
 
 ```
 eval $(op signon)
 export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential)
-export TF_VAR_github_token=$(op read op://tiles-secrets/github-tiles-tf-bootstrap/password)
+export TF_VAR_github_app_id=$(op read op://tiles-secrets/github-app-tiles-tf/app_details/app_id)
+export TF_VAR_github_app_installation_id=$(op read op://tiles-secrets/github-app-tiles-tf/app_details/installation_id)
+export TF_VAR_github_app_pem_file=$(op read op://tiles-secrets/github-app-tiles-tf/password)
 terraform plan
 ```

@@ -44,8 +44,12 @@ spec:
               name: github-data-source-secret
               labels:
                 grafana_datasource: "1"
+              annotations:
+                # Enable automatic rolling restarts when the token is rotated
+                operator.1password.io/auto-restart: "true"
             type: Opaque
             spec:
+              # Note this is a whole datasource.yaml not just a token
               itemPath: "vaults/{{.Values.vault_name}}/items/grafana-github-token"
           - apiVersion: onepassword.com/v1
             kind: OnePasswordItem
