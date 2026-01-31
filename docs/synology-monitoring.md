@@ -228,7 +228,7 @@ and make it a template as well.)
 When you see errors like `Failed to scrape Prometheus endpoint` for the SNMP exporter:
 
 1. **Check Alloy component health**:
-   - Container uses host networking (`network_mode = "host"`), so Alloy UI is accessible at `http://raconteur.ad.local.symmatree.com:12345` (or the Synology's IP address)
+   - Container uses host networking (`network_mode = "host"`), so Alloy UI is accessible at `https://raconteur.ad.local.symmatree.com:5001/` (or the Synology's IP address)
    - The UI shows component status, including `prometheus.exporter.snmp.synology` health and any errors
    - View container logs from Synology Container Manager for detailed error messages
    - If the SNMP exporter component shows as unhealthy or not running in the UI, check:
@@ -270,6 +270,7 @@ When you see errors like `Failed to scrape Prometheus endpoint` for the SNMP exp
    - Otherwise check: Synology Control Panel > Terminal & SNMP > SNMP tab
 
 7. **Check Alloy component status**:
-   - TODO: Determine if Alloy web UI is accessible and document the URL/port
-   - TODO: If UI accessible, document how to view component graph showing `prometheus.exporter.snmp.synology` status
+   - Alloy web UI is accessible at `https://raconteur.ad.local.symmatree.com:5001/`
+   - Component details are available at URLs like `http://raconteur.ad.local.symmatree.com:12345/component/otelcol.exporter.otlphttp.tiles`
+   - To view the SNMP exporter component status, navigate to `http://raconteur.ad.local.symmatree.com:12345/component/prometheus.exporter.snmp.synology`
    - Otherwise, check container logs for component health messages
