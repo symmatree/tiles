@@ -55,6 +55,30 @@ For a new cluster, generate and store the secrets as follows:
 
 **Important**: These secrets are cluster-specific and must never be regenerated for an existing cluster. The `apply-talos-config.sh` script will reuse existing secrets from 1Password.
 
+## Talos Client Configuration (talosconfig)
+
+Talos client configurations for both clusters are stored in 1Password and should be downloaded to `~/.talos/`:
+
+```bash
+# Download tiles (production) talosconfig
+op read "op://tiles-secrets/tiles-talosconfig/notesPlain" > ~/.talos/tiles.yaml
+
+# Download tiles-test talosconfig
+op read "op://tiles-secrets/tiles-test-talosconfig/notesPlain" > ~/.talos/tiles-test.yaml
+```
+
+Use talosctl with the `--talosconfig` flag to specify which cluster to connect to:
+
+```bash
+# Connect to tiles (production) cluster
+talosctl --talosconfig ~/.talos/tiles.yaml -n <NODE_IP> <command>
+
+# Connect to tiles-test cluster
+talosctl --talosconfig ~/.talos/tiles-test.yaml -n <NODE_IP> <command>
+```
+
+**Note**: The `TALOSCONFIG` environment variable and config merging approaches have issues with certificate validation. Always use `--talosconfig` explicitly.
+
 ## Runtime / Github Actions
 
 Github has a single secret, `ONEPASSWORD_SA_TOKEN`, which allows a workflow to call

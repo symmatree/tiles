@@ -64,29 +64,14 @@ To reset the tiles-test cluster and rebuild the Proxmox nodes:
 
 ## Talos client configuration (talosconfig)
 
-When a cluster's VMs are started (`start_vms = true`), this repo automatically stores the Talos client configuration in 1Password as a Secure Note titled:
-
-- `<cluster-name>-talosconfig` (e.g., `tiles-test-talosconfig`)
-
-The talosconfig YAML is stored in the `notesPlain` field of that item.
-
-### Retrieve talosconfig with 1Password CLI
-
-Replace `<VAULT>` and `<CLUSTER>` below (e.g., `tiles-secrets` and `tiles-test`).
+Download talosconfigs for both clusters as described in [secrets.md](docs/secrets.md#talos-client-configuration-talosconfig). Use `talosctl` with the `--talosconfig` flag to specify which cluster to connect to:
 
 ```bash
-# Download talosconfig from 1Password
-op read "op://<VAULT>/<CLUSTER>-talosconfig/notesPlain" > ~/.talos/<CLUSTER>.yaml
+# Verify connection to tiles (production) cluster
+talosctl --talosconfig ~/.talos/tiles.yaml -n <NODE_IP> version
 
-# Merge it into talosctl's config (talosctl uses ~/.talos/config)
-talosctl config merge ~/.talos/<CLUSTER>.yaml
-
-# Verify it works (use a node IP from your cluster)
-talosctl -n <NODE_IP> version
+# Verify connection to tiles-test cluster
+talosctl --talosconfig ~/.talos/tiles-test.yaml -n <NODE_IP> version
 ```
 
-**Important**: Use `op read` with secret reference format, not `op item get`, as the latter adds quotes around the output which breaks the YAML.
-
-Notes:
-- Production cluster uses `cluster_name = "tiles"`; test uses `"tiles-test"`.
-- Items are only created when VMs are started for that cluster.
+**Note**: The `talosctl config merge` command has certificate validation issues. Always use `--talosconfig` explicitly instead of merging configs.

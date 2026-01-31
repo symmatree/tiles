@@ -2,10 +2,13 @@
 
 ## Kubeconfig
 
-`op read "op://tiles-secrets/tiles-test-kubeconfig/notesPlain" > ~/.kube/tiles-test.yaml`
+Download the kubeconfig for the test cluster:
 
-From there you can either `export KUBECONFIG=~/.kube/tiles-test.yaml` on an ad hoc basis,
-or
+```bash
+op read "op://tiles-secrets/tiles-test-kubeconfig/notesPlain" > ~/.kube/tiles-test.yaml
+```
+
+From there you can either `export KUBECONFIG=~/.kube/tiles-test.yaml` on an ad hoc basis, or merge it with your existing config:
 
 ```
 export KUBECONFIG=~/.kube/tiles-test.yaml:~/.kube/config
@@ -16,11 +19,12 @@ mv ~/.kube/merged_config ~/.kube/config
 
 which takes advantage of kubectl's weird ability to merge configs!
 
-## talosconfig
+**TODO**: The merge approach for kubeconfig works, but a similar approach for talosconfig does not work reliably (certificate validation issues). Need to investigate why config merging fails for talosconfig but works for kubeconfig.
 
-`op read "op://tiles-secrets/tiles-test-talosconfig/notesPlain" > ~/.talos/tiles-test.yaml`
+## Talos Client Configuration
 
-```
-export TALOSCONFIG=~/.talos/tiles-test.yaml
-talosctl -n 10.0.192.11 get addresses
+Download talosconfigs for both clusters as described in [secrets.md](secrets.md#talos-client-configuration-talosconfig). Then use `talosctl` with the `--talosconfig` flag:
+
+```bash
+talosctl --talosconfig ~/.talos/tiles-test.yaml -n 10.0.192.11 get addresses
 ```

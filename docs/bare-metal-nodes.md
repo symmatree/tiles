@@ -132,10 +132,10 @@ When recreating the cluster from scratch (e.g., when tainting VMs in Terraform),
 
 ### Option 1: Using `talosctl reset` (Recommended)
 
-If the node is still accessible via `talosctl`, you can reset it:
+If the node is still accessible via `talosctl`, you can reset it. Ensure you have downloaded talosconfigs as described in [secrets.md](secrets.md#talos-client-configuration-talosconfig):
 
 ```bash
-talosctl reset --reboot --graceful=false
+talosctl --talosconfig ~/.talos/tiles.yaml reset --reboot --graceful=false --nodes <NODE_IP>
 ```
 
 This will:
@@ -154,7 +154,7 @@ This will:
 If the node is running but you want to reinstall without wiping first:
 
 ```bash
-talosctl reboot --mode maintenance
+talosctl --talosconfig ~/.talos/tiles.yaml reboot --mode maintenance --nodes <NODE_IP>
 ```
 
 This reboots the node into maintenance mode, where you can then apply a new configuration.
@@ -168,7 +168,7 @@ If the node is unresponsive or you need to force a complete reset:
 3. **Interrupt the boot sequence** - Because `-talos.halt_if_installed` is set, the installer will detect the installed OS and hand off to it automatically. You must interrupt the boot sequence (press a key during the timeout) using:
    - Physical keyboard (if you have physical access)
    - KVM/IPMI console (if available)
-   - Or use `talosctl reboot --mode maintenance` before power cycling (if node is still accessible)
+   - Or use `talosctl --talosconfig ~/.talos/tiles.yaml reboot --mode maintenance --nodes <NODE_IP>` before power cycling (if node is still accessible)
 
 Without interrupting, the node will boot into the installed OS rather than maintenance mode.
 
@@ -178,7 +178,7 @@ To coordinate bare-metal node resets with Terraform VM tainting:
 
 1. **Create a script** that:
    - Taints the VMs in Terraform: `terraform taint module.talos-cluster.module.talos-vm["vm-name"]`
-   - Resets bare-metal nodes: `talosctl reset --reboot --graceful=false --nodes <bare-metal-ip>`
+   - Resets bare-metal nodes: `talosctl --talosconfig ~/.talos/tiles.yaml reset --reboot --graceful=false --nodes <bare-metal-ip>`
    - Waits for nodes to come back up in maintenance mode
    - Applies new configurations
 
@@ -191,7 +191,7 @@ To coordinate bare-metal node resets with Terraform VM tainting:
      }
 
      provisioner "local-exec" {
-       command = "talosctl reset --reboot --graceful=false --nodes ${var.bare_metal_node_ip}"
+       command = "talosctl --talosconfig ~/.talos/tiles.yaml reset --reboot --graceful=false --nodes ${var.bare_metal_node_ip}"
      }
    }
    ```
@@ -349,19 +349,19 @@ This provides the most robust remote management but requires compatible hardware
 
 ### Talos API for Remote Management
 
-Once Talos is installed, you can manage nodes remotely via `talosctl`:
+Once Talos is installed, you can manage nodes remotely via `talosctl`. Ensure you have downloaded talosconfigs as described in [secrets.md](secrets.md#talos-client-configuration-talosconfig).
 
-- **Apply configurations:** `talosctl apply-config --nodes <ip> --file config.yaml`
-- **Reboot nodes:** `talosctl reboot --nodes <ip>`
-- **Reset nodes:** `talosctl reset --reboot --nodes <ip>`
-- **View logs:** `talosctl logs --nodes <ip>`
-- **Access console:** `talosctl dashboard --nodes <ip>`
+- **Apply configurations:** `talosctl --talosconfig ~/.talos/tiles.yaml apply-config --nodes <ip> --file config.yaml`
+- **Reboot nodes:** `talosctl --talosconfig ~/.talos/tiles.yaml reboot --nodes <ip>`
+- **Reset nodes:** `talosctl --talosconfig ~/.talos/tiles.yaml reset --reboot --nodes <ip>`
+- **View logs:** `talosctl --talosconfig ~/.talos/tiles.yaml logs --nodes <ip>`
+- **Access console:** `talosctl --talosconfig ~/.talos/tiles.yaml dashboard --nodes <ip>`
 
 **Network Requirements:**
 
 - Nodes must be accessible on network (Talos API runs on port 50000)
 - Firewall rules must allow access to Talos API
-- `talosconfig` must be configured with correct endpoints
+- Use `--talosconfig` to specify the cluster configuration file
 
 ### Emergency Recovery Procedure
 
@@ -407,7 +407,7 @@ Bare-metal nodes should use the same cluster configuration as VMs, but with:
 3. **Apply to bare-metal node:**
 
    ```bash
-   talosctl apply-config --insecure --nodes <bare-metal-ip> --file worker.yaml
+   talosctl --talosconfig ~/.talos/tiles.yaml apply-config --insecure --nodes <bare-metal-ip> --file worker.yaml
    ```
 
 4. **Verify node joins cluster** (same as any other worker node)
@@ -457,7 +457,7 @@ resource "null_resource" "reset_bare_metal_nodes" {
   }
 
   provisioner "local-exec" {
-    command = "talosctl reset --reboot --graceful=false --nodes ${each.value.ip_address}"
+    command = "talosctl --talosconfig ~/.talos/tiles.yaml reset --reboot --graceful=false --nodes ${each.value.ip_address}"
   }
 }
 ```
