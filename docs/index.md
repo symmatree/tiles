@@ -38,6 +38,8 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 - **[caching-strategy.md](caching-strategy.md)**: Caching strategy for GitHub Actions workflows using date-based invalidation and content-based keys to speed up CI/CD pipelines by avoiding redundant downloads and installations while ensuring caches stay fresh.
 
+- **[oom-troubleshooting.md](oom-troubleshooting.md)**: Guide for diagnosing OOM (Out of Memory) kills, including how to identify which pods were killed, check their resource limits, and understand cgroup paths from Talos OOM logs.
+
 ## Monitoring and Observability
 
 - **[monitoring-mixins.md](monitoring-mixins.md)**: Approach to collecting, customizing, and installing Prometheus monitoring mixins using Tanka plugin in ArgoCD to generate Kubernetes resources (Prometheus Operator objects and Grafana ConfigMaps) from mixin definitions.
