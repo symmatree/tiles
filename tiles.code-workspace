@@ -4,10 +4,10 @@
 			"path": "."
 		},
 		{
-			"path": "../tales"
+			"path": "../gcp-control"
 		},
 		{
-			"path": "../gcp-control"
+			"path": "../polisher"
 		}
 	]
 }

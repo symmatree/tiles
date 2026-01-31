@@ -20,8 +20,6 @@ jobs:
           echo "DATESTAMP=$(date +'%Y%m%d')" | tee -a "$GITHUB_OUTPUT"
       - uses: actions/checkout@v6
       - uses: ./.github/actions/helm-setup
-        with:
-          helm_version: v3.19.4
 
       - name: Build
         run: |
