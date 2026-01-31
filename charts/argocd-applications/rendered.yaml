@@ -1120,6 +1120,7 @@ spec:
               ruler_max_rules_per_rule_group: 100
               # default is 150000 per user, we are currently all in one
               max_global_series_per_user: 500000
+              max_fetched_chunks_per_query: 4000000
             common:
               storage:
                 backend: filesystem
