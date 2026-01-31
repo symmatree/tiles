@@ -1854,11 +1854,6 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       volumes:
         - name: ssh-known-hosts
           configMap:
@@ -2011,11 +2006,6 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       volumes:
         - name: tls-certs
           configMap:
@@ -2452,11 +2442,6 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       volumes:
       - configMap:
           name: cmp-tanka
@@ -2912,11 +2897,6 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       volumes:
       - name: plugins-home
         emptyDir: {}
@@ -3096,11 +3076,6 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       volumes:
       - name: static-files
         emptyDir: {}
@@ -3191,11 +3166,6 @@ spec:
             name: health
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -3555,7 +3525,8 @@ spec:
           successThreshold: 1
           failureThreshold: 3
         resources:
-          {}
+          limits:
+            memory: 800M
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -3586,11 +3557,6 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       volumes:
       - name: argocd-home
         emptyDir: {}
@@ -3940,9 +3906,4 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
-        node-role.kubernetes.io/control-plane: ""
-      tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
       serviceAccountName: argocd-redis-secret-init

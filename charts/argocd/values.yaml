@@ -1,14 +1,14 @@
 # https://raw.githubusercontent.com/argoproj/argo-helm/refs/tags/argo-cd-7.8.23/charts/argo-cd/values.yaml
 # then deleted values we do not override.
 
-global:
-  tolerations:
-    - effect: NoSchedule
-      key: node-role.kubernetes.io/control-plane
-      operator: Exists
-  nodeSelector:
-    kubernetes.io/os: linux
-    node-role.kubernetes.io/control-plane: ""
+# global:
+#   tolerations:
+#     - effect: NoSchedule
+#       key: node-role.kubernetes.io/control-plane
+#       operator: Exists
+#   nodeSelector:
+#     kubernetes.io/os: linux
+#     node-role.kubernetes.io/control-plane: ""
 argo-cd:
   ## Argo CD configuration
   ## Ref: https://github.com/argoproj/argo-cd
@@ -125,6 +125,9 @@ argo-cd:
 
   ## Application controller
   controller:
+    resources:
+      limits:
+        memory: 800M
     ## Application controller metrics configuration
     metrics:
       # -- Deploy metrics service
