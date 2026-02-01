@@ -1452,10 +1452,63 @@ spec:
           replica_dns_name_format: "{cluster}-repl-{namespace}.{hostedzone}"
           # deprecated DNS template for replica load balancer using team name
           replica_legacy_dns_name_format: "{cluster}-repl-{team}.{hostedzone}"
+        # Disable Teams API integration (Zalando-specific, not available in our setup)
+        configTeamsApi:
+          enable_teams_api: false
 
   destination:
     server: https://kubernetes.default.svc
     namespace: postgres-operator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+        trust-bundle: enabled
+---
+# Source: argocd-applications/templates/postgres-operator-ui-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres-operator-ui
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+    targetRevision: "v1.15.1"
+    chart: postgres-operator-ui
+    helm:
+      valuesObject:
+        envs:
+          # IMPORTANT: While operator chart and UI chart are independent, this is the interface between
+          # UI and operator API. Insert the service name of the operator API here!
+          appUrl: 'https://postgres-ui.placeholder.symmatree.com'
+          operatorApiUrl: "http://postgres-operator.postgres-operator.svc:8080"
+          operatorClusterNameLabel: "cluster-name"
+          resourcesVisible: "False"
+          # Set to "*" to allow viewing/creation of clusters in all namespaces
+          targetNamespace: "*"
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: real-cert
+          ingressClassName: cilium
+          hosts:
+            - host: 'postgres-ui.placeholder.symmatree.com'
+              paths: ["/"]
+          tls:
+            - secretName: postgres-operator-ui-tls
+              hosts:
+                - 'postgres-ui.placeholder.symmatree.com'
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres-operator-ui
   syncPolicy:
     automated:
       prune: true

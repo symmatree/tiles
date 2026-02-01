@@ -26,6 +26,9 @@ spec:
           replica_dns_name_format: "{cluster}-repl-{namespace}.{hostedzone}"
           # deprecated DNS template for replica load balancer using team name
           replica_legacy_dns_name_format: "{cluster}-repl-{team}.{hostedzone}"
+        # Disable Teams API integration (Zalando-specific, not available in our setup)
+        configTeamsApi:
+          enable_teams_api: false
 
   destination:
     server: https://kubernetes.default.svc
