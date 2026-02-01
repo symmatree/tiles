@@ -1442,7 +1442,7 @@ spec:
         configKubernetes:
           enable_readiness_probe: true
         configLoadBalancer:
-          db_hosted_zone: "placeholder.symmatree.com"
+          db_hosted_zone: 'placeholder.symmatree.com'
           enable_master_load_balancer: true
           # Override to put them in a flat domain under cluster_name (dashes not dots)
           master_dns_name_format: "{cluster}-{namespace}.{hostedzone}"
