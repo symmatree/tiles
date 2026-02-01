@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres-operator-ui
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+    targetRevision: "v1.15.1"
+    chart: postgres-operator-ui
+    helm:
+      valuesObject:
+        envs:
+          # IMPORTANT: While operator chart and UI chart are independent, this is the interface between
+          # UI and operator API. Insert the service name of the operator API here!
+          appUrl: 'https://postgres-ui.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+          operatorApiUrl: "http://postgres-operator.postgres-operator.svc:8080"
+          operatorClusterNameLabel: "cluster-name"
+          resourcesVisible: "False"
+          # Set to "*" to allow viewing/creation of clusters in all namespaces
+          targetNamespace: "*"
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: real-cert
+          ingressClassName: cilium
+          hosts:
+            - host: 'postgres-ui.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+              paths: ["/"]
+          tls:
+            - secretName: postgres-operator-ui-tls
+              hosts:
+                - 'postgres-ui.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres-operator-ui
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+        trust-bundle: enabled
