@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres-operator
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+    targetRevision: "v1.15.1"
+    chart: postgres-operator
+    helm:
+      valuesObject:
+        # Disable CRD registration since we install CRDs separately via install-crds.sh
+        configGeneral:
+          enable_crd_registration: false
+        configKubernetes:
+          enable_readiness_probe: true
+        configLoadBalancer:
+          db_hosted_zone: "{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com"
+          enable_master_load_balancer: true
+          # Override to put them in a flat domain under cluster_name (dashes not dots)
+          master_dns_name_format: "{cluster}-{namespace}.{hostedzone}"
+          # deprecated DNS template for master load balancer using team name
+          master_legacy_dns_name_format: "{cluster}-{team}.{hostedzone}"
+          # defines the DNS name string template for the replica load balancer cluster
+          replica_dns_name_format: "{cluster}-repl-{namespace}.{hostedzone}"
+          # deprecated DNS template for replica load balancer using team name
+          replica_legacy_dns_name_format: "{cluster}-repl-{team}.{hostedzone}"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres-operator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+        trust-bundle: enabled

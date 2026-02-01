@@ -11,6 +11,7 @@ export ALLOY_OPERATOR_VERSION="alloy-operator-0.3.14"
 # Replace external-snapshotter source with CRDs from
 # any real snapshot impl if I ever install one.
 export EXTERNAL_SNAPSHOTTER_VERSION="release-6.0"
+export POSTGRES_OPERATOR_VERSION="v1.15.1"
 
 set -x
 kubectl apply --server-side -f "https://github.com/grafana/alloy-operator/releases/download/${ALLOY_OPERATOR_VERSION}/collectors.grafana.com_alloy.yaml"
@@ -40,4 +41,8 @@ kubectl apply --server-side -f https://raw.githubusercontent.com/grafana/helm-ch
 kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml"
 kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml"
 kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
+# postgres-operator
+kubectl apply --server-side -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/postgresqls.yaml"
+kubectl apply --server-side -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/postgresteams.yaml"
+kubectl apply --server-side -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/operatorconfigurations.yaml"
 set +x

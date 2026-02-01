@@ -3629,6 +3629,7 @@ spec:
     - https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
     - https://charts.containeroo.ch
     - https://grafana.github.io/helm-charts
+    - https://opensource.zalando.com/postgres-operator/charts/postgres-operator
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"
