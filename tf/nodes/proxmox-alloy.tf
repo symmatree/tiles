@@ -15,8 +15,10 @@ resource "proxmox_virtual_environment_oci_image" "alloy" {
 }
 
 # Deploy to all Proxmox nodes
+# Using proxmox_root provider for bind mounts (requires root@pam)
 resource "proxmox_virtual_environment_container" "alloy" {
   for_each = toset(data.proxmox_virtual_environment_nodes.nodes.names)
+  provider = proxmox.proxmox_root
 
   node_name = each.value
   vm_id     = 200 # Fixed VM ID for alloy containers across all nodes
