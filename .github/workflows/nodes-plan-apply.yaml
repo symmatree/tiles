@@ -101,6 +101,7 @@ jobs:
           SYNOLOGY_PASSWORD: "op://tiles-secrets/raconteur-login/password"
           UNIFI_USERNAME: "op://tiles-secrets/morpheus-terraform/username"
           UNIFI_PASSWORD: "op://tiles-secrets/morpheus-terraform/password"
+          PROXMOX_ROOT_PASSWORD: "op://tiles-secrets/proxmox-root/password"
 
       - name: Authenticate to Google Cloud
         if: steps.charts_only.outputs.run_terraform == 'true'
@@ -143,6 +144,7 @@ jobs:
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
           UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
           UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
+          TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "test"
@@ -158,6 +160,7 @@ jobs:
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
           UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
           UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
+          TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "prod"

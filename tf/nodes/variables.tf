@@ -132,3 +132,9 @@ variable "dns_zone_local" {
   description = "DNS zone name for local.symmatree.com in seed project"
   type        = string
 }
+
+variable "proxmox_root_password" {
+  description = "Proxmox root@pam password (required for bind mounts)"
+  type        = string
+  sensitive   = true
+}

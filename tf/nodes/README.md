@@ -40,6 +40,14 @@ export SYNOLOGY_PASSWORD=$(op read op://tiles-secrets/raconteur-login/password)
 # export SYNOLOGY_HOST="https://raconteur.ad.local.symmatree.com:5001"
 ```
 
+### Proxmox Root Credentials
+
+Required for bind mounts in Proxmox containers (e.g., Alloy monitoring containers):
+
+```bash
+export TF_VAR_proxmox_root_password=$(op read op://tiles-secrets/proxmox-root/password)
+```
+
 ## Usage
 
 **IMPORTANT**: You MUST select a workspace (`test` or `prod`) before running Terraform. Running in the default workspace is dangerous and not supported.
@@ -54,6 +62,7 @@ export UNIFI_USERNAME=$(op read op://tiles-secrets/morpheus-terraform/username)
 export UNIFI_PASSWORD=$(op read op://tiles-secrets/morpheus-terraform/password)
 export SYNOLOGY_USER=$(op read op://tiles-secrets/raconteur-login/username)
 export SYNOLOGY_PASSWORD=$(op read op://tiles-secrets/raconteur-login/password)
+export TF_VAR_proxmox_root_password=$(op read op://tiles-secrets/proxmox-root/password)
 
 # Select workspace (test or prod)
 terraform workspace select test  # or 'prod' for production
