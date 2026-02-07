@@ -31,5 +31,7 @@ from a 1password provider, but we can stage it through an environment var:
 cd tf/bootstrap
 export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential)
 export TF_VAR_github_token=$(op read op://tiles-secrets/github-tiles-tf-bootstrap/password)
+export UNIFI_USERNAME=$(op read op://tiles-secrets/morpheus-terraform/username)
+export UNIFI_PASSWORD=$(op read op://tiles-secrets/morpheus-terraform/password)
 terraform plan
  ```

@@ -1,0 +1,109 @@
+// Alloy configuration for Proxmox host monitoring
+// Collects node_exporter metrics (including hwmon sensors) and system logs, forwarding to OTLP endpoints
+
+// Node exporter for host system metrics
+// This will collect hwmon metrics (temperature, fan speeds) from /sys/class/hwmon/
+prometheus.exporter.unix "node" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host"
+}
+
+// OTLP HTTP exporter for tiles-test cluster
+otelcol.exporter.otlphttp "tiles_test" {
+  client {
+    endpoint = "${otlp_tiles_test}"
+    headers = {
+      "X-Scope-OrgID" = "tiles-test",
+    }
+  }
+}
+
+// OTLP HTTP exporter for tiles cluster
+otelcol.exporter.otlphttp "tiles" {
+  client {
+    endpoint = "${otlp_tiles}"
+    headers = {
+      "X-Scope-OrgID" = "tiles",
+    }
+  }
+}
+
+// Scrape node exporter metrics (system performance + hwmon sensors) and convert to OTLP format
+prometheus.scrape "node" {
+  // This job_name lets us re-use the node_exporter_mixin dashboards
+  job_name = "integrations/node_exporter"
+  targets    = prometheus.exporter.unix.node.targets
+  forward_to = [otelcol.receiver.prometheus.main.receiver]
+}
+// TODO: Consider dropping metrics and labels like
+// https://github.com/grafana/k8s-monitoring-helm/blob/ea357b0204031a05adc478f4778875c6122b0a98/charts/k8s-monitoring/charts/feature-cluster-metrics/templates/_node_exporter.alloy.tpl
+// which really prunes a lot.
+
+// Convert Prometheus to OTLP
+otelcol.receiver.prometheus "main" {
+  output {
+    metrics = [otelcol.processor.attributes.main.input]
+  }
+}
+
+// Add cluster label to both metrics and logs, forwarding to both clusters
+otelcol.processor.attributes "main" {
+  action {
+    key    = "cluster"
+    value  = "bond"
+    action = "upsert"
+  }
+
+  action {
+    key    = "hostname"
+    value  = "${hostname}"
+    action = "upsert"
+  }
+
+  output {
+    metrics = [
+      otelcol.exporter.otlphttp.tiles_test.input,
+      otelcol.exporter.otlphttp.tiles.input,
+    ]
+    logs = [
+      otelcol.exporter.otlphttp.tiles_test.input,
+      otelcol.exporter.otlphttp.tiles.input,
+    ]
+  }
+}
+
+// Log collection from host
+// Proxmox uses systemd, so we can collect from journald or traditional syslog
+loki.source.file "syslog" {
+  targets = [
+    {
+      __path__ = "/host/var/log/syslog",
+      job      = "proxmox-syslog",
+      host     = "${hostname}",
+    },
+    {
+      __path__ = "/host/var/log/messages",
+      job      = "proxmox-messages",
+      host     = "${hostname}",
+    },
+    {
+      __path__ = "/host/var/log/auth.log",
+      job      = "proxmox-auth",
+      host     = "${hostname}",
+    },
+    {
+      __path__ = "/host/var/log/daemon.log",
+      job      = "proxmox-daemon",
+      host     = "${hostname}",
+    },
+  ]
+  forward_to = [otelcol.receiver.loki.main.receiver]
+}
+
+// Convert Loki logs to OTLP
+otelcol.receiver.loki "main" {
+  output {
+    logs = [otelcol.processor.attributes.main.input]
+  }
+}

@@ -161,8 +161,9 @@ spec:
           # https://github.com/grafana/alloy/blob/main/internal/component/loki/source/kubernetes_events/event_controller.go#L324
           logFormat: json
         nodeLogs:
-          # Talos doesn't surface these through the filesystem.
-          enabled: false
+          # Talos now (2026) echos logs into /var/log.
+          # https://docs.siderolabs.com/talos/v1.12/configure-your-talos-cluster/logging-and-telemetry/logging#forwarding-logs-for-aggregation
+          enabled: true
         podLogs:
           enabled: true
         applicationObservability:
