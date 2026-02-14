@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/symm-mixin"
+  },
+  "spec": {
+    "namespace": "symm-mixin",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}
