@@ -91,7 +91,7 @@ The `bootstrap` bundle requires two secrets to be injected, and recovers the res
 the 1Password vault:
 
 ```
-eval $(op signon)
+eval $(op signin)
 export TF_VAR_onepassword_sa_token=$(op read op://tiles-secrets/tiles-onepassword-sa/credential)
 export TF_VAR_github_token=$(op read op://tiles-secrets/github-tiles-tf-bootstrap/password)
 terraform plan
