@@ -44,7 +44,7 @@ jobs:
           workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
 
-      - uses: "hashicorp/setup-terraform@v3"
+      - uses: "hashicorp/setup-terraform@v4"
         with:
           terraform_version: "1.13.3"
 
