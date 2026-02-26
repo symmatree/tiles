@@ -1,3 +1,5 @@
 # ArgoCD Mixin
 
-See [ArgoCD README](../../argocd/README.md) for monitoring information including dashboards and alerts provided by this mixin.
+Prometheus/Grafana mixin providing dashboards and alerts for ArgoCD monitoring.
+
+**Full documentation:** [Facts: Tiles/Software/argocd-mixin.md](https://github.com/symmatree/facts/blob/main/Tiles/Software/argocd-mixin.md)

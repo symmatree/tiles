@@ -1,3 +1,5 @@
 # Kubernetes Mixin
 
-See [Grafana README](../README-grafana.md) for monitoring information including dashboards and alerts provided by this mixin.
+Prometheus/Grafana mixin providing cluster and node dashboards (API server, controller manager, scheduler, resource usage).
+
+**Full documentation:** [Facts: Tiles/Software/kubernetes-mixin.md](https://github.com/symmatree/facts/blob/main/Tiles/Software/kubernetes-mixin.md)
