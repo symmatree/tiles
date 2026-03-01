@@ -18,6 +18,8 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 - **[bare-metal-nodes.md](bare-metal-nodes.md)**: Process for adding bare-metal nodes to the Talos cluster, including computing different installation manifests, removing QEMU guest agent dependencies, and configuring physical hardware nodes as single worker nodes.
 
+- **[rising-deployment.md](rising-deployment.md)**: Step-by-step plan to deploy Rising (GMKtec NucBox K4, AMD Ryzen 9 7940HS / Radeon 780M) as a bare-metal Talos worker, with Terraform changes, USB ISO, BIOS, apply flow, and an appendix of source links for automation.
+
 - **[talos.md](talos.md)**: Talos Linux installation and upgrade procedures, including the specific image schematic with QEMU guest agent extension, ISO download links, and installation image references for both initial setup and upgrades.
 
 ## Storage and Networking

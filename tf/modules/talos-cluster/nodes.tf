@@ -4,7 +4,7 @@ locals {
   config_path             = "${path.module}/talos-config.yaml"
   base_config_yaml        = file(local.config_path)
   vm_install_image        = "factory.talos.dev/installer/${var.talos_vm_schematic}:v${var.talos_version}"
-  metal_amd_install_image = "factory.talos.dev/installer/${var.talos_metal_amd_schematic}:v${var.talos_version}"
+  metal_amd_install_image = "factory.talos.dev/metal-installer/${var.talos_metal_amd_schematic}:v${var.talos_version}"
 
   common_patch_yaml = yamlencode({
     "version" = "v1alpha1"
