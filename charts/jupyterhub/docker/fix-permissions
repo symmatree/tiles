@@ -1,0 +1,10 @@
+#!/bin/bash
+# Shadows
+# https://github.com/jupyter/docker-stacks/blob/main/images/docker-stacks-foundation/fix-permissions
+# to just log. (Otherwise things like .ssh get overly-broad privileges.)
+
+set -e
+
+for d in "$@"; do
+	echo "Skipping permissions fix for ${d}" >>~/.jupyterhub-fix-permissions.log
+done
