@@ -72,6 +72,8 @@ virtual_machines = {
     taint             = ""
   }
 }
+alloy_vm_base_id     = 400
+deploy_proxmox_alloy = false
 
 metal_amd_nodes = {}
 

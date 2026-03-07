@@ -27,13 +27,22 @@ jobs:
         with:
           base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.after }}
+      - name: Debug changed-files output
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        run: |
+          echo "--- changed_files.outputs.changed (shell repr) ---"
+          printf '%q\n' "${{ steps.changed_files.outputs.changed }}"
+          echo "--- changed_files.outputs.changed (hex, od) ---"
+          printf '%s' "${{ steps.changed_files.outputs.changed }}" | od -A n -t x1 -v
+          echo "--- changed (first 5 lines) ---"
+          echo "${{ steps.changed_files.outputs.changed }}" | head -5
       - name: Skip when only fables submodule ref changed
         id: only_fables_ref
         run: |
           # Skip heavy steps only when changed-files ran and reported exactly one path: fables.
           # When changed-files did not run (e.g. workflow_dispatch), its outputs are empty -> do not skip.
-          UNIQUE="${{ steps.changed_files.outputs.unique }}"
-          if [ "$UNIQUE" = "fables" ]; then
+          CHANGED="${{ steps.changed_files.outputs.changed }}"
+          if [ "$CHANGED" = "fables" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"

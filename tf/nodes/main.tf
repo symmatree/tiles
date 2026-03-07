@@ -35,11 +35,11 @@ provider "proxmox" {
 }
 
 provider "proxmox" {
-  alias     = "proxmox_root"
-  endpoint  = data.onepassword_item.proxmox_user_token.url
-  username  = "root@pam"
-  password  = var.proxmox_root_password
-  insecure  = true
+  alias    = "proxmox_root"
+  endpoint = data.onepassword_item.proxmox_user_token.url
+  username = "root@pam"
+  password = var.proxmox_root_password
+  insecure = true
 }
 
 provider "unifi" {
