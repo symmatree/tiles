@@ -54,7 +54,7 @@ When `cache-hit != 'true'`, the following operations run:
 
 ### Cache Configuration
 
-**Location**: `.github/workflows/nodes-plan-apply.yaml`
+**Location**: `.github/workflows/nodes-plan-apply.yaml`. Path-based skip (e.g. only fables submodule ref or only charts/tanka) uses the shared action `.github/actions/changed-files`, which other workflows (e.g. pre-commit, build-test) also use for consistent change detection.
 
 **Cached paths**: `**/.terraform` (Terraform provider binaries and modules)
 

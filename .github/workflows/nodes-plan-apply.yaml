@@ -38,34 +38,35 @@ jobs:
       - uses: "actions/checkout@v6"
         with:
           fetch-depth: 0 # Need full history for git diff
+      - uses: ./.github/actions/changed-files
+        id: changed_files
+        if: github.event_name == 'pull_request'
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
       - name: Check if only charts changed
         id: charts_only
         run: |
           set -euo pipefail
           mkdir -p "${{ runner.temp }}/txt-outputs/"
-          # For non-PR events, always run Terraform
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "Not a pull request, running Terraform"
             echo "run_terraform=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-
-          # Get the base and head SHAs for the PR
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-
-          # Get list of changed files
-          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}"..."${HEAD_SHA}" || git diff --name-only "${BASE_SHA}".."${HEAD_SHA}")
-
-          if [ -z "${CHANGED_FILES}" ]; then
+          CHANGED="${{ steps.changed_files.outputs.changed }}"
+          UNIQUE="${{ steps.changed_files.outputs.unique }}"
+          if [ -z "${UNIQUE}" ]; then
             echo "No changed files detected, running Terraform to be safe"
             echo "run_terraform=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-
-          # Check if any file is outside charts/ or tanka/
-          NON_CHARTS_FILES=$(echo "${CHANGED_FILES}" | grep -v "(^charts/)|(^tanka/)" || true)
-
+          if [ "$UNIQUE" = "fables" ]; then
+            echo "Only fables submodule ref changed, skipping Terraform"
+            echo "run_terraform=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          NON_CHARTS_FILES=$(echo "${CHANGED}" | grep -v "(^charts/)|(^tanka/)" || true)
           if [ -n "${NON_CHARTS_FILES}" ]; then
             echo "Found changes outside charts/ directory:"
             echo "${NON_CHARTS_FILES}"

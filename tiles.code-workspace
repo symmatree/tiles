@@ -4,9 +4,6 @@
 			"path": "."
 		},
 		{
-			"path": "../gcp-control"
-		},
-		{
 			"path": "../polisher"
 		},
 		{

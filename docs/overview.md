@@ -74,9 +74,10 @@ just my personal attempt at it.)
 This repo manages three-to-four chunks of config:
 
 * `tf/bootstrap` contains Terraform that needs to be run with elevated privileges.
-  It mostly exists to create and grant privileges to service accounts, to set up up the Github
-  repo, and similar meta-tasks. The goal is to minimize the size of this bundle while
+  It mostly exists to create and grant privileges to service accounts, to set up the Github
+  repos (tiles, polisher, fables), and similar meta-tasks. The goal is to minimize the size of this bundle while
   providing close to the minimum necessary set of privileges to the payload bundle.
+  The **fables** repo is content-only (markdown and the like); main allows direct push (no PR requirement) so it can be edited from the web UI. See `tf/bootstrap/github.tf`.
 * `tf/nodes` contains Terraform configuration for provisioning two Talos Kubernetes clusters on
   an externally-created Proxmox cluster. `tiles-test` is a single worker and VM on one machine, to
   provide a testbed for both Terraform and Kubernetes config before deploying it to the "real" system.

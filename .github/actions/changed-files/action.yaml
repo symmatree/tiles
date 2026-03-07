@@ -1,0 +1,33 @@
+name: "changed-files"
+description: "Compute changed file list between two refs (base and head). Use after checkout with fetch-depth: 0."
+inputs:
+  base_sha:
+    description: "Base commit SHA (e.g. github.event.pull_request.base.sha or github.event.before)"
+    required: true
+  head_sha:
+    description: "Head commit SHA (e.g. github.event.pull_request.head.sha or github.event.after)"
+    required: true
+outputs:
+  changed:
+    description: "Newline-separated list of changed paths (raw from git diff)"
+  unique:
+    description: "Sorted unique list of changed paths (one per line)"
+runs:
+  using: "composite"
+  steps:
+    - name: Compute changed files
+      id: changed
+      shell: bash
+      run: |
+        set -euo pipefail
+        BASE="${{ inputs.base_sha }}"
+        HEAD="${{ inputs.head_sha }}"
+        # Try three-dot diff (merge-base) first; fall back to two-dot (direct range) if that fails.
+        CHANGED=$(git diff --name-only "${BASE}"..."${HEAD}" 2>/dev/null || git diff --name-only "${BASE}".."${HEAD}" 2>/dev/null || true)
+        UNIQUE=$(echo "${CHANGED}" | sort -u)
+        echo "changed<<EOF" >> "$GITHUB_OUTPUT"
+        echo "${CHANGED}" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+        echo "unique<<EOF" >> "$GITHUB_OUTPUT"
+        echo "${UNIQUE}" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
