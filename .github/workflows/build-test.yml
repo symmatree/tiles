@@ -19,9 +19,30 @@ jobs:
           set -euo pipefail
           echo "DATESTAMP=$(date +'%Y%m%d')" | tee -a "$GITHUB_OUTPUT"
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/changed-files
+        id: changed_files
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        with:
+          base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.after }}
+      - name: Skip when only fables submodule ref changed
+        id: only_fables_ref
+        run: |
+          # Skip heavy steps only when changed-files ran and reported exactly one path: fables.
+          # When changed-files did not run (e.g. workflow_dispatch), its outputs are empty -> do not skip.
+          UNIQUE="${{ steps.changed_files.outputs.unique }}"
+          if [ "$UNIQUE" = "fables" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: ./.github/actions/helm-setup
+        if: steps.only_fables_ref.outputs.skip != 'true'
 
       - name: Build
+        if: steps.only_fables_ref.outputs.skip != 'true'
         run: |
           set -euo pipefail
           cd "${{ github.workspace }}"
@@ -34,6 +55,7 @@ jobs:
       #     ./test.sh
 
       - name: Ensure no git changes
+        if: steps.only_fables_ref.outputs.skip != 'true'
         run: |
           set -euo pipefail
           cd "${{ github.workspace }}"

@@ -19,6 +19,25 @@ jobs:
 
     steps:
       - uses: "actions/checkout@v6"
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/changed-files
+        id: changed_files
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        with:
+          base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.after }}
+      - name: Skip when only fables submodule ref changed
+        id: only_fables_ref
+        run: |
+          # Skip heavy steps only when changed-files ran and reported exactly one path: fables.
+          # When changed-files did not run (e.g. workflow_dispatch), its outputs are empty -> do not skip.
+          UNIQUE="${{ steps.changed_files.outputs.unique }}"
+          if [ "$UNIQUE" = "fables" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - shell: bash
         name: "Make output directory"
         run: |
@@ -27,6 +46,7 @@ jobs:
       - uses: pre-commit/action@v3.0.1
         name: pre-commit
         id: pre-commit
+        if: steps.only_fables_ref.outputs.skip != 'true'
         env:
           # `no-commit-to-branch` fails when run --all-files against main.
           SKIP: "no-commit-to-branch"
@@ -36,7 +56,7 @@ jobs:
           extra_args: "--color=never --all-files"
 
       - name: Capture diffs for PR
-        if: (success() || failure()) && github.event_name == 'pull_request'
+        if: (success() || failure()) && github.event_name == 'pull_request' && steps.only_fables_ref.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -46,7 +66,7 @@ jobs:
 
       - uses: ./.github/actions/attach-outputs
         name: Attach pre-commit outputs to PR
-        if: (success() || failure()) && github.event_name == 'pull_request'
+        if: (success() || failure()) && github.event_name == 'pull_request' && steps.only_fables_ref.outputs.skip != 'true'
         with:
           txt_output_dir: "${{ runner.temp }}/txt-outputs/"
           outcome: ${{ steps.pre-commit.outcome }}
