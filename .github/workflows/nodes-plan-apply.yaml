@@ -44,15 +44,6 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-      - name: Debug changed-files output
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "--- changed_files.outputs.changed (shell repr) ---"
-          printf '%q\n' "${{ steps.changed_files.outputs.changed }}"
-          echo "--- changed_files.outputs.changed (hex, od) ---"
-          printf '%s' "${{ steps.changed_files.outputs.changed }}" | od -A n -t x1 -v
-          echo "--- changed (first 5 lines) ---"
-          echo "${{ steps.changed_files.outputs.changed }}" | head -5
       - name: Check if only charts changed
         id: charts_only
         run: |
@@ -64,6 +55,7 @@ jobs:
             exit 0
           fi
           CHANGED="${{ steps.changed_files.outputs.changed }}"
+          CHANGED="$(printf '%s' "$CHANGED")"
           if [ -z "${CHANGED}" ]; then
             echo "No changed files detected, running Terraform to be safe"
             echo "run_terraform=true" >> "$GITHUB_OUTPUT"

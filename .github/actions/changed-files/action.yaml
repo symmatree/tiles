@@ -24,8 +24,8 @@ runs:
         CHANGED=$(git diff --name-only "${BASE}"..."${HEAD}") || \
           CHANGED=$(git diff --name-only "${BASE}".."${HEAD}") || \
           { echo "Both git diff (three-dot and two-dot) failed for BASE=${BASE} HEAD=${HEAD}" >&2; exit 1; }
-        # Use a unique delimiter so a path containing "EOF" (or similar) cannot break the heredoc.
+        # Closing delimiter must be on its own line; add newline before it.
         DELIM="CHANGED_FILES_END_7a3f"
         echo "changed<<${DELIM}" >> "$GITHUB_OUTPUT"
-        printf '%s' "${CHANGED}" >> "$GITHUB_OUTPUT"
+        printf '%s\n' "${CHANGED}" >> "$GITHUB_OUTPUT"
         echo "${DELIM}" >> "$GITHUB_OUTPUT"
