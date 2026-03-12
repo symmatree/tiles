@@ -1,11 +1,10 @@
 // Alloy configuration for Proxmox host monitoring
 // Collects node_exporter metrics (including hwmon sensors) and system logs, forwarding to OTLP endpoints
 
-// Node exporter for host system metrics
-// This will collect hwmon metrics (temperature, fan speeds) from /sys/class/hwmon/
+// Node exporter for host system metrics (nesting exposes host /proc and /sys to the container)
 prometheus.exporter.unix "node" {
-  procfs_path = "/host/proc"
-  sysfs_path  = "/host/sys"
+  procfs_path = "/proc"
+  sysfs_path  = "/sys"
   rootfs_path = "/host"
 }
 

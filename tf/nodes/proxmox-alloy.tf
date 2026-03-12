@@ -7,6 +7,10 @@
 #
 # VM/CT IDs are unique cluster-wide in Proxmox, so we assign one per node (200, 201, ...).
 # When deploy_proxmox_alloy is false, no containers/OCI/images/snippets are created.
+#
+# Operational note: After changing entrypoint or config, the first apply may not update the
+# running container's entrypoint; a second apply may try and fail to reboot the CTs. Manually
+# stop the containers in the Proxmox UI, then re-apply or start them so they come up with the new entrypoint.
 locals {
   alloy_nodes  = var.deploy_proxmox_alloy ? toset(data.proxmox_virtual_environment_nodes.nodes.names) : toset([])
   alloy_vm_ids = { for i, n in sort(tolist(local.alloy_nodes)) : n => var.alloy_vm_base_id + i }
@@ -72,8 +76,13 @@ resource "proxmox_virtual_environment_container" "alloy" {
     type      = "console"
   }
 
-  # Privileged required so bind mount of host / at /host exposes readable /host/proc and /host/sys for node_exporter.
-  unprivileged = false
+  # Nesting: expose host procfs and sysfs to the guest (per Proxmox docs). With nesting we could use /proc and /sys in Alloy for host metrics; privileged + /host bind is an alternative.
+  features {
+    nesting = true
+  }
+
+  # Unprivileged + nesting: nesting exposes host /proc and /sys to the container, so we use those paths in Alloy (no privileged needed for metrics). /host bind still used for rootfs and host logs.
+  unprivileged = true
   memory {
     dedicated = 512
   }
