@@ -83,6 +83,12 @@ resource "github_repository_ruleset" "tiles-tags" {
   target      = "tag"
   enforcement = "active"
 
+  # GITHUB_TOKEN in workflows is the GitHub Actions app (integration id 15368), not a repo role.
+  bypass_actors {
+    actor_id    = 15368
+    actor_type  = "Integration"
+    bypass_mode = "always"
+  }
   bypass_actors {
     actor_id    = 5
     actor_type  = "RepositoryRole"
@@ -176,6 +182,11 @@ resource "github_repository_ruleset" "polisher-tags" {
   target      = "tag"
   enforcement = "active"
 
+  bypass_actors {
+    actor_id    = 15368
+    actor_type  = "Integration"
+    bypass_mode = "always"
+  }
   bypass_actors {
     actor_id    = 5
     actor_type  = "RepositoryRole"
