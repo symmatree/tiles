@@ -98,7 +98,6 @@ resource "github_repository_ruleset" "tiles-tags" {
 
   rules {
     deletion = true
-    update   = true
   }
 }
 
@@ -191,7 +190,6 @@ resource "github_repository_ruleset" "polisher-tags" {
 
   rules {
     deletion = true
-    update   = true
   }
 }
 
