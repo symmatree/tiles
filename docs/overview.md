@@ -122,10 +122,10 @@ own logs and metrics" or "provide DNS for the services it provides", rather the 
 From a cold start, with a proxmox cluster,
 
 * Push to main, or run `nodes-plan-apply` on `tags/test` with a target of `test`,
-  to trigger a deployment of the`tiles-test` cluster
-* Run `bootstrap-cluster` with a target of `tiles-test` to install CRDs and initial versions of argocd, cilium and onepassword.
+  to trigger a deployment of the `tiles-test` cluster
+* Run **`bootstrap-cluster`** for **`tiles-test`** (inputs and script order: [Configuration propagation](config-propagation.md#bootstrap-process)).
 
-From there, ArgoCD will replace itself, cilium and 1password with managed versions (mostly just adding an annotation),
+From there, Argo CD replaces itself, Cilium, and 1Password with managed versions (mostly just adding an annotation),
 as well as installing the rest of the helper and payload components.
 
 ## Intended Concept of Operations: Cluster Maintenance and Deployment
