@@ -10,10 +10,31 @@
 			"path": "../semipro"
 		},
 		{
-			"path": "../../../mnt/c/Users/symmetry/Documents/GitHub/facts"
+			"path": "../dotfiles-symm"
 		},
 		{
-			"path": "../dotfiles-symm"
+			"path": "../OpenMowerOS"
+		},
+		{
+			"path": "../open_mower_ros"
+		},
+		{
+			"path": "../OpenMower"
+		},
+		{
+			"path": "../openmower-cli"
+		},
+		{
+			"path": "../openmower.de"
+		},
+		{
+			"path": "../amateur"
+		},
+		{
+			"path": "../facts"
+		},
+		{
+			"path": "../LibreChat"
 		}
 	]
 }
