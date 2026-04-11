@@ -1,34 +1,39 @@
 # Talos
 
-## Installation ISO
+This repo pins Talos Linux in [tf/nodes/terraform.tfvars](../tf/nodes/terraform.tfvars) (`talos_version`, for example `1.13.0-beta.1`). Image Factory schematics and ISOs are generated in [tf/nodes/talos-iso.tf](../tf/nodes/talos-iso.tf); installer images are patched in [tf/modules/talos-cluster/nodes.tf](../tf/modules/talos-cluster/nodes.tf).
 
-Image schematic `ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515` which
-corresponds to:
+## Image Factory and installer URL shape
 
-```
-customization:
-    systemExtensions:
-        officialExtensions:
-            - siderolabs/qemu-guest-agent
+Terraform uses the **installer** image (not the legacy `nocloud-installer/` path). The value written into machine config looks like:
+
+```text
+factory.talos.dev/installer/<SCHEMATIC_ID>:v<TALOS_VERSION>
 ```
 
-from [this ImageFactory URL](https://factory.talos.dev/?arch=amd64&cmdline-set=true&extensions=-&extensions=siderolabs%2Fqemu-guest-agent&platform=nocloud&target=cloud&version=1.11.2),
-which reports:
+- `<SCHEMATIC_ID>` comes from `talos_image_factory_schematic.vm.id` (Proxmox VMs) or `talos_image_factory_schematic.metal_amd.id` (bare-metal AMD).
+- `<TALOS_VERSION>` matches `talos_version` in tfvars (no leading `v` in tfvars; URLs use `v` prefix as above).
 
-Here are the options for the initial boot of Talos Linux on Nocloud:
+VM schematic includes the `qemu-guest-agent` system extension and kernel args such as `net.ifnames=0` and `-talos.halt_if_installed`. See `talos-iso.tf` for the exact YAML passed to Image Factory.
 
-* Disk Image https://factory.talos.dev/image/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515/v1.11.2/nocloud-amd64.raw.xz
-* ISO https://factory.talos.dev/image/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515/v1.11.2/nocloud-amd64.iso
-* PXE boot (iPXE script) https://pxe.factory.talos.dev/pxe/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515/v1.11.2/nocloud-amd64
+## ISO and disk images
 
-### Initial Installation
+Proxmox nodes download a **nocloud** ISO per Talos version and schematic, for example:
 
-For the initial installation of Talos Linux (not applicable for disk image boot), add the following installer image to the machine configuration:
+```text
+https://factory.talos.dev/image/<SCHEMATIC_ID>/v<TALOS_VERSION>/nocloud-amd64.iso
+```
 
-`factory.talos.dev/nocloud-installer/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515:v1.11.2`
+After changing `talos_version`, run Terraform so `proxmox_virtual_environment_download_file` refreshes ISOs and VM CD-ROM references stay consistent.
 
-### Upgrading Talos Linux
+## talosctl
 
-To upgrade Talos Linux on the machine, use the following image:
+Use a **talosctl** build that matches the cluster Talos version (same minor line as nodes). Always pass `--talosconfig` explicitly; see [secrets.md](secrets.md#talos-client-configuration-talosconfig) and [dev-setup.md](dev-setup.md).
 
-`factory.talos.dev/nocloud-installer/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515:v1.11.2`
+## Bare metal
+
+AMD bare-metal installers and ISO URLs use the **metal** schematic (`metal_amd`). See [bare-metal-nodes.md](bare-metal-nodes.md).
+
+## Upgrading or rebuilding clusters
+
+- **VM replace:** Destroy targeted `proxmox_virtual_environment_vm` resources and `terraform apply` (see [README.md](../README.md#recreating-cluster)).
+- **In-place OS upgrade:** Upstream procedure uses `talosctl upgrade` with the same installer image as in machine config; this repo usually drives version via Terraform and full VM refresh. See [Sidero upgrade docs](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/lifecycle-management/upgrading-talos).
