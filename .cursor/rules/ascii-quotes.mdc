@@ -1,15 +1,17 @@
 ---
-description: Use only ASCII quotes and apostrophes so edits and search/replace work
+description: Use only ASCII quotes, apostrophes, and dashes so edits and search/replace work
 alwaysApply: true
 ---
 
-# ASCII quotes and apostrophes only
+# ASCII quotes, apostrophes, and dashes only
 
-When writing or editing **any** content — files in this repo, Cursor plan documents, issue and PR descriptions and comments, and any other generated text — use **only** ASCII straight quotes and apostrophes:
+When writing or editing **any** content -- files in this repo, Cursor plan documents, issue and PR descriptions and comments, and any other generated text -- use **only** ASCII for quotes and dashes:
 
-- **Double quote:** ASCII 0x22 `"` — never Unicode U+201C or U+201D (curly/smart double quotes).
-- **Apostrophe / single quote:** ASCII 0x27 `'` — never Unicode U+2018 or U+2019 (curly/smart single quotes).
+- **Double quote:** ASCII 0x22 `"` -- never Unicode U+201C or U+201D (curly/smart double quotes).
+- **Apostrophe / single quote:** ASCII 0x27 `'` -- never Unicode U+2018 or U+2019 (curly/smart single quotes).
+- **Em dash:** ASCII `--` (two hyphens) -- never Unicode U+2014.
+- **En dash:** ASCII `-` (hyphen-minus) -- never Unicode U+2013.
 
-Curly quotes break search/replace and make later edits fail. Do not use them. This applies to all output (repo files, plans, issues, PRs, comments, docs).
+Curly quotes and Unicode dashes break search/replace and make later edits fail. Do not use them. This applies to all output (repo files, plans, issues, PRs, comments, docs).
 
-**If a replace fails on content you wrote:** The file may contain curly quotes. Run the normalizer on the **directory that contains it** (e.g. for a repo: `polisher/.venv/bin/python polisher/facts/normalize_ascii_quotes.py <repo-path>`; for Cursor plans: same script with `~/.cursor/plans`). Then retry the replace. Do not work around the mismatch with inline scripts.
+**If a replace fails on content you wrote:** The file may contain curly quotes or Unicode dashes. Run the normalizer on the **directory that contains it** (e.g. for a repo: `polisher/.venv/bin/python polisher/facts/normalize_ascii_quotes.py <repo-path>`; for Cursor plans: same script with `~/.cursor/plans`). The script replaces curly quotes and em/en dashes with ASCII. Then retry the replace. Do not work around the mismatch with inline scripts.

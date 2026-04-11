@@ -55,13 +55,13 @@ jobs:
             exit 0
           fi
           CHANGED="${{ steps.changed_files.outputs.changed }}"
-          UNIQUE="${{ steps.changed_files.outputs.unique }}"
-          if [ -z "${UNIQUE}" ]; then
+          CHANGED="$(printf '%s' "$CHANGED")"
+          if [ -z "${CHANGED}" ]; then
             echo "No changed files detected, running Terraform to be safe"
             echo "run_terraform=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [ "$UNIQUE" = "fables" ]; then
+          if [ "$CHANGED" = "fables" ]; then
             echo "Only fables submodule ref changed, skipping Terraform"
             echo "run_terraform=false" >> "$GITHUB_OUTPUT"
             exit 0
