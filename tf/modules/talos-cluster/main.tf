@@ -155,7 +155,10 @@ resource "onepassword_item" "misc_config" {
     }
     field {
       label = "worker_ips"
-      value = join(",", [for _, vm in var.vms : vm.ip_address if vm.type == "worker"])
+      value = join(",", concat(
+        [for _, vm in var.vms : vm.ip_address if vm.type == "worker"],
+        [for _, node in var.metal_amd_nodes : node.ip_address if node.type == "worker"]
+      ))
     }
   }
   section {
