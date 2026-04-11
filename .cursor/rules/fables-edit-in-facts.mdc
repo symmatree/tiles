@@ -1,0 +1,7 @@
+---
+description: When editing or creating fables content (kb/, Tiles/, etc.), prefer the facts repo copy.
+globs: fables/**/*
+---
+- Prefer making changes in the **facts** repo copy of fables (the shared underlying repo), not in tiles/fables.
+- tiles/fables is primarily for providing context to agents working on tiles; the canonical source is facts.
+- When adding or editing notes under fables (e.g. kb/Computers/, Tiles/, etc.), edit the corresponding path under facts/fables/ when both exist.

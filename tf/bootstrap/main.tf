@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.8"
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
@@ -16,7 +16,7 @@ terraform {
     unifi = {
       source = "ubiquiti-community/unifi"
       # Freeze at 0.14.3 to avoid apparently broken release.
-      version = "= 0.41.3"
+      version = "0.41.25"
     }
     onepassword = {
       source  = "1Password/onepassword"

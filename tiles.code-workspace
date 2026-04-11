@@ -10,10 +10,13 @@
 			"path": "../semipro"
 		},
 		{
-			"path": "../../../mnt/c/Users/symmetry/Documents/GitHub/facts"
+			"path": "../dotfiles-symm"
 		},
 		{
-			"path": "../dotfiles-symm"
+			"path": "../amateur"
+		},
+		{
+			"path": "../facts"
 		}
 	]
 }

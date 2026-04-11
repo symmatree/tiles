@@ -34,7 +34,7 @@ Defined in [`tf/nodes/tiles-prod.tf`](../tf/nodes/tiles-prod.tf) (currently comm
 
 ## Talos Configuration
 
-Talos provides the base operating system and initial network configuration for the cluster. The configuration is defined in [`tf/modules/talos-cluster/talos-config.yaml`](../tf/modules/talos-cluster/talos-config.yaml) and patched dynamically in [`tf/modules/talos-cluster/main.tf`](../tf/modules/talos-cluster/main.tf).
+Talos provides the base operating system and initial network configuration for the cluster. Base YAML lives in [`tf/modules/talos-cluster/talos-config.yaml`](../tf/modules/talos-cluster/talos-config.yaml). Cluster-specific patches (CIDRs, `machine.install.image`, **Layer2VIPConfig** on control plane nodes, taints) are assembled in [`tf/modules/talos-cluster/nodes.tf`](../tf/modules/talos-cluster/nodes.tf). Bootstrap and client outputs are in [`tf/modules/talos-cluster/main.tf`](../tf/modules/talos-cluster/main.tf).
 
 ### Network Setup
 
@@ -53,16 +53,7 @@ Talos configures the outer layer of the network stack:
 
 3. **kube-proxy Disabled**: The Kubernetes proxy is disabled (`proxy.disabled: true`) because Cilium replaces it with eBPF-based kube-proxy replacement.
 
-4. **Node Networking**: Control plane nodes use DHCP for IP assignment and have a Virtual IP (VIP) configured for high availability:
-
-   ```yaml
-   machine:
-     network:
-       interfaces:
-         - deviceSelector: { physical: true }
-           dhcp: true
-           vip: { ip: var.control_plane_vip }
-   ```
+4. **Control plane VIP (Layer2):** Talos v1.12+ uses a **`Layer2VIPConfig`** machine config document (not the older nested `machine.network.interfaces[].vip` snippet). Terraform encodes it in `nodes.tf` with `name = control_plane_vip` and `link = control_plane_vip_link`. [`tf/nodes/cluster.tf`](../tf/nodes/cluster.tf) passes `control_plane_vip_link = "eth0"` to match `net.ifnames=0` on the schematic. See the Talos docs for [Layer2VIPConfig](https://docs.siderolabs.com/talos/v1.13/reference/configuration/network/layer2vipconfig).
 
 ### DNS Configuration
 

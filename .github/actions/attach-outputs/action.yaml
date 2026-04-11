@@ -22,6 +22,10 @@ runs:
           const fs = require('fs')
 
           const outputs = '${{ inputs.txt_output_dir }}'
+          if (!fs.existsSync(outputs)) {
+            console.log('Output directory does not exist (job may have failed before creating it):', outputs)
+            return
+          }
           const outputs_files = fs.readdirSync(outputs)
           const out_files = outputs_files.filter(file => file.match(new RegExp(`.*\.(.txt)$`, 'ig')))
 

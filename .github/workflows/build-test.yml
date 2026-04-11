@@ -32,8 +32,9 @@ jobs:
         run: |
           # Skip heavy steps only when changed-files ran and reported exactly one path: fables.
           # When changed-files did not run (e.g. workflow_dispatch), its outputs are empty -> do not skip.
-          UNIQUE="${{ steps.changed_files.outputs.unique }}"
-          if [ "$UNIQUE" = "fables" ]; then
+          CHANGED="${{ steps.changed_files.outputs.changed }}"
+          CHANGED="$(printf '%s' "$CHANGED")"
+          if [ "$CHANGED" = "fables" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"

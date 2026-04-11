@@ -4,36 +4,58 @@
 # to collect metrics and logs from the Proxmox host
 #
 # Similar to synology-alloy.tf but for Proxmox LXC containers
+#
+# VM/CT IDs are unique cluster-wide in Proxmox, so we assign one per node (200, 201, ...).
+# When deploy_proxmox_alloy is false, no containers/OCI/images/snippets are created.
+#
+# Operational note: After changing entrypoint or config, the first apply may not update the
+# running container's entrypoint; a second apply may try and fail to reboot the CTs. Manually
+# stop the containers in the Proxmox UI, then re-apply or start them so they come up with the new entrypoint.
+locals {
+  alloy_nodes  = var.deploy_proxmox_alloy ? toset(data.proxmox_virtual_environment_nodes.nodes.names) : toset([])
+  alloy_vm_ids = { for i, n in sort(tolist(local.alloy_nodes)) : n => var.alloy_vm_base_id + i }
+}
 
 # Pull Alloy OCI image on each Proxmox node
-resource "proxmox_virtual_environment_oci_image" "alloy" {
-  for_each = toset(data.proxmox_virtual_environment_nodes.nodes.names)
+resource "proxmox_oci_image" "alloy" {
+  for_each = local.alloy_nodes
 
   node_name    = each.value
   datastore_id = "local"
   reference    = "docker.io/grafana/alloy:latest"
 }
 
+moved {
+  from = proxmox_virtual_environment_oci_image.alloy
+  to   = proxmox_oci_image.alloy
+}
+
 # Deploy to all Proxmox nodes
 # Using proxmox_root provider for bind mounts (requires root@pam)
 resource "proxmox_virtual_environment_container" "alloy" {
-  for_each = toset(data.proxmox_virtual_environment_nodes.nodes.names)
-  provider = proxmox.proxmox_root
+  for_each   = local.alloy_nodes
+  provider   = proxmox.proxmox_root
+  depends_on = [proxmox_virtual_environment_file.alloy_config]
 
   node_name = each.value
-  vm_id     = 200 # Fixed VM ID for alloy containers across all nodes
+  vm_id     = local.alloy_vm_ids[each.key]
 
   # Use OCI image - grafana/alloy:latest (same as Synology setup)
   operating_system {
     # ubuntu is underlying: https://github.com/grafana/alloy/blob/main/Dockerfile#L41
-    type            = "ubuntu"
-    template_file_id = proxmox_virtual_environment_oci_image.alloy[each.value].id
+    type             = "ubuntu"
+    template_file_id = proxmox_oci_image.alloy[each.value].id
+  }
+  environment_variables = {
+    ALLOY_DEPLOY_MODE = "docker"
+    PATH              = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   }
 
   # Initialization
   initialization {
     hostname = "alloy-${each.value}"
-
+    # Default from container does not have the listen-addr set.
+    entrypoint = "/bin/alloy run /var/lib/vz/snippets/alloy-proxmox.alloy '--storage.path=/var/lib/alloy/data' '--server.http.listen-addr=0.0.0.0:12345'"
     ip_config {
       ipv4 {
         address = "dhcp"
@@ -42,37 +64,50 @@ resource "proxmox_virtual_environment_container" "alloy" {
   }
 
   # Disk for container
-  disk { datastore_id = "local-lvm" }
+  disk {
+    mount_options = []
+    datastore_id  = "local-lvm"
+  }
 
   # Network - bridge to vmbr0 (adjust if your network setup differs)
   network_interface {
-    name   = "net0"
-    bridge = "vmbr0"
+    firewall = true
+    name     = "eth0"
+    bridge   = "vmbr0"
+  }
+  console {
+    enabled   = true
+    tty_count = 2
+    type      = "console"
   }
 
-#   # Privileged mode required for accessing host /sys, /proc, etc.
-#   # This allows the container to see host filesystems and hardware sensors
-# privileged = true
+  # Nesting: expose host procfs and sysfs to the guest (per Proxmox docs). With nesting we could use /proc and /sys in Alloy for host metrics; privileged + /host bind is an alternative.
+  features {
+    nesting = true
+  }
+
+  # Unprivileged + nesting: nesting exposes host /proc and /sys to the container, so we use those paths in Alloy (no privileged needed for metrics). /host bind still used for rootfs and host logs.
+  unprivileged = true
+  memory {
+    dedicated = 512
+  }
 
   # Mount host root filesystem (read-only for safety)
   # This gives access to /sys, /proc, /dev, /run from the host
   # Same approach as Synology - bind mount host root to /host
   mount_point {
-    path = "/host"
-    read_only = true
-    volume = "/"
+    path          = "/host"
+    read_only     = true
+    mount_options = []
+    volume        = "/"
   }
-
-#   # Mount Alloy config file from snippet
-#   mount_point {
-#     key     = "1"
-#     slot    = 1
-#     storage = "local"
-#     volume  = "snippets/alloy-proxmox-${each.value}.alloy"
-#     mp      = "/etc/alloy/config.alloy"
-#     options = "ro"
-#   }
-
+  # Snippets dir bind mount at same path as host so we leave image /etc/alloy untouched (avoid unpack/permission issues).
+  mount_point {
+    path          = "/var/lib/vz/snippets"
+    read_only     = true
+    mount_options = []
+    volume        = "/var/lib/vz/snippets"
+  }
   # Start on boot
   start_on_boot = true
 
@@ -83,9 +118,10 @@ resource "proxmox_virtual_environment_container" "alloy" {
   description = "Alloy monitoring container for ${each.value} - collects host metrics and logs via node_exporter (hwmon sensors) and system logs"
 }
 
-# Upload Alloy config file as a snippet (mounted into container)
+# Upload Alloy config file as a snippet (mounted into container at /var/lib/vz/snippets/alloy-proxmox.alloy)
 resource "proxmox_virtual_environment_file" "alloy_config" {
-  for_each = toset(data.proxmox_virtual_environment_nodes.nodes.names)
+  for_each = local.alloy_nodes
+  provider = proxmox.proxmox_root
 
   node_name    = each.value
   datastore_id = "local"
@@ -96,11 +132,6 @@ resource "proxmox_virtual_environment_file" "alloy_config" {
       otlp_tiles      = "https://otlp.tiles.symmatree.com"
       hostname        = each.value
     })
-    file_name = "alloy-proxmox-${each.value}.alloy"
+    file_name = "alloy-proxmox.alloy"
   }
 }
-
-# NOTE: Container args/command may need to be set manually or via hookscript if provider doesn't support it:
-#    pct set {vm_id} --args "run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy"
-#
-# The Alloy image's default entrypoint should be the alloy binary, so args should work
