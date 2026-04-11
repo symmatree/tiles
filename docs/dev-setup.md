@@ -28,3 +28,5 @@ Download talosconfigs for both clusters as described in [secrets.md](secrets.md#
 ```bash
 talosctl --talosconfig ~/.talos/tiles-test.yaml -n 10.0.192.11 get addresses
 ```
+
+**Version alignment:** Install `talosctl` from the same Talos release line as the cluster ([`talos_version` in terraform.tfvars](../tf/nodes/terraform.tfvars)). Mismatched clients can fail API calls or behave oddly during upgrades and debugging. See [talos.md](talos.md) for where the repo pins the OS version.

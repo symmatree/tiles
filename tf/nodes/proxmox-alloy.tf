@@ -17,12 +17,17 @@ locals {
 }
 
 # Pull Alloy OCI image on each Proxmox node
-resource "proxmox_virtual_environment_oci_image" "alloy" {
+resource "proxmox_oci_image" "alloy" {
   for_each = local.alloy_nodes
 
   node_name    = each.value
   datastore_id = "local"
   reference    = "docker.io/grafana/alloy:latest"
+}
+
+moved {
+  from = proxmox_virtual_environment_oci_image.alloy
+  to   = proxmox_oci_image.alloy
 }
 
 # Deploy to all Proxmox nodes
@@ -39,7 +44,7 @@ resource "proxmox_virtual_environment_container" "alloy" {
   operating_system {
     # ubuntu is underlying: https://github.com/grafana/alloy/blob/main/Dockerfile#L41
     type             = "ubuntu"
-    template_file_id = proxmox_virtual_environment_oci_image.alloy[each.value].id
+    template_file_id = proxmox_oci_image.alloy[each.value].id
   }
   environment_variables = {
     ALLOY_DEPLOY_MODE = "docker"
