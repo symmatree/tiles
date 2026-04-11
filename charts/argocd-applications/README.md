@@ -4,6 +4,8 @@
 
 The `argocd-applications` chart implements the [ArgoCD app-of-apps pattern](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern), serving as the root application that manages all other Application resources in the cluster. It propagates configuration values from Terraform outputs (via bootstrap) to all downstream applications, providing a single point of configuration for environment-specific values.
 
+**Bootstrap:** [Configuration propagation](../../docs/config-propagation.md#bootstrap-process) (workflow inputs, 1Password env wiring, `install-application.sh`, Cilium/Argo CD scripts).
+
 ## Architecture
 
 The chart uses a Helm-based approach where:
@@ -13,15 +15,6 @@ The chart uses a Helm-based approach where:
   - Symlinked from individual chart directories (e.g., `argocd-application.yaml` from `charts/argocd/application.yaml`)
   - Defined directly in templates (e.g., `alloy-application.yaml`, `grafana-application.yaml`)
 - **Values Propagation**: The main Application's `valuesObject` contains the union of all values needed by downstream applications, which are then templated into each component's Application resource
-
-### Value Flow
-
-1. **Bootstrap** (`charts/bootstrap.sh`) receives values from Terraform/1Password and passes them to this chart via Helm `--set` arguments
-2. **Main Application** (`application.yaml.tmpl`) receives values in its `valuesObject` block
-3. **Template Files** reference `{{ .Values.* }}` which resolve to the parent chart's values
-4. **Component Applications** receive values via their own `valuesObject` blocks in the rendered templates
-
-This enables a single point of configuration where all environment-specific values (cluster name, NFS paths, project IDs, etc.) are passed once and automatically propagate to all components.
 
 ## Configuration
 
@@ -50,11 +43,7 @@ All values are cluster-specific and set during bootstrap. The chart itself uses 
 
 ### Dependencies
 
-- **[ArgoCD](../argocd/README.md)**: Must be installed and running before this chart can manage applications
-
-## Prerequisites
-
-All configuration values are provided by the bootstrap process from Terraform/1Password: `targetRevision`, `cluster_name`, `vault_name`, `pod_cidr`, `external_ip_cidr`, `project_id`, `seed_project_id`, `cluster_nfs_path`, `datasets_nfs_path`, and `nfs_server`.
+- **[ArgoCD](../argocd/README.md)**: Must be installed and running before this chart can manage applications (order relative to Cilium and **`bootstrap-cluster`** inputs: see **Bootstrap** above)
 
 ## Terraform Integration
 
@@ -62,23 +51,11 @@ N/A - This chart receives values from Terraform outputs via the bootstrap proces
 
 ## Application Manifest
 
-- **Application Template**: [`application.yaml.tmpl`](application.yaml.tmpl) - Processed during bootstrap to create the main Application resource
+- **Application Template**: [`application.yaml.tmpl`](application.yaml.tmpl) - Rendered with `envsubst` and applied by `install-application.sh` (see **Bootstrap** above)
 - **Helm Chart**: Uses the `charts/argocd-applications` directory as a Helm chart
 - **Values**: [`values.yaml`](values.yaml) - Contains placeholder values for documentation and rendering
 - **Templates**: [`templates/`](templates/) - Contains Application resource templates for all components
 - **Namespace**: `argocd` (where the main Application resource is created)
-
-### Bootstrap Process
-
-The `argocd-applications` chart is installed during cluster bootstrap (see `.github/workflows/bootstrap-cluster.yaml`) after Cilium and ArgoCD:
-
-1. Bootstrap script receives values from Terraform/1Password
-2. Runs `helm template` with cluster-specific values
-3. Processes `application.yaml.tmpl` to create the main Application resource
-4. Applies the Application resource via `kubectl apply`
-5. ArgoCD syncs the Application, which then creates all component Application resources
-
-Once installed, the chart is self-managed by ArgoCD and automatically syncs changes from Git.
 
 ## Access & Endpoints
 
