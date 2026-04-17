@@ -1,0 +1,6 @@
+# Paths under `fables/` are the fables submodule. The submodule has its own `.gitattributes`
+# (Drones/rekon10/config CRLF rules). Some tools resolve attributes from the workspace / superproject
+# root only; duplicate those rules here so `fables/Drones/...` matches from the tiles checkout.
+
+fables/Drones/rekon10/config/**/*.yml text eol=crlf
+fables/Drones/rekon10/config/rekon10-ardupilot.param text eol=crlf
