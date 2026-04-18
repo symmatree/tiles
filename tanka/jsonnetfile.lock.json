@@ -25,6 +25,16 @@
     {
       "source": {
         "git": {
+          "remote": "https://github.com/grafana/alloy.git",
+          "subdir": "operations/alloy-mixin"
+        }
+      },
+      "version": "18b205cf5ef3eed1fb5c513362a7ec347c0e6c67",
+      "sum": "/FTpnsFO9AYYYLWkObOUnJFxwLdCrNoOuUoypm2pKi0="
+    },
+    {
+      "source": {
+        "git": {
           "remote": "https://github.com/grafana/grafonnet-lib.git",
           "subdir": "grafonnet"
         }
@@ -41,6 +51,16 @@
       },
       "version": "7380c9c64fb973f34c3ec46265621a2b0dee0058",
       "sum": "V9vAj21qJOc2DlMPDgB1eEjSQU4A+sAA4AXuJ6bd4xc="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/grafonnet.git",
+          "subdir": "gen/grafonnet-v11.0.0"
+        }
+      },
+      "version": "7380c9c64fb973f34c3ec46265621a2b0dee0058",
+      "sum": "0BvzR0i4bS4hc2O3xDv6i9m52z7mPrjvqxtcPrGhynA="
     },
     {
       "source": {
@@ -71,6 +91,36 @@
       },
       "version": "79479da035ec06f1d0193b0a80141e224c0e8cd7",
       "sum": "0y3AFX9LQSpfWTxWKSwoLgbt0Wc9nnCwhMH2szKzHv0="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/jsonnet-libs.git",
+          "subdir": "logs-lib/"
+        }
+      },
+      "version": "79479da035ec06f1d0193b0a80141e224c0e8cd7",
+      "sum": "rgzaIMC4Gujx86mPdsVfQnzSfxzfuCg/sZPrDJBV3bU="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/jsonnet-libs.git",
+          "subdir": "logs-lib/logs"
+        }
+      },
+      "version": "79479da035ec06f1d0193b0a80141e224c0e8cd7",
+      "sum": "GkY3L75913fiYk9+Rq/R1JEaHEwkFrtvufIWhJZ6MP8="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/imusmanmalik/cert-manager-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "a5f74ad04be4ee8fc007a10a918b3c48154c7e55",
+      "sum": "i1fly+j1O7FetdsEgu8hf5cbVKiOKS5523UYLaoZCtE="
     },
     {
       "source": {
