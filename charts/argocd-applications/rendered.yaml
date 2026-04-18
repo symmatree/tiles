@@ -1480,6 +1480,7 @@ metadata:
 spec:
   project: 'placeholder'
   source:
+    # UI is a separate chart/index from postgres-operator; do not use .../charts/postgres-operator
     repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
     targetRevision: "1.15.1"
     chart: postgres-operator-ui
