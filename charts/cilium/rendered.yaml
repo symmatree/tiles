@@ -310,7 +310,7 @@ data:
   l2-announcements-renew-deadline: "7s"
   l2-announcements-retry-period: "1s"
   enable-l2-pod-announcements: "true"
-  l2-pod-announcements-interface: "enp3s0"
+  l2-pod-announcements-interface-pattern: "^enp3s0$"
   enable-pmtu-discovery: "true"
 
   packetization-layer-pmtud-mode: "blackhole"
@@ -1495,7 +1495,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "0a41cd2130eba4ba9294cddd5c466ced55da4b6ed6e3d1c1d8d681e150bf545b"
+        cilium.io/cilium-configmap-checksum: "0aa05b58a5dea2d7a68182359862353ced3fd8d7f7410cde0571a6d026b78f56"
         kubectl.kubernetes.io/default-container: cilium-agent
       labels:
         k8s-app: cilium
@@ -2196,7 +2196,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "0a41cd2130eba4ba9294cddd5c466ced55da4b6ed6e3d1c1d8d681e150bf545b"
+        cilium.io/cilium-configmap-checksum: "0aa05b58a5dea2d7a68182359862353ced3fd8d7f7410cde0571a6d026b78f56"
       labels:
         io.cilium/app: operator
         name: cilium-operator
