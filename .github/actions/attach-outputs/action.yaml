@@ -12,7 +12,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/github-script@v8
+    - uses: actions/github-script@v9
       name: Attach outputs to PR
       if: github.event_name == 'pull_request'
       with:
