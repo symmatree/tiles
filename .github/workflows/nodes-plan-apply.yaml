@@ -85,14 +85,14 @@ jobs:
           datestamp=$(date +'%Y%m%d')
           echo "TIMESTAMP=${timestamp}" | tee -a "$GITHUB_OUTPUT"
           echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
-      - uses: "hashicorp/setup-terraform@v3"
+      - uses: "hashicorp/setup-terraform@v4"
         with:
-          terraform_version: "1.13.3"
+          terraform_version: "1.14.8"
 
       - name: Load secrets
         id: load_secrets
         if: steps.charts_only.outputs.run_terraform == 'true'
-        uses: 1password/load-secrets-action@v3
+        uses: 1password/load-secrets-action@v4
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"

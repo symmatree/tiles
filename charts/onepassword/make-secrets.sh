@@ -14,14 +14,14 @@ if ! kubectl get secret onepassword-token -n onepassword; then
 fi
 
 if ! kubectl get secret op-credentials -n onepassword; then
-	# thanks to https://www.1password.community/discussions/developers/loadlocalauthv2-failed-to-credentialsdatafrombase64/84597
-	# and its pointer to https://github.com/1Password/connect-helm-charts/blob/main/charts/connect/templates/connect-credentials.yaml#L14
-	# where the plaintext is base64 encoded before being put in the secret (probably due to misunderstanding).
+	# Connect mounts this secret key as a file (OP_SESSION). Kubernetes decodes the
+	# secret once; the file must be raw JSON, not base64 of JSON. Older chart/env
+	# setups sometimes expected an extra base64 layer; connect-helm-charts 2.4.x does not.
 
 	# Read in separate assignment so we bail on errors.
-	JSON=$(echo "${onepassword_connect_credentials:?}" | base64)
-	echo "::add-mask::${JSON}"
+	CREDS="${onepassword_connect_credentials:?}"
+	echo "::add-mask::${CREDS}"
 	kubectl create secret generic -n onepassword \
 		op-credentials \
-		"--from-literal=1password-credentials.json=${JSON}"
+		"--from-literal=1password-credentials.json=${CREDS}"
 fi
