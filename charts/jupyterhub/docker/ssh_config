@@ -1,0 +1,10 @@
+Host notebook
+  HostName notebook-ssh.tiles.symmatree.com
+  User jovyan
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/id_jupyterhub
+  ForwardAgent yes
+  ForwardX11 yes
+  ForwardX11Trusted yes
+  PasswordAuthentication no
+  IdentitiesOnly  yes

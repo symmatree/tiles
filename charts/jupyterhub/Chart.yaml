@@ -1,0 +1,10 @@
+apiVersion: v2
+name: jupyterhub
+description: JupyterHub development environment with SSH access
+type: application
+version: 0.1.0
+appVersion: "4.1.6"
+dependencies:
+  - name: jupyterhub
+    version: ~4.1
+    repository: https://hub.jupyter.org/helm-chart

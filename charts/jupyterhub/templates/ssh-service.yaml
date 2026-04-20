@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ssh-service
+  namespace: "{{ .Release.Namespace }}"
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: "notebook-ssh.{{ .Values.cluster_name }}.symmatree.com"
+spec:
+  type: LoadBalancer
+  selector:
+    hub.jupyter.org/username: "{{ .Values.sshUser }}"
+  ports:
+    - name: ssh
+      port: 22
+      targetPort: 22

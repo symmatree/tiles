@@ -1,0 +1,169 @@
+---
+- name: Install GitHub CLI and Linux Homebrew
+  hosts: all
+  become: yes
+  tasks:
+    - name: Capture dpkg architecture
+      command: dpkg --print-architecture
+      register: dpkg_arch
+      changed_when: false
+    - set_fact:
+        dpkg_arch: "{{ dpkg_arch.stdout }}"
+    - name: Install initial packages
+      apt:
+        name:
+          - apt-transport-https
+          - build-essential
+          - ca-certificates
+          - curl
+          - file
+          - git
+          - lsb-release
+          # Needed for deb822_repository to work.
+          - python3-debian
+          - software-properties-common
+          - wget
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+    - name: Kubernetes repository
+      deb822_repository:
+        name: kubernetes
+        uris: https://pkgs.k8s.io/core:/stable:/v1.32/deb/
+        signed_by: https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key
+        suites:
+          - /
+        state: present
+        enabled: true
+    - name: 1Password repository
+      deb822_repository:
+        name: 1password
+        uris: https://downloads.1password.com/linux/debian/{{ dpkg_arch }}
+        signed_by: https://downloads.1password.com/linux/keys/1password.asc
+        suites:
+          - stable
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: GCloud repository
+      deb822_repository:
+        name: gcloud
+        uris: https://packages.cloud.google.com/apt
+        signed_by: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        suites:
+          - cloud-sdk
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: GitHub CLI repository
+      deb822_repository:
+        name: github-cli
+        uris: https://cli.github.com/packages
+        signed_by: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        suites:
+          - stable
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: Install software
+      apt:
+        name:
+          - 1password-cli
+          - ansible
+          - apache2-utils
+          - apt-transport-https
+          - apt-utils
+          - aspell
+          - bsdmainutils
+          - buildah
+          - ca-certificates
+          - dialog
+          - dnsutils
+          - file
+          - gh
+          - git
+          - google-cloud-cli
+          - htop
+          - jq
+          - kubectl
+          # vscode wants libasound2 but that is a virtual package.
+          - libasound2t64
+          - procps
+          - shellcheck
+          - stow
+          - sudo
+          - tmux
+          - tree
+          - xdg-utils
+          - yq
+          - zsh
+          - zsh-autosuggestions
+          - zsh-syntax-highlighting
+        state: present
+        # No cache_valid_time since we just changed the repos.
+        update_cache: yes
+    - name: Check if Homebrew is already installed
+      stat:
+        path: /home/linuxbrew/.linuxbrew/bin/brew
+      register: brew_stat
+    - name: Install Homebrew
+      become: no
+      shell: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      args:
+        creates: /home/linuxbrew/.linuxbrew/bin/brew
+      when: not brew_stat.stat.exists
+    - name: Add Homebrew to PATH for all users
+      lineinfile:
+        path: /etc/profile.d/brew.sh
+        line: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        create: yes
+        state: present
+    - name: Install golang 1.24.1
+      shell: |
+        curl -LO "https://go.dev/dl/go1.24.1.linux-{{ dpkg_arch }}.tar.gz"
+        tar -C /usr/local -xzf go1.24.1.linux-{{ dpkg_arch }}.tar.gz
+        rm go1.24.1.linux-{{ dpkg_arch }}.tar.gz
+      args:
+        creates: /usr/local/go/bin/go
+    - name: Install Homebrew packages
+      become: false
+      community.general.homebrew:
+        name:
+          - argocd
+          - helm
+          - go-jsonnet
+          - jsonnet-bundler
+          - kubectx
+          - talosctl
+          - tanka
+          - mimirtool
+          # - minio/stable/mc
+          - cilium-cli
+          - yq
+        state: present
+        # update_homebrew: true
+        # upgrade_all: true
+    - name: Check if VSCode is already installed
+      stat:
+        path: /usr/bin/code
+      register: code_stat
+    - name: Install vscode
+      when: not code_stat.stat.exists
+      block:
+        - name: Add Microsoft repository
+          shell: |
+            echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
+          changed_when: false
+        - name: Install packages
+          apt:
+            deb: https://go.microsoft.com/fwlink/?LinkID=760868
+            state: present
+    - name: Install pip modules
+      pip:
+        name:
+          - pre-commit
+        state: present

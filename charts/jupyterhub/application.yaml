@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jupyterhub
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: charts/jupyterhub
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: '{{ .Values.cluster_name }}'
+        vault_name: '{{ .Values.vault_name }}'
+        jupyterhub:
+          hub:
+            config:
+              OAuthenticator:
+                oauth_callback_url: 'https://notebook.{{ .Values.cluster_name }}.symmatree.com/hub/oauth_callback'
+          proxy:
+            service:
+              annotations:
+                external-dns.alpha.kubernetes.io/hostname: 'notebook.{{ .Values.cluster_name }}.symmatree.com'
+            https:
+              hosts:
+                - 'notebook.{{ .Values.cluster_name }}.symmatree.com'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jupyterhub
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
