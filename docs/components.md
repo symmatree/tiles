@@ -1,122 +1,192 @@
-# Component Index
+# Component index
 
-This document provides an index of all software components deployed in the tiles cluster. Each component entry includes links to its Terraform configuration (if applicable), Application manifest, README documentation, and a brief description.
+This index summarizes what the clusters run and where to read it. **Argo CD Applications** (the app-of-apps chart) registers one Argo `Application` per file under [`charts/argocd-applications/templates/`](https://github.com/symmatree/tiles/tree/main/charts/argocd-applications/templates) (`*-application.yaml`). Those files are either **inline** Helm `Application` manifests or **symlinks** into [`charts/`](https://github.com/symmatree/tiles/tree/main/charts) or [`tanka/environments/`](https://github.com/symmatree/tiles/tree/main/tanka/environments).
 
-## Infrastructure Components
+Unless noted, **Application** below is always that template path (even when the symlink resolves elsewhere) so it matches what the app-of-apps chart ships.
 
-### ArgoCD
+## Bootstrap and GitOps
+
+### Argo CD
 
 - **Terraform**: N/A (bootstrapped manually)
-- **Application**: [`charts/argocd/application.yaml`](../charts/argocd/application.yaml)
-- **README**: [`charts/argocd/README.md`](../charts/argocd/README.md)
-- **Description**: GitOps continuous delivery tool that manages the deployment of all other components in the cluster. Provides declarative application management and synchronization.
+- **Application**: [`charts/argocd-applications/templates/argocd-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/argocd-application.yaml) (symlink to [`charts/argocd/application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd/application.yaml))
+- **README**: [`charts/argocd/README.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd/README.md)
+- **Description**: GitOps controller; root of the chain.
 
-### ArgoCD Applications
+### Argo CD Applications (app-of-apps)
 
 - **Terraform**: N/A
-- **Application**: [`charts/argocd-applications/application.yaml`](../charts/argocd-applications/application.yaml)
-- **README**: [`charts/argocd-applications/README.md`](../charts/argocd-applications/README.md)
-- **Description**: Meta-application that manages the ArgoCD Application resources for all other components, propagating configuration values from Terraform outputs.
+- **Application**: [`charts/argocd-applications/application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/application.yaml)
+- **README**: [`charts/argocd-applications/README.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/README.md)
+- **Description**: Meta-chart whose templates render the per-component Argo `Application` resources and propagate values.
+
+## Cluster platform
+
+### cert-manager
+
+- **Terraform**: [`tf/modules/k8s-cluster/k8s-cert-manager.tf`](https://github.com/symmatree/tiles/blob/main/tf/modules/k8s-cluster/k8s-cert-manager.tf)
+- **Application**: [`charts/argocd-applications/templates/cert-manager-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/cert-manager-application.yaml)
+- **README**: [`charts/cert-manager/README.md`](https://github.com/symmatree/tiles/blob/main/charts/cert-manager/README.md)
+- **Description**: TLS certificates (for example Let's Encrypt via DNS01).
 
 ### Cilium
 
 - **Terraform**: N/A (bootstrapped manually)
-- **Application**: [`charts/cilium/application.yaml`](../charts/cilium/application.yaml)
-- **README**: [`charts/cilium/README.md`](../charts/cilium/README.md)
-- **Description**: Cloud-native networking and security platform providing CNI (Container Network Interface) functionality, network policies, and observability through Hubble.
+- **Application**: [`charts/argocd-applications/templates/cilium-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/cilium-application.yaml)
+- **README**: [`charts/cilium/README.md`](https://github.com/symmatree/tiles/blob/main/charts/cilium/README.md)
+- **Description**: CNI, kube-proxy replacement, ingress/gateway, network policy.
 
 ### Cilium Config
 
 - **Terraform**: N/A
-- **Application**: [`charts/cilium-config/application.yaml`](../charts/cilium-config/application.yaml)
-- **README**: [`charts/cilium-config/README.md`](../charts/cilium-config/README.md)
-- **Description**: Additional configuration for Cilium, including external IP CIDR settings and other cluster-specific networking parameters.
+- **Application**: [`charts/argocd-applications/templates/cilium-config-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/cilium-config-application.yaml)
+- **README**: [`charts/cilium-config/README.md`](https://github.com/symmatree/tiles/blob/main/charts/cilium-config/README.md)
+- **Description**: Extra Cilium settings (for example cluster-specific IPAM or L2 knobs) layered after the base chart.
+
+### external-dns
+
+- **Terraform**: [`tf/modules/k8s-cluster/external-dns.tf`](https://github.com/symmatree/tiles/blob/main/tf/modules/k8s-cluster/external-dns.tf)
+- **Application**: [`charts/argocd-applications/templates/external-dns-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/external-dns-application.yaml)
+- **README**: [`charts/external-dns/README.md`](https://github.com/symmatree/tiles/blob/main/charts/external-dns/README.md)
+- **Description**: Syncs Ingress/Service hostnames to Google Cloud DNS.
 
 ### Local Path Provisioner
 
 - **Terraform**: N/A
-- **Application**: [`charts/local-path-provisioner/application.yaml`](../charts/local-path-provisioner/application.yaml)
-- **README**: [`charts/local-path-provisioner/README.md`](../charts/local-path-provisioner/README.md)
-- **Description**: Dynamic storage provisioner that creates persistent volumes using local node storage paths, providing simple local storage for workloads that don't require shared storage.
+- **Application**: [`charts/argocd-applications/templates/local-path-provisioner-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/local-path-provisioner-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-local-path-provisioner.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-local-path-provisioner.md)
+- **Description**: Simple local `PersistentVolume` provisioning on node disks (no top-level `charts/local-path-provisioner/` chart; lives under app-of-apps only).
 
-## Security & Secrets
+### NFS CSI driver
 
-### cert-manager
-
-- **Terraform**: [`tf/modules/k8s-cluster/k8s-cert-manager.tf`](../tf/modules/k8s-cluster/k8s-cert-manager.tf)
-- **Application**: [`charts/cert-manager/application.yaml`](../charts/cert-manager/application.yaml)
-- **README**: [`charts/cert-manager/README.md`](../charts/cert-manager/README.md)
-- **Description**: Automated certificate management for Kubernetes, providing Let's Encrypt certificates via DNS01 challenges using Google Cloud DNS service accounts.
+- **Terraform**: N/A (NFS server paths for workloads are passed via Talos / cluster vars; see [`tf/nodes/cluster.tf`](https://github.com/symmatree/tiles/blob/main/tf/nodes/cluster.tf) and [`tf/modules/talos-cluster/main.tf`](https://github.com/symmatree/tiles/blob/main/tf/modules/talos-cluster/main.tf) for `cluster_nfs_path` / related inputs, not a dedicated `nfs-csi` TF file)
+- **Application**: [`charts/argocd-applications/templates/nfs-csi-driver-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/nfs-csi-driver-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-nfs-csi-driver.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-nfs-csi-driver.md)
+- **Description**: CSI driver for NFS-backed storage classes.
 
 ### OnePassword Operator
 
 - **Terraform**: N/A (bootstrapped manually)
-- **Application**: [`charts/onepassword/application.yaml`](../charts/onepassword/application.yaml)
-- **README**: [`charts/onepassword/README.md`](../charts/onepassword/README.md)
-- **Description**: Kubernetes operator that synchronizes secrets from 1Password vaults into Kubernetes secrets, enabling secure secret management without storing credentials in Git.
+- **Application**: [`charts/argocd-applications/templates/onepassword-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/onepassword-application.yaml)
+- **README**: [`charts/onepassword/README.md`](https://github.com/symmatree/tiles/blob/main/charts/onepassword/README.md)
+- **Description**: Syncs 1Password items into Kubernetes secrets.
 
-## DNS & Networking
+### static-certs
 
-### external-dns
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/static-certs-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/static-certs-application.yaml)
+- **README**: [`charts/static-certs/README.md`](https://github.com/symmatree/tiles/blob/main/charts/static-certs/README.md)
+- **Description**: Long-lived or manually managed cert material used by the cluster.
 
-- **Terraform**: [`tf/modules/k8s-cluster/external-dns.tf`](../tf/modules/k8s-cluster/external-dns.tf)
-- **Application**: [`charts/external-dns/application.yaml`](../charts/external-dns/application.yaml)
-- **README**: [`charts/external-dns/README.md`](../charts/external-dns/README.md)
-- **Description**: Automatically synchronizes Kubernetes ingress and service resources with Google Cloud DNS, managing DNS records for cluster services.
-
-### DNS Zone (Google Cloud)
-
-- **Terraform**: [`tf/modules/k8s-cluster/dns.tf`](../tf/modules/k8s-cluster/dns.tf)
-- **Application**: N/A (infrastructure resource)
-- **Description**: Google Cloud DNS managed zone for the cluster subdomain, with NS record delegation configured in Cloudflare parent zone.
-
-## Observability Stack
+## Observability stack
 
 ### Alloy
 
 - **Terraform**: N/A
-- **Application**: [`charts/alloy/application.yaml`](../charts/alloy/application.yaml)
-- **README**: [`charts/alloy/README.md`](../charts/alloy/README.md)
-- **Description**: Grafana's open-source telemetry collector that scrapes metrics and logs from cluster components and forwards them to Mimir and Loki respectively.
+- **Application**: [`charts/argocd-applications/templates/alloy-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/alloy-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-alloy.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-alloy.md)
+- **Description**: Telemetry collector forwarding to Loki/Mimir (no `charts/alloy/` directory).
 
 ### Grafana
 
 - **Terraform**: N/A
-- **Application**: [`charts/grafana/application.yaml`](../charts/grafana/application.yaml)
-- **README**: [`charts/grafana/README.md`](../charts/grafana/README.md)
-- **Description**: Visualization and analytics platform for metrics and logs, providing dashboards and alerting capabilities for the LGTM (Loki/Grafana/Tempo/Mimir) observability stack.
+- **Application**: [`charts/argocd-applications/templates/grafana-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/grafana-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-grafana.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-grafana.md)
+- **Description**: Dashboards and alerting UI (upstream Grafana Helm chart sourced in the template).
 
 ### Loki
 
-- **Terraform**: [`tf/modules/k8s-cluster/loki.tf`](../tf/modules/k8s-cluster/loki.tf)
-- **Application**: [`charts/loki/application.yaml`](../charts/loki/application.yaml)
-- **README**: [`charts/loki/README.md`](../charts/loki/README.md)
-- **Description**: Horizontally scalable log aggregation system that stores logs in Google Cloud Storage buckets with encryption, providing centralized log storage and querying.
+- **Terraform**: N/A (no `loki.tf` under [`tf/modules/k8s-cluster/`](https://github.com/symmatree/tiles/tree/main/tf/modules/k8s-cluster) in this repo snapshot)
+- **Application**: [`charts/argocd-applications/templates/loki-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/loki-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-loki.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-loki.md)
+- **Description**: Log aggregation backed by GCS settings in the Argo Application.
 
 ### Mimir
 
-- **Terraform**: [`tf/modules/k8s-cluster/mimir.tf`](../tf/modules/k8s-cluster/mimir.tf)
-- **Application**: [`charts/mimir/application.yaml`](../charts/mimir/application.yaml)
-- **README**: [`charts/mimir/README.md`](../charts/mimir/README.md)
-- **Description**: Horizontally scalable, highly available Prometheus-compatible metrics storage backend, storing metrics data in Google Cloud Storage buckets with encryption and versioning.
+- **Terraform**: N/A (no `mimir.tf` under [`tf/modules/k8s-cluster/`](https://github.com/symmatree/tiles/tree/main/tf/modules/k8s-cluster); [`charts/mimir/`](https://github.com/symmatree/tiles/tree/main/charts/mimir) holds webhook assets only, not an Argo `application.yaml`)
+- **Application**: [`charts/argocd-applications/templates/mimir-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/mimir-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-mimir.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-mimir.md)
+- **Description**: Prometheus-compatible metrics backend (GCS-backed in template).
 
-## Application Services
+## Grafana / Prometheus mixins (Tanka)
+
+Thin Argo apps that render Jsonnet mixins (dashboards/rules), not the primary workload charts.
+
+### Argo CD mixin
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/argocd-mixin-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/argocd-mixin-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-argocd-mixin.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-argocd-mixin.md)
+- **Description**: Monitoring mixin for Argo CD.
+
+### Cilium mixin
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/cilium-mixin-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/cilium-mixin-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-cilium-mixin.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-cilium-mixin.md)
+- **Description**: Monitoring mixin for Cilium.
+
+### CoreDNS mixin
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/coredns-mixin-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/coredns-mixin-application.yaml)
+- **README**: N/A in-repo stub next to app (see [`tanka/environments/coredns-mixin/main.jsonnet`](https://github.com/symmatree/tiles/blob/main/tanka/environments/coredns-mixin/main.jsonnet))
+- **Description**: Grafana dashboards for CoreDNS metrics (tanka env `coredns-mixin`).
+
+### Kubernetes mixin
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/kubernetes-mixin-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/kubernetes-mixin-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-kubernetes-mixin.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-kubernetes-mixin.md)
+- **Description**: Cluster-wide Kubernetes monitoring mixin.
+
+### Node exporter mixin
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/node-exporter-mixin-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/node-exporter-mixin-application.yaml)
+- **README**: [`charts/argocd-applications/templates/README-node-exporter-mixin.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-node-exporter-mixin.md)
+- **Description**: Node-exporter monitoring mixin.
+
+## Data and application workloads
+
+### Postgres operator
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/postgres-operator-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/postgres-operator-application.yaml)
+- **README**: N/A (no sibling README in templates; use upstream Zalando docs from comments in the Application if needed)
+- **Description**: Zalando Postgres operator.
+
+### Postgres operator UI
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/postgres-operator-ui-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/postgres-operator-ui-application.yaml)
+- **README**: N/A
+- **Description**: UI for the Postgres operator.
+
+### ODM
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/odm-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/odm-application.yaml)
+- **README**: [`tanka/environments/odm/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/odm/README.md)
+- **Description**: ODM workload (tanka-rendered).
 
 ### Apprise
 
-- **Terraform**: [`tf/modules/k8s-cluster/apprise.tf`](../tf/modules/k8s-cluster/apprise.tf)
-- **Application**: [`tanka/environments/apprise/application.yaml`](../tanka/environments/apprise/application.yaml)
-- **README**: [`tanka/environments/apprise/README.md`](../tanka/environments/apprise/README.md)
-- **Description**: Centralized notification service that provides a unified API for sending alerts and notifications to multiple channels (email, Slack, Discord, etc.) from any system component.
+- **Terraform**: [`tf/modules/k8s-cluster/apprise.tf`](https://github.com/symmatree/tiles/blob/main/tf/modules/k8s-cluster/apprise.tf)
+- **Application**: [`charts/argocd-applications/templates/apprise-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/apprise-application.yaml)
+- **README**: [`tanka/environments/apprise/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/apprise/README.md)
+- **Description**: Notification proxy (tanka env `apprise`).
 
-## Component Documentation
+## DNS (Google Cloud)
 
-Each component should have a README.md file located next to its application.yaml file (or in the same directory structure) that provides detailed documentation about:
+### DNS zone
 
-- Component purpose and architecture
-- Configuration options
-- Dependencies and prerequisites
-- Troubleshooting guides
-- Maintenance procedures
+- **Terraform**: [`tf/modules/k8s-cluster/dns.tf`](https://github.com/symmatree/tiles/blob/main/tf/modules/k8s-cluster/dns.tf)
+- **Application**: N/A (GCP managed zone, not an Argo Application)
+- **Description**: Delegated DNS for the cluster zone (paired with external-dns above).
 
-The README files are linked from this index and referenced in comments within the relevant Terraform files.
+## How READMEs are laid out
+
+- **Symlinked** `*-application.yaml` entries usually have a **component README** under [`charts/<name>/README.md`](https://github.com/symmatree/tiles/tree/main/charts) when that chart directory exists.
+- **Inline** app-of-apps templates often ship [`charts/argocd-applications/templates/README-<component>.md`](https://github.com/symmatree/tiles/tree/main/charts/argocd-applications/templates) next to the Application.
+- **Tanka** workloads document under [`tanka/environments/<env>/README.md`](https://github.com/symmatree/tiles/tree/main/tanka/environments).
