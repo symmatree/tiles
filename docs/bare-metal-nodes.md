@@ -99,7 +99,7 @@ Replace placeholders from Terraform outputs or plan. Generic Talos bare-metal co
 - **Metal ISO:** `https://factory.talos.dev/image/<METAL_AMD_SCHEMATIC>/v<TALOS_VERSION>/metal-amd64.iso`
 - **Installer image (machine config, bare metal):** `factory.talos.dev/metal-installer/<METAL_AMD_SCHEMATIC>:v<TALOS_VERSION>`
 
-`TALOS_VERSION` in URLs uses the `v` prefix (e.g. `v1.13.0-beta.1`); `terraform.tfvars` uses the same string without `v` (e.g. `1.13.0-beta.1`).
+`TALOS_VERSION` in URLs uses the `v` prefix (e.g. `v1.13.0`); `terraform.tfvars` uses the same string without `v` (e.g. `1.13.0`).
 
 ## Full-cluster rebuilds and VMs
 
