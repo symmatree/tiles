@@ -98,7 +98,6 @@ resource "github_repository_ruleset" "tiles-tags" {
 
   rules {
     deletion = true
-    update   = true
   }
 }
 
@@ -191,7 +190,6 @@ resource "github_repository_ruleset" "polisher-tags" {
 
   rules {
     deletion = true
-    update   = true
   }
 }
 
@@ -201,4 +199,47 @@ module "secret_onepassword_sa_token_polisher" {
   secret_name = "ONEPASSWORD_SA_TOKEN"
   # We share the 1password vault and service account
   plaintext_value = var.onepassword_sa_token
+}
+
+resource "github_repository" "fables" {
+  name                   = "fables"
+  description            = "Public technical notes: GNSS, mapping, robotics, hardware"
+  visibility             = "public"
+  has_issues             = true
+  has_wiki               = false
+  has_projects           = false
+  allow_merge_commit     = false
+  allow_auto_merge       = true
+  allow_rebase_merge     = false
+  allow_squash_merge     = true
+  delete_branch_on_merge = true
+  vulnerability_alerts   = true
+  allow_update_branch    = true
+  security_and_analysis {
+    secret_scanning {
+      status = "enabled"
+    }
+    secret_scanning_push_protection {
+      status = "enabled"
+    }
+  }
+}
+
+resource "github_repository_ruleset" "fables-main" {
+  enforcement = "active"
+  name        = "fables-main"
+  repository  = github_repository.fables.name
+  target      = "branch"
+  conditions {
+    ref_name {
+      exclude = []
+      include = ["~DEFAULT_BRANCH"]
+    }
+  }
+  rules {
+    creation                = true
+    deletion                = true
+    non_fast_forward        = true
+    required_linear_history = true
+  }
 }

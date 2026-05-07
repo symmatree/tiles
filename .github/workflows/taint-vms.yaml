@@ -31,7 +31,7 @@ jobs:
 
       - name: Load secrets
         id: load_secrets
-        uses: 1password/load-secrets-action@v3
+        uses: 1password/load-secrets-action@v4
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
@@ -44,9 +44,9 @@ jobs:
           workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
 
-      - uses: "hashicorp/setup-terraform@v3"
+      - uses: "hashicorp/setup-terraform@v4"
         with:
-          terraform_version: "1.13.3"
+          terraform_version: "1.14.8"
 
       - uses: ./.github/actions/wg-quick
         id: wireguard

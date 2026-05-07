@@ -138,3 +138,13 @@ variable "proxmox_root_password" {
   type        = string
   sensitive   = true
 }
+
+variable "alloy_vm_base_id" {
+  description = "Base VM ID for Alloy containers"
+  type        = number
+}
+
+variable "deploy_proxmox_alloy" {
+  description = "Whether to deploy Alloy LXC containers on Proxmox nodes (one per node). When true, containers collect host metrics/logs and forward to OTLP. Set per environment (e.g. true for test, false for prod) to avoid duplicate reporting until prod-only deployment is desired."
+  type        = bool
+}
