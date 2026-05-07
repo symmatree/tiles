@@ -1,4 +1,6 @@
 name: "argocd-pr-diff"
+# Broken test path: pull_request is commented out so it does not run in CI. Use
+# workflow_dispatch from the Actions tab to debug and fix it manually.
 on:
   # pull_request:
   #   paths:
@@ -22,8 +24,8 @@ concurrency:
 jobs:
   argocd-diff:
     runs-on: "ubuntu-latest"
-    # Only run if not a draft PR
-    if: github.event.pull_request.draft == false
+    # workflow_dispatch has no pull_request; keep draft guard for when pull_request is re-enabled.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: "read"
       id-token: "write"
