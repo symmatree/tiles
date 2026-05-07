@@ -71,7 +71,7 @@ jobs:
 
       - name: Load secrets
         id: load_secrets
-        uses: 1password/load-secrets-action@v3
+        uses: 1password/load-secrets-action@v4
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
@@ -114,7 +114,7 @@ jobs:
           echo "KUBECONFIG=${kubeconfig_path}" >> "$GITHUB_ENV"
 
       - name: Load cluster config from 1Password
-        uses: 1password/load-secrets-action@v3
+        uses: 1password/load-secrets-action@v4
         with:
           export-env: true
         env:
