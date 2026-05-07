@@ -8,8 +8,8 @@
           "subdir": ""
         }
       },
-      "version": "eabba531863a1e7cdcb389f7a946a70a098149d4",
-      "sum": "mWAUVDvpJn9Ghk6Hymz4BayzU8w6xKQj4vnUl7n35qU="
+      "version": "0307c781c146c96ee695626b6cb464c6536a8e9b",
+      "sum": "bNLBmaVZu0nTqr99jCcLfgiKQSJJWRHntxqyc0/Fjpk="
     },
     {
       "source": {
@@ -18,9 +18,29 @@
           "subdir": ""
         }
       },
-      "version": "2d7880588e2b94f547c20ba270594dd7ecdc2ed9",
-      "sum": "/n6K29u+5LfCLOiSOD8uehfMrd4AQoZCaqYYg3oV6xU=",
+      "version": "58bd7fef6edbd47a03b702c8db43a72f292bda59",
+      "sum": "w17ZTazHzszYuUy/Er16AekR2e9rfHTyO5UsRb7IMH0=",
       "name": "mm-utils"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/alloy.git",
+          "subdir": "operations/alloy-mixin"
+        }
+      },
+      "version": "18b205cf5ef3eed1fb5c513362a7ec347c0e6c67",
+      "sum": "/FTpnsFO9AYYYLWkObOUnJFxwLdCrNoOuUoypm2pKi0="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/grafonnet-lib.git",
+          "subdir": "grafonnet"
+        }
+      },
+      "version": "a1d61cce1da59c71409b99b5c7568511fec661ea",
+      "sum": "342u++/7rViR/zj2jeJOjshzglkZ1SY+hFNuyCBFMdc="
     },
     {
       "source": {
@@ -31,6 +51,16 @@
       },
       "version": "7380c9c64fb973f34c3ec46265621a2b0dee0058",
       "sum": "V9vAj21qJOc2DlMPDgB1eEjSQU4A+sAA4AXuJ6bd4xc="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/grafonnet.git",
+          "subdir": "gen/grafonnet-v11.0.0"
+        }
+      },
+      "version": "7380c9c64fb973f34c3ec46265621a2b0dee0058",
+      "sum": "0BvzR0i4bS4hc2O3xDv6i9m52z7mPrjvqxtcPrGhynA="
     },
     {
       "source": {
@@ -49,7 +79,7 @@
           "subdir": "cilium-enterprise-mixin"
         }
       },
-      "version": "5299b4cd62c6c039ae426a1e5225d0d3666f46c9",
+      "version": "79479da035ec06f1d0193b0a80141e224c0e8cd7",
       "sum": "ysCe2gbjTar0ZF7G0koRTjeUvpasQ9heovpD4AeO1pw="
     },
     {
@@ -59,8 +89,38 @@
           "subdir": "ksonnet-util"
         }
       },
-      "version": "5299b4cd62c6c039ae426a1e5225d0d3666f46c9",
+      "version": "79479da035ec06f1d0193b0a80141e224c0e8cd7",
       "sum": "0y3AFX9LQSpfWTxWKSwoLgbt0Wc9nnCwhMH2szKzHv0="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/jsonnet-libs.git",
+          "subdir": "logs-lib/"
+        }
+      },
+      "version": "79479da035ec06f1d0193b0a80141e224c0e8cd7",
+      "sum": "rgzaIMC4Gujx86mPdsVfQnzSfxzfuCg/sZPrDJBV3bU="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/grafana/jsonnet-libs.git",
+          "subdir": "logs-lib/logs"
+        }
+      },
+      "version": "79479da035ec06f1d0193b0a80141e224c0e8cd7",
+      "sum": "GkY3L75913fiYk9+Rq/R1JEaHEwkFrtvufIWhJZ6MP8="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/imusmanmalik/cert-manager-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "a5f74ad04be4ee8fc007a10a918b3c48154c7e55",
+      "sum": "i1fly+j1O7FetdsEgu8hf5cbVKiOKS5523UYLaoZCtE="
     },
     {
       "source": {
@@ -69,7 +129,7 @@
           "subdir": "doc-util"
         }
       },
-      "version": "6ac6c69685b8c29c54515448eaca583da2d88150",
+      "version": "bf6f08ae02a51c48bdcec4629b1c1a5a62c6f803",
       "sum": "BrAL/k23jq+xy9oA7TWIhUx07dsA/QLm3g7ktCwe//U="
     },
     {
@@ -79,7 +139,7 @@
           "subdir": "1.32"
         }
       },
-      "version": "291653b2c17d03e855e7e00ce0e4ec25502b2ce2",
+      "version": "55380470fb7979e6ce0c4316cb9c27a266caf298",
       "sum": "L70C3SiMFOsNCuIGOxRKAzd6wUBuabAoEGrgvCyeCBc="
     },
     {
@@ -89,7 +149,7 @@
           "subdir": "0.77"
         }
       },
-      "version": "e74ac47c28bc29c2d7e7bc15286bc2dc99c2d7f6",
+      "version": "91d2d9355cbef02035d84e54ac6bebcf9d29afa7",
       "sum": "pjNJAI6ch15p0EwHy50FKncuXVcghJwrIKD578Ho8NU="
     },
     {
@@ -109,8 +169,18 @@
           "subdir": ""
         }
       },
-      "version": "93e5db5a9d7fbd0a1918102074d6acc4a6a0c7ee",
-      "sum": "C4kr8VAazx1leGrYyE4zRC0Gpu5nOuTNAgFIsRB44MQ="
+      "version": "a394539d84c8cda5f27ae6bdea81094feb5bc84e",
+      "sum": "sgFlECSBDbVtszbpByJ/Him2wht5vQC81WOuaR4xOjg="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/povilasv/coredns-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "eb356cfbdcb901fa1a3c3d008faa2a5773a917a1",
+      "sum": "comlHN6rZrsUBBvduaeLh8HKlWNQhZbeecpY8wrSdIY="
     },
     {
       "source": {

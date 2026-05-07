@@ -16,7 +16,7 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 - **[config-propagation.md](config-propagation.md)**: Describes how configuration values flow from Terraform through 1Password to the bootstrap process and into individual Helm charts via the ArgoCD app-of-apps pattern, handling both dynamically created and static environment-specific values.
 
-- **[bare-metal-nodes.md](bare-metal-nodes.md)**: Process for adding bare-metal nodes to the Talos cluster, including computing different installation manifests, removing QEMU guest agent dependencies, and configuring physical hardware nodes as single worker nodes.
+- **[bare-metal-nodes.md](bare-metal-nodes.md)**: Bare-metal AMD Talos workers in Terraform (metal schematic, UniFi, add/remove/reinstall, USB ISO). Rising-specific BIOS and MAC/IP live in the facts repo (`fables/Tiles/Rising.md`).
 
 - **[talos.md](talos.md)**: Talos Linux installation and upgrade procedures, including the specific image schematic with QEMU guest agent extension, ISO download links, and installation image references for both initial setup and upgrades.
 

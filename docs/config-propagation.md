@@ -35,8 +35,8 @@ The architecture uses 1Password as the interface between Terraform (infrastructu
 │  - GitHub Actions workflow          │
 │    • Loads from 1Password           │
 │    • Exports as environment vars    │
-│  - bootstrap.sh                     │
-│    • Validates and converts to Helm │
+│  - Per-chart bootstrap scripts      │
+│    • See bootstrap-cluster workflow │
 │  - argocd-applications Chart        │
 │    • valuesObject (union of values) │
 │    • templates/ (symlinked)         │
@@ -74,39 +74,29 @@ Terraform collects cluster configuration values from its variables and outputs, 
 - **Easy review**: The current configuration can be easily reviewed in 1Password's UI
 - **Clear interface**: 1Password serves as the complete interface between Terraform (infrastructure) and Kubernetes (applications), providing better isolation and separation of concerns
 
-### 2. GitHub Actions Workflow
+### 2. GitHub Actions Workflow (`bootstrap-cluster`)
 
 The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) performs the following steps:
 
 1. **Loads sensitive secrets from 1Password** - Retrieves kubeconfig, GCP service account credentials, and VPN config
-2. **Loads cluster config from 1Password** - Uses the `1password/load-secrets-action` with `export-env: true` to retrieve all fields from the `{cluster_name}-misc-config` item's `config` section (which was previously written by Terraform) and export them directly as environment variables:
-   - Values from misc-config (targetRevision, pod_cidr, cluster_name, external_ip_cidr, vault_name)
-   - `project_id` (from GitHub secret `PROJECT_ID` - required for Terraform to run, so cannot be in misc-config)
-3. **Calls bootstrap.sh** - The script reads environment variables, validates they are set, and converts them to Helm `--set` arguments
+2. **Loads cluster config from 1Password** - Uses the `1password/load-secrets-action` with `export-env: true` to retrieve fields from the `{cluster_name}-misc-config` item's `config` section (written by Terraform) plus operator tokens, and export them as environment variables (for example `targetRevision`, `pod_cidr`, `cluster_name`, `external_ip_cidr`, `vault_name`, `project_id`, and NFS-related fields)
+3. **Runs optional bootstrap steps** - Each step is gated by a `workflow_dispatch` boolean (see the workflow file for the exact list). When enabled, the job runs, in order:
+   - **`crds`** - `./charts/install-crds.sh` applies cluster-wide CRD YAML (Argo CD, cert-manager, Prometheus Operator, Gateway API, 1Password Item CRD, and others). This is **required on first bootstrap** for this repo because the Cilium and Argo CD bootstrap scripts use `helm template ... --skip-crds`, so chart installs do not create those CRDs themselves.
+   - **`cilium`** - `./charts/cilium/bootstrap.sh`
+   - **`argocd`** - `./charts/argocd/bootstrap.sh`
+   - **`onepassword`** - `./charts/onepassword/make-secrets.sh` creates the `onepassword` namespace (if needed) and the operator/connect secrets from 1Password-loaded env vars. **Required on first bootstrap** (or after secret loss) so the 1Password operator can run before workloads rely on `OnePasswordItem` CRs.
+   - **`argocd_applications`** - `./charts/argocd-applications/install-application.sh` runs `envsubst` on `application.yaml.tmpl` and `kubectl apply`s the root Application
 
-### 3. Bootstrap Script
+**Defaults:** Only **`argocd_applications`** defaults to **true**; **`crds`**, **`cilium`**, **`argocd`**, and **`onepassword`** default to **false**. A cold or recreated cluster should enable the full set above so nodes get a CNI, Argo CD exists before Application CRs are applied, CRDs are present, and operator secrets exist. Re-running `install-crds.sh` or `make-secrets.sh` is mostly idempotent; that does not mean skipping **`crds`** or **`onepassword`** on first bring-up after a recreate.
 
-The `bootstrap.sh` script (`charts/bootstrap.sh`) defines a `required_vars` array containing all configuration values that must be provided:
+### 3. How values reach Helm during bootstrap
 
-```bash
-required_vars=(
-	"targetRevision"
-	"pod_cidr"
-	"cluster_name"
-	"external_ip_cidr"
-	"vault_name"
-	"project_id"
-)
-```
+There is **no** single `charts/bootstrap.sh`. Scripts invoked by the workflow use environment variables exported from 1Password:
 
-For each variable, the script:
-1. Validates it is set (exits with error if missing)
-2. Adds it to `helm_args` as `--set var=value`
+- **`install-application.sh`** - Substitutes the same variables into `charts/argocd-applications/application.yaml.tmpl` via `envsubst`, then applies the manifest.
+- **`charts/cilium/bootstrap.sh`** and **`charts/argocd/bootstrap.sh`** - Source `scripts/helm-common.bash`, which builds `helm template` arguments (including `--set` for each variable name discovered from `application.yaml.tmpl`) from the current environment, then each script adds chart-specific `--set` flags.
 
-The script then installs:
-1. **Cilium** - CNI with values passed via `--set` arguments
-2. **ArgoCD** - GitOps controller with cluster-specific domain configuration
-3. **argocd-applications** - The app-of-apps that manages all other applications
+Individual scripts may validate critical variables (for example Cilium requires `pod_cidr` and `cluster_name`).
 
 ### 4. ArgoCD App-of-Apps Pattern
 
@@ -151,7 +141,7 @@ valuesObject:
   vault_name: "{{ .Values.vault_name }}"
 ```
 
-When ArgoCD renders these templates, the `{{ .Values.* }}` references resolve to values from the `argocd-applications` chart's `valuesObject`, which were originally passed from Terraform via `bootstrap.sh`.
+When ArgoCD renders these templates, the `{{ .Values.* }}` references resolve to values from the `argocd-applications` chart's `valuesObject`, which were originally passed from Terraform via 1Password and the **`bootstrap-cluster`** workflow environment.
 
 #### Template Expansion Pattern
 
@@ -180,17 +170,16 @@ This works because ArgoCD renders the Application resource (including the `value
 
 1. **Terraform** → Collects configuration values from variables and outputs, then stores them in 1Password `{cluster_name}-misc-config` item (config section)
 2. **1Password** → Serves as the interface between Terraform and Kubernetes, storing the current configuration state
-3. **GitHub Actions Workflow** → Retrieves misc-config fields from 1Password using `1password/load-secrets-action` with `export-env: true`, which automatically exports them as environment variables
-4. **bootstrap.sh** → Reads environment variables, validates they are set, and converts to Helm `--set` arguments
-5. **Helm install** → Passes values to `argocd-applications` chart via `--set` flags
-6. **argocd-applications/values.yaml** → Contains placeholder values used for:
+3. **GitHub Actions Workflow** (`bootstrap-cluster`) → Retrieves misc-config fields from 1Password using `1password/load-secrets-action` with `export-env: true`, which automatically exports them as environment variables
+4. **Bootstrap scripts** (when their workflow inputs are enabled) → `install-application.sh` substitutes those variables into `application.yaml.tmpl`; Cilium and Argo CD bootstrap scripts build Helm `--set` flags from the environment via `scripts/helm-common.bash`
+5. **argocd-applications/values.yaml** → Contains placeholder values used for:
    - **Helm requirement**: Helm 4.0.0+ requires at least an empty `values.yaml` file
    - **Documentation**: Documents the expected value structure
    - **Rendered YAML generation**: Used by `build.sh` to generate `rendered.yaml` files via `helm template` for debugging and PR review
    - **Template validation**: Helps confirm values are used properly in templates, especially for complex Helm logic
-7. **argocd-applications/application.yaml** → `valuesObject` block receives actual values from Helm `--set` arguments
-8. **Template files** → Reference `{{ .Values.* }}` which resolve to parent chart's values
-9. **Individual charts** → Receive values via their Application's `valuesObject` blocks
+6. **argocd-applications** Application manifest → `valuesObject` receives values substituted from the environment at apply time (root Application), then Argo CD propagates them when rendering child Applications
+7. **Template files** → Reference `{{ .Values.* }}` which resolve to parent chart's values
+8. **Individual charts** → Receive values via their Application's `valuesObject` blocks
 
 ## Benefits
 
@@ -198,9 +187,10 @@ This works because ArgoCD renders the Application resource (including the `value
 2. **Automatic Propagation** - Values automatically flow to individual charts through templated `valuesObject` blocks
 3. **Type Safety** - Helm validates that all referenced values exist
 4. **Maintainability** - Adding a new value requires:
-   - Adding it to `required_vars` in `bootstrap.sh`
+   - Exporting it from the **`bootstrap-cluster`** workflow's "Load cluster config from 1Password" step (and ensuring Terraform writes it to misc-config if it comes from infrastructure)
+   - Adding it to `charts/argocd-applications/application.yaml.tmpl` if it should be substituted into the root Application (so `envsubst` and `helm-common` see it)
    - Adding it to `argocd-applications/values.yaml` (with placeholder)
-   - Adding it to `argocd-applications/application.yaml` `valuesObject`
+   - Adding it to `argocd-applications/application.yaml` `valuesObject` as needed for chart propagation
    - Using it in individual chart templates as needed
 5. **Separation of Concerns** - Terraform manages infrastructure values, Helm manages application deployment
 6. **Debugging & Review** - `values.yaml` files enable generation of `rendered.yaml` files via `helm template`, making it easier to:
@@ -225,7 +215,7 @@ To add a new configuration value that needs to propagate to charts:
        new_value: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/new_value"
    ```
    The `export-env: true` flag automatically exports all values in the `env` block as environment variables.
-3. **Update `bootstrap.sh`** - Add the variable name to `required_vars` array
+3. **Update `charts/argocd-applications/application.yaml.tmpl`** - Add `${varName}` (or the pattern you use) if the value must appear in the envsubst-templated root Application; ensure the workflow exports `varName` in the load-secrets step
 4. **Update `argocd-applications/values.yaml`** - Add placeholder value (used for `rendered.yaml` generation and documentation)
 5. **Update `argocd-applications/application.yaml`** - Add to `valuesObject` block: `varName: "{{ .Values.varName }}"`
 6. **Update individual chart templates** - Reference the value in their `valuesObject` blocks as needed
@@ -262,13 +252,7 @@ Suppose we want to add a `region` value that needs to be passed to the `cert-man
    ```
    The `export-env: true` flag automatically exports all values in the `env` block as environment variables, so no separate export step is needed.
 
-3. **bootstrap.sh**:
-   ```bash
-   required_vars=(
-       # ... existing vars ...
-       "region"
-   )
-   ```
+3. **`charts/argocd-applications/application.yaml.tmpl`** (if `region` must flow through envsubst) and the workflow `env` block above so `region` is exported
 
 4. **argocd-applications/values.yaml**:
    ```yaml
@@ -291,7 +275,7 @@ Suppose we want to add a `region` value that needs to be passed to the `cert-man
        region: "{{ .Values.region }}"
    ```
 
-The value will now flow from Terraform (collects and writes) → 1Password (stores) → GitHub Actions (retrieves) → bootstrap.sh → argocd-applications → cert-manager chart.
+The value will now flow from Terraform (collects and writes) → 1Password (stores) → GitHub Actions (retrieves) → bootstrap scripts / Argo CD → argocd-applications → cert-manager chart.
 
 ## Rendered YAML Generation
 
@@ -332,7 +316,7 @@ The configuration mechanism handles three types of values differently:
 
 **Source**: Terraform variables and outputs
 **Storage**: 1Password `{cluster_name}-misc-config` item (config section)
-**Propagation**: Via bootstrap.sh → argocd-applications → individual charts
+**Propagation**: Via `bootstrap-cluster` workflow (environment variables) → argocd-applications → individual charts
 **Examples**: `cluster_name`, `pod_cidr`, `external_ip_cidr`, `targetRevision`
 
 These values flow through the standard propagation mechanism described above.
@@ -365,7 +349,7 @@ This approach:
 
 **Source**: Environment configuration (not from Terraform)
 **Storage**: GitHub secrets or other external sources
-**Propagation**: Via bootstrap.sh → argocd-applications
+**Propagation**: Via `bootstrap-cluster` workflow (environment variables) → argocd-applications
 **Examples**: `project_id` (GitHub secret - required for Terraform to run, so cannot be in misc-config)
 
 Note: `vault_name` is now stored in misc-config and managed by Terraform, so it flows through the standard propagation mechanism. Values that are required to run Terraform (like `project_id` for GCP authentication) must remain external to avoid circular dependencies.
@@ -463,9 +447,9 @@ These values must remain in external sources (GitHub secrets, environment variab
 
 ### Why Environment Variables?
 
-- **Simplicity**: `bootstrap.sh` reads from environment, no need for a separate config file
-- **Standard Practice**: Common pattern for passing config to scripts
-- **Validation**: `bootstrap.sh` validates all required variables are set before proceeding
+- **Simplicity**: The workflow exports configuration from 1Password into the job environment; bootstrap scripts read those variables directly, with no separate config file checked into git
+- **Standard Practice**: Common pattern for passing config to CI jobs
+- **Validation**: Individual bootstrap scripts validate what they need (for example Cilium checks `pod_cidr`); missing workflow `env` entries surface as empty substitutions or script errors
 
 ### Why project_id Stays External
 

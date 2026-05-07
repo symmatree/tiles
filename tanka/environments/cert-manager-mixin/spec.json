@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/cert-manager-mixin"
+  },
+  "spec": {
+    "namespace": "cert-manager",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}

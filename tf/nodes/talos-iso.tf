@@ -63,7 +63,7 @@ locals {
 # Inlined from talos-node module - original structure was:
 #   module called once per node, resource inside iterated over talos_configs
 #   With workspaces, we only have one config, so this creates one resource per node
-resource "proxmox_virtual_environment_download_file" "talos_iso" {
+resource "proxmox_download_file" "talos_iso" {
   for_each = toset(data.proxmox_virtual_environment_nodes.nodes.names)
 
   content_type = "iso"
@@ -75,10 +75,15 @@ resource "proxmox_virtual_environment_download_file" "talos_iso" {
   overwrite = true
 }
 
+moved {
+  from = proxmox_virtual_environment_download_file.talos_iso
+  to   = proxmox_download_file.talos_iso
+}
+
 locals {
   # Map of Proxmox node names to ISO IDs (required by talos-cluster module)
   nodes_to_iso_ids = {
     for node_name in data.proxmox_virtual_environment_nodes.nodes.names : node_name =>
-    proxmox_virtual_environment_download_file.talos_iso[node_name].id
+    proxmox_download_file.talos_iso[node_name].id
   }
 }

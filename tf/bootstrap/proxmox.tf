@@ -33,10 +33,17 @@ resource "proxmox_virtual_environment_user" "tiles_tf" {
   password        = random_password.proxmox_tiles_tf_password.result
 }
 
-resource "proxmox_virtual_environment_user_token" "user_token" {
+resource "proxmox_user_token" "user_token" {
   comment               = "Managed by Terraform"
   expiration_date       = "2033-01-01T22:00:00Z"
   token_name            = "tiles_tf_token"
   user_id               = proxmox_virtual_environment_user.tiles_tf.user_id
   privileges_separation = false
+}
+
+# Adopt existing state from deprecated proxmox_virtual_environment_user_token (core
+# refuses `terraform state mv` across types; Terraform 1.8+ cross-type moved).
+moved {
+  from = proxmox_virtual_environment_user_token.user_token
+  to   = proxmox_user_token.user_token
 }

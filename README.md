@@ -1,6 +1,11 @@
 # tiles
 Helm, Kubernetes, Terraform kinds of things
 
+## Documentation submodule (`fables/`)
+
+This repo includes a `fables/` git submodule which contains the published documentation/knowledge base pages (including cluster and node docs, software notes, etc.).
+If the documentation changes upstream, you may need to update the `fables/` submodule pointer occasionally to stay aligned with the repo state.
+
 ## Network ranges
 
 * Router claims 10.0.0.0/16.

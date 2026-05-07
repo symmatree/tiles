@@ -74,9 +74,10 @@ just my personal attempt at it.)
 This repo manages three-to-four chunks of config:
 
 * `tf/bootstrap` contains Terraform that needs to be run with elevated privileges.
-  It mostly exists to create and grant privileges to service accounts, to set up up the Github
-  repo, and similar meta-tasks. The goal is to minimize the size of this bundle while
+  It mostly exists to create and grant privileges to service accounts, to set up the Github
+  repos (tiles, polisher, fables), and similar meta-tasks. The goal is to minimize the size of this bundle while
   providing close to the minimum necessary set of privileges to the payload bundle.
+  The **fables** repo is content-only (markdown and the like); main allows direct push (no PR requirement) so it can be edited from the web UI. See `tf/bootstrap/github.tf`.
 * `tf/nodes` contains Terraform configuration for provisioning two Talos Kubernetes clusters on
   an externally-created Proxmox cluster. `tiles-test` is a single worker and VM on one machine, to
   provide a testbed for both Terraform and Kubernetes config before deploying it to the "real" system.
@@ -121,10 +122,10 @@ own logs and metrics" or "provide DNS for the services it provides", rather the 
 From a cold start, with a proxmox cluster,
 
 * Push to main, or run `nodes-plan-apply` on `tags/test` with a target of `test`,
-  to trigger a deployment of the`tiles-test` cluster
-* Run `bootstrap-cluster` with a target of `tiles-test` to install CRDs and initial versions of argocd, cilium and onepassword.
+  to trigger a deployment of the `tiles-test` cluster
+* Run **`bootstrap-cluster`** for **`tiles-test`** (inputs and script order: [Configuration propagation](config-propagation.md#bootstrap-process)).
 
-From there, ArgoCD will replace itself, cilium and 1password with managed versions (mostly just adding an annotation),
+From there, Argo CD replaces itself, Cilium, and 1Password with managed versions (mostly just adding an annotation),
 as well as installing the rest of the helper and payload components.
 
 ## Intended Concept of Operations: Cluster Maintenance and Deployment

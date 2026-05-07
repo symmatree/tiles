@@ -4,6 +4,7 @@ Terraform configuration for managing cluster nodes, including VMs, bare metal no
 
 ## Prerequisites
 
+* Terraform **1.8+** (`required_version` in `versions.tf`; cross-type `moved` for Proxmox refactors)
 * 1Password vault with required secrets (see `docs/secrets.md`)
 * GCP authentication configured (both direct and application-default)
 * Access to Proxmox, UniFi, Synology, and Cloudflare APIs
