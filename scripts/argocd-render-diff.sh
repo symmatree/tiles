@@ -27,7 +27,7 @@ echo "::group::Install ArgoCD CLI"
 # Install argocd CLI if not already installed
 if ! command -v argocd &>/dev/null; then
 	echo "Installing argocd CLI..."
-	ARGOCD_VERSION="v2.13.2"
+	ARGOCD_VERSION="v3.4.1"
 	curl -sSL -o /tmp/argocd "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
 	chmod +x /tmp/argocd
 	sudo mv /tmp/argocd /usr/local/bin/argocd
@@ -63,7 +63,7 @@ helm_template_args=()
 set_flags=()
 
 # Source the helper script to set up helm_template_args and set_flags
-# shellcheck source=scripts/helm-common.bash
+# shellcheck disable=SC1091
 source "${REPO_ROOT}/scripts/helm-common.bash"
 
 # Render the chart
