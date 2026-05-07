@@ -12,6 +12,8 @@ export ALLOY_OPERATOR_VERSION="alloy-operator-0.3.14"
 # any real snapshot impl if I ever install one.
 export EXTERNAL_SNAPSHOTTER_VERSION="release-6.0"
 export POSTGRES_OPERATOR_VERSION="v1.15.1"
+# Match rollout-operator Helm chart appVersion when bumping (grafana/helm-charts charts/rollout-operator).
+export ROLLOUT_OPERATOR_VERSION="v0.36.1"
 
 set -x
 kubectl apply --server-side -f "https://github.com/grafana/alloy-operator/releases/download/${ALLOY_OPERATOR_VERSION}/collectors.grafana.com_alloy.yaml"
@@ -34,9 +36,9 @@ kubectl apply --server-side -f "https://raw.githubusercontent.com/argoproj/argo-
 kubectl apply --server-side -f "https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/${ARGOCD_VERSION}/manifests/crds/appproject-crd.yaml"
 # onepassword-operator
 kubectl apply --server-side -f "https://raw.githubusercontent.com/1Password/onepassword-operator/refs/tags/${ONEPASSWORD_OPERATOR_VERSION}/config/crd/bases/onepassword.com_onepassworditems.yaml"
-# rollout-operator
-kubectl apply --server-side -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/rollout-operator/crds/replica-templates-custom-resource-definition.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/rollout-operator/crds/zone-aware-pod-disruption-budget-custom-resource-definition.yaml
+# rollout-operator (CRDs live in the operator repo; helm-charts nests them under charts/crds)
+kubectl apply --server-side -f "https://raw.githubusercontent.com/grafana/rollout-operator/refs/tags/${ROLLOUT_OPERATOR_VERSION}/operations/rollout-operator/crds/replica-templates.yaml"
+kubectl apply --server-side -f "https://raw.githubusercontent.com/grafana/rollout-operator/refs/tags/${ROLLOUT_OPERATOR_VERSION}/operations/rollout-operator/crds/zone-aware-pod-disruption-budget.yaml"
 # external-snapshotter (VolumeSnapshot CRDs - needed for NFS CSI driver even if snapshotter is disabled)
 kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml"
 kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml"
