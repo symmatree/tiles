@@ -3056,10 +3056,10 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: 'tiles-test'
+  name: 'placeholder'
   namespace: argocd
 spec:
-  description: 'tiles-test Project'
+  description: 'placeholder Project'
   sourceRepos:
     - https://github.com/symmatree/tiles.git
     - https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts

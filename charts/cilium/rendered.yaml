@@ -75,7 +75,6 @@ data:
 
   # If you want to run cilium in debug mode change this value to true
   debug: "false"
-  debug-verbose: ""
   metrics-sampling-interval: "5m"
   # The agent can be put into the following three policy enforcement modes
   # default, always and never.
@@ -245,7 +244,6 @@ data:
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
   enable-no-service-endpoints-routable: "true"
   bpf-lb-sock: "false"
-  nodeport-addresses: ""
   enable-health-check-nodeport: "true"
   enable-health-check-loadbalancer-ip: "false"
   node-port-bind-protection: "true"
@@ -1495,7 +1493,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "0aa05b58a5dea2d7a68182359862353ced3fd8d7f7410cde0571a6d026b78f56"
+        cilium.io/cilium-configmap-checksum: "81b01809ccb545c9c02d8817839540126df684afa0223153070d5cbe77c17bd8"
         kubectl.kubernetes.io/default-container: cilium-agent
       labels:
         k8s-app: cilium
@@ -2196,7 +2194,7 @@ spec:
     metadata:
       annotations:
         # ensure pods roll when configmap updates
-        cilium.io/cilium-configmap-checksum: "0aa05b58a5dea2d7a68182359862353ced3fd8d7f7410cde0571a6d026b78f56"
+        cilium.io/cilium-configmap-checksum: "81b01809ccb545c9c02d8817839540126df684afa0223153070d5cbe77c17bd8"
       labels:
         io.cilium/app: operator
         name: cilium-operator
