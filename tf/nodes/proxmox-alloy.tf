@@ -23,13 +23,6 @@ resource "proxmox_oci_image" "alloy" {
   node_name    = each.value
   datastore_id = "local"
   reference    = "docker.io/grafana/alloy:latest"
-
-  cpu {
-    architecture = "amd64"
-    cores        = 1
-    limit        = 0
-    units        = 1024
-  }
 }
 
 
@@ -64,6 +57,13 @@ resource "proxmox_virtual_environment_container" "alloy" {
         address = "dhcp"
       }
     }
+  }
+
+  cpu {
+    architecture = "amd64"
+    cores        = 1
+    limit        = 0
+    units        = 1024
   }
 
   # Disk for container
