@@ -23,12 +23,15 @@ resource "proxmox_oci_image" "alloy" {
   node_name    = each.value
   datastore_id = "local"
   reference    = "docker.io/grafana/alloy:latest"
+
+  cpu {
+    architecture = "amd64"
+    cores        = 1
+    limit        = 0
+    units        = 1024
+  }
 }
 
-moved {
-  from = proxmox_virtual_environment_oci_image.alloy
-  to   = proxmox_oci_image.alloy
-}
 
 # Deploy to all Proxmox nodes
 # Using proxmox_root provider for bind mounts (requires root@pam)
