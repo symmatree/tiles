@@ -2,10 +2,10 @@
   "apiVersion": "tanka.dev/v1alpha1",
   "kind": "Environment",
   "metadata": {
-    "name": "environments/alloy-mixin"
+    "name": "environments/cert-manager-mixin"
   },
   "spec": {
-    "namespace": "alloy",
+    "namespace": "cert-manager",
     "resourceDefaults": {},
     "expectVersions": {}
   }

@@ -15,7 +15,6 @@ libMonResources.new(
       cadvisorSelector: 'job="integrations/kubernetes/cadvisor"',
       kubeletSelector: 'job="integrations/kubernetes/kubelet"',
       nodeExporterSelector: 'job="integrations/node_exporter"',
-
       grafanaK8s+:: {
         grafanaTimezone: 'browser',
       },
@@ -25,17 +24,20 @@ libMonResources.new(
   {
     folder: 'Kubernetes',
     namespace: 'alloy',
+    tags: ['kubernetes'],
     dashboardsToDrop: [
       'proxy',
+      'k8s-resources-windows-cluster',
+      'k8s-resources-windows-namespace',
+      'k8s-resources-windows-pod',
+      'k8s-windows-cluster-rsrc-use',
+      'k8s-windows-node-rsrc-use',
     ],
     ruleGroupsToDrop: [
       'kubernetes-system-kube-proxy',
     ],
     alertsToDrop: {
-      'kubernetes-resources': [
-        'KubeCPUOvercommit',  // Fires if you cannot spare the largest node.
-        'KubeMemoryOvercommit',  // Fires if you cannot spare the largest node.
-      ],
+      'kubernetes-resources': ['KubeCPUOvercommit', 'KubeMemoryOvercommit'],
     },
   },
 )

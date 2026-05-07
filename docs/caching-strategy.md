@@ -174,7 +174,7 @@ The `helm-setup` action includes a `debug` input that logs the expansion of glob
 ```yaml
 - uses: ./.github/actions/helm-setup
   with:
-    helm_version: "v4.0.0"
+    helm_version: "v4.1.5"
     debug: "true"
 ```
 

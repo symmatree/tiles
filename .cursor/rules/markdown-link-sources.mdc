@@ -1,0 +1,17 @@
+---
+description: Markdown docs should link to source (GitHub main), not copy config
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Markdown -- reference configuration at the source
+
+When editing or adding Markdown in this repo:
+
+- **Prefer links over excerpts** for code, Helm values, Terraform, Jsonnet, and other machine-generated or high-churn configuration. Do not paste multi-line YAML, HCL, or Corefile snippets into docs "for reference"; they go stale and duplicate truth.
+- **GitHub links**: use `https://github.com/symmatree/<repo>/blob/main/<path/from/repo/root>` with the **link text equal to the path from repo root** (for example `charts/cilium/values.yaml`). Agents and humans can map that to the same path in a local clone (`<repo>/<path>`).
+- **Narrative is OK**: short bullets, role descriptions, and occasional single values are fine when they add context and do not merely duplicate what a linked file already states.
+- **Tables**: use summary tables only when they clearly add structure or orientation beyond opening the linked sources. If a table mostly mirrors tfvars or values.yaml line-for-line, delete it and link instead.
+- **Normative vs story**: troubleshooting belongs in dated notes or runbooks if needed; cluster reference docs should describe the **current model** and **constraints** (what must stay true), not a blow-by-blow of how we got here. One-line "past failure mode X, fix Y" is acceptable when it prevents someone from repeating a mistake.
+
+If both `facts` and `tiles` apply, the same conventions hold for whichever repo owns the file; adjust the GitHub org/repo in URLs to match the file's home repository.

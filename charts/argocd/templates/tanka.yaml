@@ -12,7 +12,8 @@ data:
       name: tanka
     spec:
       init:
-        command: ["sh", "-c", "/home/argocd/cmp-server/plugins/jb install"]
+        # Symlink ./vendor to a shared emptyDir so jb populates one tree for all Tanka apps; tk still sees ./vendor.
+        command: ["sh", "-c", "ln -sfn /var/jb-vendor vendor && /home/argocd/cmp-server/plugins/jb install"]
       parameters:
         static:
           - name: cluster_name
