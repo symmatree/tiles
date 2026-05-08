@@ -64,8 +64,9 @@ cilium:
     # -- Enable L2 pod announcements
     # Not so we can talk to them but to help routing.
     enabled: true
-    # -- Interface used for sending Gratuitous ARP pod announcements
-    interface: enp3s0
+    # -- Regex for interface(s) used for Gratuitous ARP. Cilium 1.19+ requires this key in the
+    # ConfigMap (l2-pod-announcements-interface-pattern); interface-only is not sufficient for the agent.
+    interfacePattern: "^enp3s0$"
   pmtuDiscovery:
     # -- Enable path MTU discovery to send ICMP fragmentation-needed replies to
     # the client.

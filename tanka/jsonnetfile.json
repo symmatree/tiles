@@ -13,6 +13,15 @@
     {
       "source": {
         "git": {
+          "remote": "https://github.com/grafana/alloy.git",
+          "subdir": "operations/alloy-mixin"
+        }
+      },
+      "version": "main"
+    },
+    {
+      "source": {
+        "git": {
           "remote": "https://github.com/grafana/jsonnet-libs.git",
           "subdir": "cilium-enterprise-mixin"
         }
@@ -27,6 +36,15 @@
         }
       },
       "version": "master"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/imusmanmalik/cert-manager-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "main"
     },
     {
       "source": {
@@ -67,6 +85,15 @@
     {
       "source": {
         "git": {
+          "remote": "https://github.com/povilasv/coredns-mixin.git",
+          "subdir": ""
+        }
+      },
+      "version": "master"
+    },
+    {
+      "source": {
+        "git": {
           "remote": "https://github.com/prometheus/node_exporter.git",
           "subdir": "docs/node-mixin"
         }
@@ -81,15 +108,6 @@
         }
       },
       "version": "main"
-    },
-    {
-      "source": {
-        "git": {
-          "remote": "https://github.com/povilasv/coredns-mixin.git",
-          "subdir": ""
-        }
-      },
-      "version": "master"
     }
   ],
   "legacyImports": true

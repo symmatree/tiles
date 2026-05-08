@@ -1,3 +1,4 @@
 [submodule "fables"]
 	path = fables
 	url = https://github.com/symmatree/fables.git
+	branch = main

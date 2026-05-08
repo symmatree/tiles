@@ -75,6 +75,18 @@ virtual_machines = {
 alloy_vm_base_id     = 400
 deploy_proxmox_alloy = false
 
+# Bare-metal AMD workers (see docs/bare-metal-nodes.md). Rising: BIOS and MAC/IP in facts fables/Tiles/Rising.md.
+# Uncomment this block and delete the empty `metal_amd_nodes = {}` line below when enabling Rising.
+# metal_amd_nodes = {
+#   "rising" = {
+#     name        = "rising"
+#     type        = "worker"
+#     mac_address = "84:47:09:2f:a9:ef"
+#     ip_address  = "10.0.128.52"
+#     taint       = "rising"
+#   }
+# }
+
 metal_amd_nodes = {}
 
 # It's a shame the internal volume leaks here

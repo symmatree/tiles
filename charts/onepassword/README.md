@@ -91,7 +91,7 @@ The operator is bootstrapped via the CI workflow (`.github/workflows/bootstrap-c
 
 1. **Create namespace** (if it doesn't exist)
 2. **Create `onepassword-token` secret**: Contains the 1Password service account token
-3. **Create `op-credentials` secret**: Contains the 1Password Connect credentials file (base64 encoded)
+3. **Create `op-credentials` secret**: Contains the Connect credentials file as raw `1password-credentials.json` (Kubernetes base64-encodes secret data; the mounted file is plaintext JSON)
 
 The workflow loads the required secrets from 1Password:
 
