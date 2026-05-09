@@ -255,7 +255,7 @@ data:
   repo.server: argocd-repo-server:8081
   reposerver.git.lsremote.parallelism.limit: "4"
   reposerver.log.format: text
-  reposerver.log.level: debug
+  reposerver.log.level: trace
   reposerver.parallelism.limit: "4"
   server.dex.server: https://argocd-dex-server:5556
   server.dex.server.strict.tls: "false"
@@ -1178,7 +1178,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: ffca6b2c9a28de7bdf650800a3c73ec0b3a6785321fc836415467ae129bb2645
+        checksum/cmd-params: 216965e48e37d518981a74e3bdf80c55ba4e8fb7cfe71d30709fc9078e0c8f71
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-applicationset-controller
@@ -1472,7 +1472,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: ffca6b2c9a28de7bdf650800a3c73ec0b3a6785321fc836415467ae129bb2645
+        checksum/cmd-params: 216965e48e37d518981a74e3bdf80c55ba4e8fb7cfe71d30709fc9078e0c8f71
         checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
       labels:
         helm.sh/chart: argo-cd-9.5.2
@@ -1931,7 +1931,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: ffca6b2c9a28de7bdf650800a3c73ec0b3a6785321fc836415467ae129bb2645
+        checksum/cmd-params: 216965e48e37d518981a74e3bdf80c55ba4e8fb7cfe71d30709fc9078e0c8f71
         checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
       labels:
         helm.sh/chart: argo-cd-9.5.2
@@ -2394,7 +2394,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: ffca6b2c9a28de7bdf650800a3c73ec0b3a6785321fc836415467ae129bb2645
+        checksum/cmd-params: 216965e48e37d518981a74e3bdf80c55ba4e8fb7cfe71d30709fc9078e0c8f71
         checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
       labels:
         helm.sh/chart: argo-cd-9.5.2
@@ -2638,7 +2638,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: ffca6b2c9a28de7bdf650800a3c73ec0b3a6785321fc836415467ae129bb2645
+        checksum/cmd-params: 216965e48e37d518981a74e3bdf80c55ba4e8fb7cfe71d30709fc9078e0c8f71
         checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
       labels:
         helm.sh/chart: argo-cd-9.5.2
