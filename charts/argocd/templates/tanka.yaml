@@ -13,7 +13,9 @@ data:
     spec:
       init:
         # Symlink ./vendor to a shared emptyDir so jb populates one tree for all Tanka apps; tk still sees ./vendor.
-        command: ["sh", "-c", "ln -sfn /var/jb-vendor vendor && /home/argocd/cmp-server/plugins/jb install"]
+        # `sh -xc` traces each command to stderr so we can see how long the symlink + jb install actually take
+        # per invocation (debugging MatchRepository / GenerateManifest stalls). Revert to `sh -c` once resolved.
+        command: ["sh", "-xc", "ln -sfn /var/jb-vendor vendor && /home/argocd/cmp-server/plugins/jb install"]
       parameters:
         static:
           - name: cluster_name
@@ -34,6 +36,9 @@ data:
   generate.sh: |
     #!/bin/sh
     set -euo pipefail
+    # Trace each command to stderr so we can see per-step timing in the tanka container log
+    # (debugging MatchRepository / GenerateManifest stalls). Remove once resolved.
+    set -x
     if [ -z "${ARGOCD_ENV_TK_ENV:-}" ]; then
       echo "ARGOCD_ENV_TK_ENV is not set" >&2
       exit 1
