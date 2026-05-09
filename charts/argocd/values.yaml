@@ -125,6 +125,14 @@ argo-cd:
       # Cap concurrent manifest generation and git ls-remote during cold start (see repoServer.livenessProbe).
       reposerver.parallelism.limit: "4"
       reposerver.git.lsremote.parallelism.limit: "4"
+      # Tanka CMP MatchRepository / GenerateManifest stalls are observed to last
+      # ~60s and consistently hit the default controller -> repo-server gRPC
+      # deadline of 60s, leaving the affected apps stuck in Unknown. We have
+      # not isolated the root cause; this bumps the deadline so the same calls
+      # have headroom to finish and the apps can actually deploy. The deadline
+      # is propagated as a context deadline through the repo-server into the
+      # CMP-server gRPC call, so this also widens the cmp-server side window.
+      controller.repo.server.timeout.seconds: "300"
       # Diagnosing 30-60s MatchRepository / GenerateManifest stalls against the Tanka
       # CMP sidecar. At debug we observe the repo-server log going silent for ~48s
       # between accepting a CMP GenerateManifest and the deadline-driven failure --
