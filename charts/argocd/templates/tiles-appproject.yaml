@@ -11,6 +11,7 @@ spec:
     - https://charts.containeroo.ch
     - https://grafana.github.io/helm-charts
     - https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+    - https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"
