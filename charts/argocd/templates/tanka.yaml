@@ -13,9 +13,13 @@ data:
     spec:
       init:
         # Symlink ./vendor to a shared emptyDir so jb populates one tree for all Tanka apps; tk still sees ./vendor.
-        # `sh -xc` traces each command to stderr so we can see how long the symlink + jb install actually take
-        # per invocation (debugging MatchRepository / GenerateManifest stalls). Revert to `sh -c` once resolved.
-        command: ["sh", "-xc", "ln -sfn /var/jb-vendor vendor && /home/argocd/cmp-server/plugins/jb install"]
+        # `flock` serializes `jb install` against the shared cache: jsonnet-bundler is not safe for concurrent
+        # writes to the same vendor dir and panics with "rename ... file exists" when two parallel CMP calls race
+        # on the same module download. The lock file lives in the shared cache itself so it persists for pod
+        # lifetime; busybox flock takes `FILE PROG ARGS` (exclusive + blocking by default), and the upstream
+        # alpine-git-curl image already provides /usr/bin/flock as a busybox applet.
+        # `sh -xc` keeps step-by-step traces in the cmp-server stderr.
+        command: ["sh", "-xc", "ln -sfn /var/jb-vendor vendor && flock /var/jb-vendor/.lock /home/argocd/cmp-server/plugins/jb install"]
       parameters:
         static:
           - name: cluster_name
