@@ -33,11 +33,10 @@ libMonResources.new(
       'k8s-windows-cluster-rsrc-use',
       'k8s-windows-node-rsrc-use',
     ],
-    ruleGroupsToDrop: [
-      'kubernetes-system-kube-proxy',
-    ],
     alertsToDrop: {
       'kubernetes-resources': ['KubeCPUOvercommit', 'KubeMemoryOvercommit'],
+      // prometheusAlerts group kubernetes-system-kube-proxy; absent(up{job="kube-proxy"}) is spurious with Cilium (no kube-proxy DS).
+      'kubernetes-system-kube-proxy': ['KubeProxyDown'],
     },
   },
 )
