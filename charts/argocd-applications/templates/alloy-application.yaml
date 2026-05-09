@@ -199,7 +199,8 @@ spec:
         alloy-metrics:
           enabled: true
           serviceMonitor:
-            enabled: true
+            # Metrics come from integrations.alloy scrape (job=integrations/alloy, allow-listed).
+            enabled: false
           # This is the instance running prometheus.operator.probes
           # so make it also the blackbox exporter.
           # https://github.com/grafana/alloy/issues/2333#issuecomment-2741631302
@@ -222,7 +223,7 @@ spec:
             }
           enabled: true
           serviceMonitor:
-            enabled: true
+            enabled: false
           alloy:
             resources: # Set 2025-07-20
               # requests:
@@ -232,7 +233,7 @@ spec:
         alloy-logs:
           enabled: true
           serviceMonitor:
-            enabled: true
+            enabled: false
           alloy:
             mounts:
               # /var/log/pods and /var/log/containers exist. (Also audit.)
@@ -241,7 +242,7 @@ spec:
         alloy-receiver:
           enabled: true
           serviceMonitor:
-            enabled: true
+            enabled: false
           controller:
             type: "deployment"
           alloy:
@@ -264,6 +265,30 @@ spec:
                     - alloy-metrics
                     - alloy-singleton
                     - alloy-logs
+                    - alloy-receiver
+                metrics:
+                  tuning:
+                    # Grafana alloy-mixin uses metrics beyond k8s-monitoring default-allow-lists/alloy.yaml.
+                    includeMetrics:
+                      - cluster_minimum_size
+                      - loki_source_file_.*
+                      - loki_source_journal_.*
+                      - loki_write_entry_propagation_latency_seconds.*
+                      - loki_write_request_size_bytes.*
+                      - otelcol_receiver_(accepted|refused)_(metric_points|log_records)_total
+                      - otelcol_exporter_sent_(metric_points|log_records|spans)_total
+                      - otelcol_exporter_send_failed_(metric_points|log_records|spans)_total
+                      - otelcol_exporter_enqueue_failed_(log_records|metric_points|spans)_total
+                      - otelcol_exporter_queue_.*
+                      - otelcol_processor_(incoming|outgoing)_items_total
+                      - otelcol_processor_refused_(metric_points|spans)_total
+                      - otelcol_processor_batch_batch_size_trigger_send_total
+                      - http_(client|server)_duration_milliseconds_bucket
+                      - rpc_(client|server)_duration_milliseconds_bucket
+                      - otelcol_process_cpu_seconds_total
+                      - otelcol_process_memory_rss_bytes
+                      - otelcol_process_runtime_total_alloc_bytes_total
+                      - otelcol_process_uptime_seconds_total
           cert-manager:
             instances:
               - name: cert-manager
