@@ -125,10 +125,12 @@ argo-cd:
       # Cap concurrent manifest generation and git ls-remote during cold start (see repoServer.livenessProbe).
       reposerver.parallelism.limit: "4"
       reposerver.git.lsremote.parallelism.limit: "4"
-      # Temporary while we diagnose 30-60s MatchRepository / GenerateManifest stalls
-      # against the Tanka CMP sidecar. Per-step traces from the repo-server side are
-      # only emitted at debug level. Revert once the source of the wait is identified.
-      reposerver.log.level: debug
+      # Diagnosing 30-60s MatchRepository / GenerateManifest stalls against the Tanka
+      # CMP sidecar. At debug we observe the repo-server log going silent for ~48s
+      # between accepting a CMP GenerateManifest and the deadline-driven failure --
+      # the silent side is repo-server itself. Bumping to trace to surface whatever
+      # code path is being walked during that window.
+      reposerver.log.level: trace
 
   ## Application controller
   controller:
