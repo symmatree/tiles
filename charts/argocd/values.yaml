@@ -125,6 +125,10 @@ argo-cd:
       # Cap concurrent manifest generation and git ls-remote during cold start (see repoServer.livenessProbe).
       reposerver.parallelism.limit: "4"
       reposerver.git.lsremote.parallelism.limit: "4"
+      # Temporary while we diagnose 30-60s MatchRepository / GenerateManifest stalls
+      # against the Tanka CMP sidecar. Per-step traces from the repo-server side are
+      # only emitted at debug level. Revert once the source of the wait is identified.
+      reposerver.log.level: debug
 
   ## Application controller
   controller:
@@ -268,6 +272,15 @@ argo-cd:
     livenessProbe:
       timeoutSeconds: 5
       failureThreshold: 3
+    ## Repo-server metrics service configuration
+    metrics:
+      # -- Deploy metrics service
+      enabled: true
+      serviceMonitor:
+        # -- Enable a prometheus ServiceMonitor
+        # Needed to graph argocd_git_request_duration_seconds, argocd_repo_pending_request_total,
+        # grpc_server_handling_seconds_*, etc. for the repo-server -> CMP path.
+        enabled: true
     # Following https://raynix.info/archives/4565
     extraContainers:
       - name: tanka
