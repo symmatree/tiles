@@ -60,6 +60,13 @@ otelcol.processor.attributes "main" {
     action = "upsert"
   }
 
+  // node-exporter-mixin dashboards filter on `instance`, not `hostname`
+  action {
+    key    = "instance"
+    value  = "${hostname}"
+    action = "upsert"
+  }
+
   output {
     metrics = [
       otelcol.exporter.otlphttp.tiles_test.input,
