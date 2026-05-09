@@ -39,33 +39,14 @@ Each cluster uses `/18` allocation (64 /24s). Pods use `/20` with `node-cidr-mas
 
 ## Recreating cluster
 
-To reset the tiles-test cluster and rebuild the Proxmox nodes:
+Use this when you want **new Proxmox VMs** (fresh disks / reinstall Talos), for example after a major Talos pin change. Workspaces are **`test`** and **`prod`**; pick one and stay consistent through the apply. This flow uses GitHub Actions (service account, VPN, secrets) end to end.
 
-1. **Select the test workspace:**
-   ```bash
-   cd tf/nodes
-   terraform workspace select test
-   ```
+1. Run **[`taint-vms`](.github/workflows/taint-vms.yaml)** in Actions. Enable **taint test** and/or **taint prod** (each taints the Talos VM resources for that workspace and **`talos_machine_bootstrap`** so bootstrap runs again after disks are new).
+2. Run **`nodes-plan-apply`** with **apply** for the workspace you tainted: a push to **`main`** applies **test** by default; use **`workflow_dispatch`** with apply and **prod** for production.
 
-2. **Destroy the VMs** (this will destroy the Proxmox VMs, allowing them to be rebuilt on next apply):
-   ```bash
-   terraform destroy -target \
-      'module.cluster.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
-   terraform destroy -target \
-      'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
-   ```
+After apply, Terraform recreates the VMs, applies machine config, and bootstraps the cluster.
 
-3. **Recreate the cluster** by running terraform apply (or via the GitHub Actions workflow):
-   ```bash
-   terraform apply -var-file=test.tfvars
-   ```
-
-   The VMs will be recreated with fresh Talos installations. The cluster module will automatically:
-   - Create new VMs in Proxmox
-   - Apply Talos machine configurations
-   - Bootstrap the Kubernetes cluster (if `run_bootstrap = true`)
-
-**Note**: The cluster configuration uses workspaces (`test` and `prod`). Make sure you're in the correct workspace before running destroy/apply operations. See `docs/environment-strategy.md` for details on the workspace-based deployment strategy.
+See `docs/environment-strategy.md` for workspace behavior.
 
 ## Talos client configuration (talosconfig)
 
