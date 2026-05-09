@@ -5,6 +5,7 @@ libMonResources.new(
   nodeExporterMixin {
     _config+:: {
       nodeExporterSelector: 'job="integrations/node_exporter"',
+      showMultiCluster: true,
     },
   },
   {
