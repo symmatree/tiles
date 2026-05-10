@@ -42,6 +42,10 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 ## Monitoring and Observability
 
+- **[synology-monitoring.md](synology-monitoring.md)**: Grafana Alloy on the Synology NAS (Raconteur), OTLP to both clusters, Mimir/Loki labels, and verification queries.
+
+- **[proxmox-monitoring.md](proxmox-monitoring.md)**: Grafana Alloy in Proxmox LXC per physical node, **`cluster="bond"`** metrics/logs, Terraform flags, and findings from Mimir/Loki debugging.
+
 - **[monitoring-mixins.md](monitoring-mixins.md)**: Approach to collecting, customizing, and installing Prometheus monitoring mixins using Tanka plugin in ArgoCD to generate Kubernetes resources (Prometheus Operator objects and Grafana ConfigMaps) from mixin definitions.
 
 - **[component-readme-plan.md](component-readme-plan.md)**: Plan for adding README.md files for each component in the tiles cluster, outlining the structure, location conventions, and linking strategy from the main component index.

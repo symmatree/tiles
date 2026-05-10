@@ -1,5 +1,5 @@
 # Proxmox LXC Container for Alloy
-# Documentation: docs/proxmox-monitoring.md (to be created)
+# Documentation: docs/proxmox-monitoring.md
 # This creates an LXC container on each Proxmox node running Alloy
 # to collect metrics and logs from the Proxmox host
 #
