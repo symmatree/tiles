@@ -1,0 +1,39 @@
+{{- if .Values.synologyDsmSync.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-dsm-synology-sync" .Release.Name | quote }}
+  namespace: "{{ .Release.Namespace }}"
+data:
+  run.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${SYNO_SCHEME:?}" "${SYNO_HOSTNAME:?}" "${SYNO_PORT:?}" "${SYNO_USERNAME:?}" "${SYNO_PASSWORD:?}"
+    git clone -q --depth 1 https://github.com/acmesh-official/acme.sh.git /tmp/a
+    A=/tmp/a/acme.sh
+    H=/tmp/h; rm -rf "$H"; mkdir -p "$H"
+    p12() {
+      local c=$1 k=$2 lf=$3 ca=$4 p=$(mktemp) w=$(openssl rand -hex 16)
+      openssl pkcs12 -export -out "$p" -inkey "$k" -in "$c" -passout "pass:$w" -name tls
+      openssl pkcs12 -in "$p" -nokeys -clcerts -passin "pass:$w" -out "$lf"
+      openssl pkcs12 -in "$p" -nokeys -cacerts -passin "pass:$w" -out "$ca"
+      rm -f "$p"
+    }
+    one() {
+      local d=$1 c=$2 k=$3 t=$(mktemp -d)
+      p12 "$c" "$k" "$t/l" "$t/z"
+      local D="$H/${d}_ecc"
+      mkdir -p "$D"
+      install -m0600 "$k" "$D/$d.key"
+      install -m0644 "$t/l" "$D/$d.cer"
+      install -m0644 "$t/z" "$D/ca.cer"
+      install -m0644 "$c" "$D/fullchain.cer"
+      printf 'Le_Domain="%s"\nLe_Alt=\n' "$d" >"$D/$d.conf"
+      export SYNO_CERTIFICATE="$d"
+      "$A" --home "$H" --deploy --deploy-hook synology_dsm -d "$d" --ecc
+      rm -rf "$t"
+    }
+{{- range .Values.synologyDsmSync.certificates }}
+    one "{{ .fqdn }}" "/certs/{{ .volumeMountPath }}/tls.crt" "/certs/{{ .volumeMountPath }}/tls.key"
+{{- end }}
+{{- end }}

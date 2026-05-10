@@ -1,6 +1,34 @@
 baseDomain: local.symmatree.com
 clusterIssuer: real-cert
 namespace: static-certs
+
+# Push TLS material from selected Certificate secrets to Synology DSM (acme.sh synology_dsm deploy hook).
+# DSM login Secret is synced from 1Password via OnePasswordItem (same pattern as laserjet password).
+synologyDsmSync:
+  enabled: false
+  schedule: "0 7 * * *"
+  image: alpine:3.20
+  synology:
+    scheme: https
+    hostname: raconteur.ad.local.symmatree.com
+    port: "5001"
+  loginOnePasswordItem:
+    name: raconteur-login
+    itemPath: vaults/tiles-secrets/items/raconteur-login
+  loginSecretKeys:
+    usernameKey: username
+    passwordKey: password
+  certificates:
+    - fqdn: raconteur.ad.local.symmatree.com
+      secretName: raconteur-cert
+      volumeMountPath: raconteur
+    - fqdn: cam.local.symmatree.com
+      secretName: cam-cert
+      volumeMountPath: cam
+    - fqdn: photos.local.symmatree.com
+      secretName: photos-cert
+      volumeMountPath: photos
+
 staticCerts:
   - name: raconteur
     subdomain: .ad

@@ -61,7 +61,7 @@ The architecture uses 1Password as the interface between Terraform (infrastructu
 
 Terraform collects cluster configuration values from its variables and outputs, then stores them in a 1Password secure note item named `{cluster_name}-misc-config`. The item contains a `config` section with the following fields:
 
-- `targetRevision` - Git branch/tag to deploy
+- `targetRevision` - Git branch/tag to deploy (also selects Helm overlays such as `charts/static-certs/values-${targetRevision}.yaml` in the static-certs Application)
 - `cluster_name` - Name of the Kubernetes cluster
 - `pod_cidr` - CIDR range for pod IPs
 - `external_ip_cidr` - CIDR range for external IPs

@@ -1633,6 +1633,7 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+        - values-placeholder.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: static-certs

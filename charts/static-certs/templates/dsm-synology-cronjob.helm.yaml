@@ -1,0 +1,65 @@
+{{- if .Values.synologyDsmSync.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ printf "%s-dsm-synology-sync" .Release.Name | quote }}
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  schedule: {{ .Values.synologyDsmSync.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: default
+          volumes:
+            - name: scripts
+              configMap:
+                name: {{ printf "%s-dsm-synology-sync" .Release.Name | quote }}
+                defaultMode: 0755
+{{- range .Values.synologyDsmSync.certificates }}
+            - name: tls-{{ .volumeMountPath }}
+              secret:
+                secretName: {{ .secretName | quote }}
+{{- end }}
+          containers:
+            - name: sync
+              image: {{ .Values.synologyDsmSync.image | quote }}
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache openssl bash curl git ca-certificates >/dev/null
+                  exec /bin/bash /scripts/run.sh
+              env:
+                - name: SYNO_SCHEME
+                  value: {{ .Values.synologyDsmSync.synology.scheme | quote }}
+                - name: SYNO_HOSTNAME
+                  value: {{ .Values.synologyDsmSync.synology.hostname | quote }}
+                - name: SYNO_PORT
+                  value: {{ .Values.synologyDsmSync.synology.port | quote }}
+                - name: SYNO_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.synologyDsmSync.loginOnePasswordItem.name | quote }}
+                      key: {{ .Values.synologyDsmSync.loginSecretKeys.usernameKey | quote }}
+                - name: SYNO_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.synologyDsmSync.loginOnePasswordItem.name | quote }}
+                      key: {{ .Values.synologyDsmSync.loginSecretKeys.passwordKey | quote }}
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+{{- range .Values.synologyDsmSync.certificates }}
+                - name: tls-{{ .volumeMountPath }}
+                  mountPath: {{ printf "/certs/%s" .volumeMountPath | quote }}
+                  readOnly: true
+{{- end }}
+{{- end }}

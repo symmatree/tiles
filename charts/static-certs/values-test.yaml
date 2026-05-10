@@ -1,0 +1,3 @@
+# tiles-test and local renders: do not push to Raconteur DSM (prod cluster owns sync).
+synologyDsmSync:
+  enabled: false
