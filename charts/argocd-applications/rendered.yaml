@@ -800,6 +800,10 @@ spec:
               itemPath: "vaults/placeholder/items/grafana-admin-user"
 
         # https://github.com/grafana/helm-charts/blob/grafana-8.13.1/charts/grafana/values.yaml
+        # Without root_url, Grafana generates links (Explore deeplinks, alerts) using http://...:3000.
+        grafana.ini:
+          server:
+            root_url: 'https://borgmon.placeholder.symmatree.com/'
         configMapAnnotations:
           argocd.argoproj.io/sync-options: Replace=true
         persistence:

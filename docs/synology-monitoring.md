@@ -1,276 +1,204 @@
-# synology monitoring
+# Synology (Raconteur) monitoring
 
-raconteur.ad.local.symmatree.com (Synology) needs to be monitored.
+`raconteur.ad.local.symmatree.com` (Synology NAS) is monitored by a single **Grafana Alloy** container that ships metrics and logs to both Kubernetes clusters over OTLP.
 
 ## Architecture
 
-Monitoring is deployed as a single Alloy container on the Synology NAS that collects:
+The Alloy container on the NAS collects:
 
-1. **System metrics** via `prometheus.exporter.unix` (node_exporter): CPU, memory, disk I/O, network
-2. **Hardware metrics** via `prometheus.exporter.snmp`: temperatures, fans, disk health, RAID status
-3. **System logs** via `loki.source.file`: syslog, Synology-specific logs, auth logs
+1. **Host metrics** via `prometheus.exporter.unix` (node_exporter-style), scraping paths under `/host/proc`, `/host/sys`, `/host`
+2. **Hardware metrics** via `prometheus.exporter.snmp` (Synology OIDs, SNMP v3)
+3. **Log files** via `loki.source.file` under `/host/var/log` (messages, synolog, auth, daemon)
 
-All metrics and logs are converted to OTLP format and forwarded to both tiles-test and tiles clusters via OTLP HTTP endpoints (`https://otlp.{cluster}.symmatree.com`) with consistent labeling from a single collection point (no separate SNMP exporter needed in cluster).
+Metrics pass through `otelcol.receiver.prometheus` and logs through `otelcol.receiver.loki`; both are labeled with **`cluster="bond"`** in the OTLP payload (attributes) and forwarded to **both** clusters:
 
-The OTLP endpoints are exposed via ingress and route to the `alloy-alloy-receiver` service (port 4318) in each cluster's `alloy` namespace. See [`charts/argocd-applications/templates/alloy-application.yaml`](../charts/argocd-applications/templates/alloy-application.yaml) for the ingress configuration.
+- `https://otlp.tiles-test.symmatree.com`
+- `https://otlp.tiles.symmatree.com`
 
-## Raconteur Setup
+Headers set **`X-Scope-OrgID`** to the cluster tenant (`tiles-test` or `tiles`). Ingress terminates TLS and forwards to **`alloy-alloy-receiver`** (HTTP OTLP, port **4318**) in namespace **`alloy`**. See [`charts/argocd-applications/templates/alloy-application.yaml`](../charts/argocd-applications/templates/alloy-application.yaml).
 
-SNMP v3 is enabled on the Synology. Credentials are stored in 1Password at `op://tiles-secrets/raconteur-snmp`:
+### Terraform workspace
+
+In [`tf/nodes/synology-alloy.tf`](../tf/nodes/synology-alloy.tf), `synology_container_project.alloy` uses **`count = terraform.workspace == "test" ? 1 : 0`**. The Synology Container Project is created only when **`terraform workspace` is `test`** (and you apply from `tf/nodes` with the matching `-var-file`). It is **not** created for the `prod` Terraform workspace as written today.
+
+## Raconteur setup
+
+SNMP v3 is enabled on the Synology. Credentials live in 1Password at `op://tiles-secrets/raconteur-snmp`:
 
 - `username`: SNMP v3 username
-- `password`: Auth password (SHA protocol)
-- `PRIVACY_PASSWORD`: Privacy password (AES protocol)
+- `password`: Auth password (SHA)
+- Privacy password: item field **`PRIVACY_PASSWORD`** (section `privacy`, AES) -- wired in Terraform via [`../modules/onepassword_field`](../modules/onepassword_field) as in `synology-alloy.tf`
 
-Synology configuration:
+Synology Control Panel settings (reference):
 
-- SNMP v3 enabled (only)
-- Auth Protocol: SHA
-- Privacy Protocol: AES
-- Device info:
-  - Device name: `raconteur.ad.local.symmatree.com`
-  - Device location: `bond-basement`
-  - Contact: <symmetry@pobox.com>
+- SNMP v3 only
+- Auth: SHA, Privacy: AES
+- Device name: `raconteur.ad.local.symmatree.com`
+- Device location: `bond-basement`
+- Contact: symmetry@pobox.com
 
-MIB files are available at <https://global.download.synology.com/download/Document/Software/DeveloperGuide/Firmware/DSM/All/enu/Synology_MIB_File.zip>
+MIB pack: <https://global.download.synology.com/download/Document/Software/DeveloperGuide/Firmware/DSM/All/enu/Synology_MIB_File.zip>
 
-## MIB Generation
+## MIB generation
 
-The SNMP exporter needs both Synology-specific MIBs and standard IETF SNMP MIBs to generate a proper configuration.
+The SNMP exporter generator needs Synology MIBs plus standard IETF MIBs. Repo helper: [`tf/nodes/templates/copy-snmp-mibs.sh`](../tf/nodes/templates/copy-snmp-mibs.sh) (run from a checkout of `net-snmp` **`mibs`** directory, with `SNMP_EXPORTER_MIBS_DIR` set). `bash -n` on that script succeeds in CI-style checks.
 
-### Required IETF MIBs
+### Generate `snmp.yml`
 
-Your Synology documentation specifies support for these standard IETF SNMP MIBs:
-
-- DISMAN-EVENT-MIB
-  For defining event triggers and actions for network management purposes
-- DISMAN-SCHEDULE-MIB
-  For scheduling SNMP set operations periodically or at specific points in time
-- HOST-RESOURCES-MIB
-  For use in managing host systems
-- IF-MIB
-  For describing network interface sub-layers
-- IP-FORWARD-MIB
-  For the management of CIDR multipath IP Routes
-- IP-MIB
-  For IP and ICMP management objects
-- IPV6-ICMP-MIB
-  For entities implementing the ICMPv6
-- IPV6-MIB
-  For entities implementing the IPv6 protocol
-- IPV6-TCP-MIB
-  For entities implementing TCP over IPv6
-- IPV6-UDP-MIB
-  For entities implementing UDP over IPv6
-- NET-SNMP-AGENT-MIB
-  For monitoring structures for the Net-SNMP agent
-- NET-SNMP-EXTEND-MIB
-  For scripted extensions for the Net-SNMP agent
-- NET-SNMP-VACM-MIB
-  Defines Net-SNMP extensions to the standard VACM view table
-- NOTIFICATION-LOG-MIB
-  For logging SNMP Notifications
-- SNMP-COMMUNITY-MIB
-  To help support coexistence between SNMPv1, SNMPv2c, and SNMPv3
-- SNMP-FRAMEWORK-MIB
-  The SNMP Management Architecture MIB
-- SNMP-MPD-MIB
-  For Message Processing and Dispatching
-- SNMP-USER-BASED-SM-MIB
-  For the SNMP User-based Security Model
-- SNMP-VIEW-BASED-ACM-MIB
-  For the View-based Access Control Model for SNMP
-- SNMPv2-MIB
-  For SNMP entities
-- TCP-MIB
-  For managing TCP implementations
-- UCD-DISKIO-MIB
-  For disk IO statistics
-- UCD-DLMOD-MIB
-  For dynamic loadable MIB modules
-- UCD-SNMP-MIB
-  For private UCD SNMP MIB extensions
-- UDP-MIB
-  For managing UDP implementations
-
-### Getting the MIB Files
-
-#### Source for Standard IETF MIBs
-
-Clone net-snmp repository and use the provided script:
+Install net-snmp dev headers, then inject secrets and run the generator (paths are examples):
 
 ```bash
-# Clone net-snmp if you haven't already
-git clone https://github.com/net-snmp/net-snmp.git
-cd net-snmp/mibs
+sudo apt-get install -y libsnmp-dev
 
-# Run the copy script from net-snmp/mibs directory
-SNMP_EXPORTER_MIBS_DIR="/path/to/snmp_exporter/generator/mibs" /path/to/tiles/tf/nodes/templates/copy-snmp-mibs.sh
-```
-
-The script (`copy-snmp-mibs.sh`) will:
-
-- Verify the `SNMP_EXPORTER_MIBS_DIR` environment variable is set
-- Check that the directory exists
-- Copy all 26 required IETF SNMP MIBs
-- Exit with an error if any file is not found
-
-#### Synology-Specific MIBs
-
-Download the Synology MIB file from the official URL and extract it:
-
-```bash
-# Download Synology MIBs
-curl -O https://global.download.synology.com/download/Document/Software/DeveloperGuide/Firmware/DSM/All/enu/Synology_MIB_File.zip
-
-# Extract into snmp_exporter generator mibs directory
-unzip Synology_MIB_File.zip -d snmp_exporter/generator/mibs/
-```
-
-### Generate the snmp.yml Config
-
-The `snmp_exporter` generator tool parses your MIBs and creates a config that maps OIDs to Prometheus metrics. Use 1Password CLI to inject your credentials into the generator config.
-
-#### Prerequisites
-
-Install the net-snmp development headers (required to build the generator):
-
-```bash
-sudo apt-get install libsnmp-dev
-```
-
-#### Run the generator
-
-A template file `generator.yml.tpl` is provided with secret references to your 1Password item.
-
-Inject secrets and run the generator:
-
-```bash
-# Set these to your actual paths
 TILES_DIR="/path/to/tiles"
 SNMP_EXPORTER_DIR="/path/to/snmp_exporter"
 
-cd $SNMP_EXPORTER_DIR/generator
+cd "$SNMP_EXPORTER_DIR/generator"
 
-# Inject 1Password secrets directly into the generator directory (temporary)
-op inject -i $TILES_DIR/tf/nodes/templates/generator.yml -o ./generator.yml
-
-# Run the generator (outputs to snmp.yml in current directory)
+op inject -i "$TILES_DIR/tf/nodes/templates/generator.yml" -o ./generator.yml
 go run . generate -m ./mibs
-
-# Clean up the temporary generator.yml with embedded secrets
 rm ./generator.yml
 
-# Move the generated config to tiles
-mv snmp.yml $TILES_DIR/tf/nodes/templates/snmp-synology-raw.yml
+mv snmp.yml "$TILES_DIR/tf/nodes/templates/snmp-synology-raw.yml"
 ```
 
-Now edit snmp.yml to replace the hard-coded auth with variable templates
-for terraform to replace again later. Then delete the snmp.yml.
+Edit the result into the tracked template [`tf/nodes/templates/snmp-synology.yml`](../tf/nodes/templates/snmp-synology.yml) (replace embedded auth with Terraform template variables) before committing. The generator embeds auth in `snmp.yml`; do not commit raw generated secrets.
 
-This generates a `snmp.yml` that defines which OIDs from your MIBs will be queried, with your SNMPv3 credentials securely injected from 1Password. The temporary `generator.yml` with embedded secrets is deleted immediately after.
+The template input for `op inject` is **`generator.yml`** (not `generator.yml.tpl`).
 
-The confident text above was written by an LLM that didn't seem to understand that
-the auth info was also embedded in the generated file (but we can pull it back out
-and make it a template as well.)
-
-## Implementation Details
+## Implementation details
 
 ### Files
 
-- **[tf/nodes/synology-alloy.tf](../tf/nodes/synology-alloy.tf)**: Terraform for the Alloy container project on Synology
-  - Fetches SNMP credentials from 1Password
-  - Mounts Alloy and SNMP configs
-  - Configures host networking and PID mode for metrics collection
-  - Configures OTLP endpoints: `https://otlp.tiles-test.symmatree.com` and `https://otlp.tiles.symmatree.com`
+- **[`tf/nodes/synology-alloy.tf`](../tf/nodes/synology-alloy.tf)**: Synology Container Project, bind-mount `/` to `/host`, configs for Alloy + SNMP, host network + host PID, Alloy listens on **`0.0.0.0:12345`**
+- **[`tf/nodes/templates/alloy-synology.alloy`](../tf/nodes/templates/alloy-synology.alloy)**: Unix exporter, SNMP exporter (target `raconteur.ad.local.symmatree.com:161`), scrapes, OTLP exporters, log tailers
+- **[`tf/nodes/templates/snmp-synology.yml`](../tf/nodes/templates/snmp-synology.yml)**: SNMP module `synology`, auth `synology_v3`
 
-- **[tf/nodes/templates/alloy-synology.alloy](../tf/nodes/templates/alloy-synology.alloy)**: Alloy configuration
-  - `prometheus.exporter.unix`: System metrics via node_exporter
-  - `prometheus.exporter.snmp`: Hardware metrics via SNMP (temperatures, fans, disk health)
-  - `loki.source.file`: Log collection from /var/log
-  - Converts all to OTLP format and forwards to tiles-test and tiles clusters
+### Metrics (Mimir)
 
-- **[tf/nodes/templates/snmp-synology.yml](../tf/nodes/templates/snmp-synology.yml)**: SNMP exporter configuration
-  - Defines Synology OID module (1.3.6.1.4.1.6574.*)
-  - Configured for SNMPv3 with authentication and privacy
-  - Template variables for passwords injected from 1Password
+Alloy sets **`job_name = "integrations/node_exporter"`** on the **`prometheus.scrape "node"`** block. After OTLP ingestion into Mimir (tiles-test / tiles tenant), unix-based host metrics for this NAS have been observed with:
 
-### Metrics Available
+- **`cluster="bond"`**
+- **`instance="raconteur"`**
+- **`job="integrations/unix"`**
 
-**Hardware sensors (via SNMP):**
+SNMP metrics have been observed with:
 
-- Temperature sensors (CPU, system, disks)
-- Fan speeds and states
-- Power supply status
-- Disk health indicators
-- RAID pool health
-- Volume metrics
+- **`cluster="bond"`**
+- **`job="integrations/snmp/raconteur"`**
+- **`instance="prometheus.exporter.snmp.synology"`**
 
-**System metrics (via node_exporter):**
+Use these labels in **Grafana Explore** (Mimir / Prometheus datasource) when debugging.
 
-- CPU utilization and load
-- Memory and swap
-- Disk I/O
-- Network interface stats
-- Process counts
+### Logs (Loki)
 
-**Logs:**
+Log streams use **`host="raconteur"`** and **`job`** per tailer, for example:
 
-- System syslog (/var/log/messages)
-- Synology application logs (/var/log/synolog/)
-- Authentication logs (/var/log/auth.log)
-- Daemon logs (/var/log/daemon.log)
+- `synology-syslog` -- `/host/var/log/messages`
+- `synology-synolog` -- `/host/var/log/synolog/*.log`
+- `synology-auth` -- `/host/var/log/auth.log`
+- `synology-daemon` -- `/host/var/log/daemon.log`
+
+Loki also carries the **Kubernetes tenant** label **`cluster`** (`tiles-test` or `tiles`), matching the org that received OTLP. The **bond** grouping appears inside the JSON log line under **`attributes.cluster`** (and similar) after OTLP decoding.
+
+**Observed (Grafana Loki, tiles-test tenant, 7d range):** non-zero volume for **`synology-auth`** and **`synology-syslog`**; other jobs may be quiet if those files have little traffic.
+
+## Verifying metrics and logs
+
+Use **Grafana Explore** on the Mimir and Loki datasources for the cluster you care about (`tiles-test` vs `tiles`).
+
+### Mimir (PromQL)
+
+Examples (instant or range):
+
+```promql
+count by (job, instance) (node_cpu_seconds_total{cluster="bond"})
+```
+
+```promql
+topk(5, count by (__name__) ({cluster="bond", job="integrations/snmp/raconteur"}))
+```
+
+```promql
+group by (job, instance) (up{cluster="bond"})
+```
+
+Expect unix + SNMP jobs as in **Metrics (Mimir)** above.
+
+### Loki (LogQL)
+
+Examples:
+
+```logql
+{host="raconteur"}
+```
+
+```logql
+{job=~"synology.*"}
+```
+
+```logql
+sum by (job) (count_over_time({host="raconteur"}[24h]))
+```
+
+### Optional: CLI against Loki / Mimir
+
+If you install **logcli** or **mimirtool** and have tenant auth, you can run equivalent queries from the shell. This repo does not pin those tools; Grafana Explore is the supported path for ad hoc checks.
+
+From a network that can reach the cluster, you can also **port-forward** the Loki gateway or Mimir query frontend and run `logcli query` / PromQL HTTP APIs yourself (see cluster runbooks for service names).
 
 ## Troubleshooting
 
-### SNMP Scrape Failures
+### Alloy UI vs DSM
 
-When you see errors like `Failed to scrape Prometheus endpoint` for the SNMP exporter:
+- **DSM (web admin):** `https://raconteur.ad.local.symmatree.com:5001/` (or the NAS IP)
+- **Alloy HTTP UI:** `http://raconteur.ad.local.symmatree.com:12345/` (host networking; plain HTTP on port **12345**, not 5001)
 
-1. **Check Alloy component health**:
-   - Container uses host networking (`network_mode = "host"`), so Alloy UI is accessible at `https://raconteur.ad.local.symmatree.com:5001/` (or the Synology's IP address)
-   - The UI shows component status, including `prometheus.exporter.snmp.synology` health and any errors
-   - View container logs from Synology Container Manager for detailed error messages
-   - If the SNMP exporter component shows as unhealthy or not running in the UI, check:
-     - Component configuration errors (red status in UI)
-     - SNMP config file path and permissions
-     - SNMP exporter component logs in the UI's component detail view
+Component URLs (examples):
 
-2. **Verify SNMP connection**: Test SNMP connectivity directly:
-   - TODO: Determine if `docker exec` or Synology Container Manager provides shell access to the container
-   - TODO: Once access method is known, document the command:
+- OTLP HTTP exporter: `http://raconteur.ad.local.symmatree.com:12345/component/otelcol.exporter.otlphttp.tiles`
+- SNMP exporter: `http://raconteur.ad.local.symmatree.com:12345/component/prometheus.exporter.snmp.synology`
 
-     ```bash
-     snmpwalk -v3 -l authPriv -u <username> -a SHA -A <auth_password> -x AES -X <privacy_password> 127.0.0.1:161 1.3.6.1.4.1.6574.1
-     ```
+### SNMP scrape failures
 
-   - Credentials are in 1Password at `op://tiles-secrets/raconteur-snmp`
+1. **Alloy UI:** Check `prometheus.exporter.snmp.synology` and downstream `prometheus.scrape "snmp"` for errors.
+2. **Synology:** Control Panel > **Terminal & SNMP** > SNMP (service enabled, v3 user matches 1Password).
+3. **From your workstation** (after `op signin`), test SNMP to the same target Alloy uses (`raconteur.ad.local.symmatree.com:161`):
 
-3. **Check SNMP config file**: Verify the config file is mounted correctly and auth is referenced:
-   - The `synology` module in `snmp-synology.yml` references `auth: synology_v3` to use the SNMPv3 credentials
-   - Verify template variables were replaced correctly (check for `${snmp_username}` placeholders in the mounted file)
-   - The config is mounted at `/etc/snmp_exporter/snmp.yml` in the container
-
-4. **Enable debug logging**: Add debug logging to Alloy by setting environment variable in `synology-alloy.tf`:
-
-   ```hcl
-   environment = {
-     HOSTNAME = "raconteur"
-     ALLOY_LOG_LEVEL = "debug"
-   }
+   ```bash
+   eval "$(op signin)"
+   snmpwalk -v3 -l authPriv \
+     -u "$(op read op://tiles-secrets/raconteur-snmp/username)" \
+     -a SHA -A "$(op read op://tiles-secrets/raconteur-snmp/password)" \
+     -x AES -X "$(op read op://tiles-secrets/raconteur-snmp/PRIVACY_PASSWORD)" \
+     raconteur.ad.local.symmatree.com:161 \
+     1.3.6.1.4.1.6574.1
    ```
 
-   Then redeploy the container project.
+   The privacy secret URI matches [`tf/nodes/templates/generator.yml`](../tf/nodes/templates/generator.yml). If `op read` fails, run `op item get raconteur-snmp` and use the field reference shown for **PRIVACY_PASSWORD**.
 
-5. **Check SNMP exporter component**: The SNMP exporter is embedded in Alloy (not a separate service). The `prometheus.exporter.snmp.synology` component exposes targets that are scraped by `prometheus.scrape "snmp"`. Check Alloy logs for SNMP-specific errors.
+4. **Mounted SNMP config:** In the container, path is **`/etc/snmp_exporter/snmp.yml`** (see `synology-alloy.tf` configs). Confirm Terraform rendered the template (no stray `${...}` placeholders).
 
-6. **Verify SNMP service on Synology**: SNMP v3 is configured on the Synology (see "Raconteur Setup" section). Verify it's listening:
-   - TODO: Determine if SSH access to Synology host is available
-   - TODO: If SSH available, document: `netstat -tuln | grep 161`
-   - Otherwise check: Synology Control Panel > Terminal & SNMP > SNMP tab
+5. **Debug logs:** In `synology-alloy.tf`, add to `environment` (check current Alloy docs for the exact variable; common pattern):
 
-7. **Check Alloy component status**:
-   - Alloy web UI is accessible at `https://raconteur.ad.local.symmatree.com:5001/`
-   - Component details are available at URLs like `http://raconteur.ad.local.symmatree.com:12345/component/otelcol.exporter.otlphttp.tiles`
-   - To view the SNMP exporter component status, navigate to `http://raconteur.ad.local.symmatree.com:12345/component/prometheus.exporter.snmp.synology`
-   - Otherwise, check container logs for component health messages
+   ```hcl
+   ALLOY_LOG_LEVEL = "debug"
+   ```
+
+   Redeploy the container project.
+
+### No metrics in Mimir
+
+1. Run the **Mimir** PromQL checks in **Verifying metrics and logs**.
+2. Confirm OTLP ingress: from a browser or `curl`, `https://otlp.tiles-test.symmatree.com` should be reachable on your network (401/404 is normal without a full OTLP POST; total failure to connect is a DNS or firewall issue).
+3. On the NAS, confirm the Alloy container is running (Synology Container Manager) and host network is in use so it can reach the public OTLP hostnames.
+
+### No logs in Loki
+
+1. Run the **Loki** LogQL checks in **Verifying metrics and logs** with **`{host="raconteur"}`**.
+2. Remember the **Loki** `cluster` label is **`tiles-test` or `tiles`**, not `bond`. Filter on **`host`** / **`job`** for Raconteur streams.
+3. If only some jobs appear, that matches file activity (e.g. `synology-daemon` may be sparse).
+
+### Container project missing after apply
+
+Re-read **Terraform workspace** above: the resource is only created for workspace **`test`**.
