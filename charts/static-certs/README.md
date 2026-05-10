@@ -158,9 +158,9 @@ kubectl get certificate <name> -n static-certs -o yaml
 
 ### Known Limitations
 
-- **Manual Deployment**: Certificates must be manually extracted and deployed to external systems
-- **No Automation**: No automatic deployment to external systems (requires manual or script-based deployment)
-- **Special Cases**: Some certificates (like laserjet) require special handling
+- **Manual deployment**: Most hosts still need manual extract + install (see below).
+- **Synology DSM (prod only)**: **`synologyDsmSync`** CronJob pushes **`raconteur`**, **`cam`**, and **`photos`** certs to Raconteur when **`values-prod.yaml`** enables it; other static certs are still manual unless extended in chart values.
+- **Special cases**: **`laserjet`** uses PKCS12 / 1Password password (separate template).
 
 ## Usage
 
