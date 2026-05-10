@@ -33,11 +33,26 @@ prometheus.scrape "node" {
   // This job_name lets us re-use the node_exporter_mixin dashboards
   job_name = "integrations/node_exporter"
   targets    = prometheus.exporter.unix.node.targets
-  forward_to = [otelcol.receiver.prometheus.main.receiver]
+  forward_to = [prometheus.relabel.unix_node_job.receiver]
 }
 // TODO: Consider dropping metrics and labels like
 // https://github.com/grafana/k8s-monitoring-helm/blob/ea357b0204031a05adc478f4778875c6122b0a98/charts/k8s-monitoring/charts/feature-cluster-metrics/templates/_node_exporter.alloy.tpl
 // which really prunes a lot.
+
+// prometheus.exporter.unix stamps job="integrations/unix" on metric labels; otelcol.receiver.prometheus
+// prefers that label over prometheus.scrape job_name when building OTLP (see Alloy transaction getJobAndInstance).
+
+prometheus.relabel "unix_node_job" {
+  forward_to = [otelcol.receiver.prometheus.main.receiver]
+
+  rule {
+    source_labels = ["job"]
+    regex         = "integrations/unix"
+    action        = "replace"
+    target_label  = "job"
+    replacement   = "integrations/node_exporter"
+  }
+}
 
 // Convert Prometheus to OTLP
 otelcol.receiver.prometheus "main" {

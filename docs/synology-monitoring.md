@@ -76,11 +76,11 @@ The template input for `op inject` is **`generator.yml`** (not `generator.yml.tp
 
 ### Metrics (Mimir)
 
-Alloy sets **`job_name = "integrations/node_exporter"`** on the **`prometheus.scrape "node"`** block. After OTLP ingestion into Mimir (tiles-test / tiles tenant), unix-based host metrics for this NAS have been observed with:
+Alloy sets **`job_name = "integrations/node_exporter"`** on the **`prometheus.scrape "node"`** block. **`prometheus.exporter.unix`** also sets **`job="integrations/unix"`** on metric labels; **`otelcol.receiver.prometheus`** uses that label for OTLP **`service.name`** (and thus Mimir **`job`**) instead of the scrape **`job_name`**. The Synology Alloy config adds **`prometheus.relabel "unix_node_job"`** so unix host metrics arrive as **`job="integrations/node_exporter"`**; SNMP scrapes are unchanged. After deploy, verify in Mimir:
 
 - **`cluster="bond"`**
 - **`instance="raconteur"`**
-- **`job="integrations/unix"`**
+- **`job="integrations/node_exporter"`** (unix host metrics)
 
 SNMP metrics have been observed with:
 

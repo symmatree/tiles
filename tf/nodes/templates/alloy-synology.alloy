@@ -49,7 +49,7 @@ prometheus.scrape "node" {
   // This job_name lets us re-use the node_exporter_mixin dashboards
   job_name = "integrations/node_exporter"
   targets    = prometheus.exporter.unix.node.targets
-  forward_to = [otelcol.receiver.prometheus.main.receiver]
+  forward_to = [prometheus.relabel.unix_node_job.receiver]
 }
 // TODO: Consider dropping metrics and labels like
 // https://github.com/grafana/k8s-monitoring-helm/blob/ea357b0204031a05adc478f4778875c6122b0a98/charts/k8s-monitoring/charts/feature-cluster-metrics/templates/_node_exporter.alloy.tpl
@@ -59,6 +59,23 @@ prometheus.scrape "node" {
 prometheus.scrape "snmp" {
   targets    = prometheus.exporter.snmp.synology.targets
   forward_to = [otelcol.receiver.prometheus.main.receiver]
+}
+
+// prometheus.exporter.unix stamps job="integrations/unix" on metric labels (Grafana integration naming).
+// otelcol.receiver.prometheus builds OTLP service.name from the metric job label when present, not from
+// prometheus.scrape job_name (see Alloy internal transaction getJobAndInstance). This relabel runs only
+// on the unix scrape path; SNMP bypasses it. In-cluster OTLP receiver does not introduce integrations/unix.
+
+prometheus.relabel "unix_node_job" {
+  forward_to = [otelcol.receiver.prometheus.main.receiver]
+
+  rule {
+    source_labels = ["job"]
+    regex         = "integrations/unix"
+    action        = "replace"
+    target_label  = "job"
+    replacement   = "integrations/node_exporter"
+  }
 }
 
 // Convert Prometheus to OTLP
