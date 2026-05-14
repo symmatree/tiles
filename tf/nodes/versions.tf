@@ -39,7 +39,9 @@ terraform {
     }
     synology = {
       source  = "synology-community/synology"
-      version = ">= 0.6.7"
+      # Pinned to the version locked when synology-alloy landed (#264). Loosen after upstream
+      # stream/JSON fix (go-synology / provider) or deliberate verification on newer DSM.
+      version = "= 0.6.7"
     }
   }
   backend "gcs" {
