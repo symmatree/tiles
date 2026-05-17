@@ -41,6 +41,7 @@ spec:
                     isDefault: true
                     jsonData:
                       prometheusType: Mimir
+                      timeInterval: 60s
                       alertmanagerUid: alertmanager
                       httpHeaderName1: X-Scope-OrgID
                     secureJsonData:
