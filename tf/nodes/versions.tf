@@ -3,7 +3,8 @@ terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = ">= 0.84"
+      # host_managed on LXC network_interface (Proxmox Alloy CTs) requires >= 0.104.
+      version = ">= 0.104"
     }
     google = {
       source  = "hashicorp/google"

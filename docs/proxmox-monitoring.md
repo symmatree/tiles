@@ -16,6 +16,7 @@ Implementation is intended to mirror the Synology pattern; OTLP ingress and rece
   - As of the values checked in-repo: **`test.tfvars`** sets **`deploy_proxmox_alloy = true`**; **`prod.tfvars`** sets **`deploy_proxmox_alloy = false`** (duplicate reporting / rollout control until you flip it).
 - **CT IDs:** **`alloy_vm_base_id`** plus per-node index (cluster-wide unique VMID); **`test.tfvars`** and **`prod.tfvars`** use different bases (see tfvars).
 - **Credentials:** Proxmox **`root@pam`** for the provider that performs bind mounts; see [`tf/nodes/README.md`](../tf/nodes/README.md) and [`docs/secrets.md`](secrets.md).
+- **Networking:** Alloy CTs use **`ip=dhcp`** with **`host_managed = true`** on **`eth0`** (Proxmox VE **9.1+**, **`bpg/proxmox` >= 0.104**). OCI application containers run **`/bin/alloy`** as entrypoint, not **`/sbin/init`**, so the guest does not configure DHCP itself; the host must. Without **`host_managed`**, **`/nodes/{node}/lxc/{vmid}/interfaces`** can show **`eth0`** with no IPv4 and Alloy logs **`network is unreachable`** when exporting to OTLP (DNS never leaves the CT). Site DNS remains **Raconteur (`10.0.99.1`)** via DHCP; do not override nameserver in Terraform unless you intend to bypass that design.
 
 ## Alloy configuration (repo truth)
 
@@ -28,7 +29,7 @@ Implementation is intended to mirror the Synology pattern; OTLP ingress and rece
 
 - **Snippet path:** Config is uploaded as a Proxmox **snippet** and mounted in the CT at **`/var/lib/vz/snippets/alloy-proxmox.alloy`** (same path on host and guest).
 - **Alloy UI:** Entrypoint sets **`--server.http.listen-addr=0.0.0.0:12345`** (see `proxmox-alloy.tf`). Reachability depends on your LAN/firewall; it is not the same as the Synology DSM port.
-- **Entrypoint / config updates:** Comment in **`proxmox-alloy.tf`**: after changing entrypoint or config, the first apply may not refresh a running CT; you may need to **stop** the CTs in the Proxmox UI, then **apply** or **start** so they pick up the new entrypoint.
+- **Entrypoint / network / config updates:** Comment in **`proxmox-alloy.tf`**: after changing entrypoint, **`host_managed`**, or config, the first apply may not refresh a running CT; **stop** the CTs in the Proxmox UI, then **apply** or **start** so they pick up the new settings. After **`host_managed`** is applied, confirm **`GET .../lxc/{vmid}/interfaces`** shows an IPv4 on **`eth0`** and Alloy export errors stop.
 
 ## Findings from Mimir / Loki checks (point-in-time)
 
