@@ -1,0 +1,68 @@
+{{- if .Values.homeassistantSshSync.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ printf "%s-ha-ssh-sync" .Release.Name | quote }}
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  schedule: {{ .Values.homeassistantSshSync.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: default
+          volumes:
+            - name: scripts
+              configMap:
+                name: {{ printf "%s-ha-ssh-sync" .Release.Name | quote }}
+                defaultMode: 0755
+            - name: ssh-key
+              secret:
+                secretName: {{ .Values.homeassistantSshSync.sshKeyOnePasswordItem.name | quote }}
+                defaultMode: 0400
+{{- range .Values.homeassistantSshSync.certificates }}
+            - name: tls-{{ .volumeMountPath }}
+              secret:
+                secretName: {{ .secretName | quote }}
+{{- end }}
+          containers:
+            - name: sync
+              image: {{ .Values.homeassistantSshSync.image | quote }}
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache openssl bash curl git ca-certificates openssh-client >/dev/null
+                  exec /bin/bash /scripts/run.sh
+              env:
+                - name: DEPLOY_SSH_USER
+                  value: {{ .Values.homeassistantSshSync.ssh.user | quote }}
+                - name: DEPLOY_SSH_SERVER
+                  value: {{ printf "%s:%s" .Values.homeassistantSshSync.ssh.host .Values.homeassistantSshSync.ssh.port | quote }}
+                - name: DEPLOY_SSH_KEYFILE
+                  value: {{ .Values.homeassistantSshSync.ssh.remotePaths.privkey | quote }}
+                - name: DEPLOY_SSH_FULLCHAIN
+                  value: {{ .Values.homeassistantSshSync.ssh.remotePaths.fullchain | quote }}
+                - name: DEPLOY_SSH_REMOTE_CMD
+                  value: {{ .Values.homeassistantSshSync.ssh.remoteCmd | quote }}
+                - name: SSH_IDENTITY_FILE
+                  value: {{ printf "/ssh/%s" .Values.homeassistantSshSync.sshKeySecretKey | quote }}
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: ssh-key
+                  mountPath: /ssh
+                  readOnly: true
+{{- range .Values.homeassistantSshSync.certificates }}
+                - name: tls-{{ .volumeMountPath }}
+                  mountPath: {{ printf "/certs/%s" .volumeMountPath | quote }}
+                  readOnly: true
+{{- end }}
+{{- end }}
