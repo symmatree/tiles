@@ -8,9 +8,9 @@
 # VM/CT IDs are unique cluster-wide in Proxmox, so we assign one per node (200, 201, ...).
 # When deploy_proxmox_alloy is false, no containers/OCI/images/snippets are created.
 #
-# Operational note: After changing entrypoint or config, the first apply may not update the
-# running container's entrypoint; a second apply may try and fail to reboot the CTs. Manually
-# stop the containers in the Proxmox UI, then re-apply or start them so they come up with the new entrypoint.
+# Operational note: After changing entrypoint, network (e.g. host_managed), or config, the first
+# apply may not update a running CT. Stop the containers in the Proxmox UI, then re-apply or start
+# them so they pick up the new settings.
 locals {
   alloy_nodes  = var.deploy_proxmox_alloy ? toset(data.proxmox_virtual_environment_nodes.nodes.names) : toset([])
   alloy_vm_ids = { for i, n in sort(tolist(local.alloy_nodes)) : n => var.alloy_vm_base_id + i }
@@ -73,10 +73,13 @@ resource "proxmox_virtual_environment_container" "alloy" {
   }
 
   # Network - bridge to vmbr0 (adjust if your network setup differs)
+  # OCI app containers (entrypoint is /bin/alloy, not /sbin/init) do not run a guest DHCP client.
+  # host_managed requires Proxmox VE 9.1+ and bpg/proxmox provider >= 0.104.
   network_interface {
-    firewall = true
-    name     = "eth0"
-    bridge   = "vmbr0"
+    bridge       = "vmbr0"
+    firewall     = true
+    host_managed = true
+    name         = "eth0"
   }
   console {
     enabled   = true
