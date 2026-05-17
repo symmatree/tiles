@@ -1,3 +1,5 @@
-# tiles (prod): push static TLS to Synology DSM.
+# tiles (prod): push static TLS to Synology DSM and Home Assistant.
 synologyDsmSync:
+  enabled: true
+homeassistantSshSync:
   enabled: true

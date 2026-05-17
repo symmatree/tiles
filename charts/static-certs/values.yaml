@@ -29,6 +29,29 @@ synologyDsmSync:
       secretName: photos-cert
       volumeMountPath: photos
 
+# Push homeassistant-cert to HA Yellow over SSH (acme.sh ssh deploy hook).
+# Deploy key Secret is synced from 1Password. Paths match ha-config configuration.yaml.
+homeassistantSshSync:
+  enabled: false
+  schedule: "15 7 * * *"
+  image: alpine:3.20
+  ssh:
+    user: root
+    host: 10.0.99.9
+    port: "22"
+    remotePaths:
+      fullchain: /config/ssl/homeassistant-cert.crt
+      privkey: /config/ssl/homeassistant-cert.key
+    remoteCmd: ha core restart
+  sshKeyOnePasswordItem:
+    name: homeassistant-cert-ssh
+    itemPath: vaults/tiles-secrets/items/homeassistant-cert-ssh
+  sshKeySecretKey: private_key
+  certificates:
+    - fqdn: homeassistant.local.symmatree.com
+      secretName: homeassistant-cert
+      volumeMountPath: homeassistant
+
 staticCerts:
   - name: raconteur
     subdomain: .ad
