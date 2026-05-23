@@ -41,9 +41,31 @@ resource "proxmox_user_token" "user_token" {
   privileges_separation = false
 }
 
-# Adopt existing state from deprecated proxmox_virtual_environment_user_token (core
-# refuses `terraform state mv` across types; Terraform 1.8+ cross-type moved).
-moved {
-  from = proxmox_virtual_environment_user_token.user_token
-  to   = proxmox_user_token.user_token
+resource "random_password" "proxmox_mcp_password" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
+resource "proxmox_virtual_environment_user" "proxmox_mcp" {
+  comment         = "Managed by Terraform (read-only MCP)"
+  email           = "proxmox-mcp@pve"
+  enabled         = true
+  expiration_date = "2034-01-01T22:00:00Z"
+  user_id         = "proxmox-mcp@pve"
+  password        = random_password.proxmox_mcp_password.result
+
+  acl {
+    path      = "/"
+    propagate = true
+    role_id   = "PVEAuditor"
+  }
+}
+
+resource "proxmox_user_token" "proxmox_mcp" {
+  comment               = "Managed by Terraform"
+  expiration_date       = "2033-01-01T22:00:00Z"
+  token_name            = "proxmox_mcp"
+  user_id               = proxmox_virtual_environment_user.proxmox_mcp.user_id
+  privileges_separation = false
 }

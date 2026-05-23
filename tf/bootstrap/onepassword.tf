@@ -49,3 +49,27 @@ resource "onepassword_item" "proxmox_user_token" {
     }
   }
 }
+
+resource "onepassword_item" "proxmox_mcp_token" {
+  vault    = data.onepassword_vault.tf_secrets.uuid
+  title    = "proxmox_mcp_token"
+  category = "login"
+  username = proxmox_user_token.proxmox_mcp.id
+  password = proxmox_user_token.proxmox_mcp.value
+  url      = data.onepassword_item.proxmox_root_user.url
+  section {
+    label = "metadata"
+    field {
+      label = "source"
+      value = "managed by terraform"
+    }
+    field {
+      label = "root_module"
+      value = basename(abspath(path.root))
+    }
+    field {
+      label = "module"
+      value = basename(abspath(path.module))
+    }
+  }
+}
