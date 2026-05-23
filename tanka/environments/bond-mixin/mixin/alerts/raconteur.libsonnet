@@ -2,16 +2,17 @@
   local cfg = $._config,
   local snmpSel = 'cluster="%(bondCluster)s", job="%(raconteurSnmpJob)s"' % cfg,
   local hostSel = 'cluster="%(bondCluster)s", instance="%(raconteurInstance)s"' % cfg,
-  local diskTempWithType =
-    |||
-      diskTemperature{%(snmp)s}
-      * on(diskIndex) group_left(diskType)
-      diskType{%(snmp)s}
-    ||| % (cfg { snmp: snmpSel }),
+  local diskTempSata =
+    'diskTemperature{%(snmp)s} * on(diskIndex) group_left(diskType) diskType{%(snmp)s, diskType="%(raconteurDiskTypeSata)s"}'
+    % (cfg { snmp: snmpSel }),
+  local diskTempSsd =
+    'diskTemperature{%(snmp)s} * on(diskIndex) group_left(diskType) diskType{%(snmp)s, diskType="%(raconteurDiskTypeSsd)s"}'
+    % (cfg { snmp: snmpSel }),
   local c = cfg {
     snmp: snmpSel,
     host: hostSel,
-    diskTempWithType: diskTempWithType,
+    diskTempSata: diskTempSata,
+    diskTempSsd: diskTempSsd,
   },
 
   prometheusAlerts+:: {
@@ -59,10 +60,7 @@
           },
           {
             alert: 'BondRaconteurSataDiskTemperatureHigh',
-            expr: |||
-              %(diskTempWithType)s{diskType="%(raconteurDiskTypeSata)s"}
-              > %(raconteurDiskSataTempCelsius)g
-            ||| % c,
+            expr: '%(diskTempSata)s > %(raconteurDiskSataTempCelsius)g' % c,
             'for': c.raconteurDiskSataTempFor,
             labels: { severity: 'warning' },
             annotations: {
@@ -72,10 +70,7 @@
           },
           {
             alert: 'BondRaconteurSsdDiskTemperatureHigh',
-            expr: |||
-              %(diskTempWithType)s{diskType="%(raconteurDiskTypeSsd)s"}
-              > %(raconteurDiskSsdTempCelsius)g
-            ||| % c,
+            expr: '%(diskTempSsd)s > %(raconteurDiskSsdTempCelsius)g' % c,
             'for': c.raconteurDiskSsdTempFor,
             labels: { severity: 'warning' },
             annotations: {
