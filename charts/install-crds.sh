@@ -16,35 +16,35 @@ export POSTGRES_OPERATOR_VERSION="v1.15.1"
 export ROLLOUT_OPERATOR_VERSION="v0.36.1"
 
 set -x
-kubectl apply --server-side -f "https://github.com/grafana/alloy-operator/releases/download/${ALLOY_OPERATOR_VERSION}/collectors.grafana.com_alloy.yaml"
+kubectl apply --server-side --force-conflicts -f "https://github.com/grafana/alloy-operator/releases/download/${ALLOY_OPERATOR_VERSION}/collectors.grafana.com_alloy.yaml"
 
 # Prometheus Operator
-kubectl apply --server-side -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_servicemonitors.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_podmonitors.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_probes.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_prometheusrules.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_scrapeconfigs.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_servicemonitors.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_podmonitors.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_probes.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_prometheusrules.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_scrapeconfigs.yaml"
 # gateway-api
-kubectl apply --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
+kubectl apply --server-side --force-conflicts -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
 # cert-manager
-kubectl apply --server-side -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.crds.yaml"
+kubectl apply --server-side --force-conflicts -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.crds.yaml"
 # trust-manager
-kubectl apply --server-side -f "https://raw.githubusercontent.com/cert-manager/trust-manager/${TRUST_MANAGER_VERSION}/deploy/crds/trust.cert-manager.io_bundles.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/cert-manager/trust-manager/${TRUST_MANAGER_VERSION}/deploy/crds/trust.cert-manager.io_bundles.yaml"
 # argo-cd
-kubectl apply --server-side -f "https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/${ARGOCD_VERSION}/manifests/crds/application-crd.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/${ARGOCD_VERSION}/manifests/crds/applicationset-crd.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/${ARGOCD_VERSION}/manifests/crds/appproject-crd.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/${ARGOCD_VERSION}/manifests/crds/application-crd.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/${ARGOCD_VERSION}/manifests/crds/applicationset-crd.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/${ARGOCD_VERSION}/manifests/crds/appproject-crd.yaml"
 # onepassword-operator
-kubectl apply --server-side -f "https://raw.githubusercontent.com/1Password/onepassword-operator/refs/tags/${ONEPASSWORD_OPERATOR_VERSION}/config/crd/bases/onepassword.com_onepassworditems.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/1Password/onepassword-operator/refs/tags/${ONEPASSWORD_OPERATOR_VERSION}/config/crd/bases/onepassword.com_onepassworditems.yaml"
 # rollout-operator (CRDs live in the operator repo; helm-charts nests them under charts/crds)
-kubectl apply --server-side -f "https://raw.githubusercontent.com/grafana/rollout-operator/refs/tags/${ROLLOUT_OPERATOR_VERSION}/operations/rollout-operator/crds/replica-templates.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/grafana/rollout-operator/refs/tags/${ROLLOUT_OPERATOR_VERSION}/operations/rollout-operator/crds/zone-aware-pod-disruption-budget.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/grafana/rollout-operator/refs/tags/${ROLLOUT_OPERATOR_VERSION}/operations/rollout-operator/crds/replica-templates.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/grafana/rollout-operator/refs/tags/${ROLLOUT_OPERATOR_VERSION}/operations/rollout-operator/crds/zone-aware-pod-disruption-budget.yaml"
 # external-snapshotter (VolumeSnapshot CRDs - needed for NFS CSI driver even if snapshotter is disabled)
-kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/${EXTERNAL_SNAPSHOTTER_VERSION}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
 # postgres-operator
-kubectl apply --server-side -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/postgresqls.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/postgresteams.yaml"
-kubectl apply --server-side -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/operatorconfigurations.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/postgresqls.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/postgresteams.yaml"
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/zalando/postgres-operator/refs/tags/${POSTGRES_OPERATOR_VERSION}/charts/postgres-operator/crds/operatorconfigurations.yaml"
 set +x
