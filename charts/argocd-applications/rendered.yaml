@@ -481,6 +481,41 @@ spec:
     syncOptions:
       - ServerSideApply=true
 ---
+# Source: argocd-applications/templates/bond-mixin-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bond-mixin
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: bond-mixin
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bond-mixin
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
 # Source: argocd-applications/templates/cert-manager-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
