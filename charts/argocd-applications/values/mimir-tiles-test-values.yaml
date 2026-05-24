@@ -1,0 +1,59 @@
+# Low requests for tiles-test scheduling. Overrides mimir-values.yaml resource keys.
+
+distributor:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+alertmanager:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 128Mi
+
+ingester:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 128Mi
+
+kafka:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+overrides_exporter:
+  resources:
+    limits:
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+querier:
+  resources:
+    requests:
+      cpu: 50m
+
+query_scheduler:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+query_frontend:
+  resources:
+    requests:
+      cpu: 50m
+
+ruler:
+  resources:
+    requests:
+      cpu: 100m
+
+store_gateway:
+  resources:
+    requests:
+      cpu: 100m
