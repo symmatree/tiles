@@ -126,7 +126,11 @@ cilium:
       enableOpenMetrics: true
       serviceMonitor:
         enabled: true
-        relabelings: []
+        metricsRelabelings:
+          # Drop all grpc_server metrics; high cardinality for inside baseball.
+          - sourceLabels: [ __name__ ]
+            regex: "grpc_server.*"
+            action: drop
       dashboards:
         enabled: false
         annotations:
@@ -165,11 +169,15 @@ cilium:
         enabled: true
         port: 9966
         serviceMonitor:
-          relabelings: []
           trustCRDsExist: true
           enabled: true
           labels:
             suppress-diff: "true"
+          metricsRelabelings:
+            # Drop all grpc_server metrics; high cardinality for inside baseball.
+            - sourceLabels: [ __name__ ]
+              regex: "grpc_server.*"
+              action: drop
     ui:
       # -- Whether to enable the Hubble UI.
       enabled: true
@@ -239,11 +247,25 @@ cilium:
     enabled: true
   # -- Configure prometheus metrics on the configured port at /metrics
   prometheus:
-    metricsService: true
     enabled: true
+    metrics:
+    # High cardinality metrics, drop at the source.
+    - "-cilium_k8s_client_rate_limiter_duration_seconds"
+    - "-cilium_k8s_client_api_latency_time_seconds"
+    - "-cilium_endpoint_regeneration_time_stats_seconds"
     serviceMonitor:
       trustCRDsExist: true
-      relabelings: []
+      metricsRelabelings:
+        # Drop all histograms remaining
+        - sourceLabels: [ __name__ ]
+          regex: ".*_bucket"
+          action: drop
+        - sourceLabels: [ __name__ ]
+          regex: "go_.*"
+          action: drop
+        - sourceLabels: [ __name__ ]
+          regex: "cilium_feature_.*"
+          action: drop
       enabled: true
   dashboards:
     enabled: false
@@ -258,9 +280,9 @@ cilium:
     # Note that some of these apply to either cilium-agent or cilium-envoy.
     prometheus:
       # -- Enable prometheus metrics for cilium-envoy
-      enabled: true
+      enabled: false
       serviceMonitor:
-        enabled: true
+        enabled: false
         relabelings: []
         trustCRDsExist: true
   # -- Configure TLS configuration in the agent.
