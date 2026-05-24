@@ -4,270 +4,91 @@ metadata:
   name: mimir
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-  source:
-    repoURL: https://grafana.github.io/helm-charts
-    targetRevision: "6.0.5"
-    chart: mimir-distributed
-    helm:
-      valuesObject:
-        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
-        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-        gateway:
-          enabled: true
-          ingress:
-            hosts:
-              - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-            tls:
-              - secretName: mimir-tls
-                hosts:
-                  - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-        # NFS storage architecture: see docs/nfs-storage-architecture.md
-        extraObjects:
-          - apiVersion: v1
-            kind: ConfigMap
-            metadata:
-              name: mimir-data-source
-              namespace: "mimir"
-              labels:
-                grafana_datasource: "1"
-            data:
-              datasource.yaml: |-
-                apiVersion: 1
-                datasources:
-                  - name: Mimir
-                    uid: prom
-                    type: prometheus
-                    url: http://mimir-gateway.mimir.svc/prometheus
-                    isDefault: true
-                    jsonData:
-                      prometheusType: Mimir
-                      timeInterval: 60s
-                      alertmanagerUid: alertmanager
-                      httpHeaderName1: X-Scope-OrgID
-                    secureJsonData:
-                      tlsCACert: $__file{/etc/ssl/certs/ca-certificates.crt}
-                      httpHeaderValue1: "{{ .Values.cluster_name }}"
-
-          - apiVersion: v1
-            kind: ConfigMap
-            metadata:
-              name: alertmanager-data-source
-              namespace: "mimir"
-              labels:
-                grafana_datasource: "1"
-            data:
-              datasource.yaml: |-
-                apiVersion: 1
-                datasources:
-                  - name: Mimir Alertmanager
-                    uid: alertmanager
-                    type: alertmanager
-                    url: http://mimir-gateway.mimir.svc/
-                    jsonData:
-                      implementation: mimir
-                      handleGrafanaManagedAlerts: true
-                      httpHeaderName1: X-Scope-OrgID
-                    secureJsonData:
-                      httpHeaderValue1: "{{ .Values.cluster_name }}"
-
-          - apiVersion: v1
-            kind: PersistentVolume
-            metadata:
-              name: mimir-mimir-data
-            spec:
-              capacity:
-                storage: 100Gi
-              accessModes:
-                - ReadWriteMany
-              persistentVolumeReclaimPolicy: Retain
-              nfs:
-                server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
-                path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}/mimir-data'
-
-          - apiVersion: v1
-            kind: PersistentVolumeClaim
-            metadata:
-              name: mimir-mimir-data
-              namespace: "mimir"
-            spec:
-              accessModes:
-                - ReadWriteMany
-              resources:
-                requests:
-                  storage: 100Gi
-              volumeName: mimir-mimir-data
-              storageClassName: ""
-
-        global:
-          podLabels: {}
-          extraVolumes:
-            - name: mimir-shared-storage
-              persistentVolumeClaim:
-                claimName: mimir-mimir-data
-          extraVolumeMounts:
-            - name: mimir-shared-storage
-              mountPath: /mnt/mimir-nfs
-
-        mimir:
-          structuredConfig:
-            multitenancy_enabled: true
-            tenant_federation:
-              enabled: true
-            limits:
-              ruler_max_rules_per_rule_group: 100
-              # default is 150000 per user, we are currently all in one
-              max_global_series_per_user: 500000
-              max_fetched_chunks_per_query: 4000000
-            common:
-              storage:
-                backend: filesystem
-                # Set to read-only root path as safety check - will fail if any component
-                # tries to use common.storage instead of explicit storage configs
-                filesystem:
-                  dir: /
-            # Shared storage - mounted at /mnt/mimir-nfs via global extraVolumes
-            # All components can access these paths for long-term storage
-            blocks_storage:
-              backend: filesystem
-              filesystem:
-                dir: /mnt/mimir-nfs/blocks
-            ruler_storage:
-              backend: filesystem
-              filesystem:
-                dir: /mnt/mimir-nfs/ruler
-            alertmanager_storage:
-              backend: filesystem
-              filesystem:
-                dir: /mnt/mimir-nfs/alertmanager
-
-        distributor:
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-        alertmanager:
-          zoneAwareReplication:
-            enabled: false
-          resources:
-            requests:
-              cpu: 10m
-              memory: 128Mi
-          statefulSet:
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      targetRevision: "6.0.5"
+      chart: mimir-distributed
+      helm:
+        valueFiles:
+          - $values/charts/argocd-applications/values/mimir-values.yaml
+          - $values/charts/argocd-applications/values/mimir-{{ required ".Values.cluster_name is required" .Values.cluster_name }}-values.yaml
+        valuesObject:
+          vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+          cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+          gateway:
             enabled: true
-          terminationGracePeriodSeconds: 60
-          extraContainers:
-            - name: alert-forward
-              # Pull-always since we build daily with security patches.
-              imagePullPolicy: Always
-              image: "ghcr.io/symmatree/tiles/mimir-webhook:main"
-              ports:
-                - name: webhook
-                  containerPort: 3000
-                  protocol: TCP
-              env:
-                - name: APPRISE_URL
-                  # Trailing slash is required
-                  value: http://apprise.apprise.svc:8000/notify/
-                - name: APPRISE_KEY
-                  value: apprise
+            ingress:
+              hosts:
+                - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+              tls:
+                - secretName: mimir-tls
+                  hosts:
+                    - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+          # NFS storage architecture: see docs/nfs-storage-architecture.md
+          extraObjects:
+            - apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: mimir-data-source
+                namespace: "mimir"
+                labels:
+                  grafana_datasource: "1"
+              data:
+                datasource.yaml: |-
+                  apiVersion: 1
+                  datasources:
+                    - name: Mimir
+                      uid: prom
+                      type: prometheus
+                      url: http://mimir-gateway.mimir.svc/prometheus
+                      isDefault: true
+                      jsonData:
+                        prometheusType: Mimir
+                        timeInterval: 60s
+                        alertmanagerUid: alertmanager
+                        httpHeaderName1: X-Scope-OrgID
+                      secureJsonData:
+                        tlsCACert: $__file{/etc/ssl/certs/ca-certificates.crt}
+                        httpHeaderValue1: "{{ .Values.cluster_name }}"
 
-        compactor:
-          terminationGracePeriodSeconds: 60
+            - apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: alertmanager-data-source
+                namespace: "mimir"
+                labels:
+                  grafana_datasource: "1"
+              data:
+                datasource.yaml: |-
+                  apiVersion: 1
+                  datasources:
+                    - name: Mimir Alertmanager
+                      uid: alertmanager
+                      type: alertmanager
+                      url: http://mimir-gateway.mimir.svc/
+                      jsonData:
+                        implementation: mimir
+                        handleGrafanaManagedAlerts: true
+                        httpHeaderName1: X-Scope-OrgID
+                      secureJsonData:
+                        httpHeaderValue1: "{{ .Values.cluster_name }}"
 
-        ingester:
-          resources:
-            requests:
-              cpu: 10m
-              memory: 128Mi
-          terminationGracePeriodSeconds: 60
-          replicas: 2
-          zoneAwareReplication:
-            enabled: false
-          affinity:
-            podAntiAffinity:
-              preferredDuringSchedulingIgnoredDuringExecution:
-                - weight: 1
-                  podAffinityTerm:
-                    labelSelector:
-                      matchLabels:
-                        app.kubernetes.io/component: ingester
-                        app.kubernetes.io/name: mimir
-                        app.kubernetes.io/instance: mimir
-                    topologyKey: kubernetes.io/hostname
-              requiredDuringSchedulingIgnoredDuringExecution: []
-        kafka:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-          extraEnv:
-            - name: KAFKA_LOG_RETENTION_HOURS
-              value: "1"
-            - name: KAFKA_OPTS
-              value: "-Dkafka.logs.dir=/tmp/kafka-logs/"
-        chunks-cache:
-          enabled: false
-          replicas: 1
-          # allocated memory in MB
-          allocatedMemory: 512
-        index-cache:
-          enabled: false
-          replicas: 1
-          allocatedMemory: 128
-
-        metadata-cache:
-          enabled: false
-          replicas: 1
-          allocatedMemory: 128
-
-        results-cache:
-          enabled: false
-          replicas: 1
-          allocatedMemory: 128
-
-        minio:
-          enabled: false
-
-        overrides_exporter:
-          replicas: 1
-          resources:
-            limits:
-              memory: 128Mi
-            requests:
-              cpu: 50m
-              memory: 128Mi
-
-        querier:
-          replicas: 1
-          resources:
-            requests:
-              cpu: 50m
-          terminationGracePeriodSeconds: 60
-        query_scheduler:
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-        query_frontend:
-          replicas: 1
-          resources:
-            requests:
-              cpu: 50m
-          terminationGracePeriodSeconds: 60
-
-        ruler:
-          replicas: 1
-          terminationGracePeriodSeconds: 60
-          resources:
-            requests:
-              cpu: 100m
-        store_gateway:
-          zoneAwareReplication:
-            enabled: false
-          resources:
-            requests:
-              cpu: 100m
-
+            - apiVersion: v1
+              kind: PersistentVolume
+              metadata:
+                name: mimir-mimir-data
+              spec:
+                capacity:
+                  storage: 100Gi
+                accessModes:
+                  - ReadWriteMany
+                persistentVolumeReclaimPolicy: Retain
+                nfs:
+                  server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+                  path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}/mimir-data'
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: mimir
