@@ -144,7 +144,12 @@ variable "alloy_vm_base_id" {
   type        = number
 }
 
+variable "deploy_synology_alloy" {
+  description = "Whether to deploy the Alloy container project on the Synology NAS (Raconteur). When true, collects host metrics/logs and forwards OTLP to the prod cluster. Enable in prod.tfvars only."
+  type        = bool
+}
+
 variable "deploy_proxmox_alloy" {
-  description = "Whether to deploy Alloy LXC containers on Proxmox nodes (one per node). When true, containers collect host metrics/logs and forward to OTLP. Set per environment (e.g. true for test, false for prod) to avoid duplicate reporting until prod-only deployment is desired."
+  description = "Whether to deploy Alloy LXC containers on Proxmox nodes (one per node). When true, collects host metrics/logs and forwards OTLP to the prod cluster. Enable in prod.tfvars only."
   type        = bool
 }

@@ -28,10 +28,9 @@ module "raconteur_snmp_privacy_password" {
   field_name   = "PRIVACY_PASSWORD"
 }
 
-# Container project configuration
-# Unique; run in sbox while iterating and then prod later.
+# Container project configuration (see deploy_synology_alloy in tfvars)
 resource "synology_container_project" "alloy" {
-  count = terraform.workspace == "test" ? 1 : 0
+  count = var.deploy_synology_alloy ? 1 : 0
   name  = "alloy"
   run   = true
 
@@ -103,8 +102,7 @@ resource "synology_container_project" "alloy" {
     alloy_config = {
       name = "alloy_config"
       content = templatefile("${path.root}/templates/alloy-synology.alloy", {
-        otlp_tiles_test = "https://otlp.tiles-test.symmatree.com"
-        otlp_tiles      = "https://otlp.tiles.symmatree.com"
+        otlp_tiles = "https://otlp.tiles.symmatree.com"
       })
     }
     snmp_config = {
