@@ -121,9 +121,51 @@ spec:
           enabled: true
           controlPlane:
             enabled: true
+          apiServer:
+            metricsTuning:
+              includeMetrics:
+                - apiserver_request_total
+                - apiserver_request_sli_duration_seconds.*
+                - apiserver_client_certificate_expiration_seconds.*
+                - apiserver_request_terminations_total
+                - aggregator_unavailable_apiservice.*
+                - rest_client_requests_total
+                - kubernetes_build_info
           kubeProxy:
             # there isn't one, cilium replaces it.
             enabled: false
+          kube-state-metrics:
+            metricsTuning:
+              excludeMetrics:
+                - kube_configmap_.*
+                - kube_secret_metadata_resource_version
+                - kube_pod_init_container_.*
+                - kube_pod_restart_policy
+                - kube_pod_start_time
+                - kube_pod_completion_time
+                - kube_replicaset_created
+                - kube_replicaset_metadata_generation
+                - kube_replicaset_spec_replicas
+                - kube_replicaset_status_.*
+                - kube_daemonset_created
+                - kube_daemonset_metadata_generation
+                - kube_daemonset_status_observed_generation
+                - kube_statefulset_created
+                - kube_statefulset_persistentvolumeclaim_retention_policy
+                - kube_statefulset_status_replicas$
+                - kube_statefulset_status_replicas_available
+                - kube_statefulset_status_replicas_current
+                - kube_cronjob_created
+                - kube_cronjob_info
+                - kube_cronjob_metadata_resource_version
+                - kube_cronjob_spec_failed_job_history_limit
+                - kube_cronjob_spec_successful_job_history_limit
+                - kube_job_complete
+                - kube_job_created
+                - kube_job_info
+                - kube_job_spec_.*
+                - kube_job_status_completion_time
+                - kube_job_status_succeeded
           windows-exporter:
             enabled: false
             deploy: false

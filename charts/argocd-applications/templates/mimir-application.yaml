@@ -200,6 +200,11 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+          extraEnv:
+            - name: KAFKA_LOG_RETENTION_HOURS
+              value: "1"
+            - name: KAFKA_OPTS
+              value: "-Dkafka.logs.dir=/tmp/kafka-logs/"
         chunks-cache:
           enabled: false
           replicas: 1
