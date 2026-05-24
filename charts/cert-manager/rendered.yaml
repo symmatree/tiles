@@ -1942,6 +1942,11 @@ spec:
     interval: 60s
     scrapeTimeout: 30s
     honorLabels: false
+    metricRelabelings:
+    - action: drop
+      regex: go_.*
+      sourceLabels:
+      - __name__
 ---
 # Source: cert-manager/charts/cert-manager/templates/startupapicheck-serviceaccount.yaml
 apiVersion: v1

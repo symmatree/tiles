@@ -34,6 +34,12 @@ cert-manager:
     servicemonitor:
       # Create a ServiceMonitor to add cert-manager to Prometheus.
       enabled: true
+      endpointAdditionalProperties:
+        metricRelabelings:
+          - action: drop
+            regex: go_.*
+            sourceLabels:
+              - __name__
   webhook:
     tolerations:
       - effect: NoSchedule

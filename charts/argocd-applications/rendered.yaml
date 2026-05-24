@@ -300,6 +300,8 @@ spec:
                 targetPort: 4318
                 protocol: TCP
         integrations:
+          # Most applications use their internal Prometheus Operator scrapes rather than integrations.
+          # Integrations can VERY easily dual-scrape.
           alloy:
             instances:
               - name: alloy
@@ -333,31 +335,6 @@ spec:
                       - otelcol_process_memory_rss_bytes
                       - otelcol_process_runtime_total_alloc_bytes_total
                       - otelcol_process_uptime_seconds_total
-          cert-manager:
-            instances:
-              - name: cert-manager
-                namespace: cert-manager
-                labelSelectors:
-                  app.kubernetes.io/name: cert-manager
-          # grafana:
-          #   instances:
-          #     - name: lgtm-grafana
-          #       namespace: lgtm
-          #       labelSelectors:
-          #         app.kubernetes.io/name: grafana
-          # loki:
-          #   instances:
-          #     - name: lgtm-loki
-          #       namespace: lgtm
-          #       labelSelectors:
-          #         app.kubernetes.io/name: loki
-          # mimir:
-          #   instances:
-          #     - name: lgtm-mimir
-          #       namespace: lgtm
-          #       labelSelectors:
-          #         app.kubernetes.io/name: mimir
-
   destination:
     server: https://kubernetes.default.svc
     namespace: alloy
