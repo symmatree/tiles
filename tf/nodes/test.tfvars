@@ -31,8 +31,9 @@ virtual_machines = {
   }
 }
 
-alloy_vm_base_id     = 500
-deploy_proxmox_alloy = true
+alloy_vm_base_id      = 500
+deploy_synology_alloy = false
+deploy_proxmox_alloy  = false
 metal_amd_nodes      = {}
 
 # It's a shame the internal volume leaks here

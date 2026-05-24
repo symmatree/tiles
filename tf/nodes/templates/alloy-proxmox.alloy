@@ -1,5 +1,5 @@
 // Alloy configuration for Proxmox host monitoring
-// Collects node_exporter metrics (including hwmon sensors) and system logs, forwarding to OTLP endpoints
+// Collects node_exporter metrics (including hwmon sensors) and system logs, forwarding to prod OTLP
 
 // Node exporter for host system metrics (nesting exposes host /proc and /sys to the container)
 prometheus.exporter.unix "node" {
@@ -8,17 +8,7 @@ prometheus.exporter.unix "node" {
   rootfs_path = "/host"
 }
 
-// OTLP HTTP exporter for tiles-test cluster
-otelcol.exporter.otlphttp "tiles_test" {
-  client {
-    endpoint = "${otlp_tiles_test}"
-    headers = {
-      "X-Scope-OrgID" = "tiles-test",
-    }
-  }
-}
-
-// OTLP HTTP exporter for tiles cluster
+// OTLP HTTP exporter for tiles (prod) cluster
 otelcol.exporter.otlphttp "tiles" {
   client {
     endpoint = "${otlp_tiles}"
@@ -61,7 +51,7 @@ otelcol.receiver.prometheus "main" {
   }
 }
 
-// Add cluster label to both metrics and logs, forwarding to both clusters
+// Add cluster label to metrics and logs, forwarding to prod
 otelcol.processor.attributes "main" {
   action {
     key    = "cluster"
@@ -83,14 +73,8 @@ otelcol.processor.attributes "main" {
   }
 
   output {
-    metrics = [
-      otelcol.exporter.otlphttp.tiles_test.input,
-      otelcol.exporter.otlphttp.tiles.input,
-    ]
-    logs = [
-      otelcol.exporter.otlphttp.tiles_test.input,
-      otelcol.exporter.otlphttp.tiles.input,
-    ]
+    metrics = [otelcol.exporter.otlphttp.tiles.input]
+    logs    = [otelcol.exporter.otlphttp.tiles.input]
   }
 }
 

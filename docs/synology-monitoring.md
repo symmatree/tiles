@@ -1,6 +1,6 @@
 # Synology (Raconteur) monitoring
 
-`raconteur.ad.local.symmatree.com` (Synology NAS) is monitored by a single **Grafana Alloy** container that ships metrics and logs to both Kubernetes clusters over OTLP.
+`raconteur.ad.local.symmatree.com` (Synology NAS) is monitored by a single **Grafana Alloy** container that ships metrics and logs to the **tiles** (prod) cluster over OTLP.
 
 ## Architecture
 
@@ -10,16 +10,15 @@ The Alloy container on the NAS collects:
 2. **Hardware metrics** via `prometheus.exporter.snmp` (Synology OIDs, SNMP v3)
 3. **Log files** via `loki.source.file` under `/host/var/log` (messages, synolog, auth, daemon)
 
-Metrics pass through `otelcol.receiver.prometheus` and logs through `otelcol.receiver.loki`; both are labeled with **`cluster="bond"`** in the OTLP payload (attributes) and forwarded to **both** clusters:
+Metrics pass through `otelcol.receiver.prometheus` and logs through `otelcol.receiver.loki`; both are labeled with **`cluster="bond"`** in the OTLP payload (attributes) and forwarded to prod:
 
-- `https://otlp.tiles-test.symmatree.com`
 - `https://otlp.tiles.symmatree.com`
 
-Headers set **`X-Scope-OrgID`** to the cluster tenant (`tiles-test` or `tiles`). Ingress terminates TLS and forwards to **`alloy-alloy-receiver`** (HTTP OTLP, port **4318**) in namespace **`alloy`**. See [`charts/argocd-applications/templates/alloy-application.yaml`](../charts/argocd-applications/templates/alloy-application.yaml).
+Headers set **`X-Scope-OrgID`** to **`tiles`**. Ingress terminates TLS and forwards to **`alloy-alloy-receiver`** (HTTP OTLP, port **4318**) in namespace **`alloy`**. See [`charts/argocd-applications/templates/alloy-application.yaml`](../charts/argocd-applications/templates/alloy-application.yaml).
 
-### Terraform workspace
+### Terraform deploy flag
 
-In [`tf/nodes/synology-alloy.tf`](../tf/nodes/synology-alloy.tf), `synology_container_project.alloy` uses **`count = terraform.workspace == "test" ? 1 : 0`**. The Synology Container Project is created only when **`terraform workspace` is `test`** (and you apply from `tf/nodes` with the matching `-var-file`). It is **not** created for the `prod` Terraform workspace as written today.
+In [`tf/nodes/synology-alloy.tf`](../tf/nodes/synology-alloy.tf), `synology_container_project.alloy` is created when **`deploy_synology_alloy = true`** in the active **`-var-file`**. Edge Alloy is enabled in **`prod.tfvars`** only; apply from **`tf/nodes`** with **`terraform workspace select prod`** and **`-var-file=prod.tfvars`**.
 
 ## Raconteur setup
 
@@ -99,13 +98,11 @@ Log streams use **`host="raconteur"`** and **`job`** per tailer, for example:
 - `synology-auth` -- `/host/var/log/auth.log`
 - `synology-daemon` -- `/host/var/log/daemon.log`
 
-Loki also carries the **Kubernetes tenant** label **`cluster`** (`tiles-test` or `tiles`), matching the org that received OTLP. The **bond** grouping appears inside the JSON log line under **`attributes.cluster`** (and similar) after OTLP decoding.
-
-**Observed (Grafana Loki, tiles-test tenant, 7d range):** non-zero volume for **`synology-auth`** and **`synology-syslog`**; other jobs may be quiet if those files have little traffic.
+Loki also carries the **Kubernetes tenant** label **`cluster="tiles"`**, matching the org that received OTLP. The **bond** grouping appears inside the JSON log line under **`attributes.cluster`** (and similar) after OTLP decoding.
 
 ## Verifying metrics and logs
 
-Use **Grafana Explore** on the Mimir and Loki datasources for the cluster you care about (`tiles-test` vs `tiles`).
+Use **Grafana Explore** on the Mimir and Loki datasources for the **tiles** cluster (`borgmon.tiles.symmatree.com`).
 
 ### Mimir (PromQL)
 
@@ -190,15 +187,15 @@ Component URLs (examples):
 ### No metrics in Mimir
 
 1. Run the **Mimir** PromQL checks in **Verifying metrics and logs**.
-2. Confirm OTLP ingress: from a browser or `curl`, `https://otlp.tiles-test.symmatree.com` should be reachable on your network (401/404 is normal without a full OTLP POST; total failure to connect is a DNS or firewall issue).
+2. Confirm OTLP ingress: from a browser or `curl`, `https://otlp.tiles.symmatree.com` should be reachable on your network (401/404 is normal without a full OTLP POST; total failure to connect is a DNS or firewall issue).
 3. On the NAS, confirm the Alloy container is running (Synology Container Manager) and host network is in use so it can reach the public OTLP hostnames.
 
 ### No logs in Loki
 
 1. Run the **Loki** LogQL checks in **Verifying metrics and logs** with **`{host="raconteur"}`**.
-2. Remember the **Loki** `cluster` label is **`tiles-test` or `tiles`**, not `bond`. Filter on **`host`** / **`job`** for Raconteur streams.
+2. Remember the **Loki** `cluster` label is **`tiles`**, not `bond`. Filter on **`host`** / **`job`** for Raconteur streams.
 3. If only some jobs appear, that matches file activity (e.g. `synology-daemon` may be sparse).
 
 ### Container project missing after apply
 
-Re-read **Terraform workspace** above: the resource is only created for workspace **`test`**.
+Confirm **`deploy_synology_alloy = true`** in **`prod.tfvars`**, workspace **`prod`**, and that you applied with **`-var-file=prod.tfvars`**.

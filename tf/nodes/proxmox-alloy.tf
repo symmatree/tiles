@@ -134,9 +134,8 @@ resource "proxmox_virtual_environment_file" "alloy_config" {
   content_type = "snippets"
   source_raw {
     data = templatefile("${path.root}/templates/alloy-proxmox.alloy", {
-      otlp_tiles_test = "https://otlp.tiles-test.symmatree.com"
-      otlp_tiles      = "https://otlp.tiles.symmatree.com"
-      hostname        = each.value
+      otlp_tiles = "https://otlp.tiles.symmatree.com"
+      hostname   = each.value
     })
     file_name = "alloy-proxmox.alloy"
   }

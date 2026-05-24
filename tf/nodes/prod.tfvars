@@ -72,8 +72,9 @@ virtual_machines = {
     taint             = ""
   }
 }
-alloy_vm_base_id     = 400
-deploy_proxmox_alloy = false
+alloy_vm_base_id      = 400
+deploy_synology_alloy = true
+deploy_proxmox_alloy  = true
 
 # Bare-metal AMD workers (see docs/bare-metal-nodes.md). Rising: BIOS and MAC/IP in facts fables/Tiles/Rising.md.
 # Uncomment this block and delete the empty `metal_amd_nodes = {}` line below when enabling Rising.

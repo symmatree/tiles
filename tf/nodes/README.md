@@ -79,3 +79,7 @@ This configuration supports two workspaces:
 - **prod**: For the production cluster (`tiles`)
 
 Each workspace has its own `.tfvars` file (`test.tfvars` or `prod.tfvars`) that must be specified with `-var-file` when running `terraform plan` or `terraform apply`. The workspace must be selected before running any Terraform commands.
+
+## Edge Alloy (Synology + Proxmox)
+
+Host-level Grafana Alloy (Raconteur NAS and Proxmox node LXCs) is controlled by **`deploy_synology_alloy`** and **`deploy_proxmox_alloy`** in the tfvars file. Both are **`true`** in **`prod.tfvars`** and **`false`** in **`test.tfvars`**. Apply from **`prod`** workspace with **`-var-file=prod.tfvars`** after merging config changes. See [`docs/synology-monitoring.md`](../../docs/synology-monitoring.md) and [`docs/proxmox-monitoring.md`](../../docs/proxmox-monitoring.md).
