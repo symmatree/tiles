@@ -4,23 +4,28 @@ metadata:
   name: argocd
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-  source:
-    repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
-    path: charts/argocd
-    helm:
-      valueFiles:
-        - values.yaml
-      valuesObject:
-        targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
-        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
-        argo-cd:
-          global:
-            domain: 'argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-          server:
-            ingressGrpc:
-              hostname: 'grpc-argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+  sources:
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+      path: charts/argocd
+      helm:
+        valueFiles:
+          - values.yaml
+          - $values/charts/argocd-applications/values/argocd-values.yaml
+          - $values/charts/argocd-applications/values/argocd-{{ required ".Values.cluster_name is required" .Values.cluster_name }}-values.yaml
+        valuesObject:
+          targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+          cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+          vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+          argo-cd:
+            global:
+              domain: 'argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            server:
+              ingressGrpc:
+                hostname: 'grpc-argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

@@ -1,0 +1,1 @@
+# Chart defaults live in charts/cilium/values.yaml. Templated keys in charts/cilium/application.yaml valuesObject.
