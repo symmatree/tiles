@@ -86,7 +86,7 @@ N/A - ArgoCD is bootstrapped manually and does not have Terraform-managed resour
 ArgoCD is initially bootstrapped via the CI workflow (`.github/workflows/bootstrap-cluster.yaml`) which runs [`bootstrap.sh`](bootstrap.sh):
 
 1. Creates the `argocd` namespace with pod security labels
-2. Runs `helm template` with cluster-specific values (loaded from 1Password)
+2. Runs `helm template` with the same value files as the `argocd` Application (`argocd-values.yaml`, `argocd-<cluster_name>-values.yaml`) plus domain overrides from the environment (loaded from 1Password)
 3. Applies manifests via `kubectl apply --server-side`
 
 After bootstrap, the `argocd-applications` chart installs the ArgoCD Application resource, which enables self-management. ArgoCD then syncs itself (mostly adding tracking annotations) and becomes self-managed.
