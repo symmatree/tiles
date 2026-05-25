@@ -1804,7 +1804,7 @@ spec:
           failureThreshold: 3
         resources:
           limits:
-            memory: 384Mi
+            memory: 512Mi
           requests:
             memory: 128Mi
         securityContext:
@@ -1854,7 +1854,7 @@ spec:
         name: copyutil
         resources:
           limits:
-            memory: 384Mi
+            memory: 512Mi
           requests:
             memory: 128Mi
         securityContext:

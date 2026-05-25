@@ -280,7 +280,7 @@ argo-cd:
   repoServer:
     resources:
       limits:
-        memory: 384Mi
+        memory: 512Mi
       requests:
         memory: 128Mi
     # Repo-server main container: allow healthz to survive brief load spikes (default timeout 1s is tight).
