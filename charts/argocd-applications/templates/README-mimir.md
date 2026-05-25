@@ -21,8 +21,10 @@ External chart (`mimir-distributed` from Grafana). Values are split across:
 | [`values/mimir-values.yaml`](../values/mimir-values.yaml) | Static chart values (structured config, caches, sidecar, affinity, etc.) |
 | [`values/mimir-tiles-test-values.yaml`](../values/mimir-tiles-test-values.yaml) | Resource requests/limits for `tiles-test` |
 | [`values/mimir-tiles-values.yaml`](../values/mimir-tiles-values.yaml) | Resource requests/limits for `tiles` (prod; same as legacy monolith until tuned) |
-| [`mimir-application.yaml`](mimir-application.yaml) `valuesObject` | Cluster-templated keys only (ingress, NFS PV, Grafana datasource ConfigMaps) |
+| [`mimir-application.yaml`](mimir-application.yaml) `valuesObject` | Cluster-templated keys only (gateway ingress, `extraObjects`, datasource org headers) |
 
-The Application uses [multi-source](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/#helm-value-files-from-external-git-repository): Grafana chart + tiles git `ref: values` so `valueFiles` can use `$values/charts/argocd-applications/values/...`. Merge order: chart defaults &lt; `valueFiles` (base then `mimir-<cluster_name>-values.yaml`) &lt; `valuesObject`.
+The Application uses [multi-source](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/#helm-value-files-from-external-git-repository): Grafana chart + tiles git `ref: values` so `valueFiles` can use `$values/charts/argocd-applications/values/...`. Merge order: chart defaults &lt; `valueFiles` (base then `mimir-<cluster_name>-values.yaml`) &lt; `valuesObject`. Do not split `extraObjects` across `valueFiles` and `valuesObject`: Helm replaces whole arrays; `valuesObject` wins.
+
+**Other apps with `valueFiles` + `valuesObject`:** `ingress` / nested maps (Grafana, Mimir `gateway`, Cilium `hubble.ui.ingress`, Argo CD `argo-cd`) merge by key. `plugins`, `sidecar`, and other list-valued keys should live in only one layer unless you intend the later layer to replace the list entirely.
 
 * **Tenant Limits**: `ruler_max_rules_per_rule_group` is 100 in `mimir-values.yaml` (increased from default 20 for workload headroom).

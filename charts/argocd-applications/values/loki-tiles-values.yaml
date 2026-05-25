@@ -1,1 +1,5 @@
 # Per-cluster overrides for tiles.
+singleBinary:
+  resources:
+    requests:
+      memory: 256Mi

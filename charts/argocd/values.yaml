@@ -144,7 +144,7 @@ argo-cd:
   controller:
     resources:
       limits:
-        memory: 800M
+        memory: 256M
     ## Application controller metrics configuration
     metrics:
       # -- Deploy metrics service

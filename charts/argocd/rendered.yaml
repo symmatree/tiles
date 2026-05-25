@@ -2962,7 +2962,7 @@ spec:
           failureThreshold: 3
         resources:
           limits:
-            memory: 800M
+            memory: 256M
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

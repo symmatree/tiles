@@ -1,1 +1,25 @@
-# Per-cluster overrides for tiles.
+# Resource overrides for tiles (prod). Tune from observed usage plus headroom.
+
+alloy-logs:
+  alloy:
+    resources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 384Mi
+
+alloy-receiver:
+  alloy:
+    resources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+
+alloy-singleton:
+  alloy:
+    resources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 256Mi

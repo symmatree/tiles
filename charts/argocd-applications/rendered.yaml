@@ -35,6 +35,51 @@ spec:
                 create: false
                 embed: true
           extraObjects:
+            - apiVersion: monitoring.coreos.com/v1
+              kind: Probe
+              metadata:
+                name: hubitat-http
+                namespace: "alloy"
+              spec:
+                interval: 30s
+                module: http_2xx
+                prober:
+                  url: alloy-alloy-metrics-cluster.alloy.svc:12345
+                  path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+                targets:
+                  staticConfig:
+                    static:
+                      - http://hubitat.local.symmatree.com
+            - apiVersion: monitoring.coreos.com/v1
+              kind: Probe
+              metadata:
+                name: raconteur-syno-ui
+                namespace: "alloy"
+              spec:
+                interval: 30s
+                module: http_2xx
+                prober:
+                  url: alloy-alloy-metrics-cluster.alloy.svc:12345
+                  path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+                targets:
+                  staticConfig:
+                    static:
+                      - https://raconteur.ad.local.symmatree.com:5001/
+            - apiVersion: monitoring.coreos.com/v1
+              kind: Probe
+              metadata:
+                name: morpheus-ui
+                namespace: "alloy"
+              spec:
+                interval: 30s
+                module: http_2xx
+                prober:
+                  url: alloy-alloy-metrics-cluster.alloy.svc:12345
+                  path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+                targets:
+                  staticConfig:
+                    static:
+                      - https://morpheus.local.symmatree.com/
             - apiVersion: networking.k8s.io/v1
               kind: Ingress
               metadata:
@@ -690,6 +735,19 @@ spec:
           cluster_name: 'placeholder'
           extraObjects:
             - apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: loki-loki-data
+                namespace: "loki"
+              spec:
+                accessModes:
+                  - ReadWriteMany
+                resources:
+                  requests:
+                    storage: 100Gi
+                volumeName: loki-loki-data
+                storageClassName: ""
+            - apiVersion: v1
               kind: ConfigMap
               metadata:
                 name: loki-data-source
@@ -768,6 +826,19 @@ spec:
                     - 'mimir.placeholder.symmatree.com'
           # NFS storage architecture: see docs/nfs-storage-architecture.md
           extraObjects:
+            - apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: mimir-mimir-data
+                namespace: "mimir"
+              spec:
+                accessModes:
+                  - ReadWriteMany
+                resources:
+                  requests:
+                    storage: 100Gi
+                volumeName: mimir-mimir-data
+                storageClassName: ""
             - apiVersion: v1
               kind: ConfigMap
               metadata:
