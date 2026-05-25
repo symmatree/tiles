@@ -4,162 +4,54 @@ metadata:
   name: loki
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-  source:
-    repoURL: "https://grafana.github.io/helm-charts"
-    targetRevision: "6.49.0"
-    chart: loki
-    helm:
-      valuesObject:
-        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
-        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-        extraObjects:
-          - apiVersion: v1
-            kind: ConfigMap
-            metadata:
-              name: loki-data-source
-              namespace: "loki"
-              labels:
-                grafana_datasource: "1"
-            data:
-              datasource.yaml: |-
-                apiVersion: 1
-                datasources:
-                  - name: Loki
-                    uid: loki
-                    type: loki
-                    url: http://loki.loki.svc:3100
-                    isDefault: false
-                    jsonData:
-                      httpHeaderName1: X-Scope-OrgID
-                    secureJsonData:
-                      httpHeaderValue1: "{{ .Values.cluster_name }}"
-
-          - apiVersion: v1
-            kind: PersistentVolume
-            metadata:
-              name: loki-loki-data
-            spec:
-              capacity:
-                storage: 100Gi
-              accessModes:
-                - ReadWriteMany
-              persistentVolumeReclaimPolicy: Retain
-              nfs:
-                server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
-                path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}/loki-data'
-
-          - apiVersion: v1
-            kind: PersistentVolumeClaim
-            metadata:
-              name: loki-loki-data
-              namespace: "loki"
-            spec:
-              accessModes:
-                - ReadWriteMany
-              resources:
-                requests:
+  sources:
+    - repoURL: "https://grafana.github.io/helm-charts"
+      targetRevision: "6.49.0"
+      chart: loki
+      helm:
+        valueFiles:
+          - $values/charts/argocd-applications/values/loki-values.yaml
+          - $values/charts/argocd-applications/values/loki-{{ required ".Values.cluster_name is required" .Values.cluster_name }}-values.yaml
+        valuesObject:
+          vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+          cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+          extraObjects:
+            - apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: loki-data-source
+                namespace: "loki"
+                labels:
+                  grafana_datasource: "1"
+              data:
+                datasource.yaml: |-
+                  apiVersion: 1
+                  datasources:
+                    - name: Loki
+                      uid: loki
+                      type: loki
+                      url: http://loki.loki.svc:3100
+                      isDefault: false
+                      jsonData:
+                        httpHeaderName1: X-Scope-OrgID
+                      secureJsonData:
+                        httpHeaderValue1: "{{ .Values.cluster_name }}"
+            - apiVersion: v1
+              kind: PersistentVolume
+              metadata:
+                name: loki-loki-data
+              spec:
+                capacity:
                   storage: 100Gi
-              volumeName: loki-loki-data
-              storageClassName: ""
-        loki:
-          commonConfig:
-            replication_factor: 1
-          schemaConfig:
-            configs:
-              - from: 2024-04-01
-                store: tsdb
-                object_store: filesystem
-                schema: v13
-                index:
-                  prefix: loki_index_
-                  period: 24h
-          ingester:
-            chunk_encoding: snappy
-          pattern_ingester:
-            enabled: true
-          limits_config:
-            volume_enabled: true
-          tracing:
-            enabled: true
-          ruler:
-            enable_api: true
-          storage:
-            type: "filesystem"
-            filesystem:
-              chunks_directory: /mnt/loki-nfs/chunks
-              rules_directory: /mnt/loki-nfs/rules
-          querier:
-            # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
-            max_concurrent: 4
-          extraMemberlistConfig:
-            cluster_label: loki
-
-        deploymentMode: SingleBinary
-        monitoring:
-          dashboards:
-            enabled: false
-            # annotations:
-            #   k8s-sidecar-target-directory: /tmp/dashboards/Loki
-          serviceMonitor:
-            enabled: true
-          rules:
-            enabled: false
-          selfMonitoring:
-            enabled: false
-
-        minio:
-          enabled: false
-
-        # NFS storage architecture: see docs/nfs-storage-architecture.md
-        # Single binary mode configuration
-        singleBinary:
-          replicas: 1
-          persistence:
-            enabled: true
-            storageClassName: local-path
-            enableStatefulSetAutoDeletePVC: true
-          extraArgs:
-            - -config.expand-env=true
-            - -log-config-reverse-order
-          extraVolumes:
-            - name: loki-shared-storage
-              persistentVolumeClaim:
-                claimName: loki-loki-data
-          extraVolumeMounts:
-            - name: loki-shared-storage
-              mountPath: /mnt/loki-nfs
-
-        gateway:
-          enabled: false
-        backend:
-          replicas: 0
-        read:
-          replicas: 0
-        write:
-          replicas: 0
-        chunksCache:
-          enabled: false
-        resultsCache:
-          enabled: false
-        ingester:
-          replicas: 0
-        querier:
-          replicas: 0
-        queryFrontend:
-          replicas: 0
-        queryScheduler:
-          replicas: 0
-        distributor:
-          replicas: 0
-        compactor:
-          replicas: 0
-        indexGateway:
-          replicas: 0
-        bloomCompactor:
-          replicas: 0
-        bloomGateway:
-          replicas: 0
-
+                accessModes:
+                  - ReadWriteMany
+                persistentVolumeReclaimPolicy: Retain
+                nfs:
+                  server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+                  path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}/loki-data'
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: loki

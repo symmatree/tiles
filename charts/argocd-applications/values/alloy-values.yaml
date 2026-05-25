@@ -1,0 +1,256 @@
+# Static k8s-monitoring values. Templated keys in alloy-application.yaml valuesObject.
+
+extraObjects:
+  - apiVersion: monitoring.coreos.com/v1
+    kind: Probe
+    metadata:
+      name: hubitat-http
+      namespace: "alloy"
+    spec:
+      interval: 30s
+      module: http_2xx
+      prober:
+        url: alloy-alloy-metrics-cluster.alloy.svc:12345
+        path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+      targets:
+        staticConfig:
+          static:
+            - http://hubitat.local.symmatree.com
+  - apiVersion: monitoring.coreos.com/v1
+    kind: Probe
+    metadata:
+      name: raconteur-syno-ui
+      namespace: "alloy"
+    spec:
+      interval: 30s
+      module: http_2xx
+      prober:
+        url: alloy-alloy-metrics-cluster.alloy.svc:12345
+        path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+      targets:
+        staticConfig:
+          static:
+            - https://raconteur.ad.local.symmatree.com:5001/
+  - apiVersion: monitoring.coreos.com/v1
+    kind: Probe
+    metadata:
+      name: morpheus-ui
+      namespace: "alloy"
+    spec:
+      interval: 30s
+      module: http_2xx
+      prober:
+        url: alloy-alloy-metrics-cluster.alloy.svc:12345
+        path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
+      targets:
+        staticConfig:
+          static:
+            - https://morpheus.local.symmatree.com/
+
+global:
+  extraEnv:
+    - name: SSL_CERT_FILE
+      value: /etc/ssl/certs/ca-certificates.crt
+  extraVolumes:
+    - name: ca-certificates
+      configMap:
+        name: trust-bundle
+  extraVolumeMounts:
+    - name: ca-certificates
+      mountPath: /etc/ssl/certs
+      readOnly: true
+
+clusterMetrics:
+  enabled: true
+  controlPlane:
+    enabled: true
+  apiServer:
+    metricsTuning:
+      includeMetrics:
+        - apiserver_request_total
+        - apiserver_request_sli_duration_seconds.*
+        - apiserver_client_certificate_expiration_seconds.*
+        - apiserver_request_terminations_total
+        - aggregator_unavailable_apiservice.*
+        - rest_client_requests_total
+        - kubernetes_build_info
+  kubeProxy:
+    enabled: false
+  kube-state-metrics:
+    metricsTuning:
+      excludeMetrics:
+        - kube_configmap_.*
+        - kube_secret_metadata_resource_version
+        - kube_pod_init_container_.*
+        - kube_pod_restart_policy
+        - kube_pod_start_time
+        - kube_pod_completion_time
+        - kube_replicaset_created
+        - kube_replicaset_metadata_generation
+        - kube_replicaset_spec_replicas
+        - kube_replicaset_status_.*
+        - kube_daemonset_created
+        - kube_daemonset_metadata_generation
+        - kube_daemonset_status_observed_generation
+        - kube_statefulset_created
+        - kube_statefulset_persistentvolumeclaim_retention_policy
+        - kube_statefulset_status_replicas$
+        - kube_statefulset_status_replicas_available
+        - kube_statefulset_status_replicas_current
+        - kube_cronjob_created
+        - kube_cronjob_info
+        - kube_cronjob_metadata_resource_version
+        - kube_cronjob_spec_failed_job_history_limit
+        - kube_cronjob_spec_successful_job_history_limit
+        - kube_job_complete
+        - kube_job_created
+        - kube_job_info
+        - kube_job_spec_.*
+        - kube_job_status_completion_time
+        - kube_job_status_succeeded
+  windows-exporter:
+    enabled: false
+    deploy: false
+  node-exporter:
+    enabled: true
+    deploy: true
+    metricsTuning:
+      useDefaultAllowList: true
+      useIntegrationAllowList: true
+      includeMetrics:
+        - "node_pressure.*"
+        - "node_xfs.*"
+        - "node_time_seconds"
+        - "node_bonding.*"
+      dropMetricsForFilesystem:
+        - ramfs
+        - tmpfs
+        - nsfs
+        - rootfs
+        - iso9660
+        - overlay
+    extraArgs:
+      - --collector.filesystem.fs-types-exclude=^(ramfs|tmpfs|nsfs|rootfs|iso9660|overlay)$
+  kepler:
+    enabled: false
+  opencost:
+    enabled: false
+
+clusterEvents:
+  enabled: true
+  logFormat: json
+
+nodeLogs:
+  enabled: true
+
+podLogs:
+  enabled: true
+
+applicationObservability:
+  enabled: true
+  receivers:
+    otlp:
+      grpc:
+        enabled: true
+        port: 4317
+        includeMetadata: true
+      http:
+        enabled: true
+        port: 4318
+        includeMetadata: true
+  processors:
+    kubernetes_node:
+      enabled: true
+  metrics:
+    enabled: true
+  logs:
+    enabled: true
+  traces:
+    enabled: false
+
+prometheusOperatorObjects:
+  enabled: true
+  crds:
+    deploy: false
+
+alloy-metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+  extraConfig: |-
+    prometheus.exporter.blackbox "blackbox_exporter" {
+      config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
+    }
+  alloy:
+    resources:
+      limits:
+        memory: 1Gi
+
+alloy-singleton:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+  alloy:
+    resources:
+      limits:
+        memory: 512Mi
+
+alloy-logs:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+  alloy:
+    mounts:
+      varlog: true
+      dockercontainers: false
+
+alloy-receiver:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+  controller:
+    type: "deployment"
+  alloy:
+    extraPorts:
+      - name: otlp-grpc
+        port: 4317
+        targetPort: 4317
+        protocol: TCP
+      - name: otlp-http
+        port: 4318
+        targetPort: 4318
+        protocol: TCP
+
+integrations:
+  alloy:
+    instances:
+      - name: alloy
+        namespace: alloy
+        labelSelectors:
+          app.kubernetes.io/name:
+            - alloy-metrics
+            - alloy-singleton
+            - alloy-logs
+            - alloy-receiver
+        metrics:
+          tuning:
+            includeMetrics:
+              - cluster_minimum_size
+              - loki_source_file_.*
+              - loki_source_journal_.*
+              - loki_write_entry_propagation_latency_seconds.*
+              - loki_write_request_size_bytes.*
+              - otelcol_receiver_(accepted|refused)_(metric_points|log_records)_total
+              - otelcol_exporter_sent_(metric_points|log_records|spans)_total
+              - otelcol_exporter_send_failed_(metric_points|log_records|spans)_total
+              - otelcol_exporter_enqueue_failed_(log_records|metric_points|spans)_total
+              - otelcol_exporter_queue_.*
+              - otelcol_processor_(incoming|outgoing)_items_total
+              - otelcol_processor_refused_(metric_points|spans)_total
+              - otelcol_processor_batch_batch_size_trigger_send_total
+              - http_(client|server)_duration_milliseconds_bucket
+              - rpc_(client|server)_duration_milliseconds_bucket
+              - otelcol_process_cpu_seconds_total
+              - otelcol_process_memory_rss_bytes
+              - otelcol_process_runtime_total_alloc_bytes_total
+              - otelcol_process_uptime_seconds_total

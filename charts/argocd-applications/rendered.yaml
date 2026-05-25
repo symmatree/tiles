@@ -6,335 +6,69 @@ metadata:
   name: alloy
 spec:
   project: 'placeholder'
-  source:
-    repoURL: https://grafana.github.io/helm-charts
-    targetRevision: "3.7.1"
-    chart: k8s-monitoring
-    helm:
-      valuesObject:
-        vault_name: 'placeholder'
-        cluster_name: 'placeholder'
-        global:
-          extraEnv:
-            - name: SSL_CERT_FILE
-              value: /etc/ssl/certs/ca-certificates.crt
-          extraVolumes:
-            - name: ca-certificates
-              configMap:
-                name: trust-bundle
-          extraVolumeMounts:
-            - name: ca-certificates
-              mountPath: /etc/ssl/certs
-              readOnly: true
-        cluster:
-          name: 'placeholder'
-
-        destinations:
-          - name: localMimir
-            type: prometheus
-            url: http://mimir-gateway.mimir.svc/api/v1/push
-            tenantId: 'placeholder'
-            secret:
-              # This is just the tenant name
-              create: false
-              embed: true
-          - name: localLoki
-            type: loki
-            url: http://loki.loki.svc:3100/loki/api/v1/push
-            tenantId: 'placeholder'
-            secret:
-              # This is just the tenant name
-              create: false
-              embed: true
-
-        extraObjects:
-          - apiVersion: monitoring.coreos.com/v1
-            kind: Probe
-            metadata:
-              name: hubitat-http
-              namespace: "alloy"
-            spec:
-              interval: 30s
-              module: http_2xx
-              prober:
-                url: alloy-alloy-metrics-cluster.alloy.svc:12345
-                path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-              targets:
-                staticConfig:
-                  static:
-                    - http://hubitat.local.symmatree.com
-          - apiVersion: monitoring.coreos.com/v1
-            kind: Probe
-            metadata:
-              name: raconteur-syno-ui
-              namespace: "alloy"
-            spec:
-              interval: 30s
-              module: http_2xx
-              prober:
-                url: alloy-alloy-metrics-cluster.alloy.svc:12345
-                path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-              targets:
-                staticConfig:
-                  static:
-                    - https://raconteur.ad.local.symmatree.com:5001/
-          - apiVersion: monitoring.coreos.com/v1
-            kind: Probe
-            metadata:
-              name: morpheus-ui
-              namespace: "alloy"
-            spec:
-              interval: 30s
-              module: http_2xx
-              prober:
-                url: alloy-alloy-metrics-cluster.alloy.svc:12345
-                path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-              targets:
-                staticConfig:
-                  static:
-                    - https://morpheus.local.symmatree.com/
-          - apiVersion: networking.k8s.io/v1
-            kind: Ingress
-            metadata:
-              name: otlp-ingress
-              namespace: "alloy"
-              annotations:
-                cert-manager.io/cluster-issuer: real-cert
-                external-dns.alpha.kubernetes.io/hostname: 'otlp.placeholder.symmatree.com'
-            spec:
-              ingressClassName: cilium
-              tls:
-                - secretName: otlp-tls
-                  hosts:
-                    - 'otlp.placeholder.symmatree.com'
-              rules:
-                - host: 'otlp.placeholder.symmatree.com'
-                  http:
-                    paths:
-                      - path: /
-                        pathType: Prefix
-                        backend:
-                          service:
-                            name: alloy-alloy-receiver
-                            port:
-                              number: 4318
-        # https://github.com/grafana/k8s-monitoring-helm/blob/main/charts/k8s-monitoring/charts/feature-cluster-metrics/values.yaml
-        clusterMetrics:
-          enabled: true
-          controlPlane:
-            enabled: true
-          apiServer:
-            metricsTuning:
-              includeMetrics:
-                - apiserver_request_total
-                - apiserver_request_sli_duration_seconds.*
-                - apiserver_client_certificate_expiration_seconds.*
-                - apiserver_request_terminations_total
-                - aggregator_unavailable_apiservice.*
-                - rest_client_requests_total
-                - kubernetes_build_info
-          kubeProxy:
-            # there isn't one, cilium replaces it.
-            enabled: false
-          kube-state-metrics:
-            metricsTuning:
-              excludeMetrics:
-                - kube_configmap_.*
-                - kube_secret_metadata_resource_version
-                - kube_pod_init_container_.*
-                - kube_pod_restart_policy
-                - kube_pod_start_time
-                - kube_pod_completion_time
-                - kube_replicaset_created
-                - kube_replicaset_metadata_generation
-                - kube_replicaset_spec_replicas
-                - kube_replicaset_status_.*
-                - kube_daemonset_created
-                - kube_daemonset_metadata_generation
-                - kube_daemonset_status_observed_generation
-                - kube_statefulset_created
-                - kube_statefulset_persistentvolumeclaim_retention_policy
-                - kube_statefulset_status_replicas$
-                - kube_statefulset_status_replicas_available
-                - kube_statefulset_status_replicas_current
-                - kube_cronjob_created
-                - kube_cronjob_info
-                - kube_cronjob_metadata_resource_version
-                - kube_cronjob_spec_failed_job_history_limit
-                - kube_cronjob_spec_successful_job_history_limit
-                - kube_job_complete
-                - kube_job_created
-                - kube_job_info
-                - kube_job_spec_.*
-                - kube_job_status_completion_time
-                - kube_job_status_succeeded
-          windows-exporter:
-            enabled: false
-            deploy: false
-          node-exporter:
-            enabled: true
-            deploy: true
-            metricsTuning:
-              useDefaultAllowList: true
-              useIntegrationAllowList: true
-              includeMetrics:
-                - "node_pressure.*"
-                - "node_xfs.*"
-                - "node_time_seconds"
-                - "node_bonding.*"
-              dropMetricsForFilesystem:
-                - ramfs
-                - tmpfs
-                - nsfs
-                - rootfs
-                - iso9660
-                - overlay
-            extraArgs:
-              - --collector.filesystem.fs-types-exclude=^(ramfs|tmpfs|nsfs|rootfs|iso9660|overlay)$
-          kepler:
-            enabled: false
-          opencost:
-            enabled: false
-        clusterEvents:
-          enabled: true
-          # logfmt version does NO escaping:
-          # https://github.com/grafana/alloy/blob/main/internal/component/loki/source/kubernetes_events/event_controller.go#L303
-          # to
-          # https://github.com/grafana/alloy/blob/main/internal/component/loki/source/kubernetes_events/event_controller.go#L324
-          logFormat: json
-        nodeLogs:
-          # Talos now (2026) echos logs into /var/log.
-          # https://docs.siderolabs.com/talos/v1.12/configure-your-talos-cluster/logging-and-telemetry/logging#forwarding-logs-for-aggregation
-          enabled: true
-        podLogs:
-          enabled: true
-        applicationObservability:
-          enabled: true
-          receivers:
-            otlp:
-              grpc:
-                enabled: true
-                port: 4317
-                includeMetadata: true
-              http:
-                enabled: true
-                port: 4318
-                includeMetadata: true
-          processors:
-            kubernetes_node:
-              enabled: true
-          # connectors:
-          #   spanLogs:
-          #     enabled: true
-          #     roots: true
-          #     spans: false
-          #   spanMetrics:
-          #     enabled: true
-          metrics:
-            enabled: true
-          logs:
-            enabled: true
-          traces:
-            enabled: false
-        prometheusOperatorObjects:
-          enabled: true
-          crds:
-            deploy: false
-        alloy-metrics:
-          enabled: true
-          serviceMonitor:
-            # Metrics come from integrations.alloy scrape (job=integrations/alloy, allow-listed).
-            enabled: false
-          # This is the instance running prometheus.operator.probes
-          # so make it also the blackbox exporter.
-          # https://github.com/grafana/alloy/issues/2333#issuecomment-2741631302
-          # goes a long way here.
-          extraConfig: |-
-            prometheus.exporter.blackbox "blackbox_exporter" {
-              config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
-            }
-          alloy:
-            resources: # Set 2025-07-20
-              # requests:
-              #   memory: 768Mi
-              limits:
-                memory: 1Gi
-        alloy-singleton:
-          extraConfig: |-
-            mimir.rules.kubernetes "default" {
-              address = "http://mimir-gateway.mimir.svc"
-              tenant_id = "placeholder"
-            }
-          enabled: true
-          serviceMonitor:
-            enabled: false
-          alloy:
-            resources: # Set 2025-07-20
-              # requests:
-              #   memory: 256Mi
-              limits:
-                memory: 512Mi
-        alloy-logs:
-          enabled: true
-          serviceMonitor:
-            enabled: false
-          alloy:
-            mounts:
-              # /var/log/pods and /var/log/containers exist. (Also audit.)
-              varlog: true
-              dockercontainers: false
-        alloy-receiver:
-          enabled: true
-          serviceMonitor:
-            enabled: false
-          controller:
-            type: "deployment"
-          alloy:
-            extraPorts:
-              - name: otlp-grpc
-                port: 4317
-                targetPort: 4317
-                protocol: TCP
-              - name: otlp-http
-                port: 4318
-                targetPort: 4318
-                protocol: TCP
-        integrations:
-          # Most applications use their internal Prometheus Operator scrapes rather than integrations.
-          # Integrations can VERY easily dual-scrape.
-          alloy:
-            instances:
-              - name: alloy
-                namespace: alloy
-                labelSelectors:
-                  app.kubernetes.io/name:
-                    - alloy-metrics
-                    - alloy-singleton
-                    - alloy-logs
-                    - alloy-receiver
-                metrics:
-                  tuning:
-                    # Grafana alloy-mixin uses metrics beyond k8s-monitoring default-allow-lists/alloy.yaml.
-                    includeMetrics:
-                      - cluster_minimum_size
-                      - loki_source_file_.*
-                      - loki_source_journal_.*
-                      - loki_write_entry_propagation_latency_seconds.*
-                      - loki_write_request_size_bytes.*
-                      - otelcol_receiver_(accepted|refused)_(metric_points|log_records)_total
-                      - otelcol_exporter_sent_(metric_points|log_records|spans)_total
-                      - otelcol_exporter_send_failed_(metric_points|log_records|spans)_total
-                      - otelcol_exporter_enqueue_failed_(log_records|metric_points|spans)_total
-                      - otelcol_exporter_queue_.*
-                      - otelcol_processor_(incoming|outgoing)_items_total
-                      - otelcol_processor_refused_(metric_points|spans)_total
-                      - otelcol_processor_batch_batch_size_trigger_send_total
-                      - http_(client|server)_duration_milliseconds_bucket
-                      - rpc_(client|server)_duration_milliseconds_bucket
-                      - otelcol_process_cpu_seconds_total
-                      - otelcol_process_memory_rss_bytes
-                      - otelcol_process_runtime_total_alloc_bytes_total
-                      - otelcol_process_uptime_seconds_total
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      targetRevision: "3.7.1"
+      chart: k8s-monitoring
+      helm:
+        valueFiles:
+          - $values/charts/argocd-applications/values/alloy-values.yaml
+          - $values/charts/argocd-applications/values/alloy-placeholder-values.yaml
+        valuesObject:
+          vault_name: 'placeholder'
+          cluster_name: 'placeholder'
+          cluster:
+            name: 'placeholder'
+          destinations:
+            - name: localMimir
+              type: prometheus
+              url: http://mimir-gateway.mimir.svc/api/v1/push
+              tenantId: 'placeholder'
+              secret:
+                create: false
+                embed: true
+            - name: localLoki
+              type: loki
+              url: http://loki.loki.svc:3100/loki/api/v1/push
+              tenantId: 'placeholder'
+              secret:
+                create: false
+                embed: true
+          extraObjects:
+            - apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: otlp-ingress
+                namespace: "alloy"
+                annotations:
+                  cert-manager.io/cluster-issuer: real-cert
+                  external-dns.alpha.kubernetes.io/hostname: 'otlp.placeholder.symmatree.com'
+              spec:
+                ingressClassName: cilium
+                tls:
+                  - secretName: otlp-tls
+                    hosts:
+                      - 'otlp.placeholder.symmatree.com'
+                rules:
+                  - host: 'otlp.placeholder.symmatree.com'
+                    http:
+                      paths:
+                        - path: /
+                          pathType: Prefix
+                          backend:
+                            service:
+                              name: alloy-alloy-receiver
+                              port:
+                                number: 4318
+          alloy-singleton:
+            extraConfig: |-
+              mimir.rules.kubernetes "default" {
+                address = "http://mimir-gateway.mimir.svc"
+                tenant_id = "placeholder"
+              }
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: 'placeholder'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: alloy
@@ -434,23 +168,28 @@ metadata:
   name: argocd
 spec:
   project: 'placeholder'
-  source:
-    repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
-    path: charts/argocd
-    helm:
-      valueFiles:
-        - values.yaml
-      valuesObject:
-        targetRevision: 'placeholder'
-        cluster_name: 'placeholder'
-        vault_name: 'placeholder'
-        argo-cd:
-          global:
-            domain: 'argocd.placeholder.symmatree.com'
-          server:
-            ingressGrpc:
-              hostname: 'grpc-argocd.placeholder.symmatree.com'
+  sources:
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: 'placeholder'
+      path: charts/argocd
+      helm:
+        valueFiles:
+          - values.yaml
+          - $values/charts/argocd-applications/values/argocd-values.yaml
+          - $values/charts/argocd-applications/values/argocd-placeholder-values.yaml
+        valuesObject:
+          targetRevision: 'placeholder'
+          cluster_name: 'placeholder'
+          vault_name: 'placeholder'
+          argo-cd:
+            global:
+              domain: 'argocd.placeholder.symmatree.com'
+            server:
+              ingressGrpc:
+                hostname: 'grpc-argocd.placeholder.symmatree.com'
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: 'placeholder'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -614,32 +353,36 @@ metadata:
   name: cilium
 spec:
   project: 'placeholder'
-  source:
-    repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
-    path: charts/cilium
-    helm:
-      valueFiles:
-        - values.yaml
-      # Inject values from Terraform or that vary by environment.
-      valuesObject:
-        cilium:
-          ipv4NativeRoutingCIDR: 'placeholder'
-          cluster:
-            name: 'placeholder'
-          hubble:
-            tls:
-              auto:
-                certManagerIssuerRef:
-                  name: 'placeholder-ca-issuer'
-            ui:
-              ingress:
-                hosts:
-                  - 'hubble.placeholder.symmatree.com'
-                tls:
-                  - secretName: hubble-ui-tls
-                    hosts:
-                      - 'hubble.placeholder.symmatree.com'
+  sources:
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: 'placeholder'
+      path: charts/cilium
+      helm:
+        valueFiles:
+          - values.yaml
+          - $values/charts/argocd-applications/values/cilium-values.yaml
+          - $values/charts/argocd-applications/values/cilium-placeholder-values.yaml
+        valuesObject:
+          cilium:
+            ipv4NativeRoutingCIDR: 'placeholder'
+            cluster:
+              name: 'placeholder'
+            hubble:
+              tls:
+                auto:
+                  certManagerIssuerRef:
+                    name: 'placeholder-ca-issuer'
+              ui:
+                ingress:
+                  hosts:
+                    - 'hubble.placeholder.symmatree.com'
+                  tls:
+                    - secretName: hubble-ui-tls
+                      hosts:
+                        - 'hubble.placeholder.symmatree.com'
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: 'placeholder'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: cilium
@@ -801,98 +544,49 @@ metadata:
   name: grafana
 spec:
   project: 'placeholder'
-  source:
-    repoURL: https://grafana.github.io/helm-charts
-    targetRevision: "10.4.2"
-    chart: grafana
-    helm:
-      valuesObject:
-        vault_name: 'placeholder'
-        cluster_name: 'placeholder'
-        global:
-          extraEnv:
-            - name: SSL_CERT_FILE
-              value: /etc/ssl/certs/ca-certificates.crt
-          extraVolumes:
-            - name: ca-certificates
-              configMap:
-                name: trust-bundle
-          extraVolumeMounts:
-            - name: ca-certificates
-              mountPath: /etc/ssl/certs
-              readOnly: true
-        ingress:
-          hosts:
-            - 'borgmon.placeholder.symmatree.com'
-          tls:
-            - secretName: grafana-tls
-              hosts:
-                - 'borgmon.placeholder.symmatree.com'
-          enabled: true
-          ingressClassName: cilium
-          annotations:
-            cert-manager.io/cluster-issuer: real-cert
-
-        extraObjects:
-          - apiVersion: onepassword.com/v1
-            kind: OnePasswordItem
-            metadata:
-              namespace: "grafana"
-              name: github-data-source-secret
-              labels:
-                grafana_datasource: "1"
-            type: Opaque
-            spec:
-              itemPath: "vaults/placeholder/items/grafana-github-token"
-          - apiVersion: onepassword.com/v1
-            kind: OnePasswordItem
-            metadata:
-              namespace: "grafana"
-              name: grafana-admin-user
-            type: Opaque
-            spec:
-              itemPath: "vaults/placeholder/items/grafana-admin-user"
-
-        # https://github.com/grafana/helm-charts/blob/grafana-8.13.1/charts/grafana/values.yaml
-        # Without root_url, Grafana generates links (Explore deeplinks, alerts) using http://...:3000.
-        grafana.ini:
-          server:
-            root_url: 'https://borgmon.placeholder.symmatree.com/'
-        configMapAnnotations:
-          argocd.argoproj.io/sync-options: Replace=true
-        persistence:
-          enabled: true
-        admin:
-          existingSecret: grafana-admin-user
-          userKey: username
-          passwordKey: password
-        plugins:
-          - grafana-github-datasource
-          - grafana-lokiexplore-app
-          # - grafana-metricsdrilldown-app
-          # - grafana-mqtt-datasource
-        initChownData:
-          enabled: false
-          # Ref https://github.com/grafana/helm-charts/issues/752 for tradeoff
-          # between this and outright disabling.
-          # This is the user grafana uses, just empirically.
-          securityContext:
-            runAsUser: 472
-            runAsGroup: 472
-        sidecar:
-          dashboards:
-            enabled: true
-            searchNamespace: ALL
-            folderAnnotation: k8s-sidecar-target-directory
-            provider:
-              folderUid: sidecar
-              folder: Sidecar
-              allowUiUpdates: true
-              foldersFromFilesStructure: true
-          datasources:
-            enabled: true
-            searchNamespace: ALL
-
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      targetRevision: "10.4.2"
+      chart: grafana
+      helm:
+        valueFiles:
+          - $values/charts/argocd-applications/values/grafana-values.yaml
+          - $values/charts/argocd-applications/values/grafana-placeholder-values.yaml
+        valuesObject:
+          vault_name: 'placeholder'
+          cluster_name: 'placeholder'
+          ingress:
+            hosts:
+              - 'borgmon.placeholder.symmatree.com'
+            tls:
+              - secretName: grafana-tls
+                hosts:
+                  - 'borgmon.placeholder.symmatree.com'
+          extraObjects:
+            - apiVersion: onepassword.com/v1
+              kind: OnePasswordItem
+              metadata:
+                namespace: "grafana"
+                name: github-data-source-secret
+                labels:
+                  grafana_datasource: "1"
+              type: Opaque
+              spec:
+                itemPath: "vaults/placeholder/items/grafana-github-token"
+            - apiVersion: onepassword.com/v1
+              kind: OnePasswordItem
+              metadata:
+                namespace: "grafana"
+                name: grafana-admin-user
+              type: Opaque
+              spec:
+                itemPath: "vaults/placeholder/items/grafana-admin-user"
+          grafana.ini:
+            server:
+              root_url: 'https://borgmon.placeholder.symmatree.com/'
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: 'placeholder'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: grafana
@@ -983,162 +677,54 @@ metadata:
   name: loki
 spec:
   project: 'placeholder'
-  source:
-    repoURL: "https://grafana.github.io/helm-charts"
-    targetRevision: "6.49.0"
-    chart: loki
-    helm:
-      valuesObject:
-        vault_name: 'placeholder'
-        cluster_name: 'placeholder'
-        extraObjects:
-          - apiVersion: v1
-            kind: ConfigMap
-            metadata:
-              name: loki-data-source
-              namespace: "loki"
-              labels:
-                grafana_datasource: "1"
-            data:
-              datasource.yaml: |-
-                apiVersion: 1
-                datasources:
-                  - name: Loki
-                    uid: loki
-                    type: loki
-                    url: http://loki.loki.svc:3100
-                    isDefault: false
-                    jsonData:
-                      httpHeaderName1: X-Scope-OrgID
-                    secureJsonData:
-                      httpHeaderValue1: "placeholder"
-
-          - apiVersion: v1
-            kind: PersistentVolume
-            metadata:
-              name: loki-loki-data
-            spec:
-              capacity:
-                storage: 100Gi
-              accessModes:
-                - ReadWriteMany
-              persistentVolumeReclaimPolicy: Retain
-              nfs:
-                server: 'placeholder'
-                path: 'placeholder/loki-data'
-
-          - apiVersion: v1
-            kind: PersistentVolumeClaim
-            metadata:
-              name: loki-loki-data
-              namespace: "loki"
-            spec:
-              accessModes:
-                - ReadWriteMany
-              resources:
-                requests:
+  sources:
+    - repoURL: "https://grafana.github.io/helm-charts"
+      targetRevision: "6.49.0"
+      chart: loki
+      helm:
+        valueFiles:
+          - $values/charts/argocd-applications/values/loki-values.yaml
+          - $values/charts/argocd-applications/values/loki-placeholder-values.yaml
+        valuesObject:
+          vault_name: 'placeholder'
+          cluster_name: 'placeholder'
+          extraObjects:
+            - apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: loki-data-source
+                namespace: "loki"
+                labels:
+                  grafana_datasource: "1"
+              data:
+                datasource.yaml: |-
+                  apiVersion: 1
+                  datasources:
+                    - name: Loki
+                      uid: loki
+                      type: loki
+                      url: http://loki.loki.svc:3100
+                      isDefault: false
+                      jsonData:
+                        httpHeaderName1: X-Scope-OrgID
+                      secureJsonData:
+                        httpHeaderValue1: "placeholder"
+            - apiVersion: v1
+              kind: PersistentVolume
+              metadata:
+                name: loki-loki-data
+              spec:
+                capacity:
                   storage: 100Gi
-              volumeName: loki-loki-data
-              storageClassName: ""
-        loki:
-          commonConfig:
-            replication_factor: 1
-          schemaConfig:
-            configs:
-              - from: 2024-04-01
-                store: tsdb
-                object_store: filesystem
-                schema: v13
-                index:
-                  prefix: loki_index_
-                  period: 24h
-          ingester:
-            chunk_encoding: snappy
-          pattern_ingester:
-            enabled: true
-          limits_config:
-            volume_enabled: true
-          tracing:
-            enabled: true
-          ruler:
-            enable_api: true
-          storage:
-            type: "filesystem"
-            filesystem:
-              chunks_directory: /mnt/loki-nfs/chunks
-              rules_directory: /mnt/loki-nfs/rules
-          querier:
-            # Default is 4, if you have enough memory and CPU you can increase, reduce if OOMing
-            max_concurrent: 4
-          extraMemberlistConfig:
-            cluster_label: loki
-
-        deploymentMode: SingleBinary
-        monitoring:
-          dashboards:
-            enabled: false
-            # annotations:
-            #   k8s-sidecar-target-directory: /tmp/dashboards/Loki
-          serviceMonitor:
-            enabled: true
-          rules:
-            enabled: false
-          selfMonitoring:
-            enabled: false
-
-        minio:
-          enabled: false
-
-        # NFS storage architecture: see docs/nfs-storage-architecture.md
-        # Single binary mode configuration
-        singleBinary:
-          replicas: 1
-          persistence:
-            enabled: true
-            storageClassName: local-path
-            enableStatefulSetAutoDeletePVC: true
-          extraArgs:
-            - -config.expand-env=true
-            - -log-config-reverse-order
-          extraVolumes:
-            - name: loki-shared-storage
-              persistentVolumeClaim:
-                claimName: loki-loki-data
-          extraVolumeMounts:
-            - name: loki-shared-storage
-              mountPath: /mnt/loki-nfs
-
-        gateway:
-          enabled: false
-        backend:
-          replicas: 0
-        read:
-          replicas: 0
-        write:
-          replicas: 0
-        chunksCache:
-          enabled: false
-        resultsCache:
-          enabled: false
-        ingester:
-          replicas: 0
-        querier:
-          replicas: 0
-        queryFrontend:
-          replicas: 0
-        queryScheduler:
-          replicas: 0
-        distributor:
-          replicas: 0
-        compactor:
-          replicas: 0
-        indexGateway:
-          replicas: 0
-        bloomCompactor:
-          replicas: 0
-        bloomGateway:
-          replicas: 0
-
+                accessModes:
+                  - ReadWriteMany
+                persistentVolumeReclaimPolicy: Retain
+                nfs:
+                  server: 'placeholder'
+                  path: 'placeholder/loki-data'
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: 'placeholder'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: loki

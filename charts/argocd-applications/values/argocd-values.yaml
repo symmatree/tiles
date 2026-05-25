@@ -1,0 +1,1 @@
+# Chart defaults live in charts/argocd/values.yaml. Templated keys in charts/argocd/application.yaml valuesObject.

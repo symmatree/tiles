@@ -1,0 +1,55 @@
+# Static Grafana chart values. Templated keys in grafana-application.yaml valuesObject.
+
+global:
+  extraEnv:
+    - name: SSL_CERT_FILE
+      value: /etc/ssl/certs/ca-certificates.crt
+  extraVolumes:
+    - name: ca-certificates
+      configMap:
+        name: trust-bundle
+  extraVolumeMounts:
+    - name: ca-certificates
+      mountPath: /etc/ssl/certs
+      readOnly: true
+
+ingress:
+  enabled: true
+  ingressClassName: cilium
+  annotations:
+    cert-manager.io/cluster-issuer: real-cert
+
+configMapAnnotations:
+  argocd.argoproj.io/sync-options: Replace=true
+
+persistence:
+  enabled: true
+
+admin:
+  existingSecret: grafana-admin-user
+  userKey: username
+  passwordKey: password
+
+plugins:
+  - grafana-github-datasource
+  - grafana-lokiexplore-app
+
+initChownData:
+  enabled: false
+  securityContext:
+    runAsUser: 472
+    runAsGroup: 472
+
+sidecar:
+  dashboards:
+    enabled: true
+    searchNamespace: ALL
+    folderAnnotation: k8s-sidecar-target-directory
+    provider:
+      folderUid: sidecar
+      folder: Sidecar
+      allowUiUpdates: true
+      foldersFromFilesStructure: true
+  datasources:
+    enabled: true
+    searchNamespace: ALL

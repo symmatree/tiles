@@ -4,335 +4,69 @@ metadata:
   name: alloy
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-  source:
-    repoURL: https://grafana.github.io/helm-charts
-    targetRevision: "3.7.1"
-    chart: k8s-monitoring
-    helm:
-      valuesObject:
-        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
-        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-        global:
-          extraEnv:
-            - name: SSL_CERT_FILE
-              value: /etc/ssl/certs/ca-certificates.crt
-          extraVolumes:
-            - name: ca-certificates
-              configMap:
-                name: trust-bundle
-          extraVolumeMounts:
-            - name: ca-certificates
-              mountPath: /etc/ssl/certs
-              readOnly: true
-        cluster:
-          name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-
-        destinations:
-          - name: localMimir
-            type: prometheus
-            url: http://mimir-gateway.mimir.svc/api/v1/push
-            tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-            secret:
-              # This is just the tenant name
-              create: false
-              embed: true
-          - name: localLoki
-            type: loki
-            url: http://loki.loki.svc:3100/loki/api/v1/push
-            tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-            secret:
-              # This is just the tenant name
-              create: false
-              embed: true
-
-        extraObjects:
-          - apiVersion: monitoring.coreos.com/v1
-            kind: Probe
-            metadata:
-              name: hubitat-http
-              namespace: "alloy"
-            spec:
-              interval: 30s
-              module: http_2xx
-              prober:
-                url: alloy-alloy-metrics-cluster.alloy.svc:12345
-                path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-              targets:
-                staticConfig:
-                  static:
-                    - http://hubitat.local.symmatree.com
-          - apiVersion: monitoring.coreos.com/v1
-            kind: Probe
-            metadata:
-              name: raconteur-syno-ui
-              namespace: "alloy"
-            spec:
-              interval: 30s
-              module: http_2xx
-              prober:
-                url: alloy-alloy-metrics-cluster.alloy.svc:12345
-                path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-              targets:
-                staticConfig:
-                  static:
-                    - https://raconteur.ad.local.symmatree.com:5001/
-          - apiVersion: monitoring.coreos.com/v1
-            kind: Probe
-            metadata:
-              name: morpheus-ui
-              namespace: "alloy"
-            spec:
-              interval: 30s
-              module: http_2xx
-              prober:
-                url: alloy-alloy-metrics-cluster.alloy.svc:12345
-                path: /api/v0/component/prometheus.exporter.blackbox.blackbox_exporter/probe
-              targets:
-                staticConfig:
-                  static:
-                    - https://morpheus.local.symmatree.com/
-          - apiVersion: networking.k8s.io/v1
-            kind: Ingress
-            metadata:
-              name: otlp-ingress
-              namespace: "alloy"
-              annotations:
-                cert-manager.io/cluster-issuer: real-cert
-                external-dns.alpha.kubernetes.io/hostname: 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-            spec:
-              ingressClassName: cilium
-              tls:
-                - secretName: otlp-tls
-                  hosts:
-                    - 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-              rules:
-                - host: 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-                  http:
-                    paths:
-                      - path: /
-                        pathType: Prefix
-                        backend:
-                          service:
-                            name: alloy-alloy-receiver
-                            port:
-                              number: 4318
-        # https://github.com/grafana/k8s-monitoring-helm/blob/main/charts/k8s-monitoring/charts/feature-cluster-metrics/values.yaml
-        clusterMetrics:
-          enabled: true
-          controlPlane:
-            enabled: true
-          apiServer:
-            metricsTuning:
-              includeMetrics:
-                - apiserver_request_total
-                - apiserver_request_sli_duration_seconds.*
-                - apiserver_client_certificate_expiration_seconds.*
-                - apiserver_request_terminations_total
-                - aggregator_unavailable_apiservice.*
-                - rest_client_requests_total
-                - kubernetes_build_info
-          kubeProxy:
-            # there isn't one, cilium replaces it.
-            enabled: false
-          kube-state-metrics:
-            metricsTuning:
-              excludeMetrics:
-                - kube_configmap_.*
-                - kube_secret_metadata_resource_version
-                - kube_pod_init_container_.*
-                - kube_pod_restart_policy
-                - kube_pod_start_time
-                - kube_pod_completion_time
-                - kube_replicaset_created
-                - kube_replicaset_metadata_generation
-                - kube_replicaset_spec_replicas
-                - kube_replicaset_status_.*
-                - kube_daemonset_created
-                - kube_daemonset_metadata_generation
-                - kube_daemonset_status_observed_generation
-                - kube_statefulset_created
-                - kube_statefulset_persistentvolumeclaim_retention_policy
-                - kube_statefulset_status_replicas$
-                - kube_statefulset_status_replicas_available
-                - kube_statefulset_status_replicas_current
-                - kube_cronjob_created
-                - kube_cronjob_info
-                - kube_cronjob_metadata_resource_version
-                - kube_cronjob_spec_failed_job_history_limit
-                - kube_cronjob_spec_successful_job_history_limit
-                - kube_job_complete
-                - kube_job_created
-                - kube_job_info
-                - kube_job_spec_.*
-                - kube_job_status_completion_time
-                - kube_job_status_succeeded
-          windows-exporter:
-            enabled: false
-            deploy: false
-          node-exporter:
-            enabled: true
-            deploy: true
-            metricsTuning:
-              useDefaultAllowList: true
-              useIntegrationAllowList: true
-              includeMetrics:
-                - "node_pressure.*"
-                - "node_xfs.*"
-                - "node_time_seconds"
-                - "node_bonding.*"
-              dropMetricsForFilesystem:
-                - ramfs
-                - tmpfs
-                - nsfs
-                - rootfs
-                - iso9660
-                - overlay
-            extraArgs:
-              - --collector.filesystem.fs-types-exclude=^(ramfs|tmpfs|nsfs|rootfs|iso9660|overlay)$
-          kepler:
-            enabled: false
-          opencost:
-            enabled: false
-        clusterEvents:
-          enabled: true
-          # logfmt version does NO escaping:
-          # https://github.com/grafana/alloy/blob/main/internal/component/loki/source/kubernetes_events/event_controller.go#L303
-          # to
-          # https://github.com/grafana/alloy/blob/main/internal/component/loki/source/kubernetes_events/event_controller.go#L324
-          logFormat: json
-        nodeLogs:
-          # Talos now (2026) echos logs into /var/log.
-          # https://docs.siderolabs.com/talos/v1.12/configure-your-talos-cluster/logging-and-telemetry/logging#forwarding-logs-for-aggregation
-          enabled: true
-        podLogs:
-          enabled: true
-        applicationObservability:
-          enabled: true
-          receivers:
-            otlp:
-              grpc:
-                enabled: true
-                port: 4317
-                includeMetadata: true
-              http:
-                enabled: true
-                port: 4318
-                includeMetadata: true
-          processors:
-            kubernetes_node:
-              enabled: true
-          # connectors:
-          #   spanLogs:
-          #     enabled: true
-          #     roots: true
-          #     spans: false
-          #   spanMetrics:
-          #     enabled: true
-          metrics:
-            enabled: true
-          logs:
-            enabled: true
-          traces:
-            enabled: false
-        prometheusOperatorObjects:
-          enabled: true
-          crds:
-            deploy: false
-        alloy-metrics:
-          enabled: true
-          serviceMonitor:
-            # Metrics come from integrations.alloy scrape (job=integrations/alloy, allow-listed).
-            enabled: false
-          # This is the instance running prometheus.operator.probes
-          # so make it also the blackbox exporter.
-          # https://github.com/grafana/alloy/issues/2333#issuecomment-2741631302
-          # goes a long way here.
-          extraConfig: |-
-            prometheus.exporter.blackbox "blackbox_exporter" {
-              config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
-            }
-          alloy:
-            resources: # Set 2025-07-20
-              # requests:
-              #   memory: 768Mi
-              limits:
-                memory: 1Gi
-        alloy-singleton:
-          extraConfig: |-
-            mimir.rules.kubernetes "default" {
-              address = "http://mimir-gateway.mimir.svc"
-              tenant_id = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
-            }
-          enabled: true
-          serviceMonitor:
-            enabled: false
-          alloy:
-            resources: # Set 2025-07-20
-              # requests:
-              #   memory: 256Mi
-              limits:
-                memory: 512Mi
-        alloy-logs:
-          enabled: true
-          serviceMonitor:
-            enabled: false
-          alloy:
-            mounts:
-              # /var/log/pods and /var/log/containers exist. (Also audit.)
-              varlog: true
-              dockercontainers: false
-        alloy-receiver:
-          enabled: true
-          serviceMonitor:
-            enabled: false
-          controller:
-            type: "deployment"
-          alloy:
-            extraPorts:
-              - name: otlp-grpc
-                port: 4317
-                targetPort: 4317
-                protocol: TCP
-              - name: otlp-http
-                port: 4318
-                targetPort: 4318
-                protocol: TCP
-        integrations:
-          # Most applications use their internal Prometheus Operator scrapes rather than integrations.
-          # Integrations can VERY easily dual-scrape.
-          alloy:
-            instances:
-              - name: alloy
-                namespace: alloy
-                labelSelectors:
-                  app.kubernetes.io/name:
-                    - alloy-metrics
-                    - alloy-singleton
-                    - alloy-logs
-                    - alloy-receiver
-                metrics:
-                  tuning:
-                    # Grafana alloy-mixin uses metrics beyond k8s-monitoring default-allow-lists/alloy.yaml.
-                    includeMetrics:
-                      - cluster_minimum_size
-                      - loki_source_file_.*
-                      - loki_source_journal_.*
-                      - loki_write_entry_propagation_latency_seconds.*
-                      - loki_write_request_size_bytes.*
-                      - otelcol_receiver_(accepted|refused)_(metric_points|log_records)_total
-                      - otelcol_exporter_sent_(metric_points|log_records|spans)_total
-                      - otelcol_exporter_send_failed_(metric_points|log_records|spans)_total
-                      - otelcol_exporter_enqueue_failed_(log_records|metric_points|spans)_total
-                      - otelcol_exporter_queue_.*
-                      - otelcol_processor_(incoming|outgoing)_items_total
-                      - otelcol_processor_refused_(metric_points|spans)_total
-                      - otelcol_processor_batch_batch_size_trigger_send_total
-                      - http_(client|server)_duration_milliseconds_bucket
-                      - rpc_(client|server)_duration_milliseconds_bucket
-                      - otelcol_process_cpu_seconds_total
-                      - otelcol_process_memory_rss_bytes
-                      - otelcol_process_runtime_total_alloc_bytes_total
-                      - otelcol_process_uptime_seconds_total
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      targetRevision: "3.7.1"
+      chart: k8s-monitoring
+      helm:
+        valueFiles:
+          - $values/charts/argocd-applications/values/alloy-values.yaml
+          - $values/charts/argocd-applications/values/alloy-{{ required ".Values.cluster_name is required" .Values.cluster_name }}-values.yaml
+        valuesObject:
+          vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+          cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+          cluster:
+            name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+          destinations:
+            - name: localMimir
+              type: prometheus
+              url: http://mimir-gateway.mimir.svc/api/v1/push
+              tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+              secret:
+                create: false
+                embed: true
+            - name: localLoki
+              type: loki
+              url: http://loki.loki.svc:3100/loki/api/v1/push
+              tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+              secret:
+                create: false
+                embed: true
+          extraObjects:
+            - apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: otlp-ingress
+                namespace: "alloy"
+                annotations:
+                  cert-manager.io/cluster-issuer: real-cert
+                  external-dns.alpha.kubernetes.io/hostname: 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+              spec:
+                ingressClassName: cilium
+                tls:
+                  - secretName: otlp-tls
+                    hosts:
+                      - 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+                rules:
+                  - host: 'otlp.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+                    http:
+                      paths:
+                        - path: /
+                          pathType: Prefix
+                          backend:
+                            service:
+                              name: alloy-alloy-receiver
+                              port:
+                                number: 4318
+          alloy-singleton:
+            extraConfig: |-
+              mimir.rules.kubernetes "default" {
+                address = "http://mimir-gateway.mimir.svc"
+                tenant_id = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
+              }
+    - repoURL: https://github.com/symmatree/tiles.git
+      targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: alloy
