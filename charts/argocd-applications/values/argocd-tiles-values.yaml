@@ -3,6 +3,6 @@ argo-cd:
   repoServer:
     resources:
       limits:
-        memory: 256Mi
+        memory: 384Mi
       requests:
         memory: 128Mi
