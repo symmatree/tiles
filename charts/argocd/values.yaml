@@ -278,6 +278,11 @@ argo-cd:
     # email-password:
     # For more information: https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/services/email/
   repoServer:
+    resources:
+      limits:
+        memory: 384Mi
+      requests:
+        memory: 128Mi
     # Repo-server main container: allow healthz to survive brief load spikes (default timeout 1s is tight).
     livenessProbe:
       timeoutSeconds: 5
