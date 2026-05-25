@@ -928,27 +928,24 @@ metadata:
   name: odm
 spec:
   project: 'placeholder'
-  sources:
-    - repoURL: https://github.com/symmatree/tiles.git
-      targetRevision: 'placeholder'
-      path: tanka
-      plugin:
-        env:
-          - name: TK_ENV
-            value: odm
-        parameters:
-          - name: cluster_name
-            string: 'placeholder'
-          - name: vault_name
-            string: 'placeholder'
-          - name: app_settings
-            map:
-              webOdmIngressHost: 'odm.placeholder.symmatree.com'
-              nfs_server: 'placeholder'
-              datasets_nfs_path: 'placeholder'
-    - repoURL: https://github.com/symmatree/tiles.git
-      targetRevision: 'placeholder'
-      ref: values
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: odm
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: app_settings
+          map:
+            webOdmIngressHost: 'odm.placeholder.symmatree.com'
+            nfs_server: 'placeholder'
+            datasets_nfs_path: 'placeholder'
   destination:
     server: https://kubernetes.default.svc
     namespace: odm
