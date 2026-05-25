@@ -1,19 +1,4 @@
-# Static Loki chart values. Templated keys in loki-application.yaml valuesObject.
-
-extraObjects:
-  - apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
-      name: loki-loki-data
-      namespace: "loki"
-    spec:
-      accessModes:
-        - ReadWriteMany
-      resources:
-        requests:
-          storage: 100Gi
-      volumeName: loki-loki-data
-      storageClassName: ""
+# Static Loki chart values. Templated keys and extraObjects in loki-application.yaml valuesObject.
 
 loki:
   commonConfig:

@@ -27,6 +27,19 @@ spec:
           # NFS storage architecture: see docs/nfs-storage-architecture.md
           extraObjects:
             - apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: mimir-mimir-data
+                namespace: "mimir"
+              spec:
+                accessModes:
+                  - ReadWriteMany
+                resources:
+                  requests:
+                    storage: 100Gi
+                volumeName: mimir-mimir-data
+                storageClassName: ""
+            - apiVersion: v1
               kind: ConfigMap
               metadata:
                 name: mimir-data-source

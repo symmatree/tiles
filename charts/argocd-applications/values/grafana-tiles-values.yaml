@@ -1,1 +1,4 @@
 # Per-cluster overrides for tiles.
+resources:
+  requests:
+    memory: 768Mi
