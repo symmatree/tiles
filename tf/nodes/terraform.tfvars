@@ -9,9 +9,10 @@ dns_zone_ad_local      = "ad-local-symmatree-com"
 dns_zone_local         = "local-symmatree-com"
 
 # Common Talos configuration (shared across all workspaces)
-talos_arch              = "amd64"
-talos_vm_variant        = "nocloud"
-talos_metal_amd_variant = "metal"
+talos_arch                = "amd64"
+talos_vm_variant          = "nocloud"
+talos_metal_amd_variant   = "metal"
+talos_metal_intel_variant = "metal"
 
 # Network and storage
 unifi_controller_url = "https://morpheus.local.symmatree.com:443"

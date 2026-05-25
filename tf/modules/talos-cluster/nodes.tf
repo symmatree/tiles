@@ -1,10 +1,11 @@
 
 # Load base configuration from YAML file
 locals {
-  config_path             = "${path.module}/talos-config.yaml"
-  base_config_yaml        = file(local.config_path)
-  vm_install_image        = "factory.talos.dev/installer/${var.talos_vm_schematic}:v${var.talos_version}"
-  metal_amd_install_image = "factory.talos.dev/metal-installer/${var.talos_metal_amd_schematic}:v${var.talos_version}"
+  config_path               = "${path.module}/talos-config.yaml"
+  base_config_yaml          = file(local.config_path)
+  vm_install_image          = "factory.talos.dev/installer/${var.talos_vm_schematic}:v${var.talos_version}"
+  metal_amd_install_image   = "factory.talos.dev/metal-installer/${var.talos_metal_amd_schematic}:v${var.talos_version}"
+  metal_intel_install_image = "factory.talos.dev/metal-installer/${var.talos_metal_intel_schematic}:v${var.talos_version}"
 
   common_patch_yaml = yamlencode({
     "version" = "v1alpha1"
@@ -96,6 +97,40 @@ module "talos-amd-metal" {
     [yamlencode({
       "machine" = {
         "install" = { "image" = local.metal_amd_install_image }
+      }
+    })],
+    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
+    each.value.taint != "" ? [yamlencode({
+      "machine" = {
+        "kubelet" = {
+          "extraArgs" = {
+            "register-with-taints" = "dedicated=${each.value.taint}:NoSchedule"
+          }
+        }
+      }
+    })] : []
+  )
+}
+
+module "talos-intel-metal" {
+  source   = "../talos-metal"
+  for_each = var.metal_intel_nodes
+
+  name                 = each.value.name
+  mac_address          = each.value.mac_address
+  ip_address           = each.value.ip_address
+  client_configuration = talos_machine_secrets.this.client_configuration
+  machine_configuration = (each.value.type == "control" ?
+    data.talos_machine_configuration.machineconfig_cp.machine_configuration
+  : data.talos_machine_configuration.machineconfig_worker.machine_configuration)
+
+  unifi_network_id = var.unifi_network_id
+  config_patches = concat(
+    [local.base_config_yaml],
+    [local.common_patch_yaml],
+    [yamlencode({
+      "machine" = {
+        "install" = { "image" = local.metal_intel_install_image }
       }
     })],
     each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],

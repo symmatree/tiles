@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 1.8"
   required_providers {
     proxmox = {
-      source  = "bpg/proxmox"
+      source = "bpg/proxmox"
       # host_managed on LXC network_interface (Proxmox Alloy CTs) requires >= 0.104.
       version = ">= 0.104"
     }
@@ -39,7 +39,7 @@ terraform {
       version = ">= 1.0.0"
     }
     synology = {
-      source  = "synology-community/synology"
+      source = "synology-community/synology"
       # Pinned to the version locked when synology-alloy landed (#264). Loosen after upstream
       # stream/JSON fix (go-synology / provider) or deliberate verification on newer DSM.
       version = "= 0.6.7"

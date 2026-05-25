@@ -48,6 +48,11 @@ variable "talos_metal_amd_variant" {
   type        = string
 }
 
+variable "talos_metal_intel_variant" {
+  description = "Talos Linux variant for bare metal Intel (e.g., metal)"
+  type        = string
+}
+
 variable "gcp_region" {
   description = "Google Cloud region"
   type        = string
@@ -74,6 +79,17 @@ variable "unifi_network_name" {
 
 variable "metal_amd_nodes" {
   description = "List of metal AMD nodes in the cluster"
+  type = map(object({
+    name        = string
+    type        = string
+    mac_address = string
+    ip_address  = string
+    taint       = string
+  }))
+}
+
+variable "metal_intel_nodes" {
+  description = "List of metal Intel nodes in the cluster"
   type = map(object({
     name        = string
     type        = string

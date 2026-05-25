@@ -34,6 +34,18 @@ variable "metal_amd_nodes" {
   }))
 }
 
+variable "metal_intel_nodes" {
+  description = "List of metal Intel nodes in the cluster"
+  type = map(object({
+    name        = string
+    type        = string
+    mac_address = string
+    ip_address  = string
+    taint       = string
+  }))
+  default = {}
+}
+
 variable "cluster_name" {
   description = "Talos cluster name"
   type        = string
@@ -74,6 +86,18 @@ variable "talos_metal_amd_variant" {
 variable "talos_metal_amd_schematic" {
   description = "Talos Linux schematic ID for bare metal AMD"
   type        = string
+}
+
+variable "talos_metal_intel_variant" {
+  description = "Talos Linux variant for bare metal Intel (e.g., metal)"
+  type        = string
+  default     = "metal"
+}
+
+variable "talos_metal_intel_schematic" {
+  description = "Talos Linux schematic ID for bare metal Intel"
+  type        = string
+  default     = ""
 }
 
 variable "pod_cidr" {
