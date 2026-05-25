@@ -1803,10 +1803,7 @@ spec:
           successThreshold: 1
           failureThreshold: 3
         resources:
-          limits:
-            memory: 512Mi
-          requests:
-            memory: 128Mi
+          {}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -1853,10 +1850,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: copyutil
         resources:
-          limits:
-            memory: 512Mi
-          requests:
-            memory: 128Mi
+          {}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

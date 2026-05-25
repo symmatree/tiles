@@ -1,8 +1,8 @@
-# Per-cluster overrides for tiles.
-argo-cd:
-  repoServer:
-    resources:
-      limits:
-        memory: 384Mi
-      requests:
-        memory: 128Mi
+# # Per-cluster overrides for tiles.
+# argo-cd:
+#   repoServer:
+#     resources:
+#       limits:
+#         memory: 384Mi
+#       requests:
+#         memory: 128Mi
