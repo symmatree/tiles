@@ -86,6 +86,11 @@ kubectl get application -n argocd
 kubectl describe application argocd-applications -n argocd
 ```
 
+## install-application.sh
+
+The argocd-applications Application (the root of the app-of-apps tree) is applied by [`install-application.sh`](install-application.sh).
+This in turn renders the child applications in charts/argocd-applications. See [Argo CD readiness and install-application](../../docs/config-propagation.md#argo-cd-readiness-and-install-application) in **config-propagation.md**.
+
 ## Troubleshooting
 
 ### Common Issues

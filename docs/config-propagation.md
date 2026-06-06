@@ -83,17 +83,32 @@ The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) pe
 3. **Runs optional bootstrap steps** - Each step is gated by a `workflow_dispatch` boolean (see the workflow file for the exact list). When enabled, the job runs, in order:
    - **`crds`** - `./charts/install-crds.sh` applies cluster-wide CRD YAML (Argo CD, cert-manager, Prometheus Operator, Gateway API, 1Password Item CRD, and others). This is **required on first bootstrap** for this repo because the Cilium and Argo CD bootstrap scripts use `helm template ... --skip-crds`, so chart installs do not create those CRDs themselves.
    - **`cilium`** - `./charts/cilium/bootstrap.sh`
-   - **`argocd`** - `./charts/argocd/bootstrap.sh`
+   - **`argocd`** - `./charts/argocd/bootstrap.sh` - this installed ArgoCD itself and the AppProject but not the actual Application resources.
    - **`onepassword`** - `./charts/onepassword/make-secrets.sh` creates the `onepassword` namespace (if needed) and the operator/connect secrets from 1Password-loaded env vars. **Required on first bootstrap** (or after secret loss) so the 1Password operator can run before workloads rely on `OnePasswordItem` CRs.
-   - **`argocd_applications`** - `./charts/argocd-applications/install-application.sh` runs `envsubst` on `application.yaml.tmpl` and `kubectl apply`s the root Application
+   - **`argocd_applications`** - `./charts/argocd-applications/install-application.sh` waits for Argo CD prerequisites (namespace, `AppProject` `cluster_name`, redis, repo-server, application-controller), then `envsubst` on `application.yaml.tmpl` and `kubectl apply`s the root Application. The waits are to avoid a race where the AppProject can be
+   installed but not yet available, and the entire cluster fails to get off the ground.
 
 **Defaults:** Only **`argocd_applications`** defaults to **true**; **`crds`**, **`cilium`**, **`argocd`**, and **`onepassword`** default to **false**. A cold or recreated cluster should enable the full set above so nodes get a CNI, Argo CD exists before Application CRs are applied, CRDs are present, and operator secrets exist. Re-running `install-crds.sh` or `make-secrets.sh` is mostly idempotent; that does not mean skipping **`crds`** or **`onepassword`** on first bring-up after a recreate.
+
+#### Argo CD readiness and install-application
+
+**Where `AppProject` comes from:** It is not in `install-application.sh` or the app-of-apps chart. It is rendered from `charts/argocd/templates/tiles-appproject.yaml` and applied with the rest of `charts/argocd` in `charts/argocd/bootstrap.sh` (`helm template | kubectl apply`). After the tree is live, the same object is owned by the `argocd` child Application (GitOps loop).
+
+**Prerequisite waits live only in `install-application.sh`:** That script is the single gate before the root `Application` is applied. `charts/argocd/bootstrap.sh` does not wait for Deployments/StatefulSets to be Ready; duplicating waits there would add maintenance and latency on full bootstrap runs without changing when the root app is applied (the workflow always runs `install-application.sh` next when `argocd_applications` is enabled). The common case `argocd_applications=true` with `argocd=false` also requires waits in `install-application.sh` only.
+
+**What `install-application.sh` waits for:** `argocd` namespace, `AppProject` named `cluster_name`, and Available/Ready `argocd-redis`, `argocd-repo-server`, `argocd-application-controller` (bounded retries; see script header for env overrides).
+
+**What it does not wait for (apply-then-reconcile):** Root or child Application sync, cert-manager, external-dns, ingress TLS, or any workload deployed by the app-of-apps tree. CRDs are decoupled via `install-crds.sh` so controllers can start later.
+
+**Do not add bootstrap waits on downstream apps** (cert-manager, external-dns, onepassword operator, etc.): those are created by the app-of-apps sync; waiting on them in a bootstrap script would deadlock or hang.
+
+**Stuck root sync after a failed first attempt:** Prerequisite waits do not repair an existing `SyncError` on `argocd-applications`; refresh/sync that Application manually (or re-apply after fixing Git/Argo). See `charts/argocd-applications/README.md` troubleshooting.
 
 ### 3. How values reach Helm during bootstrap
 
 There is **no** single `charts/bootstrap.sh`. Scripts invoked by the workflow use environment variables exported from 1Password:
 
-- **`install-application.sh`** - Substitutes the same variables into `charts/argocd-applications/application.yaml.tmpl` via `envsubst`, then applies the manifest.
+- **`install-application.sh`** - Prerequisite waits (bounded retries), then substitutes the same variables into `charts/argocd-applications/application.yaml.tmpl` via `envsubst` and applies the manifest.
 - **`charts/cilium/bootstrap.sh`** and **`charts/argocd/bootstrap.sh`** - Source `scripts/helm-common.bash`, which builds `helm template` arguments (including `--set` for each variable name discovered from `application.yaml.tmpl`) from the current environment, then each script adds chart-specific `--set` flags.
 
 Individual scripts may validate critical variables (for example Cilium requires `pod_cidr` and `cluster_name`).

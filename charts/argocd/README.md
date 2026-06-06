@@ -89,9 +89,9 @@ ArgoCD is initially bootstrapped via the CI workflow (`.github/workflows/bootstr
 2. Runs `helm template` with the same value files as the `argocd` Application (`argocd-values.yaml`, `argocd-<cluster_name>-values.yaml`) plus domain overrides from the environment (loaded from 1Password)
 3. Applies manifests via `kubectl apply --server-side`
 
-After bootstrap, the `argocd-applications` chart installs the ArgoCD Application resource, which enables self-management. ArgoCD then syncs itself (mostly adding tracking annotations) and becomes self-managed.
+After bootstrap, [`install-application.sh`](../argocd-applications/install-application.sh) applies the root app-of-apps `Application` (with prerequisite waits documented in [config-propagation.md](../../docs/config-propagation.md#argo-cd-readiness-and-install-application)). That enables self-management: the `argocd` child Application then syncs this chart from Git (mostly tracking annotations and ongoing drift).
 
-**Note**: The ingress won't work properly until `external-dns` and `cert-manager` are running, but ArgoCD can operate headless via CLI during initial setup.
+**Note**: The ingress won't work properly until `external-dns` and `cert-manager` are running, but ArgoCD can operate headless via CLI during initial setup. `bootstrap.sh` does not wait for controllers to be Ready; `install-application.sh` does, immediately before applying the root `Application`.
 
 ## Access & Endpoints
 
