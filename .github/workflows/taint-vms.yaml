@@ -67,6 +67,13 @@ jobs:
         run: |
           set -euo pipefail
           terraform workspace select test || terraform workspace new test
+
+          terraform taint 'talos_image_factory_schematic.vm'
+          terraform taint 'talos_image_factory_schematic.metal_amd'
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep '^proxmox_download_file\.talos_iso\[' || true)
+
           terraform taint 'module.cluster.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.talos_machine_bootstrap.this'
@@ -78,6 +85,13 @@ jobs:
         run: |
           set -euo pipefail
           terraform workspace select prod || terraform workspace new prod
+
+          terraform taint 'talos_image_factory_schematic.vm'
+          terraform taint 'talos_image_factory_schematic.metal_amd'
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep '^proxmox_download_file\.talos_iso\[' || true)
+
           terraform taint 'module.cluster.module.talos-vm["tiles-cp-1"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-cp-2"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-cp-3"].proxmox_virtual_environment_vm.main'
@@ -106,16 +120,16 @@ jobs:
             echo "## Taint VM Workflow Complete"
             echo ""
             if [ "${{ inputs.taint_test }}" == "true" ]; then
-              echo "✅ Test cluster VMs tainted"
+              echo "✅ Test cluster tainted (Talos schematics, Proxmox ISOs, VMs, bootstrap)"
             fi
             if [ "${{ inputs.taint_prod }}" == "true" ]; then
-              echo "✅ Prod cluster VMs tainted"
+              echo "✅ Prod cluster tainted (Talos schematics, Proxmox ISOs, VMs, bootstrap)"
             fi
             if [ "${{ inputs.taint_test }}" != "true" ] && [ "${{ inputs.taint_prod }}" != "true" ]; then
-              echo "ℹ️ No VMs were tainted (both options were false)"
+              echo "ℹ️ Nothing tainted (both options were false)"
             fi
             echo ""
             echo "**Next steps:**"
             echo "- Coordinate any bare-metal node resets if needed"
-            echo "- Run terraform apply to recreate the tainted VMs"
+            echo "- Run nodes-plan-apply with apply for the workspace you tainted"
           } >> "$GITHUB_STEP_SUMMARY"
