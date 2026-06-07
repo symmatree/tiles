@@ -27,7 +27,7 @@ runs:
 
           // Determine deployment flags
           const testApply = (isManualApply && manualTarget === 'test') || isPushToMain || isPushToTestTag;
-          const prodApply = (isManualApply && manualTarget === 'prod') || isPushToProdTag;
+          const prodApply = (isManualApply && manualTarget === 'prod') || isPushToMain || isPushToProdTag;
 
           // Configure git user for tag creation
           execSync(`git config user.name "${context.actor}"`, { stdio: 'inherit' });
