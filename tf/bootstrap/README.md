@@ -21,10 +21,12 @@ Go to [1password's service account site](https://my.1password.com/developer-tool
   environment variables to use personal creds.)
 * Create SA and VPN client configs (allowing Github to connect to Wireguard) in Unifi -- **two peers** for parallel test/prod GitHub Actions matrix legs:
 
-| Leg  | 1Password item                  | WireGuard IP   |
-| ---- | ------------------------------- | -------------- |
-| test | `github-vpn-client-tiles-test`  | `10.1.0.4/32`  |
-| prod | `github-vpn-client-tiles`       | `10.1.0.5/32`  |
+| Leg  | 1Password item                 | Notes                                      |
+| ---- | ------------------------------ | ------------------------------------------ |
+| prod | `github-vpn-client-tiles`      | Existing prod client (ex-`github-vpn-client`) |
+| test | `github-vpn-client-tiles-test` | New peer for parallel matrix runs          |
+
+Each UniFi peer gets its own `Address` in the WireGuard subnet; only `PrivateKey` and `Address` differ per client in 1Password.
 
 Client config shape (field `notesPlain` on each 1Password item):
 
