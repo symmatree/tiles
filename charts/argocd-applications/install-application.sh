@@ -60,7 +60,8 @@ else
 		-n "${ARGOCD_NAMESPACE}" --timeout=15s
 
 	wait_prereq "StatefulSet argocd-application-controller" \
-		kubectl wait --for=condition=ready "statefulset/argocd-application-controller" \
+		kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 \
+		"statefulset/argocd-application-controller" \
 		-n "${ARGOCD_NAMESPACE}" --timeout=15s
 fi
 echo "::endgroup::"
