@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/ntrip"
+  },
+  "spec": {
+    "namespace": "ntrip",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}

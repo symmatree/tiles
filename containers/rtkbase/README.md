@@ -36,4 +36,4 @@ Default autostart: `str2str_tcp.service` and `str2str_local_ntrip_caster.service
 
 ## Kubernetes (phase 3)
 
-Not in this directory yet. Planned: Deployment on acebase with hostPath `/dev/gnss`, PVC at `/persist/rtkbase`, LoadBalancer for NTRIP :2101, Ingress for admin UI.
+Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). Boot script reads `RTKBASE_WEB_PASSWORD`, `RTKBASE_NTRIP_USER`, and `RTKBASE_NTRIP_PASSWORD` from synced 1Password secrets and writes them into persisted `settings.conf` before RTKBase services start.

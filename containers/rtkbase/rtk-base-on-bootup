@@ -18,6 +18,27 @@ fi
 
 mount -o bind "${PERSIST}/settings.conf" /root/rtkbase/settings.conf
 
+# Inject credentials from Kubernetes secrets (synced from 1Password via operator).
+# RTKBase hashes new_web_password on rtkbase_web start; caster creds are plain text in settings.conf.
+set_conf_value() {
+	local key="$1"
+	local value="$2"
+	local file="${PERSIST}/settings.conf"
+	[ -f "${file}" ] || return 0
+	[ -n "${value}" ] || return 0
+	local escaped
+	escaped=$(printf '%s' "${value}" | sed "s/'/'\\\\''/g")
+	if grep -q "^${key}=" "${file}"; then
+		sed -i "s|^${key}=.*|${key}='${escaped}'|" "${file}"
+	else
+		echo "${key}='${escaped}'" >>"${file}"
+	fi
+}
+
+set_conf_value new_web_password "${RTKBASE_WEB_PASSWORD:-}"
+set_conf_value local_ntripc_user "${RTKBASE_NTRIP_USER:-}"
+set_conf_value local_ntripc_pwd "${RTKBASE_NTRIP_PASSWORD:-}"
+
 if [ -x "${PERSIST}/on-bootup" ]; then
 	"${PERSIST}/on-bootup"
 fi
