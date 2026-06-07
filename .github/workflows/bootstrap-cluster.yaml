@@ -40,6 +40,7 @@ on:
 env:
   TF_IN_AUTOMATION: "true"
   TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+  OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
 concurrency:
   group: ${{ github.repository }}
   cancel-in-progress: false
@@ -132,6 +133,7 @@ jobs:
           nfs_server: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/nfs_server"
           onepassword_operator_token: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-operator/credential"
           onepassword_connect_credentials: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
+      - uses: 1password/install-cli-action@v2
       - name: Bootstrap cluster
         id: bootstrap-cluster
         shell: bash
