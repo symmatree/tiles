@@ -41,10 +41,10 @@ Each cluster uses `/18` allocation (64 /24s). Pods use `/20` with `node-cidr-mas
 
 Use this when you want **new Proxmox VMs** (fresh disks / reinstall Talos), for example after a major Talos pin change. Workspaces are **`test`** and **`prod`**; pick one and stay consistent through the apply. This flow uses GitHub Actions (service account, VPN, secrets) end to end.
 
-1. Run **[`taint-vms`](.github/workflows/taint-vms.yaml)** in Actions. Enable **taint test** and/or **taint prod** (each taints the Talos VM resources for that workspace and **`talos_machine_bootstrap`** so bootstrap runs again after disks are new).
-2. Run **`nodes-plan-apply`** with **apply** for the workspace you tainted: a push to **`main`** applies **test** by default; use **`workflow_dispatch`** with apply and **prod** for production.
+1. Run **[`nodes-plan-apply`](.github/workflows/nodes-plan-apply.yaml)** via **workflow_dispatch** with **taint**, **apply**, and **bootstrap** enabled (use **bootstrap_profile: fresh_cluster** for a full rebuild). Select **test**, **prod**, or **both**.
+2. Alternatively, push to **`main`** applies **both** test and prod when Terraform files changed; charts-only merges skip Terraform but still promote **test** and **prod** tags for ArgoCD.
 
-After apply, Terraform recreates the VMs, applies machine config, and bootstraps the cluster.
+After apply, Terraform recreates the VMs, applies machine config, and bootstraps the cluster. When using **taint**, enable **bootstrap** (or **fresh_cluster**) so Cilium, ArgoCD, and app-of-apps run after apply.
 
 See `docs/environment-strategy.md` for workspace behavior.
 

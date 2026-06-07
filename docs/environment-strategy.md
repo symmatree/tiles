@@ -17,15 +17,13 @@ This document describes the strategy for managing two parallel Terraform environ
 
 2. **Merge to `main`**
    - Upon merge, the workflow automatically:
-     - Updates the `test` tag to point to the merged commit
-     - Deploys to the test environment (Terraform apply)
+     - Updates the **`test`** and **`prod`** tags to point to the merged commit
+     - When Terraform or non-chart files changed: deploys to **both** test and prod environments in parallel (Terraform apply)
+     - When only `charts/` or `tanka/` changed: skips Terraform; ArgoCD syncs from the updated tags
 
-3. **Deploy to Production**
-   - Manually trigger the `nodes-plan-apply` workflow via `workflow_dispatch`
-   - Select `environment: prod` and `apply: true`
-   - The workflow will:
-     - Update the `prod` tag to point to the current commit
-     - Deploy to the production environment (Terraform apply)
+3. **Manual full cluster cycle (optional)**
+   - Trigger **`nodes-plan-apply`** via `workflow_dispatch`
+   - Select environment(s), enable **taint**, **apply**, and **bootstrap** (or **bootstrap_profile: fresh_cluster**) as needed
 
 4. **ArgoCD deployment**
    - Child Applications track the `test` and `prod` Git tags with automated sync enabled (`syncPolicy.automated` on each Application).
@@ -39,7 +37,7 @@ This document describes the strategy for managing two parallel Terraform environ
 **Workflow Summary:**
 
 ```text
-PR -> main -> auto-deploy to test (test tag) -> manual deploy to prod (prod tag) -> Argo CD picks up tag within reconcile/cache bounds (minutes, not instant)
+PR -> main -> auto-deploy test+prod (both tags) -> Argo CD picks up tag within reconcile/cache bounds (minutes, not instant)
 ```
 
 ## Current State
@@ -52,8 +50,8 @@ The repository currently implements:
 - Separate state files per workspace in GCS backend
 - Tag-based deployment workflow (`test` and `prod` tags)
 - Automatic tag pushing when deploying to environments
-- Automatic deployment on push to `main` branch (deploys to test)
-- Manual deployment via `workflow_dispatch` with environment selection
+- Automatic deployment on push to `main` branch (deploys to **both** test and prod when Terraform-relevant; charts-only merges promote both tags without Terraform)
+- Manual deployment via `workflow_dispatch` with environment selection, optional taint, apply, and bootstrap
 - Composite actions for modular workflow steps
 - PR planning for both test and prod environments
 
@@ -349,23 +347,30 @@ Workspaces were selected for this implementation because:
 
 ### Deployment Workflow
 
-The deployment workflow is implemented in `.github/workflows/nodes-plan-apply.yaml` and uses composite actions for modularity.
+The deployment workflow is implemented in `.github/workflows/nodes-plan-apply.yaml` with three jobs:
+
+1. **`resolve-matrix`** -- charts-only detection, tag promotion (single git writer), dynamic test/prod matrix
+2. **`cluster`** -- parallel matrix legs (separate WireGuard clients per env): optional taint, Terraform plan/apply, optional bootstrap
+3. **`pr-summary`** -- aggregates plan artifacts onto the PR
+
+Composite actions: `configure-deployment`, `cluster-taint`, `terraform-plan-apply`, `cluster-bootstrap`, `wg-quick`.
 
 #### Workflow Triggers
 
-- **Push to `main`**: Automatically deploys to test environment (pushes test tag and applies)
-- **Push to `test` tag**: Redeploys test environment (no tag push needed)
-- **Push to `prod` tag**: Redeploys prod environment (no tag push needed)
-- **Manual workflow dispatch**: Allows selecting target environment (test or prod) with optional apply
+- **Push to `main`**: Promotes **both** `test` and `prod` tags; applies Terraform to both environments when non-chart files changed; skips Terraform for charts/tanka-only merges
+- **Push to `test` tag**: Redeploys test environment (no tag push)
+- **Push to `prod` tag**: Redeploys prod environment (no tag push)
+- **Pull request**: Parallel plan for test and prod (skipped when only charts/tanka changed)
+- **Schedule**: Parallel plan for test and prod
+- **Manual workflow dispatch**: Selected environment(s); optional taint, apply, bootstrap (`bootstrap_profile: fresh_cluster` preset for full rebuild)
 
 #### Automatic Tag Pushing
 
-Tags are automatically updated by the `configure-deployment` action when deploying to an environment:
+Tags are automatically updated by the `configure-deployment` action in the **`resolve-matrix`** job (matrix legs never push):
 
-- **Test tag**: Updated to point to current commit when deploying to test (unless already on test tag)
-- **Prod tag**: Updated to point to current commit when deploying to prod (unless already on prod tag)
-- Tags are force-updated to point to the current commit being deployed
-- Tag updates happen before Terraform operations, ensuring tags always reflect what's deployed
+- **Push to `main`**: Both **`test`** and **`prod`** tags updated to the merged commit (including charts-only merges)
+- **Manual apply**: Tags updated for the selected environment(s) when apply is enabled
+- Tags are force-updated before Terraform operations on apply paths
 
 #### Deployment Logic
 
@@ -377,11 +382,12 @@ The `configure-deployment` action determines:
 
 **Deployment scenarios:**
 
-- Push to main → Update test tag to point to main, deploy test
-- Push to test tag → Deploy test (no tag update)
-- Push to prod tag → Deploy prod (no tag update)
-- Manual: target test → Update test tag to point to current commit (unless already on test tag), deploy test
-- Manual: target prod → Update prod tag to point to current commit (unless already on prod tag), deploy prod
+- Push to main (Terraform changes) -> Update test and prod tags, deploy both
+- Push to main (charts/tanka only) -> Update test and prod tags, skip Terraform
+- Push to test tag -> Deploy test (no tag update)
+- Push to prod tag -> Deploy prod (no tag update)
+- Manual: environments + apply -> Update tag(s) for selected env(s), deploy selected leg(s)
+- Manual: taint + apply + bootstrap -> Full cluster rebuild cycle for selected env(s)
 
 #### Terraform Operations
 

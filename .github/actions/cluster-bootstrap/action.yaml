@@ -1,0 +1,123 @@
+name: "cluster-bootstrap"
+description: "Bootstrap Kubernetes cluster components after Terraform apply"
+inputs:
+  cluster:
+    description: "Cluster name (tiles-test or tiles)"
+    required: true
+  crds:
+    description: "Install CRDs"
+    required: false
+    default: "false"
+  cilium:
+    description: "Reset and bootstrap Cilium"
+    required: false
+    default: "false"
+  argocd:
+    description: "Reset and bootstrap ArgoCD"
+    required: false
+    default: "false"
+  onepassword:
+    description: "Create OnePassword secrets"
+    required: false
+    default: "false"
+  argocd_applications:
+    description: "Install ArgoCD App-of-apps"
+    required: false
+    default: "true"
+runs:
+  using: "composite"
+  steps:
+    - name: Determine kubeconfig secret
+      id: kubeconfig_secret
+      shell: bash
+      run: |
+        set -euo pipefail
+        case "${{ inputs.cluster }}" in
+          tiles-test)
+            echo "secret_path=op://tiles-secrets/tiles-test-kubeconfig/notesPlain" >> "$GITHUB_OUTPUT"
+            ;;
+          tiles)
+            echo "secret_path=op://tiles-secrets/tiles-kubeconfig/notesPlain" >> "$GITHUB_OUTPUT"
+            ;;
+          *)
+            echo "::error title=cluster-bootstrap::Unsupported cluster: ${{ inputs.cluster }}"
+            exit 1
+            ;;
+        esac
+
+    - name: Load bootstrap secrets
+      id: load_bootstrap_secrets
+      uses: 1password/load-secrets-action@v4
+      env:
+        OP_SERVICE_ACCOUNT_TOKEN: ${{ env.OP_SERVICE_ACCOUNT_TOKEN }}
+        KUBECONFIG_SECRET: ${{ steps.kubeconfig_secret.outputs.secret_path }}
+        bootstrap_ip: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/bootstrap_ip"
+        control_plane_vip: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/control_plane_vip"
+
+    - name: Setup kubeconfig
+      shell: bash
+      env:
+        bootstrap_ip: ${{ steps.load_bootstrap_secrets.outputs.bootstrap_ip }}
+        control_plane_vip: ${{ steps.load_bootstrap_secrets.outputs.control_plane_vip }}
+      run: |
+        set -euo pipefail
+        kubeconfig_path="${RUNNER_TEMP}/kubeconfig"
+        echo '${{ steps.load_bootstrap_secrets.outputs.KUBECONFIG_SECRET }}' > "${kubeconfig_path}"
+        chmod 600 "${kubeconfig_path}"
+
+        if [[ -n "${bootstrap_ip:-}" && -n "${control_plane_vip:-}" ]]; then
+          sed -i "s|https://${control_plane_vip}:6443|https://${bootstrap_ip}:6443|g" "${kubeconfig_path}"
+          echo "Updated kubeconfig server from VIP (${control_plane_vip}) to bootstrap IP (${bootstrap_ip})"
+        fi
+
+        echo "KUBECONFIG=${kubeconfig_path}" >> "$GITHUB_ENV"
+
+    - name: Load cluster config from 1Password
+      uses: 1password/load-secrets-action@v4
+      with:
+        export-env: true
+      env:
+        OP_SERVICE_ACCOUNT_TOKEN: ${{ env.OP_SERVICE_ACCOUNT_TOKEN }}
+        targetRevision: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/targetRevision"
+        pod_cidr: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/pod_cidr"
+        cluster_name: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/cluster_name"
+        external_ip_cidr: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/external_ip_cidr"
+        vault_name: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/vault_name"
+        project_id: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/project_id"
+        seed_project_id: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/seed_project_id"
+        cluster_nfs_path: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/cluster_nfs_path"
+        datasets_nfs_path: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/datasets_nfs_path"
+        nfs_server: "op://tiles-secrets/${{ inputs.cluster }}-misc-config/config/nfs_server"
+        onepassword_operator_token: "op://tiles-secrets/${{ inputs.cluster }}-onepassword-operator/credential"
+        onepassword_connect_credentials: "op://tiles-secrets/${{ inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
+
+    - uses: 1password/install-cli-action@v2
+
+    - name: Bootstrap cluster
+      shell: bash
+      run: |
+        set -euxo pipefail
+        if [ "${{ inputs.crds }}" == "true" ]; then
+          ./charts/install-crds.sh
+        fi
+        if [ "${{ inputs.cilium }}" == "true" ]; then
+          ./charts/cilium/bootstrap.sh
+        fi
+        if [ "${{ inputs.argocd }}" == "true" ]; then
+          ./charts/argocd/bootstrap.sh
+        fi
+        if [ "${{ inputs.onepassword }}" == "true" ]; then
+          ./charts/onepassword/make-secrets.sh
+        fi
+        if [ "${{ inputs.argocd_applications }}" == "true" ]; then
+          ./charts/argocd-applications/install-application.sh
+        fi
+
+        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        sudo chmod +x /usr/local/bin/yq
+
+        ./charts/extract-apis/generate-api-versions.sh
+        if ! git diff --exit-code ; then
+          echo "::warning title=API Versions Changed::API versions or kube version have changed. Consider committing the updated files."
+          git diff charts/extract-apis/helm-api-versions.txt charts/extract-apis/helm-kube-version.txt
+        fi

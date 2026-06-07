@@ -87,7 +87,7 @@ N/A - OnePassword Operator is bootstrapped via CI workflow. The secrets it syncs
 
 ## Bootstrap Process
 
-The operator is bootstrapped via the CI workflow (`.github/workflows/bootstrap-cluster.yaml`) which runs [`make-secrets.sh`](make-secrets.sh) to create the initial secrets:
+The operator is bootstrapped via the CI workflow (`.github/workflows/nodes-plan-apply.yaml`, **bootstrap** step) which runs [`make-secrets.sh`](make-secrets.sh) to create the initial secrets:
 
 1. **Create namespace** (if it doesn't exist)
 2. **Create `onepassword-token` secret**: Contains the 1Password service account token
@@ -103,7 +103,7 @@ The workflow loads the required secrets from 1Password:
 1. Create a 1Password Connect server in your 1Password vault
 2. Save the `1password-credentials.json` file to a 1Password item named `{cluster_name}-onepassword-connect-credentials`
 3. Create a 1Password service account with read access to the vault, store the token in `{cluster_name}-onepassword-operator` item
-4. Trigger the `bootstrap-cluster` workflow with the `onepassword` option enabled
+4. Trigger **`nodes-plan-apply`** **`workflow_dispatch`** with the **onepassword** bootstrap option enabled
 
 ## Access & Endpoints
 

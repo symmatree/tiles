@@ -1,0 +1,43 @@
+name: "cluster-taint"
+description: "Taint Talos VM resources in a tf/nodes workspace for cluster rebuild"
+inputs:
+  workspace:
+    description: "Terraform workspace (test or prod)"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Taint cluster VMs
+      shell: bash
+      working-directory: "tf/nodes"
+      run: |
+        set -euo pipefail
+        workspace="${{ inputs.workspace }}"
+        terraform workspace select "${workspace}" || terraform workspace new "${workspace}"
+
+        terraform taint 'talos_image_factory_schematic.vm'
+        terraform taint 'talos_image_factory_schematic.metal_amd'
+        while IFS= read -r addr; do
+          [ -n "$addr" ] && terraform taint "$addr"
+        done < <(terraform state list | grep '^proxmox_download_file\.talos_iso\[' || true)
+
+        case "${workspace}" in
+          test)
+            terraform taint 'module.cluster.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
+            terraform taint 'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
+            ;;
+          prod)
+            terraform taint 'module.cluster.module.talos-vm["tiles-cp-1"].proxmox_virtual_environment_vm.main'
+            terraform taint 'module.cluster.module.talos-vm["tiles-cp-2"].proxmox_virtual_environment_vm.main'
+            terraform taint 'module.cluster.module.talos-vm["tiles-cp-3"].proxmox_virtual_environment_vm.main'
+            terraform taint 'module.cluster.module.talos-vm["tiles-wk-1"].proxmox_virtual_environment_vm.main'
+            terraform taint 'module.cluster.module.talos-vm["tiles-wk-2"].proxmox_virtual_environment_vm.main'
+            terraform taint 'module.cluster.module.talos-vm["tiles-wk-3"].proxmox_virtual_environment_vm.main'
+            ;;
+          *)
+            echo "::error title=cluster-taint::Unsupported workspace: ${workspace}"
+            exit 1
+            ;;
+        esac
+
+        terraform taint 'module.cluster.talos_machine_bootstrap.this'

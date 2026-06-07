@@ -36,7 +36,7 @@ The architecture uses 1Password as the interface between Terraform (infrastructu
 │    • Loads from 1Password           │
 │    • Exports as environment vars    │
 │  - Per-chart bootstrap scripts      │
-│    • See bootstrap-cluster workflow │
+│    • See nodes-plan-apply / cluster-bootstrap │
 │  - argocd-applications Chart        │
 │    • valuesObject (union of values) │
 │    • templates/ (symlinked)         │
@@ -74,13 +74,13 @@ Terraform collects cluster configuration values from its variables and outputs, 
 - **Easy review**: The current configuration can be easily reviewed in 1Password's UI
 - **Clear interface**: 1Password serves as the complete interface between Terraform (infrastructure) and Kubernetes (applications), providing better isolation and separation of concerns
 
-### 2. GitHub Actions Workflow (`bootstrap-cluster`)
+### 2. GitHub Actions (`nodes-plan-apply` / `cluster-bootstrap`)
 
-The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) performs the following steps:
+Cluster bootstrap runs from the unified **`nodes-plan-apply`** workflow (`.github/workflows/nodes-plan-apply.yaml`) via the **`cluster-bootstrap`** composite action (`.github/actions/cluster-bootstrap/action.yaml`). On **`workflow_dispatch`**, enable **bootstrap** or set **bootstrap_profile: fresh_cluster** after a successful apply. The bootstrap step performs the following:
 
 1. **Loads sensitive secrets from 1Password** - Retrieves kubeconfig, GCP service account credentials, and VPN config
 2. **Loads cluster config from 1Password** - Uses the `1password/load-secrets-action` with `export-env: true` to retrieve fields from the `{cluster_name}-misc-config` item's `config` section (written by Terraform) plus operator tokens, and export them as environment variables (for example `targetRevision`, `pod_cidr`, `cluster_name`, `external_ip_cidr`, `vault_name`, `project_id`, and NFS-related fields)
-3. **Runs optional bootstrap steps** - Each step is gated by a `workflow_dispatch` boolean (see the workflow file for the exact list). When enabled, the job runs, in order:
+3. **Runs optional bootstrap steps** - Each step is gated by workflow inputs (see `cluster-bootstrap` and `nodes-plan-apply` workflow_dispatch). When enabled, the job runs, in order:
    - **`crds`** - `./charts/install-crds.sh` applies cluster-wide CRD YAML (Argo CD, cert-manager, Prometheus Operator, Gateway API, 1Password Item CRD, and others). This is **required on first bootstrap** for this repo because the Cilium and Argo CD bootstrap scripts use `helm template ... --skip-crds`, so chart installs do not create those CRDs themselves.
    - **`cilium`** - `./charts/cilium/bootstrap.sh`
    - **`argocd`** - `./charts/argocd/bootstrap.sh` - this installed ArgoCD itself and the AppProject but not the actual Application resources.
@@ -156,7 +156,7 @@ valuesObject:
   vault_name: "{{ .Values.vault_name }}"
 ```
 
-When ArgoCD renders these templates, the `{{ .Values.* }}` references resolve to values from the `argocd-applications` chart's `valuesObject`, which were originally passed from Terraform via 1Password and the **`bootstrap-cluster`** workflow environment.
+When ArgoCD renders these templates, the `{{ .Values.* }}` references resolve to values from the `argocd-applications` chart's `valuesObject`, which were originally passed from Terraform via 1Password and the **`cluster-bootstrap`** step environment.
 
 #### Template Expansion Pattern
 
@@ -185,7 +185,7 @@ This works because ArgoCD renders the Application resource (including the `value
 
 1. **Terraform** → Collects configuration values from variables and outputs, then stores them in 1Password `{cluster_name}-misc-config` item (config section)
 2. **1Password** → Serves as the interface between Terraform and Kubernetes, storing the current configuration state
-3. **GitHub Actions Workflow** (`bootstrap-cluster`) → Retrieves misc-config fields from 1Password using `1password/load-secrets-action` with `export-env: true`, which automatically exports them as environment variables
+3. **GitHub Actions** (`cluster-bootstrap` in `nodes-plan-apply`) -> Retrieves misc-config fields from 1Password using `1password/load-secrets-action` with `export-env: true`, which automatically exports them as environment variables
 4. **Bootstrap scripts** (when their workflow inputs are enabled) → `install-application.sh` substitutes those variables into `application.yaml.tmpl`; Cilium and Argo CD bootstrap scripts build Helm `--set` flags from the environment via `scripts/helm-common.bash`
 5. **argocd-applications/values.yaml** → Contains placeholder values used for:
    - **Helm requirement**: Helm 4.0.0+ requires at least an empty `values.yaml` file
@@ -202,7 +202,7 @@ This works because ArgoCD renders the Application resource (including the `value
 2. **Automatic Propagation** - Values automatically flow to individual charts through templated `valuesObject` blocks
 3. **Type Safety** - Helm validates that all referenced values exist
 4. **Maintainability** - Adding a new value requires:
-   - Exporting it from the **`bootstrap-cluster`** workflow's "Load cluster config from 1Password" step (and ensuring Terraform writes it to misc-config if it comes from infrastructure)
+   - Exporting it from the **`cluster-bootstrap`** action's "Load cluster config from 1Password" step (and ensuring Terraform writes it to misc-config if it comes from infrastructure)
    - Adding it to `charts/argocd-applications/application.yaml.tmpl` if it should be substituted into the root Application (so `envsubst` and `helm-common` see it)
    - Adding it to `argocd-applications/values.yaml` (with placeholder)
    - Adding it to `argocd-applications/application.yaml` `valuesObject` as needed for chart propagation
@@ -255,7 +255,7 @@ Suppose we want to add a `region` value that needs to be passed to the `cert-man
    }
    ```
 
-2. **GitHub Actions Workflow** (`.github/workflows/bootstrap-cluster.yaml`):
+2. **GitHub Actions** (`.github/actions/cluster-bootstrap/action.yaml`, invoked from `.github/workflows/nodes-plan-apply.yaml`):
    ```yaml
    - name: Load cluster config from 1Password
      uses: 1password/load-secrets-action@v3
@@ -331,7 +331,7 @@ The configuration mechanism handles three types of values differently:
 
 **Source**: Terraform variables and outputs
 **Storage**: 1Password `{cluster_name}-misc-config` item (config section)
-**Propagation**: Via `bootstrap-cluster` workflow (environment variables) → argocd-applications → individual charts
+**Propagation**: Via `cluster-bootstrap` (in `nodes-plan-apply`) -> argocd-applications -> individual charts
 **Examples**: `cluster_name`, `pod_cidr`, `external_ip_cidr`, `targetRevision`
 
 These values flow through the standard propagation mechanism described above.
@@ -364,7 +364,7 @@ This approach:
 
 **Source**: Environment configuration (not from Terraform)
 **Storage**: GitHub secrets or other external sources
-**Propagation**: Via `bootstrap-cluster` workflow (environment variables) → argocd-applications
+**Propagation**: Via `cluster-bootstrap` (in `nodes-plan-apply`) -> argocd-applications
 **Examples**: `project_id` (GitHub secret - required for Terraform to run, so cannot be in misc-config)
 
 Note: `vault_name` is now stored in misc-config and managed by Terraform, so it flows through the standard propagation mechanism. Values that are required to run Terraform (like `project_id` for GCP authentication) must remain external to avoid circular dependencies.

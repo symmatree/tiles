@@ -1,5 +1,5 @@
 name: "configure-deployment"
-description: "Configure deployment settings and push tags as needed"
+description: "Configure deployment settings and push tags as needed (Job 1 only; matrix legs never push)"
 outputs:
   test_apply:
     description: "Whether to apply to test environment"
@@ -7,6 +7,12 @@ outputs:
   prod_apply:
     description: "Whether to apply to prod environment"
     value: ${{ steps.config.outputs.prod_apply }}
+  test_tag_pushed:
+    description: "Whether the test tag was pushed"
+    value: ${{ steps.config.outputs.test_tag_pushed }}
+  prod_tag_pushed:
+    description: "Whether the prod tag was pushed"
+    value: ${{ steps.config.outputs.prod_tag_pushed }}
 runs:
   using: "composite"
   steps:
@@ -23,32 +29,53 @@ runs:
           const isPushToTestTag = eventName === 'push' && ref === 'refs/tags/test';
           const isPushToProdTag = eventName === 'push' && ref === 'refs/tags/prod';
           const isManualApply = eventName === 'workflow_dispatch' && context.payload.inputs?.apply === 'true';
-          const manualTarget = context.payload.inputs?.environment || '';
+          const manualEnvironments = context.payload.inputs?.environments || 'both';
 
-          // Determine deployment flags
-          const testApply = (isManualApply && manualTarget === 'test') || isPushToMain || isPushToTestTag;
-          const prodApply = (isManualApply && manualTarget === 'prod') || isPushToMain || isPushToProdTag;
+          const manualTargetsTest = isManualApply && (manualEnvironments === 'test' || manualEnvironments === 'both');
+          const manualTargetsProd = isManualApply && (manualEnvironments === 'prod' || manualEnvironments === 'both');
 
-          // Configure git user for tag creation
+          // Push to main applies both environments; tag redeploys apply the matching env only.
+          const testApply = manualTargetsTest || isPushToMain || isPushToTestTag;
+          const prodApply = manualTargetsProd || isPushToMain || isPushToProdTag;
+
           execSync(`git config user.name "${context.actor}"`, { stdio: 'inherit' });
           execSync(`git config user.email "${context.actor}@users.noreply.github.com"`, { stdio: 'inherit' });
 
-          // Push tags when we apply to that environment
-          const tagsToPush = [
-            { shouldPush: testApply && !isPushToTestTag, name: 'test' },
-            { shouldPush: prodApply && !isPushToProdTag, name: 'prod' }
-          ];
+          let testTagPushed = false;
+          let prodTagPushed = false;
 
-          for (const tag of tagsToPush) {
-            if (tag.shouldPush) {
-              console.log(`::notice title=Git::Pushing ${tag.name} tag from ${ref}...`);
-              const tagMessage = `Deployed by ${context.actor} from ${ref}`;
-              execSync(`git tag -f -m "${tagMessage}" ${tag.name} HEAD`, { stdio: 'inherit' });
-              execSync(`git push -f origin ${tag.name}`, { stdio: 'inherit' });
-              console.log(`Pushed ${tag.name} tag`);
+          const pushTag = (name) => {
+            console.log(`::notice title=Git::Pushing ${name} tag from ${ref}...`);
+            const tagMessage = `Deployed by ${context.actor} from ${ref}`;
+            execSync(`git tag -f -m "${tagMessage}" ${name} HEAD`, { stdio: 'inherit' });
+            execSync(`git push -f origin ${name}`, { stdio: 'inherit' });
+            console.log(`Pushed ${name} tag`);
+          };
+
+          if (isPushToMain) {
+            if (!isPushToTestTag) {
+              pushTag('test');
+              testTagPushed = true;
+            }
+            if (!isPushToProdTag) {
+              pushTag('prod');
+              prodTagPushed = true;
+            }
+          } else {
+            const tagsToPush = [
+              { shouldPush: testApply && !isPushToTestTag, name: 'test' },
+              { shouldPush: prodApply && !isPushToProdTag, name: 'prod' }
+            ];
+            for (const tag of tagsToPush) {
+              if (tag.shouldPush) {
+                pushTag(tag.name);
+                if (tag.name === 'test') testTagPushed = true;
+                if (tag.name === 'prod') prodTagPushed = true;
+              }
             }
           }
 
-          // Set outputs
           core.setOutput('test_apply', testApply.toString());
           core.setOutput('prod_apply', prodApply.toString());
+          core.setOutput('test_tag_pushed', testTagPushed.toString());
+          core.setOutput('prod_tag_pushed', prodTagPushed.toString());

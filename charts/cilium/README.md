@@ -78,7 +78,7 @@ N/A - Cilium is bootstrapped via CI workflow and does not have Terraform-managed
 
 ### Bootstrap Process
 
-Cilium is initially bootstrapped via the CI workflow (`.github/workflows/bootstrap-cluster.yaml`) which runs [`bootstrap.sh`](bootstrap.sh):
+Cilium is initially bootstrapped via the CI workflow (`.github/workflows/nodes-plan-apply.yaml`, **bootstrap** step) which runs [`bootstrap.sh`](bootstrap.sh):
 
 1. Creates the `cilium` namespace with privileged pod security labels
 2. Runs `helm template` with cluster-specific values (pod CIDR, cluster name, Hubble UI hostname, loaded from 1Password)
