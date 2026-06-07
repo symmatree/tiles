@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install the root app-of-apps Application. Waits for Argo CD prerequisites only
 # (not for sync). See charts/argocd-applications/README.md and docs/config-propagation.md.
-set -euo pipefail
+set -euxo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -46,22 +46,22 @@ if [[ ${INSTALL_APPLICATION_SKIP_PREREQ_WAIT:-} == "true" ]]; then
 	echo "INSTALL_APPLICATION_SKIP_PREREQ_WAIT=true; skipping prerequisite waits"
 else
 	wait_prereq "namespace ${ARGOCD_NAMESPACE}" \
-		kubectl get namespace "${ARGOCD_NAMESPACE}" >/dev/null 2>&1
+		kubectl get namespace "${ARGOCD_NAMESPACE}"
 
 	wait_prereq "AppProject ${cluster_name}" \
-		kubectl get appproject "${cluster_name}" -n "${ARGOCD_NAMESPACE}" >/dev/null 2>&1
+		kubectl get appproject "${cluster_name}" -n "${ARGOCD_NAMESPACE}"
 
 	wait_prereq "Deployment argocd-redis" \
 		kubectl wait --for=condition=available "deployment/argocd-redis" \
-		-n "${ARGOCD_NAMESPACE}" --timeout=15s >/dev/null 2>&1
+		-n "${ARGOCD_NAMESPACE}" --timeout=15s
 
 	wait_prereq "Deployment argocd-repo-server" \
 		kubectl wait --for=condition=available "deployment/argocd-repo-server" \
-		-n "${ARGOCD_NAMESPACE}" --timeout=15s >/dev/null 2>&1
+		-n "${ARGOCD_NAMESPACE}" --timeout=15s
 
 	wait_prereq "StatefulSet argocd-application-controller" \
 		kubectl wait --for=condition=ready "statefulset/argocd-application-controller" \
-		-n "${ARGOCD_NAMESPACE}" --timeout=15s >/dev/null 2>&1
+		-n "${ARGOCD_NAMESPACE}" --timeout=15s
 fi
 echo "::endgroup::"
 
