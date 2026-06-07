@@ -1,4 +1,5 @@
 name: "taint-vms"
+run-name: "Taint VMs test=${{ inputs.taint_test }} prod=${{ inputs.taint_prod }} by @${{ github.actor }}"
 on:
   workflow_dispatch:
     inputs:

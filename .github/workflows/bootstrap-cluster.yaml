@@ -1,4 +1,5 @@
 name: "bootstrap-cluster"
+run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [crds=${{ inputs.crds }}, cilium=${{ inputs.cilium }}, argocd=${{ inputs.argocd }}, 1p=${{ inputs.onepassword }}, apps=${{ inputs.argocd_applications }}]"
 on:
   workflow_dispatch:
     inputs:

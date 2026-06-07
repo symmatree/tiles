@@ -1,4 +1,16 @@
 name: "nodes-plan-apply"
+run-name: >-
+  ${{
+    github.event_name == 'workflow_dispatch' && (
+      inputs.apply == false && format('Plan test+prod by @{0}', github.actor)
+      || inputs.environment == 'test' && format('Apply test, plan prod by @{0}', github.actor)
+      || format('Plan test, apply prod by @{0}', github.actor)
+    )
+    || github.event_name == 'push' && format('Apply test, plan prod (push {0}) by @{1}', github.ref_name, github.actor)
+    || github.event_name == 'pull_request' && format('Plan test+prod (PR #{0}) by @{1}', github.event.pull_request.number, github.actor)
+    || github.event_name == 'schedule' && format('Plan test+prod (schedule) by @{0}', github.actor)
+    || format('{0} by @{1}', github.event_name, github.actor)
+  }}
 on:
   workflow_dispatch:
     inputs:
