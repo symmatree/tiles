@@ -1,0 +1,23 @@
+#!/bin/bash
+# Adapted from drakkar-lig/walt-images featured/rpi32-rtk-base/rtk-base-on-bootup (BSD-3-Clause).
+
+PERSIST=/persist/rtkbase
+
+# settings.conf and collected data persist across reboots
+if [ ! -d "${PERSIST}" ]; then
+	# First boot: detect and configure the GNSS receiver (requires /dev/gnss mounted)
+	cd /root || exit 1
+	./install.sh --user root --detect-gnss
+	./install.sh --user root --configure-gnss
+	sed -i -e "s/^datadir=.*$/datadir=${PERSIST}\/data/" rtkbase/settings.conf
+	mkdir -p "${PERSIST}/data"
+	mv /root/rtkbase/settings.conf "${PERSIST}/"
+	touch /root/rtkbase/settings.conf
+	mv /usr/local/bin/rtk-base-user-on-bootup "${PERSIST}/on-bootup"
+fi
+
+mount -o bind "${PERSIST}/settings.conf" /root/rtkbase/settings.conf
+
+if [ -x "${PERSIST}/on-bootup" ]; then
+	"${PERSIST}/on-bootup"
+fi
