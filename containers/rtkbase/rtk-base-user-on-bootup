@@ -1,0 +1,6 @@
+#!/bin/bash
+# Adapted from drakkar-lig/walt-images featured/rpi32-rtk-base/rtk-base-user-on-bootup (BSD-3-Clause).
+# Default first-boot autostart for acebase NTRIP deployment (issue #488).
+
+systemctl start str2str_tcp.service
+systemctl start str2str_local_ntrip_caster.service
