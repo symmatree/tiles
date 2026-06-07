@@ -1,0 +1,9 @@
+# AceBase ZED-F9P on USB (discovered 2026-06-07 via talosctl on 10.0.99.14):
+#   idVendor=1546 (u-blox AG), idProduct=01a9 (ZED-F9P), driver=cdc_acm, device=ttyACM0
+machine:
+  kernel:
+    modules:
+      - name: cdc_acm
+  udev:
+    rules:
+      - SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a9", SYMLINK+="gnss"

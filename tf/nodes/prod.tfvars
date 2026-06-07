@@ -82,11 +82,12 @@ metal_amd_nodes = {}
 # MAC/IP from facts fables/kb/Computers/AceBase.md
 metal_intel_nodes = {
   "acebase" = {
-    name        = "acebase"
-    type        = "worker"
-    mac_address = "00:e0:4c:5f:3d:71"
-    ip_address  = "10.0.99.14"
-    taint       = ""
+    name                   = "acebase"
+    type                   = "worker"
+    mac_address            = "00:e0:4c:5f:3d:71"
+    ip_address             = "10.0.99.14"
+    taint                  = "gnss"
+    machine_config_patches = ["patches/acebase-gnss.yaml"]
   }
 }
 
