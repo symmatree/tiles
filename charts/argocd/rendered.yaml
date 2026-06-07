@@ -2961,8 +2961,11 @@ spec:
           successThreshold: 1
           failureThreshold: 3
         resources:
+          env:
+          - name: GOMEMLIMIT
+            value: 340MiB
           limits:
-            memory: 256M
+            memory: 384Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
