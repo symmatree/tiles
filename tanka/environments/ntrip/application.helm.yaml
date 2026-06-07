@@ -1,0 +1,44 @@
+{{- if eq .Values.cluster_name "tiles" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ntrip
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: ntrip
+      parameters:
+        - name: cluster_name
+          string: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        - name: vault_name
+          string: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        - name: project_id
+          string: '{{ required ".Values.project_id is required" .Values.project_id }}'
+        - name: app_settings
+          map:
+            ntrip_hostname: ntrip.tiles.symmatree.com
+            admin_hostname: ntrip-admin.tiles.symmatree.com
+            cluster_issuer: real-cert
+            image: ghcr.io/symmatree/tiles/rtkbase:0a66c21
+            ntrip_admin: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ntrip-admin'
+            ntrip_caster_auth: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ntrip-caster-auth'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ntrip
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+{{- end }}
