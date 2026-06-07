@@ -76,19 +76,21 @@ alloy_vm_base_id      = 400
 deploy_synology_alloy = true
 deploy_proxmox_alloy  = true
 
-# Bare-metal AMD workers (see docs/bare-metal-nodes.md). Rising: BIOS and MAC/IP in facts fables/Tiles/Rising.md.
-# Uncomment this block and delete the empty `metal_amd_nodes = {}` line below when enabling Rising.
-# metal_amd_nodes = {
-#   "rising" = {
-#     name        = "rising"
+# Bare-metal workers (see docs/bare-metal-nodes.md)
+metal_amd_nodes = {}
+
+# AceBase (Intel Alder Lake-N): uncomment after USB boot / before terraform apply for install.
+# MAC/IP from facts fables/kb/Computers/AceBase.md
+# metal_intel_nodes = {
+#   "acebase" = {
+#     name        = "acebase"
 #     type        = "worker"
-#     mac_address = "84:47:09:2f:a9:ef"
-#     ip_address  = "10.0.128.52"
-#     taint       = "rising"
+#     mac_address = "00:e0:4c:5f:3d:71"
+#     ip_address  = "10.0.99.14"
+#     taint       = ""
 #   }
 # }
-
-metal_amd_nodes = {}
+metal_intel_nodes = {}
 
 # It's a shame the internal volume leaks here
 cluster_nfs_path = "/volume2/tiles"

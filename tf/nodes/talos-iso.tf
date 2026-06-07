@@ -40,6 +40,27 @@ resource "talos_image_factory_schematic" "metal_amd" {
   )
 }
 
+# Bare-metal Intel schematic (e.g. Alder Lake-N integrated graphics)
+data "talos_image_factory_extensions_versions" "metal_intel" {
+  talos_version = "v${var.talos_version}"
+  filters = {
+    names = ["intel-ucode", "i915"]
+  }
+}
+
+resource "talos_image_factory_schematic" "metal_intel" {
+  schematic = yamlencode(
+    {
+      customization = {
+        systemExtensions = {
+          officialExtensions = data.talos_image_factory_extensions_versions.metal_intel.extensions_info.*.name
+        }
+        extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed"]
+      }
+    }
+  )
+}
+
 output "vm_schematic_id" {
   description = "Schematic ID for VM installations"
   value       = talos_image_factory_schematic.vm.id
@@ -53,6 +74,16 @@ output "metal_amd_schematic_id" {
 output "metal_amd_iso_url" {
   description = "Download URL for bare-metal AMD ISO"
   value       = "https://factory.talos.dev/image/${talos_image_factory_schematic.metal_amd.id}/v${var.talos_version}/metal-amd64.iso"
+}
+
+output "metal_intel_schematic_id" {
+  description = "Schematic ID for bare-metal Intel installations"
+  value       = talos_image_factory_schematic.metal_intel.id
+}
+
+output "metal_intel_iso_url" {
+  description = "Download URL for bare-metal Intel ISO"
+  value       = "https://factory.talos.dev/image/${talos_image_factory_schematic.metal_intel.id}/v${var.talos_version}/metal-amd64.iso"
 }
 
 locals {

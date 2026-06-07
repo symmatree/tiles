@@ -10,7 +10,7 @@ Terraform uses the **installer** image (not the legacy `nocloud-installer/` path
 factory.talos.dev/installer/<SCHEMATIC_ID>:v<TALOS_VERSION>
 ```
 
-- `<SCHEMATIC_ID>` comes from `talos_image_factory_schematic.vm.id` (Proxmox VMs) or `talos_image_factory_schematic.metal_amd.id` (bare-metal AMD).
+- `<SCHEMATIC_ID>` comes from `talos_image_factory_schematic.vm.id` (Proxmox VMs), `metal_amd.id` (bare-metal AMD), or `metal_intel.id` (bare-metal Intel).
 - `<TALOS_VERSION>` matches `talos_version` in tfvars (no leading `v` in tfvars; URLs use `v` prefix as above).
 
 VM schematic includes the `qemu-guest-agent` system extension and kernel args such as `net.ifnames=0` and `-talos.halt_if_installed`. See `talos-iso.tf` for the exact YAML passed to Image Factory.
@@ -31,7 +31,7 @@ Use a **talosctl** build that matches the cluster Talos version (same minor line
 
 ## Bare metal
 
-AMD bare-metal installers and ISO URLs use the **metal** schematic (`metal_amd`). See [bare-metal-nodes.md](bare-metal-nodes.md).
+Bare-metal installers and ISO URLs use **metal** schematics: `metal_amd` (AMD) and `metal_intel` (Intel). Outputs `metal_amd_iso_url` and `metal_intel_iso_url` in `tf/nodes/`. See [bare-metal-nodes.md](bare-metal-nodes.md).
 
 ## Upgrading or rebuilding clusters
 
