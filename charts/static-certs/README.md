@@ -160,7 +160,7 @@ kubectl get certificate <name> -n static-certs -o yaml
 
 - **Manual deployment**: Most hosts still need manual extract + install (see below).
 - **Synology DSM (prod only)**: **`synologyDsmSync`** CronJob pushes **`raconteur`**, **`cam`**, and **`photos`** certs to Raconteur when **`values-prod.yaml`** enables it.
-- **Home Assistant (prod only)**: **`homeassistantSshSync`** CronJob pushes **`homeassistant-cert`** to `/config/ssl/` on the Yellow (`10.0.99.9`) via SSH when **`values-prod.yaml`** enables it. Requires 1Password item **`homeassistant-cert-ssh`** (`private_key` / `public_key`) and the **`public_key`** value in the SSH add-on **`authorized_keys`**. Remote paths match **`ha-config`** `configuration.yaml` (`ssl/homeassistant-cert.crt` / `.key`).
+- **Home Assistant (prod only)**: **`homeassistantSshSync`** CronJob pushes **`homeassistant-cert`** to `/config/ssl/` on the Yellow (`10.0.99.9`) via SSH when **`values-prod.yaml`** enables it. Requires 1Password item **`homeassistant-cert-ssh`** (fields **`private key`** / **`public key`**, see **`sshKeySecretKey`** in `values.yaml`) and the **`public key`** value in the SSH add-on **`authorized_keys`**. Remote paths match **`ha-config`** `configuration.yaml` (`ssl/homeassistant-cert.crt` / `.key`).
 - Other static certs are still manual unless extended in chart values.
 - **Special cases**: **`laserjet`** uses PKCS12 / 1Password password (separate template).
 
