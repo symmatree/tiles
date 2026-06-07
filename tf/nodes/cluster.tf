@@ -2,6 +2,24 @@ data "unifi_network" "main" {
   name = var.unifi_network_name
 }
 
+locals {
+  metal_amd_nodes = {
+    for k, v in var.metal_amd_nodes : k => merge(v, {
+      machine_config_patches = [
+        for p in v.machine_config_patches : file("${path.module}/${p}")
+      ]
+    })
+  }
+
+  metal_intel_nodes = {
+    for k, v in var.metal_intel_nodes : k => merge(v, {
+      machine_config_patches = [
+        for p in v.machine_config_patches : file("${path.module}/${p}")
+      ]
+    })
+  }
+}
+
 module "cluster" {
   source                      = "../modules/talos-cluster"
   proxmox_storage_iso         = var.proxmox_storage_iso
@@ -25,8 +43,8 @@ module "cluster" {
   control_plane_vip      = var.control_plane_vip
   control_plane_vip_link = "eth0" # This depends on predictable network ifaces being off
   vms                    = var.virtual_machines
-  metal_amd_nodes        = var.metal_amd_nodes
-  metal_intel_nodes      = var.metal_intel_nodes
+  metal_amd_nodes        = local.metal_amd_nodes
+  metal_intel_nodes      = local.metal_intel_nodes
   nodes_to_iso_ids       = local.nodes_to_iso_ids
   main_project_id        = local.main_project_id
   kms_project_id         = local.kms_project_id

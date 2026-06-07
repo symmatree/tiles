@@ -80,22 +80,24 @@ variable "unifi_network_name" {
 variable "metal_amd_nodes" {
   description = "List of metal AMD nodes in the cluster"
   type = map(object({
-    name        = string
-    type        = string
-    mac_address = string
-    ip_address  = string
-    taint       = string
+    name                   = string
+    type                   = string
+    mac_address            = string
+    ip_address             = string
+    taint                  = string
+    machine_config_patches = optional(list(string), [])
   }))
 }
 
 variable "metal_intel_nodes" {
   description = "List of metal Intel nodes in the cluster"
   type = map(object({
-    name        = string
-    type        = string
-    mac_address = string
-    ip_address  = string
-    taint       = string
+    name                   = string
+    type                   = string
+    mac_address            = string
+    ip_address             = string
+    taint                  = string
+    machine_config_patches = optional(list(string), [])
   }))
 }
 

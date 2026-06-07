@@ -108,7 +108,8 @@ module "talos-amd-metal" {
           }
         }
       }
-    })] : []
+    })] : [],
+    each.value.machine_config_patches
   )
 }
 
@@ -142,6 +143,7 @@ module "talos-intel-metal" {
           }
         }
       }
-    })] : []
+    })] : [],
+    each.value.machine_config_patches
   )
 }
