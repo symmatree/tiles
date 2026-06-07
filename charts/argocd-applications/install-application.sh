@@ -41,6 +41,61 @@ wait_prereq() {
 	prereq_fail "Timed out after ${ATTEMPTS} attempts (~$((ATTEMPTS * SLEEP_SECS))s) waiting for: ${description}"
 }
 
+# Push Argo CD's generated initial admin password into the existing 1Password login
+# item for this cluster (e.g. argocd-tiles-admin, argocd-tiles-test-admin).
+sync_argocd_admin_password_to_onepassword() {
+	if [[ ${INSTALL_APPLICATION_SKIP_ARGOCD_ADMIN_PASSWORD_SYNC:-} == "true" ]]; then
+		echo "INSTALL_APPLICATION_SKIP_ARGOCD_ADMIN_PASSWORD_SYNC=true; skipping Argo CD admin password sync"
+		return 0
+	fi
+
+	if [[ -z ${vault_name:-} ]]; then
+		echo "ERROR: vault_name not set (required for Argo CD admin password sync to 1Password)"
+		exit 1
+	fi
+
+	local op_item="argocd-${cluster_name}-admin"
+
+	if ! command -v op >/dev/null 2>&1; then
+		echo "WARNING: op CLI not found; skipping Argo CD admin password sync (${op_item})"
+		return 0
+	fi
+
+	if [[ -z ${OP_SERVICE_ACCOUNT_TOKEN:-} ]] && ! op account list >/dev/null 2>&1; then
+		echo "WARNING: no OP_SERVICE_ACCOUNT_TOKEN and no op session; skipping Argo CD admin password sync (${op_item})"
+		return 0
+	fi
+
+	wait_prereq "Secret argocd-initial-admin-secret" \
+		kubectl get secret argocd-initial-admin-secret -n "${ARGOCD_NAMESPACE}"
+
+	local password
+	password="$(
+		kubectl -n "${ARGOCD_NAMESPACE}" get secret argocd-initial-admin-secret \
+			-o jsonpath='{.data.password}' | base64 -d
+	)"
+
+	if [[ -z ${password} ]]; then
+		echo "ERROR: argocd-initial-admin-secret password field is empty"
+		exit 1
+	fi
+
+	# set -x would echo the password argument; disable tracing for the edit.
+	set +x
+	op item edit "${op_item}" --vault "${vault_name}" "password=${password}"
+	local edit_status=$?
+	password=''
+	unset password
+	set -x
+
+	if ((edit_status != 0)); then
+		echo "ERROR: failed to update 1Password item ${op_item} in vault ${vault_name}"
+		exit 1
+	fi
+
+	echo "Updated 1Password item ${op_item} (vault ${vault_name}) with Argo CD initial admin password"
+}
+
 echo "::group::Wait for Argo CD prerequisites"
 if [[ ${INSTALL_APPLICATION_SKIP_PREREQ_WAIT:-} == "true" ]]; then
 	echo "INSTALL_APPLICATION_SKIP_PREREQ_WAIT=true; skipping prerequisite waits"
@@ -64,6 +119,10 @@ else
 		"statefulset/argocd-application-controller" \
 		-n "${ARGOCD_NAMESPACE}" --timeout=15s
 fi
+echo "::endgroup::"
+
+echo "::group::Sync Argo CD initial admin password to 1Password"
+sync_argocd_admin_password_to_onepassword
 echo "::endgroup::"
 
 echo "::group::Install ArgoCD Applications"
