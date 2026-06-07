@@ -79,15 +79,18 @@ deploy_proxmox_alloy  = true
 # Bare-metal workers (see docs/bare-metal-nodes.md)
 metal_amd_nodes = {}
 
-metal_intel_nodes = {
-  "acebase" = {
-    name        = "acebase"
-    type        = "worker"
-    mac_address = "00:e0:4c:5f:3d:71"
-    ip_address  = "10.0.99.14"
-    taint       = ""
-  }
-}
+# AceBase (Intel Alder Lake-N): uncomment after USB boot / before terraform apply for install.
+# MAC/IP from facts fables/kb/Computers/AceBase.md
+# metal_intel_nodes = {
+#   "acebase" = {
+#     name        = "acebase"
+#     type        = "worker"
+#     mac_address = "00:e0:4c:5f:3d:71"
+#     ip_address  = "10.0.99.14"
+#     taint       = ""
+#   }
+# }
+metal_intel_nodes = {}
 
 # It's a shame the internal volume leaks here
 cluster_nfs_path = "/volume2/tiles"
