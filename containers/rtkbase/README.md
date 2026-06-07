@@ -36,4 +36,4 @@ Default autostart: `str2str_tcp.service` and `str2str_local_ntrip_caster.service
 
 ## Kubernetes (phase 3)
 
-Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). Boot script reads `RTKBASE_WEB_PASSWORD`, `RTKBASE_NTRIP_USER`, and `RTKBASE_NTRIP_PASSWORD` from synced 1Password secrets and writes them into persisted `settings.conf` before RTKBase services start.
+Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). Boot script reads `RTKBASE_NTRIP_USER` and `RTKBASE_NTRIP_PASSWORD` from the synced 1Password caster secret (`gps` / `gps`) and writes them into persisted `settings.conf` before RTKBase services start. Web UI uses the upstream default `admin` / `admin`.

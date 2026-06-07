@@ -39,7 +39,6 @@ local ntrip = {
     ntripPortNumber: 2101,
     ntripHostname: APP.app_settings.ntrip_hostname,
     adminHostname: APP.app_settings.admin_hostname,
-    adminSecret: APP.app_settings.ntrip_admin,
     casterSecret: APP.app_settings.ntrip_caster_auth,
     ingressAnnotations: {
       'cert-manager.io/cluster-issuer': APP.app_settings.cluster_issuer,
@@ -51,7 +50,6 @@ local ntrip = {
     local ntripObj = self,
     local config = defaults + overrides,
 
-    adminSecret: op.item.new(config.adminSecret, 'vaults/' + APP.vault_name + '/items/' + config.adminSecret),
     casterSecret: op.item.new(config.casterSecret, 'vaults/' + APP.vault_name + '/items/' + config.casterSecret),
 
     persistPvc: kPersistentVolumeClaim.new(std.format('%s-persist', config.name))
@@ -69,9 +67,6 @@ local ntrip = {
           kPort.newNamed(config.ntripPortNumber, config.ntripPortName),
         ])
         + kContainer.withEnvMixin([
-          kEnvVar.new('RTKBASE_WEB_PASSWORD', '')
-          + kEnvVar.valueFrom.secretKeyRef.withName(ntripObj.adminSecret.metadata.name)
-          + kEnvVar.valueFrom.secretKeyRef.withKey('password'),
           kEnvVar.new('RTKBASE_NTRIP_USER', '')
           + kEnvVar.valueFrom.secretKeyRef.withName(ntripObj.casterSecret.metadata.name)
           + kEnvVar.valueFrom.secretKeyRef.withKey('username'),
