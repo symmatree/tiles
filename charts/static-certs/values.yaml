@@ -46,7 +46,7 @@ homeassistantSshSync:
   sshKeyOnePasswordItem:
     name: homeassistant-cert-ssh
     itemPath: vaults/tiles-secrets/items/homeassistant-cert-ssh
-  sshKeySecretKey: "private key"
+  sshKeySecretKey: "private-key"
   certificates:
     - fqdn: homeassistant.local.symmatree.com
       secretName: homeassistant-cert

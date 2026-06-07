@@ -2,13 +2,6 @@
 set -euo pipefail
 : "${DEPLOY_SSH_USER:?}" "${DEPLOY_SSH_SERVER:?}" "${DEPLOY_SSH_KEYFILE:?}" "${DEPLOY_SSH_FULLCHAIN:?}" "${DEPLOY_SSH_REMOTE_CMD:?}" "${SSH_IDENTITY_FILE:?}"
 
-# 1Password field names may contain spaces (e.g. "private key" -> /ssh/private key).
-# acme.sh runs DEPLOY_SSH_CMD via unquoted "$_ssh_cmd" (word-split only, no re-parse
-# of embedded quotes), so -i paths cannot contain spaces. Copy to a temp file first.
-_ssh_identity="$(mktemp)"
-install -m600 "$SSH_IDENTITY_FILE" "$_ssh_identity"
-SSH_IDENTITY_FILE="$_ssh_identity"
-export SSH_IDENTITY_FILE
 export DEPLOY_SSH_CMD="ssh -i ${SSH_IDENTITY_FILE} -o StrictHostKeyChecking=accept-new"
 export DEPLOY_SSH_SCP_CMD="scp -q -i ${SSH_IDENTITY_FILE} -o StrictHostKeyChecking=accept-new"
 
