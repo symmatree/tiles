@@ -145,9 +145,9 @@ argo-cd:
     resources:
       limits:
         memory: 384Mi
-      env:
-      - name: GOMEMLIMIT
-        value: "340MiB"  # ~90% of the 384Mi memory limit above; GOMEMLIMIT uses MiB/GiB units
+    env:
+    - name: GOMEMLIMIT
+      value: "340MiB"  # ~90% of the 384Mi memory limit above; GOMEMLIMIT uses MiB/GiB units
     ## Application controller metrics configuration
     metrics:
       # -- Deploy metrics service
