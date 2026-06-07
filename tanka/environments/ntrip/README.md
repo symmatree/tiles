@@ -6,29 +6,25 @@ GNSS base + local NTRIP caster on bare-metal node **acebase**. Prod only (`clust
 
 | Service | URL | Auth |
 |---------|-----|------|
-| NTRIP caster | `ntrip.tiles.symmatree.com:2101` / mountpoint `ATTIC` | `{cluster}-ntrip-caster-auth` in 1Password |
-| Admin web UI | `https://ntrip-admin.tiles.symmatree.com` | `{cluster}-ntrip-admin` in 1Password (username `admin`) |
+| NTRIP caster | `ntrip.tiles.symmatree.com:2101` / mountpoint `ATTIC` | `gps` / `gps` (also in 1Password `{cluster}-ntrip-caster-auth`) |
+| Admin web UI | `https://ntrip-admin.tiles.symmatree.com` | RTKBase default `admin` / `admin` |
+
+Both hostnames resolve to **private 10.x addresses** on the site LAN (Cilium LoadBalancer pool `10.0.129.0/24` on prod). external-dns provides convenient names; there is no public internet exposure.
 
 ## Architecture
 
 - **Image:** [`containers/rtkbase/`](../../../containers/rtkbase/)
-- **Terraform secrets:** [`tf/modules/k8s-cluster/ntrip.tf`](../../../tf/modules/k8s-cluster/ntrip.tf)
+- **Terraform:** [`tf/modules/k8s-cluster/ntrip.tf`](../../../tf/modules/k8s-cluster/ntrip.tf) (caster creds reference in 1Password)
 - **Tanka:** [`main.jsonnet`](main.jsonnet)
 - **Argo CD:** [`application.helm.yaml`](application.helm.yaml) (prod only: `cluster_name == tiles`)
 
-Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase`, and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager.
+Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase`, and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager (TLS only).
 
-## Web UI authentication
+## Authentication
 
-RTKBase uses a **single built-in user** with username **`admin`** (hardcoded in upstream Flask app). The password is stored as a werkzeug hash in `settings.conf` (`web_password_hash`); upstream default is the literal password **`admin`** ([Stefal/rtkbase README](https://github.com/Stefal/rtkbase/)).
+**Web UI:** RTKBase ships with username `admin` and password `admin` ([upstream default](https://github.com/Stefal/rtkbase/)). Ingress adds HTTPS; no extra auth layer.
 
-Unlike Apprise, there is no nginx/basic-auth sidecar. Ingress provides TLS only; the app login form is the gate.
-
-Terraform generates a random admin password and stores it in 1Password as a **login** item (`tiles-ntrip-admin`, username `admin`, URL `https://ntrip-admin.tiles.symmatree.com`) so the browser extension can autofill. The 1Password operator syncs it into the cluster; [`rtk-base-on-bootup`](../../../containers/rtkbase/rtk-base-on-bootup) writes `new_web_password` into persisted `settings.conf` before `rtkbase_web` starts, and RTKBase hashes it on service start.
-
-## NTRIP caster authentication
-
-Caster credentials live in `settings.conf` under `[local_ntrip_caster]` as plain `local_ntripc_user` / `local_ntripc_pwd`. Terraform creates `{cluster}-ntrip-caster-auth` (username `gps`, random password) for client reference. Historical field setup used `gps`/`gps`; change via the web UI or update clients after deploy.
+**NTRIP caster:** `gps` / `gps`, injected from the synced 1Password item on each boot via [`rtk-base-on-bootup`](../../../containers/rtkbase/rtk-base-on-bootup). Matches historical field clients (SW Maps, u-center, etc.).
 
 ## Operator follow-up (phase 5)
 
