@@ -12,7 +12,7 @@ terraform {
     }
     unifi = {
       source  = "ubiquiti-community/unifi"
-      version = "= 0.41.3"
+      version = "0.43.0"
     }
     talos = {
       source  = "siderolabs/talos"
