@@ -133,7 +133,7 @@ jobs:
           nfs_server: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/nfs_server"
           onepassword_operator_token: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-operator/credential"
           onepassword_connect_credentials: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
-      - uses: 1password/install-cli-action@v2
+      - uses: 1password/install-cli-action@v4
       - name: Bootstrap cluster
         id: bootstrap-cluster
         shell: bash
