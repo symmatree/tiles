@@ -19,6 +19,13 @@ local mavproxy = {
   local kPort = k.core.v1.containerPort,
   local kEnvVar = k.core.v1.envVar,
 
+  local gnssToleration = {
+    key: 'dedicated',
+    operator: 'Equal',
+    value: 'gnss',
+    effect: 'NoSchedule',
+  },
+
   local defaults = {
     name: 'mavproxy',
     image: APP.app_settings.image,
@@ -54,6 +61,7 @@ local mavproxy = {
     deployment:
       kDeployment.new(config.name, replicas=1, containers=[
         kContainer.new(config.name, config.image)
+        + kContainer.withImagePullPolicy('Always')
         + kContainer.withPortsMixin([
           kPort.newNamedUDP(config.mavlinkUdpPort, 'mavlink-udp'),
           kPort.newNamed(config.tcpPort, 'mavlink-tcp'),
@@ -83,7 +91,8 @@ local mavproxy = {
       + kDeployment.spec.strategy.withType('Recreate')
       + kDeployment.spec.template.spec.withHostNetwork(true)
       + kDeployment.spec.template.spec.withDnsPolicy('ClusterFirstWithHostNet')
-      + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': config.nodeHostname }),
+      + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': config.nodeHostname })
+      + kDeployment.spec.template.spec.withTolerationsMixin([gnssToleration]),
 
     tcpService: {
       apiVersion: 'v1',
