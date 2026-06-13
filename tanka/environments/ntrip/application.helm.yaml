@@ -25,7 +25,7 @@ spec:
             ntrip_hostname: ntrip.tiles.symmatree.com
             admin_hostname: ntrip-admin.tiles.symmatree.com
             cluster_issuer: real-cert
-            image: ghcr.io/symmatree/tiles/rtkbase:sha-80f095e
+            image: ghcr.io/symmatree/tiles/rtkbase:main
             ntrip_caster_auth: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ntrip-caster-auth'
   destination:
     server: https://kubernetes.default.svc
