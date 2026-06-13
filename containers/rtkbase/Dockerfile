@@ -22,9 +22,9 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY rtk-base-on-bootup rtk-base-user-on-bootup /usr/local/bin/
-RUN chmod +x /usr/local/bin/rtk-base-on-bootup /usr/local/bin/rtk-base-user-on-bootup \
-    && sed -i '/^ExecStart=.*/i ExecStartPre=/usr/local/bin/rtk-base-on-bootup' /etc/systemd/system/rtkbase_web.service \
+COPY rtk-base-user-on-bootup /usr/local/bin/
+RUN chmod +x /usr/local/bin/rtk-base-user-on-bootup \
+    && sed -i '/^ExecStart=.*/i ExecStartPre=/usr/local/bin/rtk-base-user-on-bootup' /etc/systemd/system/rtkbase_web.service \
     && rm -f /usr/sbin/policy-rc.d
 
 # Populated on first boot; mount a PVC at /persist/rtkbase in Kubernetes.
