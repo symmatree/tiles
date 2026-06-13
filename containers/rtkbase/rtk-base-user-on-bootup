@@ -2,5 +2,15 @@
 # Adapted from drakkar-lig/walt-images featured/rpi32-rtk-base/rtk-base-user-on-bootup (BSD-3-Clause).
 # Default first-boot autostart for acebase NTRIP deployment (issue #488).
 
+PERSIST=/persist/rtkbase
+
+# PVC holds settings.conf; bind-mount it over the image copy at the path RTKBase reads.
+# (Kubernetes subPath file mounts fail here with "not a directory" on acebase/kubelet.)
+if [ ! -f "${PERSIST}/settings.conf" ]; then
+	echo "missing ${PERSIST}/settings.conf (init container should have seeded it)" >&2
+	exit 1
+fi
+mount --bind "${PERSIST}/settings.conf" /root/rtkbase/settings.conf
+
 systemctl start str2str_tcp.service
 systemctl start str2str_local_ntrip_caster.service
