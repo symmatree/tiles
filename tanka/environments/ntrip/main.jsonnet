@@ -69,13 +69,11 @@ local ntrip = {
     local persistPvcName = ntripObj.persistPvc.metadata.name,
     local settingsConfigMapName = ntripObj.settingsConfigMap.metadata.name,
     local settingsConfigMapHash = std.md5(importstr 'settings.conf'),
-    local settingsConfMount =
-      kVolumeMount.new(persistPvcName, '/root/rtkbase/settings.conf')
-      + kVolumeMount.withSubPath('settings.conf'),
 
     deployment:
       kDeployment.new(config.name, replicas=1, containers=[
         kContainer.new(config.name, config.image)
+        + kContainer.withImagePullPolicy('Always')
         + kContainer.withPortsMixin([
           config.webPort,
           kPort.newNamed(config.ntripPortNumber, config.ntripPortName),
@@ -90,8 +88,6 @@ local ntrip = {
         [std.format('%s-hash', settingsConfigMapName)]: settingsConfigMapHash,
       })
       + k_util.pvcVolumeMount(persistPvcName, '/persist/rtkbase')
-      + kDeployment.mapContainers(function(c)
-          c + kContainer.withVolumeMountsMixin([settingsConfMount]))
       + kDeployment.mixin.spec.template.spec.withVolumesMixin([
         kVolume.fromConfigMap(settingsConfigMapName, settingsConfigMapName),
       ])
@@ -101,6 +97,9 @@ local ntrip = {
         + kContainer.withArgsMixin([
           |||
             mkdir -p /persist/rtkbase/data
+            if [ -d /persist/rtkbase/settings.conf ]; then
+              rm -rf /persist/rtkbase/settings.conf
+            fi
             if [ ! -f /persist/rtkbase/settings.conf ]; then
               cp /seed/settings.conf /persist/rtkbase/settings.conf
             fi

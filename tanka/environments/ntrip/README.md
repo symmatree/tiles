@@ -18,7 +18,7 @@ Both hostnames resolve to **private 10.x addresses** on the site LAN (Cilium Loa
 - **Tanka:** [`main.jsonnet`](main.jsonnet)
 - **Argo CD:** [`application.helm.yaml`](application.helm.yaml) (prod only: `cluster_name == tiles`)
 
-Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase` (RTK data + `settings.conf` via subPath at `/root/rtkbase/settings.conf`), and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager (TLS only).
+Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase` (RTK data + persisted `settings.conf`, bind-mounted into `/root/rtkbase/settings.conf` on boot), and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager (TLS only).
 
 ## Authentication
 
