@@ -50,12 +50,12 @@ local mavproxy = {
     local podLabels = { app: config.name },
     local ntripSecretName = mavproxyObj.ntripSecret.metadata.name,
 
-    local tcpProbe(probe, port) =
+    local execProbe(probe) =
       probe.withInitialDelaySeconds(10)
       + probe.withPeriodSeconds(10)
-      + probe.tcpSocket.withPort(port)
-      + probe.withSuccessThreshold(1),
-    local livenessProbe = kContainer.livenessProbe,
+      + probe.withTimeoutSeconds(1)
+      + probe.withSuccessThreshold(1)
+      + probe.exec.withCommand(['/bin/sh', '-c', 'kill -0 1']),
     local readinessProbe = kContainer.readinessProbe,
 
     deployment:
@@ -82,12 +82,8 @@ local mavproxy = {
           '--daemon',
           '--nowait',
         ])
-        + tcpProbe(readinessProbe, config.tcpPort)
-        + readinessProbe.withFailureThreshold(3)
-        + tcpProbe(livenessProbe, config.tcpPort)
-        + livenessProbe.withInitialDelaySeconds(30)
-        + livenessProbe.withPeriodSeconds(30)
-        + livenessProbe.withFailureThreshold(6),
+        + execProbe(readinessProbe)
+        + readinessProbe.withFailureThreshold(3),
       ], podLabels=podLabels)
       + kDeployment.spec.selector.withMatchLabels(podLabels)
       + kDeployment.spec.strategy.withType('Recreate')
