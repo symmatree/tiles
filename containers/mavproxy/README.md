@@ -2,7 +2,7 @@
 
 amd64 image for the Rekon10 always-on ground MAVLink proxy: ELRS UDP in, NTRIP corrections, TCP fan-out to Mission Planner.
 
-Headless `pip install MAVProxy` on Ubuntu 24.04 LTS (no GUI dependencies).
+Headless `pip install MAVProxy` on Ubuntu 24.04 LTS (no GUI dependencies). Entrypoint writes NTRIP startup commands to `$HOME/.mavproxy/mavinit.scr` (where MAVProxy looks for them).
 
 Published to `ghcr.io/symmatree/tiles/mavproxy` by [`.github/workflows/build-mavproxy.yaml`](../../.github/workflows/build-mavproxy.yaml). Version pinned in that workflow and [`Dockerfile`](Dockerfile) (`MAVPROXY_VERSION`).
 

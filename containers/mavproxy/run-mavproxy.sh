@@ -3,10 +3,11 @@ set -euo pipefail
 
 log_dir="${MAVPROXY_LOG_DIR:-/var/log/mavproxy}"
 state_dir="${MAVPROXY_STATE_DIR:-/var/lib/mavproxy}"
-mkdir -p "${log_dir}" "${state_dir}"
+init_dir="${MAVPROXY_INIT_DIR:-${HOME}/.mavproxy}"
+mkdir -p "${log_dir}" "${state_dir}" "${init_dir}"
 
 if [[ -n ${NTRIP_CASTER:-} ]]; then
-	cat >"${state_dir}/mavinit.scr" <<EOF
+	cat >"${init_dir}/mavinit.scr" <<EOF
 module load ntrip
 ntrip set caster ${NTRIP_CASTER}
 ntrip set port ${NTRIP_PORT:-2101}
