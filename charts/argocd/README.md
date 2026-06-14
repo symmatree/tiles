@@ -37,6 +37,7 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 - **Cluster Name**: Passed as `cluster_name` value
 - **Vault Name**: Passed as `vault_name` value for 1Password integration
 - **Target Revision**: Git branch/tag to track (passed as `targetRevision`)
+- **Repo manifest cache TTL**: `reposerver.repo.cache.expiration` in `values.yaml` (30m). Tag-based deploy timing is documented in `docs/environment-strategy.md`.
 
 ### Environment-Specific Settings
 
