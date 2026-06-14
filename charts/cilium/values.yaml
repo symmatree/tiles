@@ -271,11 +271,22 @@ cilium:
     enabled: false
     annotations:
       k8s-sidecar-target-directory: /tmp/Cilium
+  # Operator reads proxy-stream-idle-timeout-seconds when building ingress/gateway
+  # CiliumEnvoyConfig listeners. Helm 1.19.x maps envoy.streamIdleTimeoutDurationSeconds
+  # only to http-stream-idle-timeout; without this key the operator keeps 300s listeners.
+  # https://github.com/cilium/cilium/issues/43814
+  extraConfig:
+    proxy-stream-idle-timeout-seconds: "86400"
   # Configure Cilium Envoy options.
   envoy:
     enabled: true
     # -- Roll out cilium envoy pods automatically when configmap is updated.
     rollOutPods: true
+    # Ingress/gateway Envoy stream_idle_timeout (default 300s). ArgoCD UI grpc-web Watch
+    # streams are long-lived; 300s matches argocd-server log stream duration and can poison
+    # browser HTTP/2 state. No per-Ingress annotation exists (request-timeout is unrelated).
+    # https://docs.cilium.io/en/stable/network/servicemesh/ingress/
+    streamIdleTimeoutDurationSeconds: 86400
     # -- Configure Cilium Envoy Prometheus options.
     # Note that some of these apply to either cilium-agent or cilium-envoy.
     prometheus:
