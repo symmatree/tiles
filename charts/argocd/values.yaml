@@ -133,6 +133,11 @@ argo-cd:
       # is propagated as a context deadline through the repo-server into the
       # CMP-server gRPC call, so this also widens the cmp-server side window.
       controller.repo.server.timeout.seconds: "300"
+      # Manifest cache TTL (commit SHA -> generated manifests). Default 24h is too long for
+      # tag-based deploys and in-repo Helm when generation inputs change without a new
+      # chart version. Separate from timeout.reconciliation (revision/ref cache).
+      # https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/
+      reposerver.repo.cache.expiration: 30m
       # Diagnosing 30-60s MatchRepository / GenerateManifest stalls against the Tanka
       # CMP sidecar. At debug we observe the repo-server log going silent for ~48s
       # between accepting a CMP GenerateManifest and the deadline-driven failure --

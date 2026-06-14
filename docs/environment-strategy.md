@@ -27,16 +27,19 @@ This document describes the strategy for managing two parallel Terraform environ
      - Update the `prod` tag to point to the current commit
      - Deploy to the production environment (Terraform apply)
 
-4. **ArgoCD Deployment**
-   - ArgoCD is configured to point at the `test` and `prod` Git tags
-   - When tags are updated, ArgoCD automatically syncs the changes to the clusters
-   - Test cluster tracks the `test` tag
-   - Production cluster tracks the `prod` tag
+4. **ArgoCD deployment**
+   - Child Applications track the `test` and `prod` Git tags with automated sync enabled (`syncPolicy.automated` on each Application).
+   - **Tag updates do not apply instantly.** ArgoCD reconciles on a timer and caches Git work in two layers ([Argo CD HA / performance docs](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/)):
+     - **Revision cache** (symbolic ref such as `prod` -> commit SHA): expiration matches `timeout.reconciliation` plus `timeout.reconciliation.jitter` in `argocd-cm` (see `charts/argocd/rendered.yaml`; currently 120s + up to 60s jitter per app).
+     - **Manifest cache** (commit SHA -> generated manifests, including Helm renders): `reposerver.repo.cache.expiration` in `charts/argocd/values.yaml` (set to **30m**; upstream default is **24h**, which is a poor fit for tag-based deploys and in-repo Helm).
+   - After moving `test` or `prod`, expect child apps to go OutOfSync and auto-sync within a few minutes in the normal case. If nothing moves, use **Refresh** in the Argo CD UI (ordinary refresh is enough; Hard Refresh is not required) or sync the Application manually.
+   - **Git webhooks** to Argo CD are the recommended way to avoid polling and cache latency at scale; not configured on these clusters yet.
+   - Test cluster tracks the `test` tag; production tracks the `prod` tag.
 
 **Workflow Summary:**
 
 ```text
-PR → main → auto-deploy to test (test tag) → manual deploy to prod (prod tag) → ArgoCD syncs
+PR -> main -> auto-deploy to test (test tag) -> manual deploy to prod (prod tag) -> Argo CD picks up tag within reconcile/cache bounds (minutes, not instant)
 ```
 
 ## Current State
@@ -61,7 +64,7 @@ The repository currently implements:
 1. **Parallel Environments**: Test and production are managed as separate Terraform workspaces
 2. **Shared Bootstrap**: The bootstrap Terraform (`tf/bootstrap`) remains shared since it initializes resources for both environments
 3. **Side-by-Side Configuration**: Both environment configurations live in the same source tree for easy diffing in PRs
-4. **Tag-Based Deployment**: Git tags (`test` and `prod`) track what's deployed and trigger redeployments
+4. **Tag-Based Deployment**: Git tags (`test` and `prod`) track what's deployed; Argo CD child Applications follow those tags with automated sync, subject to reconcile interval and repo-server cache TTL (see procedures above)
 5. **Promotion Workflow**: Production deployments can be promoted from test-tagged commits or deployed directly
 6. **Shared Code, Different Variables**: Most differences between environments are represented as different `.tfvars` files
 
