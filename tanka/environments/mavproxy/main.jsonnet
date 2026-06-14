@@ -79,6 +79,8 @@ local mavproxy = {
           std.format('--source-system=%s', config.sourceSystem),
           std.format('--source-component=%s', config.sourceComponent),
           '--default-modules=ntrip',
+          '--daemon',
+          '--nowait',
         ])
         + tcpProbe(readinessProbe, config.tcpPort)
         + readinessProbe.withFailureThreshold(3)

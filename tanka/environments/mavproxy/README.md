@@ -21,7 +21,7 @@ Both hostnames resolve to private **10.x** addresses on site LAN. Mission Planne
 - **Tanka:** [`main.jsonnet`](main.jsonnet)
 - **Argo CD:** [`application.helm.yaml`](application.helm.yaml) (prod only)
 
-Pod uses **hostNetwork** on acebase (privileged namespace, `dedicated=gnss` toleration) so ELRS backpack UDP broadcast on `:14550` reaches the proxy. MAVProxy runs as GCS **sysid 255**; injects RTCM via the built-in `ntrip` module using credentials from the existing `{cluster}-ntrip-caster-auth` 1Password item.
+Pod uses **hostNetwork** on acebase (privileged namespace, `dedicated=gnss` toleration) so ELRS backpack UDP broadcast on `:14550` reaches the proxy. MAVProxy runs with **`--daemon`** (no interactive console; required in k8s) and **`--nowait`** (open TCP before the drone connects) as GCS **sysid 255**; injects RTCM via the built-in `ntrip` module using credentials from the existing `{cluster}-ntrip-caster-auth` 1Password item.
 
 ## Operator notes
 

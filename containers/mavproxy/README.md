@@ -26,7 +26,9 @@ docker run --rm -it --network host \
   --out=tcpin:0.0.0.0:5760 \
   --source-system=255 \
   --source-component=190 \
-  --default-modules=ntrip
+  --default-modules=ntrip \
+  --daemon \
+  --nowait
 ```
 
 Deployed via [`tanka/environments/mavproxy/`](../../tanka/environments/mavproxy/).
