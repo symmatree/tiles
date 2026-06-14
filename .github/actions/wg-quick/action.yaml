@@ -58,4 +58,9 @@ runs:
             echo "Resolving ${endpoint_host}..."
             getent hosts "${endpoint_host}"
           fi
+          echo "Resolving storage.googleapis.com (Terraform GCS)..."
+          getent hosts storage.googleapis.com
+          echo "Resolving GitHub Actions OIDC host..."
+          getent hosts run-actions-2-azure-eastus.actions.githubusercontent.com
+          getent hosts actions.githubusercontent.com
           set -e
