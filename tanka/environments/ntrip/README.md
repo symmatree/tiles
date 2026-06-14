@@ -18,13 +18,13 @@ Both hostnames resolve to **private 10.x addresses** on the site LAN (Cilium Loa
 - **Tanka:** [`main.jsonnet`](main.jsonnet)
 - **Argo CD:** [`application.helm.yaml`](application.helm.yaml) (prod only: `cluster_name == tiles`)
 
-Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase`, and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager (TLS only).
+Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase` (RTK data + persisted `settings.conf`, bind-mounted into `/root/rtkbase/settings.conf` on boot), and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager (TLS only).
 
 ## Authentication
 
 **Web UI:** RTKBase ships with username `admin` and password `admin` ([upstream default](https://github.com/Stefal/rtkbase/)). Ingress adds HTTPS; no extra auth layer.
 
-**NTRIP caster:** `gps` / `gps`, injected from the synced 1Password item on each boot via [`rtk-base-on-bootup`](../../../containers/rtkbase/rtk-base-on-bootup). Matches historical field clients (SW Maps, u-center, etc.).
+**NTRIP caster:** `gps` / `gps` (in [`settings.conf`](settings.conf); also in 1Password `{cluster}-ntrip-caster-auth`). Matches historical field clients (SW Maps, u-center, etc.).
 
 ## Operator follow-up (phase 5)
 

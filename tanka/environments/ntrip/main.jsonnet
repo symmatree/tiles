@@ -17,9 +17,11 @@ local ntrip = {
   local kDeployment = k.apps.v1.deployment,
   local kContainer = k.core.v1.container,
   local kPort = k.core.v1.containerPort,
+  local kVolumeMount = k.core.v1.volumeMount,
+  local kVolume = k.core.v1.volume,
+  local kConfigMap = k.core.v1.configMap,
   local kPersistentVolumeClaim = k.core.v1.persistentVolumeClaim,
   local kIngress = k.networking.v1.ingress,
-  local kEnvVar = k.core.v1.envVar,
   local kIngressRule = k.networking.v1.ingressRule,
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
   local kIngressTLS = k.networking.v1.ingressTLS,
@@ -57,22 +59,24 @@ local ntrip = {
                 + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '5Gi' })
                 + kPersistentVolumeClaim.spec.withStorageClassName('local-path'),
 
+    settingsConfigMap:
+      kConfigMap.new(std.format('%s-settings', config.name))
+      + kConfigMap.withData({
+        'settings.conf': importstr 'settings.conf',
+      }),
+
     local podLabels = { app: config.name },
+    local persistPvcName = ntripObj.persistPvc.metadata.name,
+    local settingsConfigMapName = ntripObj.settingsConfigMap.metadata.name,
+    local settingsConfigMapHash = std.md5(importstr 'settings.conf'),
 
     deployment:
       kDeployment.new(config.name, replicas=1, containers=[
         kContainer.new(config.name, config.image)
+        + kContainer.withImagePullPolicy('Always')
         + kContainer.withPortsMixin([
           config.webPort,
           kPort.newNamed(config.ntripPortNumber, config.ntripPortName),
-        ])
-        + kContainer.withEnvMixin([
-          kEnvVar.new('RTKBASE_NTRIP_USER', '')
-          + kEnvVar.valueFrom.secretKeyRef.withName(ntripObj.casterSecret.metadata.name)
-          + kEnvVar.valueFrom.secretKeyRef.withKey('username'),
-          kEnvVar.new('RTKBASE_NTRIP_PASSWORD', '')
-          + kEnvVar.valueFrom.secretKeyRef.withName(ntripObj.casterSecret.metadata.name)
-          + kEnvVar.valueFrom.secretKeyRef.withKey('password'),
         ])
         + kContainer.securityContext.withPrivileged(true),
       ], podLabels=podLabels)
@@ -80,7 +84,34 @@ local ntrip = {
       + kDeployment.spec.strategy.withType('Recreate')
       + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': 'acebase' })
       + kDeployment.spec.template.spec.withTolerationsMixin([gnssToleration])
-      + k_util.pvcVolumeMount(ntripObj.persistPvc.metadata.name, '/persist/rtkbase')
+      + kDeployment.mixin.spec.template.metadata.withAnnotationsMixin({
+        [std.format('%s-hash', settingsConfigMapName)]: settingsConfigMapHash,
+      })
+      + k_util.pvcVolumeMount(persistPvcName, '/persist/rtkbase')
+      + kDeployment.mixin.spec.template.spec.withVolumesMixin([
+        kVolume.fromConfigMap(settingsConfigMapName, settingsConfigMapName),
+      ])
+      + kDeployment.spec.template.spec.withInitContainers([
+        kContainer.new('seed-settings', 'busybox:1.36')
+        + kContainer.withCommand(['/bin/sh', '-ec'])
+        + kContainer.withArgsMixin([
+          |||
+            mkdir -p /persist/rtkbase/data
+            if [ -d /persist/rtkbase/settings.conf ]; then
+              rm -rf /persist/rtkbase/settings.conf
+            fi
+            if [ ! -f /persist/rtkbase/settings.conf ]; then
+              cp /seed/settings.conf /persist/rtkbase/settings.conf
+            fi
+          |||,
+        ])
+        + kContainer.withVolumeMountsMixin([
+          kVolumeMount.new(persistPvcName, '/persist/rtkbase'),
+          kVolumeMount.new(settingsConfigMapName, '/seed/settings.conf')
+          + kVolumeMount.withSubPath('settings.conf')
+          + kVolumeMount.withReadOnly(true),
+        ]),
+      ])
       + k_util.hostVolumeMount('gnss', '/dev/gnss', '/dev/gnss')
       + k_util.hostVolumeMount('cgroup', '/sys/fs/cgroup', '/sys/fs/cgroup', readOnly=false),
 
