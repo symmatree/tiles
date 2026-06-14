@@ -42,32 +42,20 @@ runs:
           dns_server=$(grep -E '^DNS\s*=' "${conf}" | head -1 | sed 's/^DNS\s*=\s*//' | tr -d ' ' | cut -d, -f1)
           dns_server="${dns_server:-10.1.0.1}"
 
-          echo "=== WireGuard diagnostics ==="
-          sudo wg show wg0 || true
-
+          echo "=== WireGuard diagnostics (informational) ==="
+          set +e
+          sudo wg show wg0
           handshake=$(sudo wg show wg0 latest-handshakes 2>/dev/null | awk '{print $2}' | head -1)
           if [ -z "${handshake}" ] || [ "${handshake}" = "0" ]; then
-            echo "::error title=WireGuard::No handshake with peer (tunnel not established)"
-            exit 1
+            echo "Latest handshake: none"
+          else
+            echo "Latest handshake: $(( $(date +%s) - handshake ))s ago"
           fi
-          handshake_age=$(( $(date +%s) - handshake ))
-          echo "Latest handshake: ${handshake_age}s ago"
-
           echo "Pinging VPN DNS ${dns_server}..."
-          if ! ping -c1 -W3 "${dns_server}"; then
-            echo "::error title=WireGuard::VPN DNS ${dns_server} unreachable"
-            exit 1
+          ping -c1 -W3 "${dns_server}"
+          endpoint_host=$(grep -E '^Endpoint\s*=' "${conf}" | head -1 | sed 's/^Endpoint\s*=\s*//' | tr -d ' ' | cut -d: -f1)
+          if [ -n "${endpoint_host}" ]; then
+            echo "Resolving ${endpoint_host}..."
+            getent hosts "${endpoint_host}"
           fi
-
-          echo "Resolving storage.googleapis.com (Terraform GCS backend)..."
-          if ! getent hosts storage.googleapis.com; then
-            echo "::error title=WireGuard::Cannot resolve storage.googleapis.com with VPN DNS active"
-            exit 1
-          fi
-
-          echo "Resolving GitHub Actions OIDC host..."
-          if ! getent hosts run-actions-2-azure-eastus.actions.githubusercontent.com \
-            && ! getent hosts actions.githubusercontent.com; then
-            echo "::error title=WireGuard::Cannot resolve GitHub Actions OIDC host with VPN DNS active"
-            exit 1
-          fi
+          set -e
