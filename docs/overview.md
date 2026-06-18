@@ -123,7 +123,7 @@ From a cold start, with a proxmox cluster,
 
 * Push to main, or run `nodes-plan-apply` on `tags/test` with a target of `test`,
   to trigger a deployment of the `tiles-test` cluster
-* Run **`bootstrap-cluster`** for **`tiles-test`** (inputs and script order: [Configuration propagation](config-propagation.md#bootstrap-process)).
+* Run **`nodes-plan-apply`** **`workflow_dispatch`** for **`tiles-test`** with bootstrap enabled (inputs and script order: [Configuration propagation](config-propagation.md#bootstrap-process)).
 
 From there, Argo CD replaces itself, Cilium, and 1Password with managed versions (mostly just adding an annotation),
 as well as installing the rest of the helper and payload components.

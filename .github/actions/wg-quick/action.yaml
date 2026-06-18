@@ -37,3 +37,30 @@ runs:
           time sudo wg-quick up "${{ inputs.conf_dir }}/wg0.conf"
           echo "Connected"
           echo "wg_connected=1" | tee -a "$GITHUB_OUTPUT"
+
+          conf="${{ inputs.conf_dir }}/wg0.conf"
+          dns_server=$(grep -E '^DNS\s*=' "${conf}" | head -1 | sed 's/^DNS\s*=\s*//' | tr -d ' ' | cut -d, -f1)
+          dns_server="${dns_server:-10.1.0.1}"
+
+          echo "=== WireGuard diagnostics (informational) ==="
+          set +e
+          sudo wg show wg0
+          handshake=$(sudo wg show wg0 latest-handshakes 2>/dev/null | awk '{print $2}' | head -1)
+          if [ -z "${handshake}" ] || [ "${handshake}" = "0" ]; then
+            echo "Latest handshake: none"
+          else
+            echo "Latest handshake: $(( $(date +%s) - handshake ))s ago"
+          fi
+          echo "Pinging VPN DNS ${dns_server}..."
+          ping -c1 -W3 "${dns_server}"
+          endpoint_host=$(grep -E '^Endpoint\s*=' "${conf}" | head -1 | sed 's/^Endpoint\s*=\s*//' | tr -d ' ' | cut -d: -f1)
+          if [ -n "${endpoint_host}" ]; then
+            echo "Resolving ${endpoint_host}..."
+            getent hosts "${endpoint_host}"
+          fi
+          echo "Resolving storage.googleapis.com (Terraform GCS)..."
+          getent hosts storage.googleapis.com
+          echo "Resolving GitHub Actions OIDC host..."
+          getent hosts run-actions-2-azure-eastus.actions.githubusercontent.com
+          getent hosts actions.githubusercontent.com
+          set -e

@@ -20,7 +20,7 @@ fi
 prereq_fail() {
 	echo "ERROR: $1"
 	echo "argocd-applications install needs Argo CD bootstrapped first (AppProject + controller + repo-server)."
-	echo "Cold start: bootstrap-cluster with crds, cilium, argocd, onepassword enabled, then argocd_applications."
+	echo "Cold start: nodes-plan-apply workflow_dispatch with bootstrap_profile=fresh_cluster (or crds, cilium, argocd, onepassword enabled), then argocd_applications."
 	echo "Or run: charts/argocd/bootstrap.sh with cluster_name and related env from 1Password misc-config."
 	exit 1
 }

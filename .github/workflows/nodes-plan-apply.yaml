@@ -1,12 +1,15 @@
 name: "nodes-plan-apply"
 run-name: >-
   ${{
-    github.event_name == 'workflow_dispatch' && (
-      inputs.apply == false && format('Plan test+prod by @{0}', github.actor)
-      || inputs.environment == 'test' && format('Apply test, plan prod by @{0}', github.actor)
-      || format('Plan test, apply prod by @{0}', github.actor)
+    github.event_name == 'workflow_dispatch' && format(
+      'Manual {0} taint={1} apply={2} bootstrap={3} by @{4}',
+      inputs.environments,
+      inputs.taint,
+      inputs.apply,
+      inputs.bootstrap,
+      github.actor
     )
-    || github.event_name == 'push' && format('Apply test, plan prod (push {0}) by @{1}', github.ref_name, github.actor)
+    || github.event_name == 'push' && format('Cluster deploy (push {0}) by @{1}', github.ref_name, github.actor)
     || github.event_name == 'pull_request' && format('Plan test+prod (PR #{0}) by @{1}', github.event.pull_request.number, github.actor)
     || github.event_name == 'schedule' && format('Plan test+prod (schedule) by @{0}', github.actor)
     || format('{0} by @{1}', github.event_name, github.actor)
@@ -14,95 +17,296 @@ run-name: >-
 on:
   workflow_dispatch:
     inputs:
-      apply:
-        description: "Whether to apply the plan after creating it"
-        type: boolean
-        default: false
-      environment:
-        description: "Target environment to apply to"
+      environments:
+        description: "Target environment(s)"
         type: choice
         options:
+          - both
           - test
           - prod
+        default: both
+      taint:
+        description: "Taint VMs before plan/apply (cluster rebuild)"
+        type: boolean
+        default: false
+      apply:
+        description: "Apply Terraform after planning"
+        type: boolean
+        default: false
+      bootstrap:
+        description: "Run cluster bootstrap after apply"
+        type: boolean
+        default: false
+      bootstrap_profile:
+        description: "Bootstrap preset (overrides individual bootstrap toggles when set)"
+        type: choice
+        options:
+          - none
+          - fresh_cluster
+        default: none
+      crds:
+        description: "Bootstrap: install CRDs"
+        type: boolean
+        default: false
+      cilium:
+        description: "Bootstrap: reset and bootstrap Cilium"
+        type: boolean
+        default: false
+      argocd:
+        description: "Bootstrap: reset and bootstrap ArgoCD"
+        type: boolean
+        default: false
+      onepassword:
+        description: "Bootstrap: create OnePassword secrets"
+        type: boolean
+        default: false
+      argocd_applications:
+        description: "Bootstrap: install ArgoCD App-of-apps"
+        type: boolean
+        default: true
   pull_request: {}
   push:
     branches:
       - "main"
+    tags:
+      - "test"
+      - "prod"
   schedule:
-    - cron: "0 8 * * *" # Daily at 0800 UTC
+    - cron: "0 8 * * *"
 
 env:
   TF_IN_AUTOMATION: "true"
   TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+  OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+
 concurrency:
   group: ${{ github.repository }}
   cancel-in-progress: false
+
 jobs:
-  nodes-plan-apply:
+  resolve-matrix:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "write"
       id-token: "write"
       issues: "write"
       pull-requests: "write"
-
+    outputs:
+      run_terraform: ${{ steps.resolve.outputs.run_terraform }}
+      charts_only: ${{ steps.resolve.outputs.charts_only }}
+      matrix: ${{ steps.resolve.outputs.matrix }}
+      pr_outcome: ${{ steps.resolve.outputs.pr_outcome }}
     steps:
       - uses: "actions/checkout@v6"
         with:
-          fetch-depth: 0 # Need full history for git diff
+          fetch-depth: 0
+
       - uses: ./.github/actions/changed-files
         id: changed_files
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         with:
-          base_sha: ${{ github.event.pull_request.base.sha }}
-          head_sha: ${{ github.event.pull_request.head.sha }}
-      - name: Check if only charts changed
-        id: charts_only
-        run: |
-          set -euo pipefail
-          mkdir -p "${{ runner.temp }}/txt-outputs/"
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "Not a pull request, running Terraform"
-            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          CHANGED="${{ steps.changed_files.outputs.changed }}"
-          CHANGED="$(printf '%s' "$CHANGED")"
-          if [ -z "${CHANGED}" ]; then
-            echo "No changed files detected, running Terraform to be safe"
-            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          NON_CHARTS_FILES=$(echo "${CHANGED}" | grep -v "(^charts/)|(^tanka/)" || true)
-          if [ -n "${NON_CHARTS_FILES}" ]; then
-            echo "Found changes outside charts/ directory:"
-            echo "${NON_CHARTS_FILES}"
-            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "All changes are in charts/ directory, skipping Terraform"
-            echo "run_terraform=false" >> "$GITHUB_OUTPUT"
-          fi
+          base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.after }}
+
       - uses: ./.github/actions/configure-deployment
         id: config
+
+      - name: Resolve cluster matrix
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          CHANGED_FILES: ${{ steps.changed_files.outputs.changed }}
+          TEST_APPLY: ${{ steps.config.outputs.test_apply }}
+          PROD_APPLY: ${{ steps.config.outputs.prod_apply }}
+          INPUT_ENVIRONMENTS: ${{ github.event_name == 'workflow_dispatch' && inputs.environments || '' }}
+          INPUT_TAINT: ${{ github.event_name == 'workflow_dispatch' && inputs.taint || 'false' }}
+          INPUT_BOOTSTRAP: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap || 'false' }}
+          INPUT_BOOTSTRAP_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_profile || 'none' }}
+          INPUT_CRDS: ${{ github.event_name == 'workflow_dispatch' && inputs.crds || 'false' }}
+          INPUT_CILIUM: ${{ github.event_name == 'workflow_dispatch' && inputs.cilium || 'false' }}
+          INPUT_ARGOCD: ${{ github.event_name == 'workflow_dispatch' && inputs.argocd || 'false' }}
+          INPUT_ONEPASSWORD: ${{ github.event_name == 'workflow_dispatch' && inputs.onepassword || 'false' }}
+          INPUT_ARGOCD_APPLICATIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.argocd_applications || 'true' }}
+        run: |
+          set -euo pipefail
+
+          charts_only=false
+          run_terraform=true
+
+          if [ "${EVENT_NAME}" = "pull_request" ] || { [ "${EVENT_NAME}" = "push" ] && [ "${REF}" = "refs/heads/main" ]; }; then
+            CHANGED="$(printf '%s' "${CHANGED_FILES:-}")"
+            if [ -z "${CHANGED}" ]; then
+              echo "No changed files detected, running Terraform to be safe"
+            else
+              NON_CHARTS_FILES=$(echo "${CHANGED}" | grep -Ev '^(charts/|tanka/)' || true)
+              if [ -z "${NON_CHARTS_FILES}" ]; then
+                echo "All changes are in charts/ or tanka/, skipping Terraform"
+                charts_only=true
+                run_terraform=false
+              else
+                echo "Found changes outside charts/ and tanka/:"
+                echo "${NON_CHARTS_FILES}"
+              fi
+            fi
+          fi
+
+          include_test=false
+          include_prod=false
+          taint=false
+          bootstrap=false
+          crds=false
+          cilium=false
+          argocd=false
+          onepassword=false
+          argocd_applications=true
+
+          case "${EVENT_NAME}" in
+            pull_request|schedule)
+              include_test=true
+              include_prod=true
+              ;;
+            push)
+              case "${REF}" in
+                refs/heads/main)
+                  if [ "${run_terraform}" = "true" ]; then
+                    include_test=true
+                    include_prod=true
+                  fi
+                  ;;
+                refs/tags/test)
+                  include_test=true
+                  ;;
+                refs/tags/prod)
+                  include_prod=true
+                  ;;
+              esac
+              ;;
+            workflow_dispatch)
+              case "${INPUT_ENVIRONMENTS}" in
+                test) include_test=true ;;
+                prod) include_prod=true ;;
+                both) include_test=true; include_prod=true ;;
+              esac
+              taint=${INPUT_TAINT}
+              bootstrap=${INPUT_BOOTSTRAP}
+              if [ "${INPUT_BOOTSTRAP_PROFILE}" = "fresh_cluster" ]; then
+                bootstrap=true
+                crds=true
+                cilium=true
+                argocd=true
+                onepassword=true
+                argocd_applications=true
+              else
+                crds=${INPUT_CRDS}
+                cilium=${INPUT_CILIUM}
+                argocd=${INPUT_ARGOCD}
+                onepassword=${INPUT_ONEPASSWORD}
+                argocd_applications=${INPUT_ARGOCD_APPLICATIONS}
+              fi
+              if [ "${run_terraform}" = "false" ]; then
+                run_terraform=true
+              fi
+              ;;
+          esac
+
+          if [ "${run_terraform}" = "false" ]; then
+            {
+              echo 'matrix={"include":[]}'
+              echo "run_terraform=false"
+              echo "charts_only=${charts_only}"
+              if [ "${charts_only}" = "true" ]; then
+                echo "pr_outcome=Skipped (charts/tanka-only changes)"
+              else
+                echo "pr_outcome=Skipped"
+              fi
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          legs="[]"
+          add_leg() {
+            local environment=$1
+            local cluster=$2
+            local apply=$3
+            legs=$(jq -cn \
+              --argjson legs "${legs}" \
+              --arg environment "${environment}" \
+              --arg cluster "${cluster}" \
+              --arg apply "${apply}" \
+              --arg taint "${taint}" \
+              --arg bootstrap "${bootstrap}" \
+              --arg crds "${crds}" \
+              --arg cilium "${cilium}" \
+              --arg argocd "${argocd}" \
+              --arg onepassword "${onepassword}" \
+              --arg argocd_applications "${argocd_applications}" \
+              '$legs + [{
+                environment: $environment,
+                cluster: $cluster,
+                apply: $apply,
+                taint: $taint,
+                bootstrap: $bootstrap,
+                crds: $crds,
+                cilium: $cilium,
+                argocd: $argocd,
+                onepassword: $onepassword,
+                argocd_applications: $argocd_applications
+              }]')
+          }
+
+          if [ "${include_test}" = "true" ]; then
+            add_leg "test" "tiles-test" "${TEST_APPLY:-false}"
+          fi
+          if [ "${include_prod}" = "true" ]; then
+            add_leg "prod" "tiles" "${PROD_APPLY:-false}"
+          fi
+
+          matrix_json=$(jq -cn --argjson include "${legs}" '{include: $include}')
+          leg_count=$(echo "${legs}" | jq 'length')
+          {
+            echo "matrix=${matrix_json}"
+            echo "run_terraform=true"
+            echo "charts_only=false"
+            if [ "${leg_count}" -eq 0 ]; then
+              echo "pr_outcome=Skipped (no matrix legs)"
+            elif [ "${EVENT_NAME}" = "pull_request" ]; then
+              echo "pr_outcome=plan only (test + prod in parallel)"
+            else
+              echo "pr_outcome=completed"
+            fi
+          } >> "$GITHUB_OUTPUT"
+
+  cluster:
+    needs: resolve-matrix
+    if: needs.resolve-matrix.outputs.run_terraform == 'true' && needs.resolve-matrix.outputs.matrix != '{"include":[]}'
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: "read"
+      id-token: "write"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve-matrix.outputs.matrix) }}
+    steps:
+      - uses: "actions/checkout@v6"
+
       - name: DateAndTimeStamps
         id: stamps
         run: |
           set -euo pipefail
-          timestamp=$(date +'%Y%m%dT%H%M%S')
-          datestamp=$(date +'%Y%m%d')
-          echo "TIMESTAMP=${timestamp}" | tee -a "$GITHUB_OUTPUT"
-          echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
+          echo "TIMESTAMP=$(date +'%Y%m%dT%H%M%S')" >> "$GITHUB_OUTPUT"
+          echo "DATESTAMP=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+
       - uses: "hashicorp/setup-terraform@v4"
         with:
           terraform_version: "1.14.8"
 
       - name: Load secrets
         id: load_secrets
-        if: steps.charts_only.outputs.run_terraform == 'true'
         uses: 1password/load-secrets-action@v4
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
-          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
+          TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client-${{ matrix.cluster }}/notesPlain"
           WORKLOAD_IDENTITY_PROVIDER: "op://tiles-secrets/gh_oidc_workload_identity/workload_identity_provider"
           SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
           SYNOLOGY_USER: "op://tiles-secrets/raconteur-login/username"
@@ -112,28 +316,20 @@ jobs:
           PROXMOX_ROOT_PASSWORD: "op://tiles-secrets/proxmox-root/password"
 
       - name: Authenticate to Google Cloud
-        if: steps.charts_only.outputs.run_terraform == 'true'
         uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
 
-      # Only tf/nodes: this workflow never bootstraps /tf/bootstrap, but caching **/.terraform
-      # and hashing **/.terraform.lock.hcl mixes bootstrap + nodes artifacts and restores
-      # unrelated .terraform subtrees onto the checkout. Prefer an exact-only key scoped to the
-      # nodes lockfile; drop restore-keys so we never resurrect a stale same-day entry that
-      # does not match the full key (hits should only be dirs produced solely by terraform
-      # init below). Key prefix `nodes-tf-v2` burns any older wide-cache payloads once.
       - name: Terraform cache
-        if: steps.charts_only.outputs.run_terraform == 'true'
         id: tf-cache
         uses: actions/cache@v5
         with:
           path: tf/nodes/.terraform
-          key: ${{ runner.os }}-nodes-tf-v2-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/nodes/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
+          key: ${{ runner.os }}-nodes-tf-v2-${{ matrix.environment }}-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/nodes/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
 
       - name: Terraform init
-        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit != 'true'
+        if: steps.tf-cache.outputs.cache-hit != 'true'
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
@@ -141,30 +337,17 @@ jobs:
 
       - uses: ./.github/actions/wg-quick
         id: wireguard
-        if: steps.charts_only.outputs.run_terraform == 'true'
         with:
           wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
           conf_dir: "$HOME"
 
-      - name: Terraform plan and apply - test
-        id: tf-test
-        if: steps.charts_only.outputs.run_terraform == 'true'
-        env:
-          SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
-          SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
-          UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
-          UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
-          TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
-        uses: ./.github/actions/terraform-plan-apply
+      - uses: ./.github/actions/cluster-taint
+        if: matrix.taint == 'true'
         with:
-          workspace: "test"
-          apply: ${{ steps.config.outputs.test_apply }}
-          plan_file: "${{ runner.temp }}/tfplan-nodes-test.bin"
-          txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-test.txt"
+          workspace: ${{ matrix.environment }}
 
-      - name: Terraform plan and apply - prod
-        id: tf-prod
-        if: steps.charts_only.outputs.run_terraform == 'true'
+      - name: Terraform plan and apply
+        id: tf
         env:
           SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
@@ -173,10 +356,31 @@ jobs:
           TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
         uses: ./.github/actions/terraform-plan-apply
         with:
-          workspace: "prod"
-          apply: ${{ steps.config.outputs.prod_apply }}
-          plan_file: "${{ runner.temp }}/tfplan-nodes-prod.bin"
-          txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-prod.txt"
+          workspace: ${{ matrix.environment }}
+          apply: ${{ matrix.apply }}
+          plan_file: "${{ runner.temp }}/tfplan-nodes-${{ matrix.environment }}.bin"
+          txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-${{ matrix.environment }}.txt"
+
+      - uses: ./.github/actions/helm-setup
+        if: matrix.bootstrap == 'true' && (matrix.taint != 'true' || (matrix.apply == 'true' && steps.tf.outcome == 'success'))
+
+      - uses: ./.github/actions/cluster-bootstrap
+        if: matrix.bootstrap == 'true' && (matrix.taint != 'true' || (matrix.apply == 'true' && steps.tf.outcome == 'success'))
+        with:
+          cluster: ${{ matrix.cluster }}
+          crds: ${{ matrix.crds }}
+          cilium: ${{ matrix.cilium }}
+          argocd: ${{ matrix.argocd }}
+          onepassword: ${{ matrix.onepassword }}
+          argocd_applications: ${{ matrix.argocd_applications }}
+
+      - name: Upload plan output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-${{ matrix.environment }}
+          path: ${{ runner.temp }}/txt-outputs/plan-nodes-${{ matrix.environment }}.txt
+          if-no-files-found: ignore
 
       - name: De-wireguard
         if: always()
@@ -190,18 +394,71 @@ jobs:
           time sudo wg-quick down "$HOME/wg0.conf" || true
           echo "Disconnected"
 
+  pr-summary:
+    needs: [resolve-matrix, cluster]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: "ubuntu-latest"
+    permissions:
+      pull-requests: "write"
+    steps:
+      - uses: "actions/checkout@v6"
+
+      - name: Download plan artifacts
+        if: needs.resolve-matrix.outputs.run_terraform == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: plan-*
+          path: "${{ runner.temp }}/txt-outputs/"
+          merge-multiple: true
+
       - name: Determine outcome message
         id: outcome_msg
-        if: always() && github.event_name == 'pull_request'
         run: |
-          if [ "${{ steps.charts_only.outputs.run_terraform }}" == "false" ]; then
-            echo "message=Skipped (charts-only changes)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [ "${{ needs.resolve-matrix.outputs.charts_only }}" = "true" ]; then
+            echo "message=${{ needs.resolve-matrix.outputs.pr_outcome }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ needs.resolve-matrix.outputs.run_terraform }}" != "true" ]; then
+            echo "message=${{ needs.resolve-matrix.outputs.pr_outcome }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ needs.cluster.result }}" = "success" ]; then
+            echo "message=${{ needs.resolve-matrix.outputs.pr_outcome }}" >> "$GITHUB_OUTPUT"
           else
-            echo "message=test: ${{ steps.tf-test.outcome }}, prod: ${{ steps.tf-prod.outcome }}" >> "$GITHUB_OUTPUT"
+            echo "message=cluster matrix: ${{ needs.cluster.result }}" >> "$GITHUB_OUTPUT"
           fi
+
       - uses: ./.github/actions/attach-outputs
-        name: Attach outputs to PR
-        if: always() && github.event_name == 'pull_request'
+        if: needs.resolve-matrix.outputs.run_terraform == 'true'
         with:
           txt_output_dir: "${{ runner.temp }}/txt-outputs/"
           outcome: ${{ steps.outcome_msg.outputs.message }}
+
+      - uses: actions/github-script@v9
+        if: needs.resolve-matrix.outputs.charts_only == 'true'
+        with:
+          script: |
+            const marker = '<!-- nodes-plan-apply:charts-only -->';
+            const body = `${marker}
+            #### nodes-plan-apply
+
+            Skipped Terraform (charts/tanka-only changes). ArgoCD will sync chart changes after merge via tag promotion on \`main\`.
+            `;
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            const existing = comments.data.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            }

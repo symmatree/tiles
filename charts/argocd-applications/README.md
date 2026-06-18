@@ -43,7 +43,7 @@ All values are cluster-specific and set during bootstrap. The chart itself uses 
 
 ### Dependencies
 
-- **[ArgoCD](../argocd/README.md)**: Must be installed and running before this chart can manage applications (order relative to Cilium and **`bootstrap-cluster`** inputs: see **Bootstrap** above)
+- **[ArgoCD](../argocd/README.md)**: Must be installed and running before this chart can manage applications (order relative to Cilium and **`nodes-plan-apply`** bootstrap inputs: see **Bootstrap** above)
 
 ## Terraform Integration
 

@@ -10,7 +10,10 @@ and restricted tokens where it can. However some are created manually:
 * `tiles-onepassword-sa` which is a full 1Password service account with read-write
   access to the relevant vault. Note that this would allow privilege escalation (read becomes write), and
   should probably live in a separate privileged vault.
-* `github-vpn-client` with a `notesPlain` with a Wireguard config in it
+* `github-vpn-client-tiles` -- WireGuard config for GitHub Actions **prod** matrix leg (`tiles`). This is the existing prod client (formerly the single shared `github-vpn-client` item, renamed to match the cluster).
+* `github-vpn-client-tiles-test` -- WireGuard config for GitHub Actions **test** matrix leg (`tiles-test`); a second UniFi peer so test and prod can run in parallel.
+
+Each client needs a unique `[Interface] PrivateKey` and `Address` (assigned in UniFi); the `[Peer]` block is shared (see `tf/bootstrap/README.md`). Workflows load `op://tiles-secrets/github-vpn-client-{tiles,tiles-test}/notesPlain`. The legacy `github-vpn-client` item may remain for workflows not yet repointed (e.g. `argocd-pr-diff`).
 * `morpheus-terraform` with a `terraform` service account creds for the Unifi
 * `proxmox-root` with a `root` service account for the Proxmox cluster
 * `github-tiles-tf-bootstrap` with a Github PAT token granting read-write access
