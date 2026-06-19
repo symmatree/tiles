@@ -21,7 +21,7 @@ jobs:
       REGISTRY_USER: ${{ github.actor }}
       REGISTRY_PASSWORD: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Docker Metadata
         id: docker-metadata
         uses: docker/metadata-action@v6

@@ -18,7 +18,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "DATESTAMP=$(date +'%Y%m%d')" | tee -a "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/changed-files

@@ -18,7 +18,7 @@ jobs:
       REGISTRY_PASSWORD: ${{ github.token }}
       MAVPROXY_VERSION: "1.8.74"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Docker Metadata
         id: docker-metadata
