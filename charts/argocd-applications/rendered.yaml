@@ -647,6 +647,52 @@ spec:
         pod-security.kubernetes.io/warn: baseline
         trust-bundle: enabled
 ---
+# Source: argocd-applications/templates/jupyterhub-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jupyterhub
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: charts/jupyterhub
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-placeholder.yaml
+      valuesObject:
+        cluster_name: 'placeholder'
+        vault_name: 'placeholder'
+        hostname: 'notebook.placeholder.symmatree.com'
+        sshHostname: 'notebook-ssh.placeholder.symmatree.com'
+        jupyterhub:
+          hub:
+            config:
+              OAuthenticator:
+                oauth_callback_url: 'https://notebook.placeholder.symmatree.com/hub/oauth_callback'
+          proxy:
+            service:
+              annotations:
+                external-dns.alpha.kubernetes.io/hostname: 'notebook.placeholder.symmatree.com'
+            https:
+              hosts:
+                - 'notebook.placeholder.symmatree.com'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jupyterhub
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+---
 # Source: argocd-applications/templates/kubernetes-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
