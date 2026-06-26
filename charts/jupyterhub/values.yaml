@@ -6,13 +6,13 @@ sshHostname: notebook-ssh.placeholder.symmatree.com
 
 jupyterhub:
   hub:
-    # Runtime credentials come from hub-credentials (OnePasswordItem → k8s
-    # Secret, populated by Terraform-generated random_password in 1Password).
-    # Placeholder values below are for stable rendered.yaml at helm-template
-    # time only; get_secret_value() checks existing-secret first so the real
-    # Terraform values win at runtime for cookieSecret and CryptKeeper.keys.
-    # auth_token is set via CONFIGPROXY_AUTH_TOKEN env var from the chart-
-    # managed Secret (random on first install, preserved by lookup() after).
+    # Placeholder values are for stable rendered.yaml only. At runtime,
+    # hub-credentials (OnePasswordItem from Terraform-generated 1Password
+    # items) supplies the real cookie_secret and CryptKeeper.keys via
+    # existingSecret; get_secret_value() checks existing-secret first.
+    # auth_token uses the same placeholder because it goes via the
+    # CONFIGPROXY_AUTH_TOKEN env var (chart-managed Secret only, existingSecret
+    # is not checked). Override in values-{cluster}.yaml or via Terraform.
     existingSecret: hub-credentials
     cookieSecret: "placeholder-for-rendered-yaml"
     networkPolicy:
@@ -35,6 +35,8 @@ jupyterhub:
           - name: admin
             users:
               - seth.porter@gmail.com
+      ConfigurableHTTPProxy:
+        auth_token: "placeholder-for-rendered-yaml"
       CryptKeeper:
         keys:
           - "placeholder-for-rendered-yaml"
