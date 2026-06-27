@@ -1,0 +1,69 @@
+name: build-datascience-notebook-ssh
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: 0 9 * * 0
+jobs:
+  build-datascience-notebook-ssh:
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    name: build-datascience-notebook-ssh
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/symmatree/tiles/datascience-notebook-ssh
+      IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+      REGISTRY_USER: ${{ github.actor }}
+      REGISTRY_PASSWORD: ${{ github.token }}
+      BASE_IMAGE: quay.io/jupyter/datascience-notebook
+      BASE_TAG: "2025-05-24"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Docker Metadata
+        id: docker-metadata
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          tags: |
+            type=edge
+            type=sha
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+
+      - name: Build Image
+        id: build_image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ steps.docker-metadata.outputs.tags }}
+          labels: ${{ steps.docker-metadata.outputs.labels }}
+          context: ./containers/datascience-notebook-ssh
+          containerfiles: |
+            ./containers/datascience-notebook-ssh/Dockerfile
+          build-args: |
+            BASE_IMAGE=${{ env.BASE_IMAGE }}
+            BASE_TAG=${{ env.BASE_TAG }}
+          extra-args: |
+            --disable-compression=false
+            --cache-from=${{ env.IMAGE_NAME }}-cache
+            --cache-to=${{ env.IMAGE_NAME }}-cache
+
+      - name: Check images created
+        run: buildah images | grep '${{ env.IMAGE_NAME }}'
+
+      - name: Push To GHCR
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        with:
+          image: ${{ steps.build_image.outputs.image }}
+          tags: ${{ steps.build_image.outputs.tags }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          extra-args: |
+            --compression-format=zstd

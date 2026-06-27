@@ -1,5 +1,6 @@
 .terraform/
 node_modules/
+.kube/
 
 # Talos configuration files (contain secrets)
 controlplane.yaml

@@ -1,0 +1,114 @@
+# Passed by jupyterhub-application.yaml valuesObject.
+cluster_name: placeholder
+vault_name: placeholder
+hostname: notebook.placeholder.symmatree.com
+sshHostname: notebook-ssh.placeholder.symmatree.com
+
+jupyterhub:
+  hub:
+    # Placeholder values are for stable rendered.yaml only. At runtime,
+    # hub-credentials (OnePasswordItem from Terraform-generated 1Password
+    # items) supplies the real cookie_secret and CryptKeeper.keys via
+    # existingSecret; get_secret_value() checks existing-secret first.
+    # auth_token uses the same placeholder because it goes via the
+    # CONFIGPROXY_AUTH_TOKEN env var (chart-managed Secret only, existingSecret
+    # is not checked). Override in values-{cluster}.yaml or via Terraform.
+    existingSecret: hub-credentials
+    cookieSecret: "placeholder-for-rendered-yaml"
+    networkPolicy:
+      enabled: false
+    extraEnv:
+      OAUTH_CLIENT_ID:
+        valueFrom:
+          secretKeyRef:
+            name: google-oauth-secret
+            key: OAUTH_CLIENT_ID
+      OAUTH_CLIENT_SECRET:
+        valueFrom:
+          secretKeyRef:
+            name: google-oauth-secret
+            key: OAUTH_CLIENT_SECRET
+    config:
+      JupyterHub:
+        authenticator_class: google
+        load_roles:
+          - name: admin
+            users:
+              - seth.porter@gmail.com
+      ConfigurableHTTPProxy:
+        auth_token: "placeholder-for-rendered-yaml"
+      CryptKeeper:
+        keys:
+          - "placeholder-for-rendered-yaml"
+      KubeSpawner:
+        privileged: true
+        # Stable label on every singleuser pod; SSH LoadBalancer selects on this
+        # instead of the hub.jupyter.org/username hash which is hard to predict.
+        extra_labels:
+          tiles.symmatree.com/user: seth
+        container_security_context:
+          capabilities:
+            add:
+              - SYS_ADMIN
+              - DAC_READ_SEARCH
+      OAuthenticator:
+        allow_all: true
+    extraConfig:
+      oauthConfig.py: |
+        import os
+        c.OAuthenticator.client_id = os.environ["OAUTH_CLIENT_ID"]
+        c.OAuthenticator.client_secret = os.environ["OAUTH_CLIENT_SECRET"]
+
+  # Never cull: the whole point is an always-on SSH target.
+  cull:
+    enabled: false
+
+  singleuser:
+    uid: 0
+    extraEnv:
+      GRANT_SUDO:
+        value: "yes"
+    allowPrivilegeEscalation: true
+    cloudMetadata:
+      blockWithIptables: false
+    networkPolicy:
+      enabled: false
+    cmd: null
+    image:
+      name: ghcr.io/symmatree/tiles/datascience-notebook-ssh
+      tag: edge
+      pullPolicy: Always
+    storage:
+      capacity: 100Gi
+      extraVolumeMounts:
+        - name: keys
+          mountPath: /mnt/keys
+      extraVolumes:
+        - name: keys
+          secret:
+            secretName: ssh-secret
+            items:
+              - key: public-key
+                path: authorized_keys
+
+  scheduling:
+    userScheduler:
+      replicas: 1
+
+  prePuller:
+    hook:
+      enabled: false
+    continuous:
+      enabled: false
+
+  proxy:
+    chp:
+      networkPolicy:
+        enabled: false
+    https:
+      enabled: true
+      type: secret
+      secret:
+        name: jupyterhub-tls
+        key: tls.key
+        crt: tls.crt

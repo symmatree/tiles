@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Helm rendered.yaml files contain auto-generated placeholder secrets, not real credentials"
+paths = ['''rendered\.yaml''']
