@@ -97,7 +97,7 @@ Each **application** gets its own OAuth client with multiple redirect URIs cover
 
 **Creation is permanently manual.** GCP has no public API for creating OAuth clients for external-facing apps. The `google_iap_brand`/`google_iap_client` Terraform resources only ever supported internal (Google Workspace org-only) brands, are deprecated January 2025, and shut down March 2026. `gcloud iap oauth-brands create` has the same restriction (it explicitly requires `internal only`). There is no scripting path.
 
-**One-time per project: configure the OAuth consent screen first.** Before creating any client, go to GCP Console → `tiles-id` project → APIs & Services → OAuth consent screen. Fill in app name, support email, authorized domains (`symmatree.com`), agree to Google's terms. This step is required once per project, not once per client.
+**One-time per project: configure the OAuth consent screen first.** The consent screen is project-scoped — one app name shared by all OAuth clients in the project. All services (JupyterHub, ArgoCD, oauth-proxy) will show the same brand to users when requesting access; the per-client display name is only visible in Cloud Console. Pick a generic name like "Tiles". Go to GCP Console → `tiles-id` project → APIs & Services → OAuth consent screen. Fill in app name, support email, authorized domains (`symmatree.com`), agree to Google's terms. This step is required once per project, not once per client.
 
 **Per application: create an OAuth client.** GCP Console → `tiles-id` → APIs & Services → Credentials → Create OAuth client ID → Web application. Name it after the application (not the environment). Add redirect URIs for all environments.
 
