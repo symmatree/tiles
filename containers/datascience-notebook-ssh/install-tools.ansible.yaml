@@ -1,0 +1,312 @@
+---
+- name: Install GitHub CLI and Linux Homebrew
+  hosts: all
+  become: yes
+  vars:
+    golang_version: "1.26.4"
+    kubernetes_minor: "v1.32"
+    dist_upgrade: false
+  tasks:
+    - name: Capture dpkg architecture
+      command: dpkg --print-architecture
+      register: dpkg_arch
+      changed_when: false
+      tags: [nodesource]
+    - set_fact:
+        dpkg_arch: "{{ dpkg_arch.stdout }}"
+      tags: [nodesource]
+    - name: Capture Ubuntu codename
+      shell: ". /etc/os-release && echo \"${VERSION_CODENAME:-$UBUNTU_CODENAME}\""
+      register: ubuntu_codename
+      changed_when: false
+    - set_fact:
+        ubuntu_codename: "{{ ubuntu_codename.stdout }}"
+    - name: Install initial packages
+      apt:
+        name:
+          - apt-transport-https
+          - build-essential
+          - ca-certificates
+          - curl
+          - file
+          - git
+          - lsb-release
+          # Needed for deb822_repository to work.
+          - python3-debian
+          - software-properties-common
+          - wget
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+    - name: Kubernetes repository
+      deb822_repository:
+        name: kubernetes
+        uris: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_minor }}/deb/"
+        signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_minor }}/deb/Release.key"
+        suites:
+          - /
+        state: present
+        enabled: true
+    - name: 1Password repository
+      deb822_repository:
+        name: 1password
+        uris: https://downloads.1password.com/linux/debian/{{ dpkg_arch }}
+        signed_by: https://downloads.1password.com/linux/keys/1password.asc
+        suites:
+          - stable
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: GCloud repository
+      deb822_repository:
+        name: gcloud
+        uris: https://packages.cloud.google.com/apt
+        signed_by: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        suites:
+          - cloud-sdk
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: GitHub CLI repository
+      deb822_repository:
+        name: githubcli-archive-keyring
+        uris: https://cli.github.com/packages
+        signed_by: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        suites:
+          - stable
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: HashiCorp repository
+      deb822_repository:
+        name: hashicorp
+        uris: https://apt.releases.hashicorp.com
+        signed_by: https://apt.releases.hashicorp.com/gpg
+        suites:
+          - "{{ ubuntu_codename }}"
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: Grafana APT repository (e.g. mimirtool binary packages)
+      deb822_repository:
+        name: grafana
+        uris:
+          - https://apt.grafana.com
+        signed_by: https://apt.grafana.com/gpg.key
+        suites:
+          - stable
+        components:
+          - main
+        state: present
+        enabled: true
+    - name: Docker Engine repository
+      deb822_repository:
+        name: docker
+        uris: https://download.docker.com/linux/ubuntu
+        signed_by: https://download.docker.com/linux/ubuntu/gpg
+        suites:
+          - "{{ ubuntu_codename }}"
+        components:
+          - stable
+        architectures:
+          - "{{ dpkg_arch }}"
+        state: present
+        enabled: true
+    # - name: Helm APT repository (community Debian packages hosted on Buildkite)
+    #   deb822_repository:
+    #     name: helm
+    #     uris:
+    #       - https://packages.buildkite.com/helm-linux/helm-debian/any/
+    #     signed_by: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
+    #     suites:
+    #       - any
+    #     components:
+    #       - main
+    #     state: present
+    #     enabled: true
+    - name: Remove legacy NodeSource one-line APT list if present
+      file:
+        path: /etc/apt/sources.list.d/nodesource.list
+        state: absent
+    - name: NodeSource repository (Node.js LTS deb822 .sources)
+      deb822_repository:
+        name: nodesource
+        uris:
+          - https://deb.nodesource.com/node_22.x
+        signed_by: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+        suites:
+          - nodistro
+        components:
+          - main
+        architectures:
+          - "{{ dpkg_arch }}"
+        state: present
+        enabled: true
+      when: dpkg_arch in ['amd64', 'arm64']
+    - name: Prefer NodeSource nodejs over distro packages
+      copy:
+        dest: /etc/apt/preferences.d/nodejs
+        mode: "0644"
+        content: |
+          Package: nodejs
+          Pin: origin deb.nodesource.com
+          Pin-Priority: 600
+      when: dpkg_arch in ['amd64', 'arm64']
+    - name: VS Code repository
+      deb822_repository:
+        name: vscode
+        uris: https://packages.microsoft.com/repos/code
+        signed_by: https://packages.microsoft.com/keys/microsoft.asc
+        suites:
+          - stable
+        components:
+          - main
+        architectures:
+          - "{{ dpkg_arch }}"
+        state: present
+        enabled: true
+
+    - name: Claude Code APT repository
+      deb822_repository:
+        name: claude-code
+        uris:
+          - https://downloads.claude.ai/claude-code/apt/stable
+        signed_by: https://downloads.claude.ai/keys/claude-code.asc
+        suites:
+          - stable
+        components:
+          - main
+        state: present
+        enabled: true
+
+    - name: Install software
+      apt:
+        name:
+          - 1password-cli
+          - ansible
+          - apache2-utils
+          - apt-transport-https
+          - apt-utils
+          - aspell
+          - binfmt-support
+          - bsdmainutils
+          - buildah
+          - ca-certificates
+          - claude-code
+          - code
+          - containerd.io
+          - dialog
+          - dnsutils
+          - docker-buildx-plugin
+          - docker-ce
+          - docker-ce-cli
+          - docker-compose-plugin
+          - file
+          - gh
+          - git
+          - google-cloud-cli
+          # - helm
+          - htop
+          - jq
+          - kubectl
+          - kubectx
+          # vscode wants libasound2 but that is a virtual package.
+          - libasound2t64
+          - mimirtool
+          - nodejs
+          - pandoc
+          - procps
+          - pre-commit
+          - qemu-user-static
+          - rclone
+          - shellcheck
+          - stow
+          - sudo
+          - terraform
+          - tmux
+          - tree
+          - xdg-utils
+          - yq
+          - zsh
+          - zsh-autosuggestions
+          - zsh-syntax-highlighting
+        state: present
+        # No cache_valid_time since we just changed the repos.
+        update_cache: yes
+
+    - name: Enable and start Docker Engine
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+    - name: Ensure docker group exists
+      group:
+        name: docker
+        state: present
+    - name: Add Ansible connection user to docker group
+      user:
+        name: "{{ ansible_env.SUDO_USER | default(ansible_user) }}"
+        groups: docker
+        append: true
+
+    - name: Check installed Go version
+      command: /usr/local/go/bin/go version
+      register: go_installed
+      changed_when: false
+      failed_when: false
+    - name: Install Go {{ golang_version }}
+      shell: |
+        curl -LO "https://go.dev/dl/go{{ golang_version }}.linux-{{ dpkg_arch }}.tar.gz"
+        rm -rf /usr/local/go
+        tar -C /usr/local -xzf go{{ golang_version }}.linux-{{ dpkg_arch }}.tar.gz
+        rm go{{ golang_version }}.linux-{{ dpkg_arch }}.tar.gz
+      when: "'go' + golang_version not in go_installed.stdout"
+
+    - name: Check if Homebrew is already installed
+      stat:
+        path: /home/linuxbrew/.linuxbrew/bin/brew
+      register: brew_stat
+    - name: Install Homebrew
+      become: no
+      shell: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      args:
+        creates: /home/linuxbrew/.linuxbrew/bin/brew
+      when: not brew_stat.stat.exists
+    - name: Add Homebrew to PATH for all users
+      lineinfile:
+        path: /etc/profile.d/brew.sh
+        line: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        create: yes
+        state: present
+
+    - name: Install notebook analysis Python packages
+      pip:
+        name:
+          # Offline notebook execution and parameter injection.
+          - papermill
+          # Ardupilot .bin log parsing for flight analysis notebooks.
+          - pymavlink
+          # Kubernetes Python client for cluster health notebooks.
+          - kubernetes
+        executable: /opt/conda/bin/pip
+        state: present
+
+    - name: Install Homebrew packages
+      become: false
+      community.general.homebrew:
+        # No first-party DEB822/repo for these: use brew, or swap to pinned release tarballs / go install later.
+        name:
+          - argocd
+          - cilium-cli
+          - go-jsonnet
+          - jsonnet-bundler
+          - talosctl
+          - tanka
+        state: present
+        update_homebrew: true
+        upgrade_all: true
