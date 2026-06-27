@@ -16,7 +16,7 @@
         dpkg_arch: "{{ dpkg_arch.stdout }}"
       tags: [nodesource]
     - name: Capture Ubuntu codename
-      command: lsb_release -cs
+      shell: ". /etc/os-release && echo \"${VERSION_CODENAME:-$UBUNTU_CODENAME}\""
       register: ubuntu_codename
       changed_when: false
     - set_fact:
