@@ -284,6 +284,16 @@
         create: yes
         state: present
 
+    - name: Install notebook analysis Python packages
+      pip:
+        name:
+          # Offline notebook execution and parameter injection.
+          - papermill
+          # Ardupilot .bin log parsing for flight analysis notebooks.
+          - pymavlink
+        executable: /opt/conda/bin/pip
+        state: present
+
     - name: Install Homebrew packages
       become: false
       community.general.homebrew:
