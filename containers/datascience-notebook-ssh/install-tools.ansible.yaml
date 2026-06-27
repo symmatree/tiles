@@ -291,8 +291,6 @@
           - papermill
           # Ardupilot .bin log parsing for flight analysis notebooks.
           - pymavlink
-          # Kubernetes Python client for cluster health notebooks.
-          - kubernetes
         executable: /opt/conda/bin/pip
         state: present
 
