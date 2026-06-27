@@ -44,7 +44,9 @@ Both `tiles` and `tiles-test` share the `tiles-secrets` 1Password vault and ther
 
 The `oauth_callback_url` in each cluster's JupyterHub config is set to its own URL via `application.yaml` `valuesObject`; Google validates the redirect against its allowlist. The client_id and client_secret are the same for both clusters.
 
-This will be automated alongside ArgoCD Dex Google login in a follow-on PR.
+Create in the **`tiles-id`** GCP project (the shared identity project). The choice of project doesn't affect which GCP services JupyterHub can call — SA grants for that live in `tiles-main`/`tiles-test-main`. It's tiles-id because the OAuth consent screen is identity infrastructure shared across environments, same as the workload identity pool.
+
+This is permanently manual: GCP has no API for creating OAuth clients for external apps (the Terraform `google_iap_brand`/`google_iap_client` route was internal-org-only and shut down March 2026). The `tiles-terraform-oidc` SA only has `roles/viewer` on `tiles-id` anyway.
 
 ### Terraform resources
 
