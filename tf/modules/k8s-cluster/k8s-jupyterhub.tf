@@ -7,14 +7,16 @@
 # proxy.secretToken (auth_token) is left to chart auto-generation; it is
 # stable across upgrades via lookup() and cannot be overridden via existingSecret.
 
-resource "random_password" "jupyterhub_cookie_secret" {
-  length  = 64
-  special = false
+# cookie_secret: JupyterHub parses this as hex and decodes to 32 bytes → must
+# be 64 lowercase hex characters. random_id.hex gives exactly that.
+resource "random_id" "jupyterhub_cookie_secret" {
+  byte_length = 32
 }
 
-resource "random_password" "jupyterhub_crypt_key" {
-  length  = 64
-  special = false
+# CryptKeeper.keys: Fernet key format — 32 random bytes, URL-safe base64 with
+# padding. random_id.b64_url is 43 chars (no padding); 32 bytes needs one '='.
+resource "random_id" "jupyterhub_crypt_key" {
+  byte_length = 32
 }
 
 resource "onepassword_item" "jupyterhub_hub_credentials" {
@@ -26,12 +28,12 @@ resource "onepassword_item" "jupyterhub_hub_credentials" {
     label = "credentials"
     field {
       label = "hub.config.JupyterHub.cookie_secret"
-      value = random_password.jupyterhub_cookie_secret.result
+      value = random_id.jupyterhub_cookie_secret.hex
       type  = "CONCEALED"
     }
     field {
       label = "hub.config.CryptKeeper.keys"
-      value = random_password.jupyterhub_crypt_key.result
+      value = "${random_id.jupyterhub_crypt_key.b64_url}="
       type  = "CONCEALED"
     }
   }
