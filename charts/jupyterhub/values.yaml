@@ -77,8 +77,6 @@ jupyterhub:
     image:
       name: ghcr.io/symmatree/tiles/datascience-notebook-ssh
       tag: edge
-      pullSecrets:
-        - name: ghcr-pull-secret
       pullPolicy: Always
     storage:
       capacity: 100Gi
