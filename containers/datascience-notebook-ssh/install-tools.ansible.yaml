@@ -238,11 +238,6 @@
         # No cache_valid_time since we just changed the repos.
         update_cache: yes
 
-    - name: Enable and start Docker Engine
-      systemd:
-        name: docker
-        enabled: true
-        state: started
     - name: Ensure docker group exists
       group:
         name: docker
