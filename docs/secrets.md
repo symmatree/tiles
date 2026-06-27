@@ -99,6 +99,12 @@ Each **application** gets its own OAuth client with multiple redirect URIs cover
 
 **One-time per project: configure the OAuth consent screen first.** The consent screen is project-scoped — one app name shared by all OAuth clients in the project. All services (JupyterHub, ArgoCD, oauth-proxy) will show the same brand to users when requesting access; the per-client display name is only visible in Cloud Console. Pick a generic name like "Tiles". Go to GCP Console → `tiles-id` project → APIs & Services → OAuth consent screen. Fill in app name, support email, authorized domains (`symmatree.com`), agree to Google's terms. This step is required once per project, not once per client.
 
+Scopes to add on the consent screen:
+- `openid` — always present
+- `https://www.googleapis.com/auth/userinfo.email` — JupyterHub `GoogleOAuthenticator` default; ArgoCD Dex Google connector also needs email
+
+Both are non-sensitive; no Google verification required, and they work in Testing publishing status. Do not add `admin.directory.group.readonly` unless you configure Google group-based authorization (requires Google Workspace admin access).
+
 **Per application: create an OAuth client.** GCP Console → `tiles-id` → APIs & Services → Credentials → Create OAuth client ID → Web application. Name it after the application (not the environment). Add redirect URIs for all environments.
 
 After creating a client, store it in 1Password:

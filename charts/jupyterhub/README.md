@@ -35,6 +35,12 @@ The SSH LoadBalancer selects pods on `tiles.symmatree.com/user: seth`, set via `
 | Google OAuth `client_id`/`client_secret` | Manual | `jupyterhub-oauth-client` | Shared (no cluster prefix): both clusters use the same GCP OAuth app with both redirect URIs registered. See below. |
 | SSH authorized key | Manual | `jupyterhub-ssh-key` | Shared (no cluster prefix): same keypair works across clusters. |
 
+### OAuth scopes
+
+`GoogleOAuthenticator` requests `openid` and `email` by default — no `profile`. Both are non-sensitive scopes; the consent screen does not need to go through Google's verification process and they work in Testing publishing status.
+
+If `allowed_google_groups` or `admin_google_groups` were configured, the authenticator would also request `https://www.googleapis.com/auth/admin.directory.group.readonly`, which requires Google Workspace admin access and domain-wide delegation on a service account. That is not configured here — `allow_all: true` with an explicit admin user list is used instead.
+
 ### Google OAuth — one app, two redirect URIs
 
 Both `tiles` and `tiles-test` share the `tiles-secrets` 1Password vault and therefore share one `jupyterhub-oauth-client` item. A single GCP OAuth 2.0 client (Web Application) is registered with both redirect URIs:
