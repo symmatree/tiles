@@ -61,7 +61,7 @@ jobs:
           datestamp=$(date +'%Y%m%d')
           echo "TIMESTAMP=${timestamp}" | tee -a "$GITHUB_OUTPUT"
           echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
-      - uses: "actions/checkout@v6"
+      - uses: "actions/checkout@v7"
       - name: Determine kubeconfig secret
         id: kubeconfig_secret
         run: |

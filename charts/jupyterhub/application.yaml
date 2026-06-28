@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jupyterhub
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: charts/jupyterhub
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-{{ required ".Values.cluster_name is required" .Values.cluster_name }}.yaml
+      valuesObject:
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        hostname: 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+        sshHostname: 'notebook-ssh.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+        jupyterhub:
+          hub:
+            config:
+              OAuthenticator:
+                oauth_callback_url: 'https://notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com/hub/oauth_callback'
+          proxy:
+            service:
+              annotations:
+                external-dns.alpha.kubernetes.io/hostname: 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            https:
+              hosts:
+                - 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jupyterhub
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
