@@ -79,7 +79,7 @@ jupyterhub:
     image:
       name: ghcr.io/symmatree/tiles/datascience-notebook-ssh
       tag: edge
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     storage:
       capacity: 100Gi
       extraVolumeMounts:
