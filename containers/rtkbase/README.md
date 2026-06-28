@@ -24,16 +24,10 @@ docker run --rm -it --privileged \
   rtkbase:local
 ```
 
-## First boot
+## Boot
 
-`rtk-base-on-bootup` (ExecStartPre on `rtkbase_web.service`):
-
-1. Detect/configure the receiver when `/persist/rtkbase` is empty (GNSS device must be present).
-2. Bind-mount `settings.conf` from the persist volume.
-3. Run `/persist/rtkbase/on-bootup` (seeded from `rtk-base-user-on-bootup`).
-
-Default autostart: `str2str_tcp.service` and `str2str_local_ntrip_caster.service`. Coords, mountpoint, and caster auth are configured via the web UI after first boot.
+`rtk-base-user-on-bootup` runs as ExecStartPre on `rtkbase_web.service` and starts `str2str_tcp.service` and `str2str_local_ntrip_caster.service`. Base coords, mountpoint, and caster auth live in [`tanka/environments/ntrip/settings.conf`](../../tanka/environments/ntrip/settings.conf) (ConfigMap seed).
 
 ## Kubernetes (phase 3)
 
-Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). Boot script reads `RTKBASE_NTRIP_USER` and `RTKBASE_NTRIP_PASSWORD` from the synced 1Password caster secret (`gps` / `gps`) and writes them into persisted `settings.conf` before RTKBase services start. Web UI uses the upstream default `admin` / `admin`.
+Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). Init container seeds persisted `settings.conf` from the ConfigMap on first boot. Web UI uses the upstream default `admin` / `admin`.

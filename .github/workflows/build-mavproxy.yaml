@@ -1,27 +1,25 @@
-name: build-mimir-webhook
+name: build-mavproxy
 on:
-  # push:
-  #   branches:
-  #     # Run post-commit to validate, also to update caches.
-  #     - main
   workflow_dispatch: {}
   schedule:
-    - cron: 0 8 * * *
+    - cron: 0 9 * * *
 jobs:
-  build-mimir-webhook:
+  build-mavproxy:
     permissions:
       contents: read
       id-token: write
       packages: write
-    name: build-mimir-webhook
+    name: build-mavproxy
     runs-on: ubuntu-latest
     env:
-      IMAGE_NAME: ghcr.io/symmatree/tiles/mimir-webhook
+      IMAGE_NAME: ghcr.io/symmatree/tiles/mavproxy
       IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
       REGISTRY_USER: ${{ github.actor }}
       REGISTRY_PASSWORD: ${{ github.token }}
+      MAVPROXY_VERSION: "1.8.74"
     steps:
       - uses: actions/checkout@v7
+
       - name: Docker Metadata
         id: docker-metadata
         uses: docker/metadata-action@v6
@@ -39,12 +37,6 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
 
-      # - name: Install latest buildah
-      #   if: matrix.install_latest
-      #   run: |
-      #     bash .github/install_latest_buildah.sh
-
-      # Build image using Buildah action
       - name: Build Image
         id: build_image
         uses: redhat-actions/buildah-build@v2
@@ -52,37 +44,19 @@ jobs:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
           labels: ${{ steps.docker-metadata.outputs.labels }}
-          context: ./charts/mimir/webhook
-          #context: .
+          context: ./containers/mavproxy
           containerfiles: |
-            ./charts/mimir/webhook/Dockerfile
+            ./containers/mavproxy/Dockerfile
           build-args: |
-            BASE_IMAGE=node
-            BASE_TAG=alpine
-          # --layers=true
-          # --network=host
+            MAVPROXY_VERSION=${{ env.MAVPROXY_VERSION }}
           extra-args: |
             --disable-compression=false
             --cache-from=${{ env.IMAGE_NAME }}-cache
             --cache-to=${{ env.IMAGE_NAME }}-cache
 
-      - name: Echo Outputs
-        run: |
-          echo "Image: ${{ steps.build_image.outputs.image }}"
-          echo "Tags: ${{ steps.build_image.outputs.tags }}"
-          echo "Tagged Image: ${{ steps.build_image.outputs.image-with-tag }}"
-
-      # Check if image is build
       - name: Check images created
         run: buildah images | grep '${{ env.IMAGE_NAME }}'
 
-      - name: Check image metadata
-        run: |
-          set -eux
-          buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.OCIv1.config.Labels."org.opencontainers.image.title"'
-          buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.OCIv1.config.Labels."org.opencontainers.image.description"'
-          buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.Docker.config.Labels."org.opencontainers.image.title"'
-          buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.Docker.config.Labels."org.opencontainers.image.description"'
       - name: Push To GHCR
         uses: redhat-actions/push-to-registry@v2
         id: push
@@ -94,6 +68,3 @@ jobs:
           password: ${{ env.REGISTRY_PASSWORD }}
           extra-args: |
             --disable-content-trust
-      - name: Echo outputs
-        run: |
-          echo "${{ toJSON(steps.push.outputs) }}"

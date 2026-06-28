@@ -1,0 +1,12 @@
+Include /etc/ssh/sshd_config.d/*.conf
+
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+UsePAM yes
+X11Forwarding yes
+PrintMotd no
+PermitUserEnvironment yes
+PermitTunnel yes
+AcceptEnv LANG LC_*
+LogLevel VERBOSE

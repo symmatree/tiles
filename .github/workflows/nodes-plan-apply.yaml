@@ -47,7 +47,7 @@ jobs:
       pull-requests: "write"
 
     steps:
-      - uses: "actions/checkout@v6"
+      - uses: "actions/checkout@v7"
         with:
           fetch-depth: 0 # Need full history for git diff
       - uses: ./.github/actions/changed-files
@@ -127,7 +127,7 @@ jobs:
       - name: Terraform cache
         if: steps.charts_only.outputs.run_terraform == 'true'
         id: tf-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: tf/nodes/.terraform
           key: ${{ runner.os }}-nodes-tf-v2-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/nodes/.terraform.lock.hcl', 'tf-cache-poison.txt') }}

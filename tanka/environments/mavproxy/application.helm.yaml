@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: ntrip
+  name: mavproxy
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
@@ -12,7 +12,7 @@ spec:
     plugin:
       env:
         - name: TK_ENV
-          value: ntrip
+          value: mavproxy
       parameters:
         - name: cluster_name
           string: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
@@ -22,14 +22,14 @@ spec:
           string: '{{ required ".Values.project_id is required" .Values.project_id }}'
         - name: app_settings
           map:
-            ntrip_hostname: ntrip.tiles.symmatree.com
-            admin_hostname: ntrip-admin.tiles.symmatree.com
-            cluster_issuer: real-cert
-            image: ghcr.io/symmatree/tiles/rtkbase:main
+            image: ghcr.io/symmatree/tiles/mavproxy:main
+            tcp_hostname: mavproxy.tiles.symmatree.com
+            ntrip_caster: ntrip.tiles.symmatree.com
+            ntrip_mountpoint: ATTIC
             ntrip_caster_auth: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ntrip-caster-auth'
   destination:
     server: https://kubernetes.default.svc
-    namespace: ntrip
+    namespace: mavproxy
   syncPolicy:
     automated:
       prune: true

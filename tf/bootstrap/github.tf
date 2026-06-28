@@ -25,8 +25,8 @@ resource "github_repository" "tiles" {
   has_projects           = false
   allow_merge_commit     = false
   allow_auto_merge       = true
-  allow_rebase_merge     = false
-  allow_squash_merge     = true
+  allow_rebase_merge     = true
+  allow_squash_merge     = false
   delete_branch_on_merge = true
   vulnerability_alerts   = true
   allow_update_branch    = true
@@ -117,8 +117,8 @@ resource "github_repository" "polisher" {
   has_projects           = false
   allow_merge_commit     = false
   allow_auto_merge       = true
-  allow_rebase_merge     = false
-  allow_squash_merge     = true
+  allow_rebase_merge     = true
+  allow_squash_merge     = false
   delete_branch_on_merge = true
   vulnerability_alerts   = true
   allow_update_branch    = true
@@ -210,8 +210,8 @@ resource "github_repository" "fables" {
   has_projects           = false
   allow_merge_commit     = false
   allow_auto_merge       = true
-  allow_rebase_merge     = false
-  allow_squash_merge     = true
+  allow_rebase_merge     = true
+  allow_squash_merge     = false
   delete_branch_on_merge = true
   vulnerability_alerts   = true
   allow_update_branch    = true
