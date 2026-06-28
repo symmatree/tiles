@@ -39,7 +39,12 @@ variable "ram_mb" {
 variable "disk_size_gb" {
   description = "Disk size in GB for the VM"
   type        = number
-  default     = 32
+  # 100GB: the datascience-notebook-ssh image is ~4GB compressed / ~12GB
+  # unpacked, and pullPolicy: Always briefly holds two copies during an edge
+  # re-pull. 32GB drove the node into kubelet disk-pressure eviction mid-pull.
+  # local-lvm is thin-provisioned so the nominal size only consumes real blocks
+  # as written; 2 VMs/node at 100GB stays well under the per-node pool.
+  default = 100
 }
 
 variable "mac_address" {
