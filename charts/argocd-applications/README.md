@@ -91,7 +91,7 @@ kubectl describe application argocd-applications -n argocd
 The argocd-applications Application (the root of the app-of-apps tree) is applied by [`install-application.sh`](install-application.sh).
 This in turn renders the child applications in charts/argocd-applications. See [Argo CD readiness and install-application](../../docs/config-propagation.md#argo-cd-readiness-and-install-application) in **config-propagation.md**.
 
-After Argo CD prerequisite waits, the script reads `argocd-initial-admin-secret` and updates the existing 1Password login item `argocd-{cluster_name}-admin` (password field only). Requires `vault_name` and `op` with `OP_SERVICE_ACCOUNT_TOKEN` or a signed-in session. Set `INSTALL_APPLICATION_SKIP_ARGOCD_ADMIN_PASSWORD_SYNC=true` to skip.
+After the prerequisite waits, the script applies the root Application. It does **not** sync the Argo CD initial admin password to 1Password — update the `argocd-{cluster_name}-admin` item manually if needed (see [argocd/README.md](../argocd/README.md)).
 
 ## Troubleshooting
 
