@@ -134,6 +134,11 @@ jobs:
           onepassword_operator_token: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-operator/credential"
           onepassword_connect_credentials: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
       - uses: 1password/install-cli-action@v2
+        with:
+          # Pinned to test whether op item edit's "invalid JSON provided" failure
+          # tracks the 2.34.0 -> 2.34.1 bump (latest). Last green bootstrap used
+          # 2.34.0; first failure used 2.34.1. Revisit once that's confirmed.
+          version: "2.34.0"
       - name: Bootstrap cluster
         id: bootstrap-cluster
         shell: bash
