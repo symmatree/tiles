@@ -80,6 +80,11 @@ sync_argocd_admin_password_to_onepassword() {
 		exit 1
 	fi
 
+	# TEMP DIAGNOSTIC: record exactly which op binary/version runs the edit, so a
+	# pass/fail can be attributed to a specific op version (two op installs exist
+	# in CI: load-secrets-action and install-cli-action).
+	echo "DIAG op binary: $(command -v op) | version: $(op --version)"
+
 	# set -x would echo the password argument; disable tracing for the edit.
 	set +x
 	op item edit "${op_item}" --vault "${vault_name}" "password=${password}"
