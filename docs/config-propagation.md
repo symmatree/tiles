@@ -96,7 +96,7 @@ The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) pe
 
 **Prerequisite waits live only in `install-application.sh`:** That script is the single gate before the root `Application` is applied. `charts/argocd/bootstrap.sh` does not wait for Deployments/StatefulSets to be Ready; duplicating waits there would add maintenance and latency on full bootstrap runs without changing when the root app is applied (the workflow always runs `install-application.sh` next when `argocd_applications` is enabled). The common case `argocd_applications=true` with `argocd=false` also requires waits in `install-application.sh` only.
 
-**What `install-application.sh` waits for:** `argocd` namespace, `AppProject` named `cluster_name`, and Available/Ready `argocd-redis`, `argocd-repo-server`, `argocd-application-controller` (bounded retries; see script header for env overrides). It then reads `argocd-initial-admin-secret` and updates the existing 1Password login item `argocd-{cluster_name}-admin` (password field only; e.g. `argocd-tiles-admin`).
+**What `install-application.sh` waits for:** `argocd` namespace, `AppProject` named `cluster_name`, and Available/Ready `argocd-redis`, `argocd-repo-server`, `argocd-application-controller` (bounded retries; see script header for env overrides). It then applies the root Application. (It no longer syncs the Argo CD admin password to 1Password — that is a manual step; see `charts/argocd/README.md`.)
 
 **What it does not wait for (apply-then-reconcile):** Root or child Application sync, cert-manager, external-dns, ingress TLS, or any workload deployed by the app-of-apps tree. CRDs are decoupled via `install-crds.sh` so controllers can start later.
 
