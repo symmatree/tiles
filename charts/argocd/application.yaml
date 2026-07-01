@@ -23,6 +23,14 @@ spec:
             server:
               ingressGrpc:
                 hostname: 'grpc-argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+          oauth2-proxy:
+            ingress:
+              hosts:
+                - 'argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+              tls:
+                - secretName: argocd-proxy-tls
+                  hosts:
+                    - 'argocd.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
     - repoURL: https://github.com/symmatree/tiles.git
       targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
       ref: values
