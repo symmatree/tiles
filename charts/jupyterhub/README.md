@@ -19,6 +19,17 @@ The singleuser pod runs as root (`uid: 0`) with `SYS_ADMIN` + `DAC_READ_SEARCH` 
 
 The SSH LoadBalancer selects pods on `tiles.symmatree.com/user: seth`, set via `c.KubeSpawner.extra_labels` in hub config. This is stable across pod restarts. The upstream chart also stamps pods with `hub.jupyter.org/username: {hash}` but that hash is hard to predict and changes with username format changes; the custom label avoids that dependency.
 
+## SSH access — verification status (incomplete)
+
+End-to-end SSH into the singleuser pod is **not yet verified**. Verified working: the `ssh-service` LoadBalancer + endpoint select the pod correctly, the public key mounts at `/mnt/keys/authorized_keys`, and `sshd`/`sshd_config`/host keys are present in the image. The gap was that **nothing started `sshd`** — the Dockerfile `systemctl enable ssh` does nothing without an init system.
+
+Remaining work, in order:
+
+1. **Merge the `sshd`-start fix** (PR #538): adds `containers/datascience-notebook-ssh/before-notebook.d/start-sshd.sh`, which the Jupyter base image runs on startup. Still open at time of writing; nothing works until it lands.
+2. **Rebuild the image** (the `containers/datascience-notebook-ssh/**` push trigger fires on merge) and **respawn** the notebook (`pullPolicy: Always` pulls the new `edge`).
+3. **Verify** on the running pod: `ss -tlnp | grep :22` shows `sshd` listening, then actually `ssh` in with the key.
+4. **If login is rejected**, check `sshd_config` specifics — `PermitRootLogin` (the pod runs as uid 0) and `AuthorizedKeysFile` path (must resolve to `/mnt/keys/authorized_keys`). These were not audited.
+
 ## Secrets architecture
 
 ### hub.existingSecret
