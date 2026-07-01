@@ -181,22 +181,10 @@ argo-cd:
       serviceMonitor:
         # -- Enable a prometheus ServiceMonitor
         enabled: true
-    # Argo CD server ingress configuration
+    # Ingress disabled: oauth2-proxy is the external entry point.
+    # argocd-server has no direct external exposure.
     ingress:
-      # -- Enable an ingress resource for the Argo CD server
-      enabled: true
-      # -- Specific implementation for ingress controller. One of `generic`, `aws` or `gke`
-      ## Additional configuration might be required in related configuration sections
-      controller: generic
-      annotations:
-        cert-manager.io/cluster-issuer: real-cert
-        # Note: Cilium automatically syncs TLS secrets from the ingress namespace
-        # to cilium-secrets namespace when enable-ingress-secrets-sync is true
-      ingressClassName: cilium
-      # -- Enable TLS configuration for the hostname defined at `server.ingress.hostname`
-      ## TLS certificate will be retrieved from a TLS secret `argocd-server-tls`
-      ## You can create this secret via `certificate` or `certificateSecret` option
-      tls: true
+      enabled: false
     # Dedicated gRPC ingress for ingress controllers that supports only single backend protocol per Ingress resource
     # Ref: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-2-multiple-ingress-objects-and-hosts
     ingressGrpc:
@@ -334,3 +322,33 @@ argo-cd:
       - name: cmp-tanka
         configMap:
           name: cmp-tanka
+
+oauth2-proxy:
+  # Credentials injected from 1Password. Create a vault item named 'argocd-oauth2-proxy' with
+  # fields: OAUTH2_PROXY_CLIENT_ID, OAUTH2_PROXY_CLIENT_SECRET, OAUTH2_PROXY_COOKIE_SECRET.
+  # Generate cookie secret with: openssl rand -base64 32 | head -c 32 | base64
+  # GCP OAuth2 client redirect URI: https://argocd.{cluster}.symmatree.com/oauth2/callback
+  extraEnvFrom:
+    - secretRef:
+        name: argocd-oauth2-proxy
+  extraArgs:
+    - --provider=google
+    - "--email-domain=*"
+    - --allowed-email=seth.porter@gmail.com
+    - --upstream=http://argocd-server:80
+    - --pass-host-header=true
+    - --set-xauthrequest=true
+    - --silence-ping-logging=true
+    - --skip-provider-button=true
+    - --reverse-proxy=true
+  ingress:
+    enabled: true
+    className: cilium
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+    hosts:
+      - argocd.placeholder.symmatree.com
+    tls:
+      - secretName: argocd-proxy-tls
+        hosts:
+          - argocd.placeholder.symmatree.com
