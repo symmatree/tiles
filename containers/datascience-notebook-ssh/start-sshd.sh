@@ -12,4 +12,10 @@ set -euo pipefail
 # if /etc/ssh was overlaid) so sshd can start.
 ssh-keygen -A
 
+# sshd needs its privilege-separation directory or it exits 255 with "Missing
+# privilege separation directory: /run/sshd". /run is a tmpfs that starts empty
+# and no init system creates it here, so make it ourselves — otherwise this hook
+# fails under `set -e` and takes the whole notebook container down with it.
+mkdir -p /run/sshd
+
 /usr/sbin/sshd
