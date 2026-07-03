@@ -25,6 +25,26 @@ locals {
     name       = var.control_plane_vip
     link       = var.control_plane_vip_link
   })
+
+  # Widen the within-node OOM safety margin: raise the kubelet hard-eviction
+  # threshold so the kubelet reclaims (evicts low-priority pods) before the
+  # kernel OOM-killer fires. Re-declares the default nodefs/imagefs thresholds
+  # so the extraConfig merge does not drop disk-pressure eviction. Empty list
+  # (no patch) when the knob is unset -- e.g. the test cluster keeps defaults.
+  eviction_patches = var.kubelet_eviction_memory_available == null ? [] : [yamlencode({
+    machine = {
+      kubelet = {
+        extraConfig = {
+          evictionHard = {
+            "memory.available"  = var.kubelet_eviction_memory_available
+            "nodefs.available"  = "10%"
+            "nodefs.inodesFree" = "5%"
+            "imagefs.available" = "15%"
+          }
+        }
+      }
+    }
+  })]
 }
 
 output "config_path" {
@@ -60,6 +80,7 @@ module "talos-vm" {
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],
+    local.eviction_patches,
     [yamlencode({
       "machine" = {
         "install" = { "image" = local.vm_install_image }
@@ -94,6 +115,7 @@ module "talos-amd-metal" {
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],
+    local.eviction_patches,
     [yamlencode({
       "machine" = {
         "install" = { "image" = local.metal_amd_install_image }
@@ -135,6 +157,7 @@ module "talos-intel-metal" {
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],
+    local.eviction_patches,
     [yamlencode({
       "machine" = {
         "install" = { "image" = local.metal_intel_install_image }

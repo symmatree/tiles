@@ -4,6 +4,13 @@
 cluster_name = "tiles"
 cluster_code = "p"
 
+# Widen the kubelet within-node OOM safety margin on prod. The kubelet evicts
+# low-priority pods when free memory drops below this, before the kernel
+# OOM-killer fires. Prod-only: test.tfvars leaves it unset (Talos default
+# 100Mi). Context: facts fables/Tiles/tiles-host-instability.md (guest-level
+# wedge, tiles-wk-1, 2026-07-03).
+kubelet_eviction_memory_available = "512Mi"
+
 # Network configuration for tiles cluster (10.0.128.0/18 block)
 control_plane_vip = "10.0.128.10"
 external_ip_cidr  = "10.0.129.0/24"
