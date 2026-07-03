@@ -46,7 +46,7 @@ local serviceAccount = kServiceAccount.new('flight-analysis');
 local container =
   kContainer.new('runner', image='ghcr.io/symmatree/tiles/datascience-notebook-ssh:main')
   + kContainer.withCommand(['python', '/runner/runner.py'])
-  + kContainer.resources.withRequests({ cpu: '500m', memory: '2Gi' })
+  + kContainer.resources.withRequests({ cpu: '500m', memory: '1Gi' })
   + kContainer.resources.withLimits({ memory: '4Gi' })
   + kContainer.withVolumeMountsMixin([
     kVolumeMount.new('flights', '/mnt/flights'),
