@@ -42,6 +42,8 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 ## Monitoring and Observability
 
+- **[mimir.md](mimir.md)**: Grafana Mimir metrics backend — tenancy (`X-Scope-OrgID`), per-tenant limits, self-monitoring (component ServiceMonitors), and how to answer cardinality/load questions.
+
 - **[synology-monitoring.md](synology-monitoring.md)**: Grafana Alloy on the Synology NAS (Raconteur), OTLP to both clusters, Mimir/Loki labels, and verification queries.
 
 - **[proxmox-monitoring.md](proxmox-monitoring.md)**: Grafana Alloy in Proxmox LXC per physical node, **`cluster="bond"`** metrics/logs, Terraform flags, and findings from Mimir/Loki debugging.

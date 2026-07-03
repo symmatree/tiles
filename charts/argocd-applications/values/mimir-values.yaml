@@ -21,6 +21,10 @@ mimir:
       # default is 150000 per user, we are currently all in one
       max_global_series_per_user: 500000
       max_fetched_chunks_per_query: 4000000
+      # Enable the on-demand cardinality API (/prometheus/api/v1/cardinality/*),
+      # which powers Grafana Explore's "Analyse cardinality". Default is false.
+      # See docs/mimir.md.
+      cardinality_analysis_enabled: true
     common:
       storage:
         backend: filesystem
@@ -42,7 +46,16 @@ mimir:
       filesystem:
         dir: /mnt/mimir-nfs/alertmanager
 
-alertmanager:
+# Self-monitoring: emit a ServiceMonitor per Mimir component so the cluster's
+# Alloy (k8s-monitoring) stack scrapes cortex_* into the k8s tenant. Without
+# this, Mimir's own metrics are exposed but scraped by nothing, so we can't see
+# per-tenant series counts, cardinality, or ingest/query load. See docs/mimir.md.
+metaMonitoring:
+  serviceMonitor:
+    enabled: true
+    # Let the Alloy pipeline own the `cluster` label; null stops Mimir from
+    # stamping its own (which would default to the release name "mimir").
+    clusterLabel: null
   resources:
     requests:
       cpu: 10m
