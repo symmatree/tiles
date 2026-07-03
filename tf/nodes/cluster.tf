@@ -46,16 +46,18 @@ module "cluster" {
   metal_amd_nodes        = local.metal_amd_nodes
   metal_intel_nodes      = local.metal_intel_nodes
   metal_apply_mode       = var.metal_apply_mode
-  nodes_to_iso_ids       = local.nodes_to_iso_ids
-  main_project_id        = local.main_project_id
-  kms_project_id         = local.kms_project_id
-  gcp_region             = var.gcp_region
-  cluster_nfs_path       = var.cluster_nfs_path
-  datasets_nfs_path      = var.datasets_nfs_path
-  nfs_server             = var.nfs_server
-  seed_project_id        = var.seed_project_id
-  dns_zone_ad_local      = var.dns_zone_ad_local
-  dns_zone_local         = var.dns_zone_local
+
+  kubelet_eviction_memory_available = var.kubelet_eviction_memory_available
+  nodes_to_iso_ids                  = local.nodes_to_iso_ids
+  main_project_id                   = local.main_project_id
+  kms_project_id                    = local.kms_project_id
+  gcp_region                        = var.gcp_region
+  cluster_nfs_path                  = var.cluster_nfs_path
+  datasets_nfs_path                 = var.datasets_nfs_path
+  nfs_server                        = var.nfs_server
+  seed_project_id                   = var.seed_project_id
+  dns_zone_ad_local                 = var.dns_zone_ad_local
+  dns_zone_local                    = var.dns_zone_local
 }
 
 output "talosconfig" {
