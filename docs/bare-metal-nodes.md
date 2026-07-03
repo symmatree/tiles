@@ -101,7 +101,28 @@ Replace placeholders from Terraform outputs or plan. Generic Talos bare-metal co
 
 ## Full-cluster rebuilds and VMs
 
-If you are destroying and recreating **Proxmox VMs** with Terraform at the same time as bare metal, see [README.md -- Recreating cluster](../README.md#recreating-cluster). Bare-metal nodes are **not** destroyed by that flow; reset or reinstall them using [Wipe and reinstall](#3-wipe-and-reinstall-talos-on-the-same-machine).
+The [Recreating cluster](../README.md#recreating-cluster) flow taints the Proxmox **VMs** and **`talos_machine_bootstrap`**, so Terraform builds new VM disks and **re-bootstraps etcd** -- a brand-new cluster. Bare-metal nodes are **not** VMs and are **not** recreated by that flow, which is exactly where they get stranded.
+
+### Rebuilds: metal reapply + reboot
+
+**The trap.** A metal worker's machine config is derived from `talos_machine_secrets`, which a bootstrap recreate does **not** change. Re-applying it therefore produces byte-identical config, and `talos_machine_configuration_apply` under the default `apply_mode = "auto"` is a **no-op -- no reboot**. The node keeps its old in-memory etcd/kubelet identity, its Node object was wiped with the old etcd, and the long-running kubelet loops `nodes "<name>" not found`; `NodeRestriction` then denies every pod pinned there. (Observed 2026-06-30 -> 07-01: `acebase` -- the GNSS base -- sat orphaned ~35h, so `ntrip/rtkbase` + `mavproxy` were `Pending` and **RTK was down**. See [tiles#547](https://github.com/symmatree/tiles/issues/547).)
+
+A config *apply* is not a *reset*. PKI is preserved across the recreate (both apid mTLS and the kubelet client cert still authenticate), so the node needs neither new certs nor a reinstall -- it only needs to **reboot** (or at minimum `talosctl -n <NODE_IP> service kubelet restart`) to rejoin. Since `auto` won't reboot on unchanged config, we force it.
+
+**The mechanism -- two knobs, both required:**
+
+1. **[`taint-vms`](../.github/workflows/taint-vms.yaml)** taints each metal `talos_machine_configuration_apply` (derived from state, so it tracks `metal_{amd,intel}_nodes` automatically) so the apply re-runs on the next Terraform apply.
+2. **[`nodes-plan-apply`](../.github/workflows/nodes-plan-apply.yaml)** takes a **`metal_apply_mode`** input, threaded via `TF_VAR_metal_apply_mode` into the metal module's `apply_mode`. Set it to **`reboot`** for a rebuild: the re-applied node reboots and rejoins the new etcd. The metal modules `depends_on` `talos_machine_bootstrap`, so the reboot lands **after** the new etcd exists.
+
+Routine applies (PR / push / daily schedule) leave `metal_apply_mode = "auto"`, so this is inert outside a deliberate rebuild. The same `reboot` knob is also the general way to push a machine-config change that needs a reboot to a metal node.
+
+> **apply-config modes** ([Talos v1.13](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed; `reboot` always reboots to apply; `staged` applies on next reboot. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#3-wipe-and-reinstall-talos-on-the-same-machine).
+
+**Rebuild runbook**
+
+1. Run **`taint-vms`** for the workspace (taints VMs, `talos_machine_bootstrap`, and metal config-apply).
+2. Run **`nodes-plan-apply`** with **apply** for that workspace and **`metal_apply_mode = reboot`**.
+3. Verify: `talosctl -n <NODE_IP> get members` and `kubectl get nodes` show the metal node; any pinned pods (e.g. `ntrip`, `mavproxy`) return to `Running`.
 
 ## Related docs
 
