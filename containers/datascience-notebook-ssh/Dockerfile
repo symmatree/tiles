@@ -14,6 +14,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY install-tools.ansible.yaml /tmp/install-tools.ansible.yaml
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 # Fix linuxbrew permissions because we're running as root.
 RUN ansible-playbook -v /tmp/install-tools.ansible.yaml -i localhost, --connection=local \
     && rm -rf /var/lib/apt/lists/* \

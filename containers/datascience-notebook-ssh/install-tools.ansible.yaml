@@ -227,6 +227,9 @@
           - stow
           - sudo
           - terraform
+          - texlive-fonts-recommended
+          - texlive-plain-generic
+          - texlive-xetex
           - tmux
           - tree
           - xdg-utils
@@ -288,8 +291,20 @@
           - pymavlink
           # Kubernetes Python client for cluster health notebooks.
           - kubernetes
+          # PDF export via headless Chromium (playwright provides the browser).
+          - nbconvert[webpdf]
+          # Interactive map tiles in flight analysis notebooks.
+          - folium
         executable: /opt/conda/bin/pip
         state: present
+
+    - name: Install Playwright browsers for webpdf export
+      shell: /opt/conda/bin/playwright install --with-deps chromium
+      environment:
+        PLAYWRIGHT_BROWSERS_PATH: /opt/playwright-browsers
+
+    - name: Allow all users to read/execute Playwright browsers
+      shell: chmod -R o+rx /opt/playwright-browsers
 
     - name: Install Homebrew packages
       become: false
