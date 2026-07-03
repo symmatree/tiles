@@ -117,6 +117,8 @@ A config *apply* is not a *reset*. PKI is preserved across the recreate (both ap
 Routine applies (PR / push / daily schedule) leave `metal_apply_mode = "auto"`, so this is inert outside a deliberate rebuild. The same `reboot` knob is also the general way to push a machine-config change that needs a reboot to a metal node.
 
 > **apply-config modes** ([Talos v1.13](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed; `reboot` always reboots to apply; `staged` applies on next reboot. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#3-wipe-and-reinstall-talos-on-the-same-machine).
+>
+> Why `reboot` works on unchanged config: in v1.13 machined's `ApplyConfiguration` REBOOT case persists the config and **unconditionally** sequences a reboot -- there is no config-diff short-circuit ([v1alpha1_server.go](https://github.com/siderolabs/talos/blob/v1.13.0/internal/app/machined/internal/server/v1alpha1/v1alpha1_server.go)). **Forward-compat:** the deprecated `REBOOT` gRPC mode is slated for removal on Talos `main` ("use AUTO or NO_REBOOT"), so **re-verify this mechanism when bumping `talos_version`** past 1.13.
 
 **Rebuild runbook**
 
