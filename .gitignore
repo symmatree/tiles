@@ -13,3 +13,6 @@ secrets.yaml
 # Temporary files
 *.tmp
 *.bak
+
+# Claude Code transient client state (worktree checkouts); keep the rest of .claude/
+.claude/worktrees/
