@@ -36,4 +36,5 @@ Bare-metal installers and ISO URLs use **metal** schematics: `metal_amd` (AMD) a
 ## Upgrading or rebuilding clusters
 
 - **VM replace:** Destroy targeted `proxmox_virtual_environment_vm` resources and `terraform apply` (see [README.md](../README.md#recreating-cluster)).
+- **Bare-metal rebuild:** Metal workers are not VMs and are not recreated by that flow. A re-apply of unchanged config is a no-op (no reboot), so a rebuild must run with `metal_apply_mode = reboot` or the node stays orphaned on the old etcd. See [bare-metal-nodes.md](bare-metal-nodes.md#rebuilds-metal-reapply--reboot).
 - **In-place OS upgrade:** Upstream procedure uses `talosctl upgrade` with the same installer image as in machine config; this repo usually drives version via Terraform and full VM refresh. See [Sidero upgrade docs](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/lifecycle-management/upgrading-talos).
