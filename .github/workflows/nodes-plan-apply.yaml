@@ -132,24 +132,32 @@ jobs:
           path: tf/nodes/.terraform
           key: ${{ runner.os }}-nodes-tf-v2-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/nodes/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
 
-      # Always run plain `terraform init` (no -upgrade). The cache above is a warm start,
-      # not a substitute for init:
-      #   - Providers: already restored and matching the committed .terraform.lock.hcl, so
-      #     init verifies them without re-downloading. `-upgrade` would install
-      #     newest-available and rewrite the lockfile, decoupling .terraform from the cache
-      #     key (which hashes the lockfile) and poisoning the cache -- see #549.
-      #   - Modules: init reconciles .terraform/modules/modules.json against the current
-      #     config every run, so adding/removing/moving a module block is picked up. Module
-      #     versions are not tracked in the lockfile, so a cache keyed on the lockfile can't
-      #     see them; skipping init on a cache hit would run plan against a stale manifest.
+      # The cache key hashes the committed .terraform.lock.hcl, which fully pins providers.
+      # So a cache hit means providers are already correct, and re-running init's provider
+      # phase (a registry round-trip per provider -- the slow part) is pure waste. Modules
+      # are NOT tracked by the lockfile, so a hit can still carry a stale module manifest.
+      # Split the work by what the cache can and can't vouch for:
+      #   - cache miss: full `terraform init` to download providers per the lockfile. No
+      #     -upgrade -- that installs newest-available and rewrites the lockfile, decoupling
+      #     .terraform from the cache key and poisoning the cache (see #549).
+      #   - cache hit: `terraform get -update` to reconcile modules only (add/remove/move a
+      #     block, and re-fetch remote modules), skipping the provider/backend network. This
+      #     is the module-refresh that -upgrade used to provide, without the provider side
+      #     effect; for the current all-local modules it is effectively free.
       # Deliberate provider upgrades: run `terraform init -upgrade` locally and commit the
       # new lockfile; the changed hash busts this cache automatically.
-      - name: Terraform init
-        if: steps.charts_only.outputs.run_terraform == 'true'
+      - name: Terraform init (cache miss)
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit != 'true'
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
           terraform init
+      - name: Terraform get (warm cache)
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit == 'true'
+        working-directory: "tf/nodes"
+        run: |
+          set -euo pipefail
+          terraform get -update
 
       - uses: ./.github/actions/wg-quick
         id: wireguard
