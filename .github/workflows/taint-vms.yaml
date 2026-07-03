@@ -79,6 +79,17 @@ jobs:
           terraform taint 'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.talos_machine_bootstrap.this'
 
+          # Bare-metal workers are not recreated like VMs: a rebuild re-applies
+          # byte-identical config, so talos_machine_configuration_apply is a no-op
+          # under apply_mode="auto" and the node never rejoins the new etcd. Taint
+          # it (derived from state, so it tracks metal_{amd,intel}_nodes) so it
+          # re-runs, then run nodes-plan-apply with metal_apply_mode=reboot so the
+          # re-apply reboots the node. Empty in workspaces with no metal nodes.
+          # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
+
       # Prod cluster VM tainting
       - name: Taint prod cluster VMs
         if: inputs.taint_prod == true
@@ -99,8 +110,19 @@ jobs:
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-1"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-2"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-3"].proxmox_virtual_environment_vm.main'
-          # terraform taint 'module.cluster.module.talos-amd-metal["lancer"].talos_machine_configuration_apply.this'
           terraform taint 'module.cluster.talos_machine_bootstrap.this'
+
+          # Bare-metal workers (e.g. acebase) are not recreated like VMs: a rebuild
+          # re-applies byte-identical config, so talos_machine_configuration_apply
+          # is a no-op under apply_mode="auto" and the node never rejoins the new
+          # etcd. Taint it (derived from state, so it tracks metal_{amd,intel}_nodes
+          # -- replaces the old hardcoded, commented-out "lancer" line) so it
+          # re-runs, then run nodes-plan-apply with metal_apply_mode=reboot so the
+          # re-apply reboots the node.
+          # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
 
       - name: De-wireguard
         if: always()
@@ -121,16 +143,16 @@ jobs:
             echo "## Taint VM Workflow Complete"
             echo ""
             if [ "${{ inputs.taint_test }}" == "true" ]; then
-              echo "✅ Test cluster tainted (Talos schematics, Proxmox ISOs, VMs, bootstrap)"
+              echo "✅ Test cluster tainted (Talos schematics, Proxmox ISOs, VMs, bootstrap, metal config-apply)"
             fi
             if [ "${{ inputs.taint_prod }}" == "true" ]; then
-              echo "✅ Prod cluster tainted (Talos schematics, Proxmox ISOs, VMs, bootstrap)"
+              echo "✅ Prod cluster tainted (Talos schematics, Proxmox ISOs, VMs, bootstrap, metal config-apply)"
             fi
             if [ "${{ inputs.taint_test }}" != "true" ] && [ "${{ inputs.taint_prod }}" != "true" ]; then
               echo "ℹ️ Nothing tainted (both options were false)"
             fi
             echo ""
             echo "**Next steps:**"
-            echo "- Coordinate any bare-metal node resets if needed"
-            echo "- Run nodes-plan-apply with apply for the workspace you tainted"
+            echo "- Run **nodes-plan-apply** with **apply** for the workspace you tainted, and set **\`metal_apply_mode = reboot\`** so re-applied bare-metal workers reboot and rejoin the freshly bootstrapped etcd (a plain re-apply is a no-op and leaves them orphaned)."
+            echo "- See [docs/bare-metal-nodes.md](../blob/main/docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot) for the full rebuild runbook."
           } >> "$GITHUB_STEP_SUMMARY"

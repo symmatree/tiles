@@ -101,6 +101,22 @@ variable "metal_intel_nodes" {
   }))
 }
 
+# Normally "auto". Set to "reboot" (via the nodes-plan-apply workflow input, or
+# TF_VAR_metal_apply_mode) during a cluster rebuild so re-applied bare-metal
+# workers reboot and rejoin the freshly bootstrapped etcd instead of silently
+# staying orphaned on the old one. See
+# docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot.
+variable "metal_apply_mode" {
+  description = "talosctl apply-config mode for bare-metal nodes (auto | no_reboot | reboot | staged)"
+  type        = string
+  default     = "auto"
+
+  validation {
+    condition     = contains(["auto", "no_reboot", "reboot", "staged"], var.metal_apply_mode)
+    error_message = "metal_apply_mode must be one of: auto, no_reboot, reboot, staged."
+  }
+}
+
 variable "external_ip_cidr" {
   description = "External IP CIDR for the cluster"
   type        = string

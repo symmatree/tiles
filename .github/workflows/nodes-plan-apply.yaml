@@ -24,6 +24,21 @@ on:
         options:
           - test
           - prod
+      metal_apply_mode:
+        # "reboot" is what makes bare-metal workers rejoin after a rebuild: pair
+        # it with a taint-vms run (which taints the metal config-apply) so the
+        # re-applied node reboots into the new etcd instead of staying orphaned.
+        # Leave "auto" for routine applies. Only consumed on workflow_dispatch;
+        # PR/push/schedule always use the "auto" default below.
+        # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
+        description: "talosctl apply-config mode for bare-metal nodes (use reboot for a cluster rebuild)"
+        type: choice
+        default: auto
+        options:
+          - auto
+          - reboot
+          - no_reboot
+          - staged
   pull_request: {}
   push:
     branches:
@@ -155,6 +170,9 @@ jobs:
           UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
           UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
           TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
+          # Rebuild knob: reboot re-applied metal workers so they rejoin the new
+          # etcd. Empty on PR/push/schedule -> "auto" (no behavior change).
+          TF_VAR_metal_apply_mode: ${{ inputs.metal_apply_mode || 'auto' }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "test"
@@ -171,6 +189,9 @@ jobs:
           UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
           UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
           TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
+          # Rebuild knob: reboot re-applied metal workers so they rejoin the new
+          # etcd. Empty on PR/push/schedule -> "auto" (no behavior change).
+          TF_VAR_metal_apply_mode: ${{ inputs.metal_apply_mode || 'auto' }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "prod"
