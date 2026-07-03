@@ -77,7 +77,19 @@ deploy_synology_alloy = true
 deploy_proxmox_alloy  = true
 
 # Bare-metal workers (see docs/bare-metal-nodes.md)
-metal_amd_nodes = {}
+# MAC/IP from facts fables/Tiles/Lancer.md (GMKtec EVO X2, Ryzen AI Max+ 395,
+# Radeon 8060S / gfx1151, 128 GB). amdgpu firmware ships in the metal_amd
+# schematic; scheduling the iGPU to pods is follow-on work. Single NVMe
+# (nvme0n1, Lexar 2TB) so no disk selector needed.
+metal_amd_nodes = {
+  "lancer" = {
+    name        = "lancer"
+    type        = "worker"
+    mac_address = "84:47:09:75:89:a6"
+    ip_address  = "10.0.128.51"
+    taint       = ""
+  }
+}
 
 # MAC/IP from facts fables/kb/Computers/AceBase.md
 metal_intel_nodes = {
