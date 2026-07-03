@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/flight-analysis"
+  },
+  "spec": {
+    "namespace": "flight-analysis",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}

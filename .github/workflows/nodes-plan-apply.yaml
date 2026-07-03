@@ -24,6 +24,21 @@ on:
         options:
           - test
           - prod
+      metal_apply_mode:
+        # "reboot" is what makes bare-metal workers rejoin after a rebuild: pair
+        # it with a taint-vms run (which taints the metal config-apply) so the
+        # re-applied node reboots into the new etcd instead of staying orphaned.
+        # Leave "auto" for routine applies. Only consumed on workflow_dispatch;
+        # PR/push/schedule always use the "auto" default below.
+        # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
+        description: "talosctl apply-config mode for bare-metal nodes (use reboot for a cluster rebuild)"
+        type: choice
+        default: auto
+        options:
+          - auto
+          - reboot
+          - no_reboot
+          - staged
   pull_request: {}
   push:
     branches:
@@ -132,12 +147,32 @@ jobs:
           path: tf/nodes/.terraform
           key: ${{ runner.os }}-nodes-tf-v2-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/nodes/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
 
-      - name: Terraform init
+      # The cache key hashes the committed .terraform.lock.hcl, which fully pins providers.
+      # So a cache hit means providers are already correct, and re-running init's provider
+      # phase (a registry round-trip per provider -- the slow part) is pure waste. Modules
+      # are NOT tracked by the lockfile, so a hit can still carry a stale module manifest.
+      # Split the work by what the cache can and can't vouch for:
+      #   - cache miss: full `terraform init` to download providers per the lockfile. No
+      #     -upgrade -- that installs newest-available and rewrites the lockfile, decoupling
+      #     .terraform from the cache key and poisoning the cache (see #549).
+      #   - cache hit: `terraform get -update` to reconcile modules only (add/remove/move a
+      #     block, and re-fetch remote modules), skipping the provider/backend network. This
+      #     is the module-refresh that -upgrade used to provide, without the provider side
+      #     effect; for the current all-local modules it is effectively free.
+      # Deliberate provider upgrades: run `terraform init -upgrade` locally and commit the
+      # new lockfile; the changed hash busts this cache automatically.
+      - name: Terraform init (cache miss)
         if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit != 'true'
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
-          terraform init -upgrade
+          terraform init
+      - name: Terraform get (warm cache)
+        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit == 'true'
+        working-directory: "tf/nodes"
+        run: |
+          set -euo pipefail
+          terraform get -update
 
       - uses: ./.github/actions/wg-quick
         id: wireguard
@@ -155,6 +190,9 @@ jobs:
           UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
           UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
           TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
+          # Rebuild knob: reboot re-applied metal workers so they rejoin the new
+          # etcd. Empty on PR/push/schedule -> "auto" (no behavior change).
+          TF_VAR_metal_apply_mode: ${{ inputs.metal_apply_mode || 'auto' }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "test"
@@ -171,6 +209,9 @@ jobs:
           UNIFI_USERNAME: ${{ steps.load_secrets.outputs.UNIFI_USERNAME }}
           UNIFI_PASSWORD: ${{ steps.load_secrets.outputs.UNIFI_PASSWORD }}
           TF_VAR_proxmox_root_password: ${{ steps.load_secrets.outputs.PROXMOX_ROOT_PASSWORD }}
+          # Rebuild knob: reboot re-applied metal workers so they rejoin the new
+          # etcd. Empty on PR/push/schedule -> "auto" (no behavior change).
+          TF_VAR_metal_apply_mode: ${{ inputs.metal_apply_mode || 'auto' }}
         uses: ./.github/actions/terraform-plan-apply
         with:
           workspace: "prod"

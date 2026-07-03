@@ -26,3 +26,9 @@ COPY systemctl3.py /usr/bin/systemctl
 COPY sshd_config /etc/ssh/sshd_config
 RUN rm -fv /etc/ssh/sshd_not_to_be_run
 RUN systemctl enable ssh
+
+# The container has no init system, so `systemctl enable ssh` never actually
+# launches the daemon. The Jupyter base image runs every executable in
+# before-notebook.d/ before starting the notebook server; start sshd there.
+COPY start-sshd.sh /usr/local/bin/before-notebook.d/start-sshd.sh
+RUN chmod a+rx /usr/local/bin/before-notebook.d/start-sshd.sh

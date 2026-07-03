@@ -45,6 +45,7 @@ module "cluster" {
   vms                    = var.virtual_machines
   metal_amd_nodes        = local.metal_amd_nodes
   metal_intel_nodes      = local.metal_intel_nodes
+  metal_apply_mode       = var.metal_apply_mode
   nodes_to_iso_ids       = local.nodes_to_iso_ids
   main_project_id        = local.main_project_id
   kms_project_id         = local.kms_project_id

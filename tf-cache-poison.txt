@@ -1,3 +1,4 @@
 # Terraform cache poison file
 # Modify this file to force Terraform cache invalidation
-# Last updated: 2026-05-25 (metal_intel i915 extension)
+# Last updated: 2026-07-01 (bust stale provider cache after #527 lock bump to google/google-beta 7.38.0, kubernetes 3.2.0)
+# Last updated: 2026-07-03 (#549: drop `terraform init -upgrade`; bust the -upgrade-poisoned cache one final time)

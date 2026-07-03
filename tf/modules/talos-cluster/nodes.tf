@@ -111,6 +111,12 @@ module "talos-amd-metal" {
     })] : [],
     each.value.machine_config_patches
   )
+
+  apply_mode = var.metal_apply_mode
+
+  # Order the metal (re)apply after the etcd bootstrap so an apply_mode="reboot"
+  # rebuild reboots the node into the *new* cluster rather than the old one.
+  depends_on = [talos_machine_bootstrap.this]
 }
 
 module "talos-intel-metal" {
@@ -146,4 +152,10 @@ module "talos-intel-metal" {
     })] : [],
     each.value.machine_config_patches
   )
+
+  apply_mode = var.metal_apply_mode
+
+  # Order the metal (re)apply after the etcd bootstrap so an apply_mode="reboot"
+  # rebuild reboots the node into the *new* cluster rather than the old one.
+  depends_on = [talos_machine_bootstrap.this]
 }
