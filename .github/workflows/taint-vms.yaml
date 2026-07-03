@@ -154,5 +154,5 @@ jobs:
             echo ""
             echo "**Next steps:**"
             echo "- Run **nodes-plan-apply** with **apply** for the workspace you tainted, and set **\`metal_apply_mode = reboot\`** so re-applied bare-metal workers reboot and rejoin the freshly bootstrapped etcd (a plain re-apply is a no-op and leaves them orphaned)."
-            echo "- See [docs/bare-metal-nodes.md](../blob/main/docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot) for the full rebuild runbook."
+            echo "- See [docs/bare-metal-nodes.md](https://github.com/symmatree/tiles/blob/main/docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot) for the full rebuild runbook."
           } >> "$GITHUB_STEP_SUMMARY"
