@@ -132,14 +132,20 @@ jobs:
           path: tf/nodes/.terraform
           key: ${{ runner.os }}-nodes-tf-v2-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/nodes/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
 
-      # Plain `terraform init` (no -upgrade): install exactly the versions pinned in the
-      # committed .terraform.lock.hcl, so .terraform always matches the lockfile hash used
-      # in the cache key above. `-upgrade` would install newest-available and rewrite the
-      # lockfile, decoupling .terraform from the key and poisoning the cache (see #549).
-      # Deliberate upgrades: run `terraform init -upgrade` locally and commit the new
-      # lockfile; the changed hash busts this cache automatically.
+      # Always run plain `terraform init` (no -upgrade). The cache above is a warm start,
+      # not a substitute for init:
+      #   - Providers: already restored and matching the committed .terraform.lock.hcl, so
+      #     init verifies them without re-downloading. `-upgrade` would install
+      #     newest-available and rewrite the lockfile, decoupling .terraform from the cache
+      #     key (which hashes the lockfile) and poisoning the cache -- see #549.
+      #   - Modules: init reconciles .terraform/modules/modules.json against the current
+      #     config every run, so adding/removing/moving a module block is picked up. Module
+      #     versions are not tracked in the lockfile, so a cache keyed on the lockfile can't
+      #     see them; skipping init on a cache hit would run plan against a stale manifest.
+      # Deliberate provider upgrades: run `terraform init -upgrade` locally and commit the
+      # new lockfile; the changed hash busts this cache automatically.
       - name: Terraform init
-        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit != 'true'
+        if: steps.charts_only.outputs.run_terraform == 'true'
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
