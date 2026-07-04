@@ -25,5 +25,12 @@
 	# creates it here, so make it ourselves.
 	mkdir -p /run/sshd
 
+	# The 1Password-managed key is mounted at /mnt/keys/authorized_keys, but its
+	# secret-mount dir is world-writable (1777) so sshd's StrictModes refuses to
+	# read authorized_keys from there. Copy it to the root-owned path sshd is
+	# configured to trust (AuthorizedKeysFile in sshd_config). This hook runs as
+	# root during start.sh setup, before the drop to jovyan.
+	install -m 0644 /mnt/keys/authorized_keys /etc/ssh/authorized_keys
+
 	/usr/sbin/sshd
 ) || echo "start-sshd.sh: WARNING: sshd failed to start; notebook continues without SSH" >&2
