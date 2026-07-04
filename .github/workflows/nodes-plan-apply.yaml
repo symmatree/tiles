@@ -111,6 +111,29 @@ jobs:
         with:
           terraform_version: "1.14.8"
 
+      # 1Password SA quota metering (#561). `op service-account ratelimit` is
+      # NOT billed against the read_write pool (it returns even when the pool is
+      # exhausted), so snapshotting start/end is free. Delta = this run's SA
+      # cost. Steps are non-fatal so metering never breaks a deploy.
+      - name: Install 1Password CLI (quota metering)
+        if: steps.charts_only.outputs.run_terraform == 'true'
+        continue-on-error: true
+        uses: 1password/install-cli-action@v1
+
+      - name: 1Password quota — snapshot at start
+        id: quota_start
+        if: steps.charts_only.outputs.run_terraform == 'true'
+        continue-on-error: true
+        shell: bash
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+        run: |
+          set -uo pipefail
+          used=$(op service-account ratelimit 2>/dev/null \
+            | awk '$1=="account" && $2=="read_write"{print $4; exit}')
+          echo "used=${used:-}" >> "$GITHUB_OUTPUT"
+          echo "SA read_write USED at start: ${used:-<unavailable>}"
+
       - name: Load secrets
         id: load_secrets
         if: steps.charts_only.outputs.run_terraform == 'true'
@@ -218,6 +241,38 @@ jobs:
           apply: ${{ steps.config.outputs.prod_apply }}
           plan_file: "${{ runner.temp }}/tfplan-nodes-prod.bin"
           txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-prod.txt"
+
+      - name: 1Password quota — snapshot at end + delta
+        if: always() && steps.charts_only.outputs.run_terraform == 'true'
+        continue-on-error: true
+        shell: bash
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          START_USED: ${{ steps.quota_start.outputs.used }}
+        run: |
+          set -uo pipefail
+          line=$(op service-account ratelimit 2>/dev/null \
+            | awk '$1=="account" && $2=="read_write"{print; exit}')
+          limit=$(echo "$line"     | awk '{print $3}')
+          used=$(echo "$line"      | awk '{print $4}')
+          remaining=$(echo "$line" | awk '{print $5}')
+          delta="n/a"
+          if [[ "${START_USED:-}" =~ ^[0-9]+$ && "${used:-}" =~ ^[0-9]+$ ]]; then
+            delta=$((used - START_USED))
+          fi
+          {
+            echo "## 1Password SA quota — account read_write (#561)"
+            echo ""
+            echo "| metric | value |"
+            echo "|---|---|"
+            echo "| USED at start | ${START_USED:-n/a} |"
+            echo "| USED at end | ${used:-n/a} |"
+            echo "| **this run Δ** | **${delta}** |"
+            echo "| remaining | ${remaining:-n/a} / ${limit:-n/a} |"
+            echo ""
+            echo "_Δ is account-wide, so it also captures any concurrent consumer; tiles CI is serialized by the concurrency group._"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "SA quota Δ this run: ${delta} (end ${used:-n/a} − start ${START_USED:-n/a}); remaining ${remaining:-n/a}/${limit:-n/a}"
 
       - name: De-wireguard
         if: always()
