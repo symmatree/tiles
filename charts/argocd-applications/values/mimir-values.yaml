@@ -56,6 +56,8 @@ metaMonitoring:
     # Let the Alloy pipeline own the `cluster` label; null stops Mimir from
     # stamping its own (which would default to the release name "mimir").
     clusterLabel: null
+
+alertmanager:
   resources:
     requests:
       cpu: 10m
