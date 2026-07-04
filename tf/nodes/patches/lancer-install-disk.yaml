@@ -1,0 +1,10 @@
+# Lancer (GMKtec EVO X2) has a single 2TB Lexar NVMe (nvme0n1) that shipped
+# with Windows. The shared install config sets no disk selector, so the first
+# config-apply (run 28708501422) was accepted but the node never installed --
+# it's still in maintenance with the Windows GPT intact. Pin the install disk
+# to the only disk it has, and wipe it (defaults true, set explicitly so it's
+# clear this overwrites Windows). See docs/bare-metal-nodes.md.
+machine:
+  install:
+    disk: /dev/nvme0n1
+    wipe: true
