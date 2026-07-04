@@ -56,6 +56,19 @@ metaMonitoring:
     # Let the Alloy pipeline own the `cluster` label; null stops Mimir from
     # stamping its own (which would default to the release name "mimir").
     clusterLabel: null
+  # Deploy the chart's vendored Mimir mixin: dashboards + recording rules +
+  # alerts. Recording rules (cluster_job:cortex_*) feed the dashboards; Alloy's
+  # mimir.rules.kubernetes syncs the generated PrometheusRule into the ruler
+  # (tenant tiles). Job matchers are the microservices flavor and match our
+  # mimir/<component> labels. See docs/mimir.md.
+  dashboards:
+    enabled: true
+  prometheusRule:
+    enabled: true
+    mimirRules: true
+    mimirAlerts: true
+
+alertmanager:
   resources:
     requests:
       cpu: 10m
