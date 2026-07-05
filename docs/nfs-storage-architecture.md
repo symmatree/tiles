@@ -27,6 +27,7 @@ All services use **static PVs with fixed paths** to ensure persistence across Ar
   - **Loki**: `/volume2/{cluster_name}/loki-data` (e.g., `/volume2/tiles/loki-data` for prod, `/volume2/tiles-test/loki-data` for test)
   - **Mimir**: `/volume2/{cluster_name}/mimir-data` (e.g., `/volume2/tiles/mimir-data` for prod, `/volume2/tiles-test/mimir-data` for test)
   - **ODM**: `/volume2/datasets/webodm-media-{cluster_name}` (with subpath mount for isolation)
+  - **JupyterHub**: `/volume2/{cluster_name}/jupyterhub-home` (shared RWX home; each singleuser server mounts a per-user `subPath: {username}` under it)
 
 ## NFS Configuration
 
@@ -65,9 +66,11 @@ Create the following shared folders on the NAS:
 - **Production cluster:**
   - `tiles` (on volume2) → exports as `/volume2/tiles`
     - Subdirectories `loki-data` and `mimir-data` will be created automatically by the applications
+    - Subdirectory `jupyterhub-home` must be created manually (the static PV mounts it directly, so it must exist before the singleuser pod starts)
 - **Test cluster:**
   - `tiles-test` (on volume2) → exports as `/volume2/tiles-test`
     - Subdirectories `loki-data` and `mimir-data` will be created automatically by the applications
+    - Subdirectory `jupyterhub-home` must be created manually (the static PV mounts it directly, so it must exist before the singleuser pod starts)
 - **Both clusters:**
   - `datasets` (on volume2) → exports as `/volume2/datasets` (pre-existing, used by ODM)
 
