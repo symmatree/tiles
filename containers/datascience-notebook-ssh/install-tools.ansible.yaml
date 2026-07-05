@@ -283,6 +283,7 @@
         state: present
 
     - name: Install notebook analysis Python packages
+      tags: [notebook-pip]
       pip:
         name:
           # Offline notebook execution and parameter injection.
@@ -295,6 +296,11 @@
           - nbconvert[webpdf]
           # Interactive map tiles in flight analysis notebooks.
           - folium
+          # Real-time collaboration: shared kernel + live co-editing so an agent
+          # (or a second person) can drive a notebook against the running kernel and
+          # have edits/outputs show up without a reload. Needs a server restart to
+          # activate; 3.x matches JupyterLab 4.4 in this image's base tag.
+          - jupyter-collaboration>=3,<4
         executable: /opt/conda/bin/pip
         state: present
 
