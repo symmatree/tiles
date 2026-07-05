@@ -6,8 +6,8 @@ Generated 2026-07-05. Summaries reflect the docs AS OF this date; verify before 
 
 `tiles` is a GitOps-managed home Kubernetes infrastructure repo. It provisions two Talos Linux clusters
 (`tiles` and `tiles-test`) on Proxmox VMs using Terraform, then deploys all workloads via ArgoCD and
-Helm (the app-of-apps pattern). A `fables/` git submodule holds the published knowledge-base pages;
-the repo also contains Tanka/Jsonnet environments for drone-related services and custom container builds.
+Helm (the app-of-apps pattern). It also contains Tanka/Jsonnet environments for drone-related services
+and custom container builds.
 
 ---
 
