@@ -1,1 +1,10 @@
 # Per-cluster overrides for tiles (prod). Add overrides here as needed.
+
+# Pin the interactive singleuser to lancer (128 GB metal): its image unpacks in
+# containerd (podruntime/runtime) at node level -- not bounded by any pod limit --
+# so it needs a node that can absorb the transient. Prod-only (test has no lancer).
+# Context: facts fables/Tiles/tiles-host-instability.md (T-B1), issue #576.
+jupyterhub:
+  singleuser:
+    nodeSelector:
+      kubernetes.io/hostname: lancer
