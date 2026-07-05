@@ -1,10 +1,19 @@
-# Per-cluster overrides for tiles (prod). Add overrides here as needed.
+# Per-cluster overrides for tiles (prod).
 
-# Pin the interactive singleuser to lancer (128 GB metal): its image unpacks in
-# containerd (podruntime/runtime) at node level -- not bounded by any pod limit --
-# so it needs a node that can absorb the transient. Prod-only (test has no lancer).
-# Context: facts fables/Tiles/tiles-host-instability.md (T-B1), issue #576.
+# lancer (128 GB metal) is reserved for memory-intensive / big-image workloads
+# via the taint `dedicated=heavy:NoSchedule`, so routine workload stays on
+# wk-1/2/3 and lancer's headroom is kept free for notebooks / ODM. The singleuser
+# belongs on lancer -- its ~4 GB image unpacks in containerd (podruntime/runtime)
+# at node level, not bounded by any pod limit (see facts fables/Tiles/
+# tiles-host-instability.md T-B1, issue #576) -- so it needs BOTH the nodeSelector
+# (put it there) and the toleration (get past the taint). Prod-only (test has no
+# lancer). NB: durable taint should live in tf (metal_amd_nodes.lancer.taint).
 jupyterhub:
   singleuser:
     nodeSelector:
       kubernetes.io/hostname: lancer
+    extraTolerations:
+      - key: dedicated
+        operator: Equal
+        value: heavy
+        effect: NoSchedule
