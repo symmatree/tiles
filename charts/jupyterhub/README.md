@@ -11,24 +11,28 @@ Wraps [zero-to-jupyterhub-k8s](https://z2jh.jupyter.org/) (`hub.jupyter.org/helm
 
 ## Image
 
-`ghcr.io/symmatree/tiles/datascience-notebook-ssh` — built weekly from `containers/datascience-notebook-ssh/`. Extends `jupyter/datascience-notebook` with openssh-server and an Ansible playbook that installs kubectl, gh, gcloud, 1password-cli, VSCode, homebrew, helm, argocd, talosctl, tanka, and go. `ARG BASE_IMAGE/BASE_TAG` allows GPU/vendor stacks (NVIDIA, ROS, Jetson) as the base. Images are public on GHCR; no pull secret is needed.
+`ghcr.io/symmatree/tiles/datascience-notebook-ssh` — built from `containers/datascience-notebook-ssh/` on push and weekly. Extends `jupyter/datascience-notebook` with openssh-server and an Ansible playbook that installs kubectl, gh, gcloud, 1password-cli, VSCode, homebrew, helm, argocd, talosctl, tanka, and go. `ARG BASE_IMAGE/BASE_TAG` allows GPU/vendor stacks (NVIDIA, ROS, Jetson) as the base. Images are public on GHCR; no pull secret is needed.
 
-The singleuser pod runs as root (`uid: 0`) with `SYS_ADMIN` + `DAC_READ_SEARCH` capabilities to support bind mounts and FUSE filesystems. Culling is disabled — the pod is intended to stay alive as a persistent SSH target.
+The build tags each image with an immutable `sha-<short>` tag (docker/metadata `type=sha`) alongside `edge`. `values.yaml` pins the `sha-<short>` tag with `pullPolicy: IfNotPresent` — the ~4GB image is pulled once when the tag changes, not on every pod spawn (which `edge` + `Always` did). Roll forward by bumping `singleuser.image.tag` to the newer `sha-<short>` from the build run.
+
+The singleuser pod runs as root (`uid: 0`) with `SYS_ADMIN` + `DAC_READ_SEARCH` capabilities to support bind mounts and FUSE filesystems. Culling is disabled — the pod is intended to stay alive as a persistent SSH target. In prod it is pinned to `lancer` (128GB metal) via `values-tiles.yaml` `nodeSelector`, because the image unpacks at node level (not bounded by a pod limit) and needs a node that can absorb the transient (see #576).
 
 ## SSH selector stability
 
 The SSH LoadBalancer selects pods on `tiles.symmatree.com/user: seth`, set via `c.KubeSpawner.extra_labels` in hub config. This is stable across pod restarts. The upstream chart also stamps pods with `hub.jupyter.org/username: {hash}` but that hash is hard to predict and changes with username format changes; the custom label avoids that dependency.
 
-## SSH access — verification status (incomplete)
+## SSH access
 
-End-to-end SSH into the singleuser pod is **not yet verified**. Verified working: the `ssh-service` LoadBalancer + endpoint select the pod correctly, the public key mounts at `/mnt/keys/authorized_keys`, and `sshd`/`sshd_config`/host keys are present in the image. The gap was that **nothing started `sshd`** — the Dockerfile `systemctl enable ssh` does nothing without an init system.
+End-to-end SSH is **working**: `ssh jovyan@notebook-ssh.{cluster_name}.symmatree.com` (port 22, the default; key from the `jupyterhub-ssh-key` 1Password item). `PermitRootLogin` is `no`, so log in as `jovyan` (the image drops to `NB_USER` after root-time setup).
 
-Remaining work, in order:
+How the pieces fit — each of these was a distinct fix (PRs #538, #546, #553, #570):
 
-1. **Merge the `sshd`-start fix** (PR #538): adds `containers/datascience-notebook-ssh/before-notebook.d/start-sshd.sh`, which the Jupyter base image runs on startup. Still open at time of writing; nothing works until it lands.
-2. **Rebuild the image** (the `containers/datascience-notebook-ssh/**` push trigger fires on merge) and **respawn** the notebook (`pullPolicy: Always` pulls the new `edge`).
-3. **Verify** on the running pod: `ss -tlnp | grep :22` shows `sshd` listening, then actually `ssh` in with the key.
-4. **If login is rejected**, check `sshd_config` specifics — `PermitRootLogin` (the pod runs as uid 0) and `AuthorizedKeysFile` path (must resolve to `/mnt/keys/authorized_keys`). These were not audited.
+1. **Start `sshd`** — the container has no init system, so `systemctl enable ssh` never launches the daemon. `before-notebook.d/start-sshd.sh` (run by the base image's `start.sh`) launches it on every start.
+2. **`/run/sshd`** — `sshd` exits 255 without its privilege-separation dir; `/run` is an empty tmpfs, so the hook `mkdir -p /run/sshd`.
+3. **Don't break `start.sh`** — the hook is *sourced*, so its `set -euo pipefail` is wrapped in a subshell; a bare `set -u` leaked into `start.sh` (which references an unset `JUPYTER_DOCKER_STACKS_QUIET`) and aborted startup. A broken `sshd` now logs and lets the notebook come up without SSH rather than crashlooping.
+4. **Find the key** — the mounted key lives at `/mnt/keys/authorized_keys`, but sshd's default `AuthorizedKeysFile` is `~/.ssh/authorized_keys` and nothing populates it; pointing sshd straight at `/mnt/keys` fails `StrictModes` (the secret mount dir is world-writable). The hook copies the key to root-owned `/etc/ssh/authorized_keys` and `sshd_config` sets `AuthorizedKeysFile` there.
+
+The `ssh-service` LoadBalancer (`external-dns` → `notebook-ssh.{cluster}.symmatree.com`) selects the pod on the stable `tiles.symmatree.com/user` label (see below).
 
 ## Secrets architecture
 
@@ -73,8 +77,8 @@ This is permanently manual: GCP has no API for creating OAuth clients for extern
 
 | File | Purpose |
 |------|---------|
-| `values-tiles.yaml` | Production overrides (currently empty stub) |
-| `values-tiles-test.yaml` | Reduced resources: hub 128Mi, proxy 64Mi, singleuser 1G/512M guarantee, PVC 10Gi, userScheduler disabled |
+| `values-tiles.yaml` | Production overrides: pin singleuser to `lancer` (128GB metal) |
+| `values-tiles-test.yaml` | Reduced resources: hub 128Mi, proxy 64Mi, singleuser 1G/512M guarantee, userScheduler disabled |
 
 ## Persistence model
 
@@ -82,4 +86,6 @@ Three tiers:
 
 1. **Image baseline** — tools installed at build time (Ansible playbook)
 2. **Ephemeral container FS** — writable overlay, lost on pod restart
-3. **PVC home directory** (100Gi prod, 10Gi test) — survives restarts; Claude Code session history at `~/.claude/projects/…` is persistent here
+3. **Home directory** — survives restarts; Claude Code session history at `~/.claude/projects/…` lives here.
+
+Home is a **static NFS volume** (`templates/home-nfs.yaml`), not a dynamic PVC. One shared RWX PV on the NAS (`raconteur:/volume2/{cluster}/jupyterhub-home`, `Retain`) is mounted with a per-user `subPath: {username}` (z2jh `storage.type: static`), so each user gets a stable, named directory `…/jupyterhub-home/<username>` that persists independently of the pod/PVC lifecycle. This replaced the default dynamic `local-path` PVC, which was node-local and pinned the pod to one worker's disk — starving that node and blocking the `lancer` nodeSelector. NFS has no node affinity, so the pod is free to schedule on `lancer`. The `jupyterhub-home` directory must exist under the cluster NFS share (manual NAS step, alongside `loki-data`/`mimir-data`).
