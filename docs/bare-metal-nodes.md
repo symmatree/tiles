@@ -58,10 +58,23 @@ Use the talosconfig for the right cluster ([secrets.md](secrets.md#talos-client-
 3. **Add the node** in workspace tfvars: `metal_amd_nodes` for AMD (e.g. Rising -- facts repo `fables/Tiles/Rising.md`) or `metal_intel_nodes` for Intel (e.g. AceBase -- `facts/fables/kb/Computers/AceBase.md`).
 4. **Prepare USB** -- From `tf/nodes/`, run `terraform plan` or `terraform apply` with the right `-var-file=...`, then read **`metal_amd_iso_url`** or **`metal_intel_iso_url`** as appropriate. Download that `metal-amd64.iso`, then write it to USB.
 5. **Boot the machine** from USB into the Talos installer (in-memory maintenance mode).
-6. **`terraform apply`** -- Once the Talos API answers on the node IP, `talos_machine_configuration_apply` runs and the node installs to disk from `machine.install.image` (`metal-installer` schematic).
-7. **Verify** -- After reboot, `kubectl get nodes` and/or `talosctl get members --nodes <NODE_IP>`.
+6. **`terraform apply`** -- Once the Talos API answers on the node IP, `talos_machine_configuration_apply` sends the config and the node installs to disk from `machine.install.image` (`metal-installer` schematic). This resource is **fire-and-forget**: it returns as soon as the maintenance-mode node accepts the config (often `Creation complete after 0s`) and does **not** wait for the install or cluster join. A green apply means "config delivered", not "node installed" -- always confirm with step 7.
+7. **Verify** -- After reboot, `kubectl get nodes` and `talosctl get members --nodes <NODE_IP>`. If the node never appears, check whether it is still in maintenance mode: `talosctl -n <NODE_IP> version --insecure` answering means it booted the ISO but did **not** install -- see [Install disk](#install-disk-machine-with-an-existing-os).
 
 You may run `terraform apply` once before the machine is booted: UniFi objects are created first; `talos_machine_configuration_apply` fails or times out until the node is reachable. Boot from USB, then apply again.
+
+### Install disk (machine with an existing OS)
+
+The shared config sets no `machine.install.disk`, so Talos auto-selects one. That works on an empty or spare disk (AceBase installed onto an empty SATA SSD). It does **not** work when the node's **only** disk already holds another OS: Talos won't clobber the occupied disk, so the config is accepted but the install never runs and the node **silently stays in maintenance mode** (Lancer shipped with Windows on its sole NVMe and did exactly this). Add a per-node patch pinning the disk and wiping it -- see [tf/nodes/patches/lancer-install-disk.yaml](../tf/nodes/patches/lancer-install-disk.yaml):
+
+```yaml
+machine:
+  install:
+    disk: /dev/nvme0n1   # target disk; find it with: talosctl -n <IP> get disks --insecure
+    wipe: true           # overwrites the existing OS
+```
+
+Wire it in via `machine_config_patches` on the node's tfvars entry. Changing `config_patches` is a real diff, so a plain `terraform apply` re-applies (no taint needed) and the install proceeds. Maintenance mode exposes only `version` / `get` / `disks` / `apply-config` over `--insecure` -- **not** `dmesg`, service `logs`, or `events` -- so watch an install attempt on console/serial, not via `talosctl`.
 
 ### 2. Remove a bare-metal worker from the cluster
 
