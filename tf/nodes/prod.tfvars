@@ -95,7 +95,8 @@ metal_amd_nodes = {
     type                   = "worker"
     mac_address            = "84:47:09:75:89:a6"
     ip_address             = "10.0.128.51"
-    taint                  = ""
+    taint                  = "heavy"
+    taint_effect           = "PreferNoSchedule"
     machine_config_patches = ["patches/lancer-install-disk.yaml"]
   }
 }

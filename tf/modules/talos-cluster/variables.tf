@@ -31,6 +31,7 @@ variable "metal_amd_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
 }
@@ -43,6 +44,7 @@ variable "metal_intel_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
   default = {}
