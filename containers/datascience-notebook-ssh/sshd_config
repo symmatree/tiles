@@ -2,6 +2,12 @@ Include /etc/ssh/sshd_config.d/*.conf
 
 PermitRootLogin no
 PasswordAuthentication no
+# The authorized key comes from the jupyterhub-ssh-key 1Password item, mounted
+# at /mnt/keys/authorized_keys. Nothing populates any user's ~/.ssh, and sshd's
+# StrictModes refuses to read it straight from the world-writable (1777) secret
+# mount dir, so start-sshd.sh copies it to this root-owned path. Absolute path
+# applies to every login user (e.g. jovyan; root login is denied above).
+AuthorizedKeysFile /etc/ssh/authorized_keys
 KbdInteractiveAuthentication no
 UsePAM yes
 X11Forwarding yes

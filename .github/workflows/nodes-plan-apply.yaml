@@ -220,6 +220,9 @@ jobs:
         with:
           workspace: "test"
           apply: ${{ steps.config.outputs.test_apply }}
+          # Cheap PR-preview plan (skip live refresh) to save 1Password SA
+          # quota (#561); real reconcile/drift on push/dispatch/schedule.
+          refresh: ${{ github.event_name != 'pull_request' }}
           plan_file: "${{ runner.temp }}/tfplan-nodes-test.bin"
           txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-test.txt"
 
@@ -239,6 +242,9 @@ jobs:
         with:
           workspace: "prod"
           apply: ${{ steps.config.outputs.prod_apply }}
+          # Cheap PR-preview plan (skip live refresh) to save 1Password SA
+          # quota (#561); real reconcile/drift on push/dispatch/schedule.
+          refresh: ${{ github.event_name != 'pull_request' }}
           plan_file: "${{ runner.temp }}/tfplan-nodes-prod.bin"
           txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-prod.txt"
 

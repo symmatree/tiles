@@ -31,6 +31,7 @@ variable "metal_amd_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
 }
@@ -43,6 +44,7 @@ variable "metal_intel_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
   default = {}
@@ -151,4 +153,10 @@ variable "onepassword_vault_name" {
 variable "admin_user" {
   description = "Admin user email"
   type        = string
+}
+
+variable "kubelet_eviction_memory_available" {
+  description = "kubelet evictionHard `memory.available` threshold, applied to every node in the cluster. This is the free-memory margin the kubelet keeps so it evicts low-priority pods *before* the kernel OOM-killer fires (within-node OOM protection). null = leave kubelet defaults untouched (memory.available<100Mi). When set (e.g. \"512Mi\"), the nodefs/imagefs disk-eviction defaults are re-declared unchanged so the extraConfig merge does not drop disk-pressure eviction."
+  type        = string
+  default     = null
 }

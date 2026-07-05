@@ -80,7 +80,7 @@ def process(bin_path: Path, notebook_path: Path, notebook_sha: str) -> None:
         [
             "jupyter", "nbconvert", "--to", "webpdf",
             "--no-input",
-            "--output", str(out_pdf),
+            "--output", str(out_pdf.with_suffix("")),
             str(out_ipynb),
         ],
         check=True,

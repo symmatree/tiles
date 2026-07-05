@@ -4,6 +4,13 @@
 cluster_name = "tiles"
 cluster_code = "p"
 
+# Widen the kubelet within-node OOM safety margin on prod. The kubelet evicts
+# low-priority pods when free memory drops below this, before the kernel
+# OOM-killer fires. Prod-only: test.tfvars leaves it unset (Talos default
+# 100Mi). Context: facts fables/Tiles/tiles-host-instability.md (guest-level
+# wedge, tiles-wk-1, 2026-07-03).
+kubelet_eviction_memory_available = "512Mi"
+
 # Network configuration for tiles cluster (10.0.128.0/18 block)
 control_plane_vip = "10.0.128.10"
 external_ip_cidr  = "10.0.129.0/24"
@@ -80,14 +87,17 @@ deploy_proxmox_alloy  = true
 # MAC/IP from facts fables/Tiles/Lancer.md (GMKtec EVO X2, Ryzen AI Max+ 395,
 # Radeon 8060S / gfx1151, 128 GB). amdgpu firmware ships in the metal_amd
 # schematic; scheduling the iGPU to pods is follow-on work. Single NVMe
-# (nvme0n1, Lexar 2TB) so no disk selector needed.
+# (nvme0n1, Lexar 2TB, shipped with Windows) -- the install patch pins that
+# disk + wipe so Talos actually installs (first apply left it in maintenance).
 metal_amd_nodes = {
   "lancer" = {
-    name        = "lancer"
-    type        = "worker"
-    mac_address = "84:47:09:75:89:a6"
-    ip_address  = "10.0.128.51"
-    taint       = ""
+    name                   = "lancer"
+    type                   = "worker"
+    mac_address            = "84:47:09:75:89:a6"
+    ip_address             = "10.0.128.51"
+    taint                  = "heavy"
+    taint_effect           = "PreferNoSchedule"
+    machine_config_patches = ["patches/lancer-install-disk.yaml"]
   }
 }
 

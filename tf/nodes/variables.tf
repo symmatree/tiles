@@ -85,6 +85,7 @@ variable "metal_amd_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
 }
@@ -97,6 +98,7 @@ variable "metal_intel_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
 }
@@ -115,6 +117,12 @@ variable "metal_apply_mode" {
     condition     = contains(["auto", "no_reboot", "reboot", "staged"], var.metal_apply_mode)
     error_message = "metal_apply_mode must be one of: auto, no_reboot, reboot, staged."
   }
+}
+
+variable "kubelet_eviction_memory_available" {
+  description = "kubelet evictionHard `memory.available` threshold for every node in the cluster -- the free-memory margin the kubelet keeps so it evicts before the kernel OOM-killer fires. null leaves Talos/kubelet defaults (100Mi). Set on resource-tight clusters (prod) to widen the OOM safety margin; leave unset on test."
+  type        = string
+  default     = null
 }
 
 variable "external_ip_cidr" {

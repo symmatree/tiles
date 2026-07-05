@@ -8,6 +8,15 @@ inputs:
     description: "Whether to apply the plan after creating it"
     required: false
     default: "false"
+  refresh:
+    description: >-
+      Whether terraform plan refreshes state (reads live resources). "false"
+      gives a cheap PR-preview plan against stored state (skips re-reading
+      managed onepassword_item resources -- saves 1Password SA quota, #561),
+      at the cost of not detecting out-of-band drift. "true" (default) does a
+      real reconcile: use it on post-merge/manual runs to catch drift.
+    required: false
+    default: "true"
   plan_file:
     description: "Path to the plan file to produce"
     required: true
@@ -41,8 +50,11 @@ runs:
       run: |
         set -euo pipefail
         mkdir -p "$(dirname "${TXT_OUTPUT_FILE}")"
+        if [ "${{ inputs.refresh }}" = "false" ]; then
+          echo "::notice title=Terraform::Plan ${{ inputs.workspace }} ran with -refresh=false (PR preview against stored state; NOT live drift -- run manually or wait for post-merge for a real reconcile)"
+        fi
         set +e
-        terraform plan -detailed-exitcode -lock-timeout=5m -input=false -var-file="${{ inputs.workspace }}.tfvars" -out="${PLAN_FILE}"
+        terraform plan -detailed-exitcode -lock-timeout=5m -input=false -refresh="${{ inputs.refresh }}" -var-file="${{ inputs.workspace }}.tfvars" -out="${PLAN_FILE}"
         PLAN_EXIT_CODE=$?
         set -e
         echo "Terraform plan exited with code: ${PLAN_EXIT_CODE}"
