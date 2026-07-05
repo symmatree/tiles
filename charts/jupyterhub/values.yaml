@@ -1,6 +1,8 @@
 # Passed by jupyterhub-application.yaml valuesObject.
 cluster_name: placeholder
 vault_name: placeholder
+nfs_server: placeholder
+cluster_nfs_path: placeholder
 hostname: notebook.placeholder.symmatree.com
 sshHostname: notebook-ssh.placeholder.symmatree.com
 
@@ -81,7 +83,15 @@ jupyterhub:
       tag: edge
       pullPolicy: Always
     storage:
-      capacity: 100Gi
+      # Static shared NFS volume (templates/home-nfs.yaml) instead of a dynamic
+      # local-path PVC: each user gets a persistent, named directory
+      # …/jupyterhub-home/<username> on the NAS, with no node affinity so the
+      # pod is free to honor the nodeSelector (e.g. lancer) rather than being
+      # pinned to whichever node held the local disk.
+      type: static
+      static:
+        pvcName: jupyterhub-home
+        subPath: "{username}"
       extraVolumeMounts:
         - name: keys
           mountPath: /mnt/keys
