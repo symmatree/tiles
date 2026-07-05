@@ -17,6 +17,7 @@ spec:
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
         nfs_server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
         cluster_nfs_path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}'
+        datasets_nfs_path: '{{ required ".Values.datasets_nfs_path is required" .Values.datasets_nfs_path }}'
         hostname: 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
         sshHostname: 'notebook-ssh.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
         jupyterhub:

@@ -3,6 +3,7 @@ cluster_name: placeholder
 vault_name: placeholder
 nfs_server: placeholder
 cluster_nfs_path: placeholder
+datasets_nfs_path: placeholder
 hostname: notebook.placeholder.symmatree.com
 sshHostname: notebook-ssh.placeholder.symmatree.com
 
@@ -101,6 +102,10 @@ jupyterhub:
       extraVolumeMounts:
         - name: keys
           mountPath: /mnt/keys
+        # Shared "datasets" NFS share (templates/datasets-nfs.yaml), read-write,
+        # under the notebook root so it shows up in the Jupyter file browser.
+        - name: datasets
+          mountPath: /home/jovyan/datasets
       extraVolumes:
         - name: keys
           secret:
@@ -108,6 +113,9 @@ jupyterhub:
             items:
               - key: public-key
                 path: authorized_keys
+        - name: datasets
+          persistentVolumeClaim:
+            claimName: jupyterhub-datasets
 
   scheduling:
     userScheduler:
