@@ -2,13 +2,17 @@
 
 # lancer (128 GB metal) is reserved for memory-intensive / big-image workloads
 # via a soft taint `dedicated=heavy:PreferNoSchedule` (declared in tf:
-# metal_amd_nodes.lancer.taint / .taint_effect), so routine workload prefers
-# wk-1/2/3 while lancer stays free for notebooks / ODM but still takes overflow.
-# The singleuser belongs on lancer -- its ~4 GB image unpacks in containerd
-# (podruntime/runtime) at node level, not bounded by any pod limit (see facts
-# fables/Tiles/tiles-host-instability.md T-B1, issue #576) -- so it gets the
-# nodeSelector (put it there) plus a matching toleration. Prod-only (test has no
-# lancer).
+# metal_amd_nodes.lancer.taint / .taint_effect): routine workload prefers
+# wk-1/2/3, but lancer still takes overflow -- it is not walled off.
+#
+# The singleuser is HARD-pinned to lancer: nodeSelector is a *required*
+# constraint, so it schedules on lancer or stays Pending -- it never lands on
+# another node. Deliberate: its ~4 GB image unpacks in containerd
+# (podruntime/runtime) at node level, unbounded by any pod limit (see facts
+# fables/Tiles/tiles-host-instability.md T-B1, issue #576), which would OOM any
+# of the small nodes -- better Pending than hammering a node that will fall over
+# anyway. The toleration matches the soft taint (belt for the hard pin).
+# Prod-only (test has no lancer).
 jupyterhub:
   singleuser:
     nodeSelector:
