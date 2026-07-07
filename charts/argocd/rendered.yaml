@@ -79,6 +79,23 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
 ---
+# Source: argocd/charts/oauth2-proxy/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+automountServiceAccountToken: true
+---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-secret.yaml
 apiVersion: v1
 kind: Secret
@@ -94,6 +111,27 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
 type: Opaque
+---
+# Source: argocd/charts/oauth2-proxy/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+type: Opaque
+data:
+  cookie-secret: "WFhYWFhYWFhYWFhYWFhYWA=="
+  client-secret: "WFhYWFhYWFg="
+  client-id: "WFhYWFhYWA=="
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-cm.yaml
 apiVersion: v1
@@ -385,6 +423,42 @@ data:
       exit 1
     fi
     echo "response=$response"
+---
+# Source: argocd/charts/oauth2-proxy/templates/configmap-authenticated-emails-file.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy-accesslist
+  namespace: argocd
+data:
+  restricted_user_access: "seth.porter@gmail.com\n"
+---
+# Source: argocd/charts/oauth2-proxy/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+data:
+  oauth2_proxy.cfg: "email_domains = [ \"*\" ]\nupstreams = [ \"file:///dev/null\" ]"
 ---
 # Source: argocd/templates/tanka.yaml
 apiVersion: v1
@@ -1158,6 +1232,38 @@ spec:
     targetPort: redis
   selector:
     app.kubernetes.io/name: argocd-redis
+    app.kubernetes.io/instance: argocd
+---
+# Source: argocd/charts/oauth2-proxy/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      appProtocol: http
+      name: http
+    - port: 44180
+      protocol: TCP
+      appProtocol: http
+      targetPort: metrics
+      name: metrics
+  selector:    
+    app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: argocd
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-applicationset/deployment.yaml
@@ -2619,6 +2725,139 @@ spec:
             defaultMode: 493
       dnsPolicy: ClusterFirst
 ---
+# Source: argocd/charts/oauth2-proxy/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:      
+      app.kubernetes.io/name: oauth2-proxy
+      app.kubernetes.io/instance: argocd
+  template:
+    metadata:
+      annotations:
+        checksum/config: c0329892592df8b1519fac51e84aee8cf879bb8e157e5a04f6556b38b5a2435b
+        checksum/config-emails: 27a8e7f3520c51f2b1fb340fc9cfb18be7d5fd195077b86c4521f37ca9d80c24
+        checksum/secret: 8fa6fdae65861caa2986544b8860a5205be1937328c8ec2bad6bad076b9e2425
+        checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+      labels:
+        app: oauth2-proxy        
+        helm.sh/chart: oauth2-proxy-7.7.0
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: authentication-proxy
+        app.kubernetes.io/part-of: oauth2-proxy
+        app.kubernetes.io/name: oauth2-proxy
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/version: "7.6.0"
+    spec:
+      serviceAccountName: argocd-oauth2-proxy
+      automountServiceAccountToken: true
+      containers:
+      - name: oauth2-proxy
+        image: "quay.io/oauth2-proxy/oauth2-proxy:v7.6.0"
+        imagePullPolicy: IfNotPresent
+        args:
+          - --http-address=0.0.0.0:4180
+          - --https-address=0.0.0.0:4443
+          - --metrics-address=0.0.0.0:44180
+          - --provider=google
+          - --email-domain=*
+          - --upstream=http://argocd-server:80
+          - --pass-host-header=true
+          - --set-xauthrequest=true
+          - --silence-ping-logging=true
+          - --skip-provider-button=true
+          - --reverse-proxy=true
+          - --config=/etc/oauth2_proxy/oauth2_proxy.cfg
+          - --authenticated-emails-file=/etc/oauth2-proxy/argocd-oauth2-proxy-accesslist
+        env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name:  argocd-oauth2-proxy
+              key: client-id
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  argocd-oauth2-proxy
+              key: client-secret
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  argocd-oauth2-proxy
+              key: cookie-secret
+        ports:
+          - containerPort: 4180
+            name: http
+            protocol: TCP
+          - containerPort: 44180
+            protocol: TCP
+            name: metrics
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 5
+          successThreshold: 1
+          periodSeconds: 10
+        resources:
+          {}
+        volumeMounts:
+        - mountPath: /etc/oauth2_proxy/oauth2_proxy.cfg
+          name: configmain
+          subPath: oauth2_proxy.cfg
+        - mountPath: /etc/oauth2-proxy
+          name: configaccesslist
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 2000
+          seccompProfile:
+            type: RuntimeDefault
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: argocd-oauth2-proxy
+        name: configmain
+      - configMap:
+          name: argocd-oauth2-proxy-accesslist
+          items:
+          - key: restricted_user_access
+            path: argocd-oauth2-proxy-accesslist
+        name: configaccesslist
+      tolerations:
+        []
+---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
@@ -3021,39 +3260,40 @@ spec:
             path: profiler.enabled
       dnsPolicy: ClusterFirst
 ---
-# Source: argocd/charts/argo-cd/templates/argocd-server/ingress.yaml
+# Source: argocd/charts/oauth2-proxy/templates/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: argocd-server
-  namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-9.5.2
-    app.kubernetes.io/name: argocd-server
-    app.kubernetes.io/instance: argocd
-    app.kubernetes.io/component: server
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: argocd
-    app.kubernetes.io/version: "v3.3.7"
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
   annotations:
-    cert-manager.io/cluster-issuer: "real-cert"
+    cert-manager.io/cluster-issuer: real-cert
 spec:
-  ingressClassName: cilium
+  ingressClassName: "cilium"
   rules:
-    - host: argocd.placeholder.symmatree.com
+    - host: "argocd.placeholder.symmatree.com"
       http:
         paths:
           - path: /
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
-                name: argocd-server
+                name: argocd-oauth2-proxy
                 port:
                   number: 80
   tls:
     - hosts:
       - argocd.placeholder.symmatree.com
-      secretName: argocd-server-tls
+      secretName: argocd-proxy-tls
 ---
 # Source: argocd/templates/tiles-appproject.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -3121,6 +3361,16 @@ metadata:
 type: Opaque
 spec:
   itemPath: 'vaults/placeholder/items/argocd-google-oauth'
+---
+# Source: argocd/templates/oauth2-proxy-secret.yaml
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  name: argocd-oauth2-proxy
+  namespace: "argocd"
+type: Opaque
+spec:
+  itemPath: 'vaults/placeholder/items/argocd-oauth2-proxy'
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
