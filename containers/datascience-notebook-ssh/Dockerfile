@@ -5,6 +5,16 @@ FROM $BASE_IMAGE:$BASE_TAG
 
 USER root
 
+# Bake the notebook user's uid to the cluster NFS export's all-squash target
+# (1024 = the raconteur NAS admin uid) so home/repo ownership is consistent and
+# git's ownership check passes without a safe.directory workaround. gid stays
+# 100 (users), which is what the export preserves. ENV NB_UID must match, or
+# docker-stacks start.sh resets jovyan back to 1000 at runtime. The base env
+# (/opt/conda) stays group-writable via gid 100, so installs still work without
+# a chown. See home-skel/AGENTS.md.
+RUN usermod -u 1024 jovyan && chown -R 1024:100 /home/jovyan
+ENV NB_UID=1024
+
 RUN apt-get update \
     && apt-get dist-upgrade -y \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -18,7 +28,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 # Fix linuxbrew permissions because we're running as root.
 RUN ansible-playbook -v /tmp/install-tools.ansible.yaml -i localhost, --connection=local \
     && rm -rf /var/lib/apt/lists/* \
-    && chown -R 1000:100 /home/linuxbrew
+    && chown -R 1024:100 /home/linuxbrew
 
 COPY fix-permissions /usr/local/bin/fix-permissions
 RUN chmod a+rx /usr/local/bin/fix-permissions
@@ -33,3 +43,10 @@ RUN systemctl enable ssh
 # before-notebook.d/ before starting the notebook server; start sshd there.
 COPY start-sshd.sh /usr/local/bin/before-notebook.d/start-sshd.sh
 RUN chmod a+rx /usr/local/bin/before-notebook.d/start-sshd.sh
+
+# Home is an NFS mount that masks anything baked at /home/jovyan, so stage the
+# home-dir docs at an unmasked path and copy them in via a before-notebook.d
+# hook at startup. See home-skel/AGENTS.md.
+COPY home-skel/AGENTS.md /opt/home-skel/AGENTS.md
+COPY seed-home-docs.sh /usr/local/bin/before-notebook.d/seed-home-docs.sh
+RUN chmod a+rx /usr/local/bin/before-notebook.d/seed-home-docs.sh
