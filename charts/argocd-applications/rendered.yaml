@@ -232,6 +232,14 @@ spec:
             server:
               ingressGrpc:
                 hostname: 'grpc-argocd.placeholder.symmatree.com'
+          oauth2-proxy:
+            ingress:
+              hosts:
+                - 'argocd.placeholder.symmatree.com'
+              tls:
+                - secretName: argocd-proxy-tls
+                  hosts:
+                    - 'argocd.placeholder.symmatree.com'
     - repoURL: https://github.com/symmatree/tiles.git
       targetRevision: 'placeholder'
       ref: values

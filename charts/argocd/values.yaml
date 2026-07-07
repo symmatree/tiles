@@ -334,13 +334,20 @@ oauth2-proxy:
   extraArgs:
     - --provider=google
     - "--email-domain=*"
-    - --allowed-email=seth.porter@gmail.com
     - --upstream=http://argocd-server:80
     - --pass-host-header=true
     - --set-xauthrequest=true
     - --silence-ping-logging=true
     - --skip-provider-button=true
     - --reverse-proxy=true
+  # Allowlist: only these emails may authenticate. The chart writes them to a
+  # ConfigMap and passes --authenticated-emails-file automatically. --email-domain=*
+  # above lets the domain check pass; this file is the actual restriction. (There is
+  # no --allowed-email flag in oauth2-proxy -- the old line was a no-op at best.)
+  authenticatedEmailsFile:
+    enabled: true
+    restricted_access: |
+      seth.porter@gmail.com
   ingress:
     enabled: true
     className: cilium
