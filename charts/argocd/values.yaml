@@ -353,6 +353,13 @@ oauth2-proxy:
     className: cilium
     annotations:
       cert-manager.io/cluster-issuer: real-cert
+      # Ride the single shared front door (the cilium-ingress LB IP that UniFi
+      # forwards 443 to) rather than getting a dedicated per-ingress LB IP.
+      ingress.cilium.io/loadbalancer-mode: shared
+      # Publish as a CNAME to the UniFi dynamic-DNS record (WAN IP), not the
+      # internal LB IP, so this resolves for external clients and tracks the
+      # dynamic Verizon address.
+      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
     hosts:
       - argocd.placeholder.symmatree.com
     tls:
