@@ -209,7 +209,6 @@
           - gh
           - git
           - google-cloud-cli
-          # - helm
           - htop
           - jq
           - kubectl
@@ -233,7 +232,6 @@
           - tmux
           - tree
           - xdg-utils
-          - yq
           - zsh
           - zsh-autosuggestions
           - zsh-syntax-highlighting
@@ -320,9 +318,14 @@
           - argocd
           - cilium-cli
           - go-jsonnet
+          - helm
           - jsonnet-bundler
           - talosctl
           - tanka
+          # Go/mikefarah yq -- what the helm build tooling (scripts/helm-common.bash)
+          # calls. The apt "yq" is the unrelated python jq-wrapper; installing brew
+          # yq here and dropping the apt one makes `yq` resolve to the Go build.
+          - yq
         state: present
         update_homebrew: true
         upgrade_all: true
