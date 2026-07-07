@@ -59,6 +59,7 @@ repos:
 
   # Local because the alternative,
   # https://github.com/koalaman/shellcheck-precommit requires docker.
+  # https://github.com/koalaman/shellcheck/issues/2495
   - repo: local
     hooks:
       # Requires apt-get install shellcheck

@@ -14,8 +14,8 @@ type: application
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
 version: 0.1.0
-appVersion: 3.3.7
+appVersion: 3.4.1
 dependencies:
   - name: argo-cd
-    version: 9.5.2
+    version: 9.5.12
     repository: https://argoproj.github.io/argo-helm
