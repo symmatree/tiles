@@ -112,27 +112,6 @@ metadata:
     app.kubernetes.io/version: "v3.3.7"
 type: Opaque
 ---
-# Source: argocd/charts/oauth2-proxy/templates/secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.7.0
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/component: authentication-proxy
-    app.kubernetes.io/part-of: oauth2-proxy
-    app.kubernetes.io/name: oauth2-proxy
-    app.kubernetes.io/instance: argocd
-    app.kubernetes.io/version: "7.6.0"
-  name: argocd-oauth2-proxy
-  namespace: argocd
-type: Opaque
-data:
-  cookie-secret: "WFhYWFhYWFhYWFhYWFhYWA=="
-  client-secret: "WFhYWFhYWFg="
-  client-id: "WFhYWFhYWA=="
----
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-cm.yaml
 apiVersion: v1
 kind: ConfigMap
