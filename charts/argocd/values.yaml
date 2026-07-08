@@ -384,6 +384,11 @@ oauth2-proxy:
       # target -> lhitw.symmatree.com + the UniFi 443 port-forward) is a
       # separate follow-up PR, so nothing is exposed until that is applied.
       ingress.cilium.io/loadbalancer-mode: shared
+      # WAN cutover: publish as a CNAME to the UniFi dynamic-DNS record (WAN IP)
+      # instead of the internal ingress IP, so the host resolves for external
+      # clients and tracks the dynamic address. Paired with the UniFi 443
+      # port-forward (tf/nodes/port-forwards.tf) -- this is the exposure switch.
+      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
     hosts:
       - argocd.placeholder.symmatree.com
     tls:
