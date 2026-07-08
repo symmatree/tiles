@@ -324,13 +324,21 @@ argo-cd:
           name: cmp-tanka
 
 oauth2-proxy:
-  # Credentials injected from 1Password. Create a vault item named 'argocd-oauth2-proxy' with
-  # fields: OAUTH2_PROXY_CLIENT_ID, OAUTH2_PROXY_CLIENT_SECRET, OAUTH2_PROXY_COOKIE_SECRET.
-  # Generate cookie secret with: openssl rand -base64 32 | head -c 32 | base64
-  # GCP OAuth2 client redirect URI: https://argocd.{cluster}.symmatree.com/oauth2/callback
-  extraEnvFrom:
-    - secretRef:
-        name: argocd-oauth2-proxy
+  # Credentials come from 1Password via the OnePasswordItem in
+  # templates/oauth2-proxy-secret.yaml, which creates a Secret named
+  # 'argocd-oauth2-proxy'. The vault item's field labels must be exactly
+  # 'client-id', 'client-secret', 'cookie-secret' -- those become the Secret keys
+  # that the chart's existingSecret path reads.
+  #   - client-id / client-secret: from the GCP OAuth2 client 'argocd-oauth-proxy'
+  #     (redirect URI https://argocd.{cluster}.symmatree.com/oauth2/callback)
+  #   - cookie-secret: openssl rand -base64 32 | head -c 32 | base64
+  #
+  # existingSecret is required: without it the chart renders its OWN Secret of the
+  # same name full of "XXXXXXX" placeholders, which collides with the OnePasswordItem
+  # and (Argo self-heal winning the race) sends client_id=XXXXXXX to Google -- the
+  # authorize step is rejected and no callback ever returns.
+  config:
+    existingSecret: argocd-oauth2-proxy
   extraArgs:
     - --provider=google
     - "--email-domain=*"
