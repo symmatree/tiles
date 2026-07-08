@@ -140,7 +140,7 @@ spec:
             - --interval=1m
             - --source=service
             - --source=ingress
-            - --policy=upsert-only
+            - --policy=sync
             - --registry=txt
             - --txt-owner-id=placeholder-cluster-name
             - --domain-filter=placeholder-cluster-name.symmatree.com
