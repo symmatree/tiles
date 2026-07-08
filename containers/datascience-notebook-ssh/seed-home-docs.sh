@@ -8,15 +8,22 @@
 # image. Edit the source in the repo, not the copy in the home dir.
 #
 # Best-effort: a failure here must never stop the notebook from starting.
-set -euo pipefail
+#
+# Because we're sourced (not executed), keep all strictness inside a subshell:
+# `set -u` at the top level would leak into start.sh, whose own `set -e` plus its
+# reference to an unset JUPYTER_DOCKER_STACKS_QUIET then aborts container startup.
+# (This hook sorts before start-sshd.sh, so it is the first to trip that.)
+(
+	set -euo pipefail
 
-dest="/home/${NB_USER:-jovyan}"
-src="/opt/home-skel/AGENTS.md"
+	dest="/home/${NB_USER:-jovyan}"
+	src="/opt/home-skel/AGENTS.md"
 
-if [ -d "${dest}" ] && [ -f "${src}" ]; then
-	if cp -f "${src}" "${dest}/AGENTS.md"; then
-		echo "seed-home-docs.sh: refreshed ${dest}/AGENTS.md"
-	else
-		echo "seed-home-docs.sh: WARNING: failed to seed AGENTS.md; continuing" >&2
+	if [ -d "${dest}" ] && [ -f "${src}" ]; then
+		if cp -f "${src}" "${dest}/AGENTS.md"; then
+			echo "seed-home-docs.sh: refreshed ${dest}/AGENTS.md"
+		else
+			echo "seed-home-docs.sh: WARNING: failed to seed AGENTS.md; continuing" >&2
+		fi
 	fi
-fi
+) || echo "seed-home-docs.sh: WARNING: failed to seed home docs; notebook continues" >&2
