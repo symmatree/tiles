@@ -15,7 +15,12 @@ external-dns:
   # -- Interval for DNS updates.
   interval: 1m
   # -- How DNS records are synchronized between sources and providers; available values are `sync` & `upsert-only`.
-  policy: upsert-only # @schema enum:[sync, upsert-only]; type:string; default: "upsert-only"
+  # sync (not upsert-only): upsert-only never deletes, so a record-type change
+  # (e.g. an A -> CNAME flip, as the front-door WAN cutover does) silently fails
+  # -- it needs delete-then-create. sync does that, and only ever touches records
+  # this instance owns (txt registry, txtOwnerId = cluster name), so it will not
+  # delete the UniFi/Cloudflare lhitw record or any hand-made records.
+  policy: sync # @schema enum:[sync, upsert-only]; type:string; default: "upsert-only"
   # -- Specify the registry for storing ownership and labels.
   # Valid values are `txt`, `aws-sd`, `dynamodb` & `noop`.
   registry: txt # @schema enum:[txt, aws-sd, dynamodb, noop]; default: "txt"
