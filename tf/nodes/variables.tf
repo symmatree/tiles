@@ -130,6 +130,12 @@ variable "external_ip_cidr" {
   type        = string
 }
 
+variable "ingress_lb_ip" {
+  description = "Fixed LoadBalancer IP to pin the shared Cilium ingress (the WAN-forwarded front door) to. Must be inside external_ip_cidr and reserved out of DHCP. Empty = let Cilium assign dynamically (e.g. test)."
+  type        = string
+  default     = ""
+}
+
 variable "pod_cidr" {
   description = "Pod CIDR for the cluster"
   type        = string

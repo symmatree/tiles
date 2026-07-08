@@ -140,6 +140,12 @@ variable "external_ip_cidr" {
   type        = string
 }
 
+variable "ingress_lb_ip" {
+  description = "Fixed LoadBalancer IP for the shared Cilium ingress front door. Empty = dynamic."
+  type        = string
+  default     = ""
+}
+
 variable "onepassword_vault" {
   description = "1Password vault UUID."
   type        = string

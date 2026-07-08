@@ -466,6 +466,7 @@ spec:
       # Inject values from Terraform or that vary by environment.
       valuesObject:
         external_ip_cidr: 'placeholder'
+        ingress_lb_ip: 'placeholder'
         targetRevision: 'placeholder'
   destination:
     server: https://kubernetes.default.svc

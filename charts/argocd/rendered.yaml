@@ -3277,7 +3277,6 @@ metadata:
   namespace: argocd
   annotations:
     cert-manager.io/cluster-issuer: real-cert
-    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
     ingress.cilium.io/loadbalancer-mode: shared
 spec:
   ingressClassName: "cilium"
