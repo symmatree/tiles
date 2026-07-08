@@ -114,6 +114,10 @@ resource "onepassword_item" "misc_config" {
       value = var.external_ip_cidr
     }
     field {
+      label = "ingress_lb_ip"
+      value = var.ingress_lb_ip
+    }
+    field {
       label = "vault_name"
       value = var.onepassword_vault_name
     }

@@ -38,6 +38,7 @@ module "cluster" {
 
   admin_user             = var.admin_user
   external_ip_cidr       = var.external_ip_cidr
+  ingress_lb_ip          = var.ingress_lb_ip
   pod_cidr               = var.pod_cidr
   service_cidr           = var.service_cidr
   control_plane_vip      = var.control_plane_vip
