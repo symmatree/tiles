@@ -339,12 +339,20 @@ oauth2-proxy:
   # authorize step is rejected and no callback ever returns.
   config:
     existingSecret: argocd-oauth2-proxy
+    # Override the chart's default configFile, which sets email_domains = [ "*" ]
+    # (allowAll). oauth2-proxy merges --config with CLI args, so dropping the
+    # --email-domain arg alone was NOT enough -- the wildcard lived here too and
+    # kept letting every Google account in. With no email_domains anywhere, the
+    # authenticated-emails-file below is the sole gate. (upstreams here is the
+    # chart's required dummy; the real upstream is --upstream in extraArgs.)
+    configFile: |-
+      upstreams = [ "file:///dev/null" ]
   extraArgs:
     - --provider=google
     # Do NOT set --email-domain: in oauth2-proxy email validation is OR, not AND
     # (valid = domain-matches OR in-emails-file), and --email-domain=* sets allowAll
     # -> every Google account passes and the emails file below is never consulted.
-    # With no email-domain configured, the authenticated-emails-file is the sole gate.
+    # The wildcard must also be absent from config.configFile above (chart default).
     - --upstream=http://argocd-server:80
     - --pass-host-header=true
     - --set-xauthrequest=true
