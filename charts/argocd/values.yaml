@@ -359,6 +359,12 @@ oauth2-proxy:
   ingress:
     enabled: true
     className: cilium
+    # Prefix (not the chart's default ImplementationSpecific): under Cilium,
+    # ImplementationSpecific + path "/" matches ONLY the exact "/", so /oauth2/callback
+    # and the whole Argo CD UI 404 at Envoy before reaching the proxy. Every other
+    # ingress in this cluster uses Prefix "/"; match that so all paths route.
+    path: /
+    pathType: Prefix
     annotations:
       cert-manager.io/cluster-issuer: real-cert
       # Ride the single shared front door (the pinned cilium-ingress LB IP)
