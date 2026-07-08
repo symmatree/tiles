@@ -341,17 +341,19 @@ oauth2-proxy:
     existingSecret: argocd-oauth2-proxy
   extraArgs:
     - --provider=google
-    - "--email-domain=*"
+    # Do NOT set --email-domain: in oauth2-proxy email validation is OR, not AND
+    # (valid = domain-matches OR in-emails-file), and --email-domain=* sets allowAll
+    # -> every Google account passes and the emails file below is never consulted.
+    # With no email-domain configured, the authenticated-emails-file is the sole gate.
     - --upstream=http://argocd-server:80
     - --pass-host-header=true
     - --set-xauthrequest=true
     - --silence-ping-logging=true
     - --skip-provider-button=true
     - --reverse-proxy=true
-  # Allowlist: only these emails may authenticate. The chart writes them to a
-  # ConfigMap and passes --authenticated-emails-file automatically. --email-domain=*
-  # above lets the domain check pass; this file is the actual restriction. (There is
-  # no --allowed-email flag in oauth2-proxy -- the old line was a no-op at best.)
+  # Allowlist: the ONLY emails permitted. The chart writes them to a ConfigMap and
+  # passes --authenticated-emails-file automatically. This is the actual restriction --
+  # it works precisely because --email-domain is unset (see extraArgs above).
   authenticatedEmailsFile:
     enabled: true
     restricted_access: |

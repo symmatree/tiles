@@ -2755,7 +2755,6 @@ spec:
           - --https-address=0.0.0.0:4443
           - --metrics-address=0.0.0.0:44180
           - --provider=google
-          - --email-domain=*
           - --upstream=http://argocd-server:80
           - --pass-host-header=true
           - --set-xauthrequest=true
