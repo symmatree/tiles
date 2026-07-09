@@ -324,6 +324,14 @@ argo-cd:
           name: cmp-tanka
 
 oauth2-proxy:
+  # Pin a current patched image (chart 7.7.0 defaults to the older v7.6.0). This
+  # is the internet-facing auth gate, so track upstream security fixes. Bumped for
+  # the WAN cutover. 7.6 -> 7.15 uses only long-stable flags/config keys; the
+  # provider (google), classic --config file, and --authenticated-emails-file are
+  # unaffected by the interim breaking changes (Alpha Config v2, Azure/keycloak
+  # provider deprecations, upstream request signatures -- none of which we use).
+  image:
+    tag: v7.15.3
   # Credentials come from 1Password via the OnePasswordItem in
   # templates/oauth2-proxy-secret.yaml, which creates a Secret named
   # 'argocd-oauth2-proxy'. The vault item's field labels must be exactly
