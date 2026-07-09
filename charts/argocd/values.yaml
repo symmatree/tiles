@@ -367,6 +367,15 @@ oauth2-proxy:
     - --silence-ping-logging=true
     - --skip-provider-button=true
     - --reverse-proxy=true
+    # Restrict who may set X-Forwarded-* to the in-cluster pod CIDR
+    # (cilium ipv4-native-routing-cidr). Without this, --reverse-proxy trusts
+    # X-Forwarded-* from 0.0.0.0/0 -- fine when only the ingress could reach us,
+    # but this is now internet-facing. The Cilium ingress Envoy SNATs its backend
+    # connections into this CIDR (observed proxy source IPs 10.0.145/148/149.x all
+    # land here), so trusting it covers every legitimate ingress source while
+    # excluding external clients. Node IPs are heterogeneous (10.0.128.x and
+    # 10.0.99.x) so the pod CIDR -- not node subnets -- is the reliable boundary.
+    - --trusted-proxy-ip=10.0.144.0/20
   # Allowlist: the ONLY emails permitted. The chart writes them to a ConfigMap and
   # passes --authenticated-emails-file automatically. This is the actual restriction --
   # it works precisely because --email-domain is unset (see extraArgs above).

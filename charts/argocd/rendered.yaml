@@ -2761,6 +2761,7 @@ spec:
           - --silence-ping-logging=true
           - --skip-provider-button=true
           - --reverse-proxy=true
+          - --trusted-proxy-ip=10.0.144.0/20
           - --config=/etc/oauth2_proxy/oauth2_proxy.cfg
           - --authenticated-emails-file=/etc/oauth2-proxy/argocd-oauth2-proxy-accesslist
         env:
