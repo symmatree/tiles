@@ -20,14 +20,23 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     --no-install-recommends \
     ansible \
+    ca-certificates \
+    git \
     openssh-server \
     && rm -rf /var/lib/apt/lists/*
 
-COPY install-tools.ansible.yaml /tmp/install-tools.ansible.yaml
+# Dev toolchain comes from the single source of truth (dotfiles-symm), fetched
+# at build time and pinned by SHA -- no local copy to drift, no submodule.
+# Bump DOTFILES_REF to adopt upstream changes. See symmatree/tiles#607.
+ARG DOTFILES_REPO=https://github.com/symmatree/dotfiles-symm.git
+ARG DOTFILES_REF=5321890b65f4a1bf1c9c4fe7d7344d7bc93d05b4
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 # Fix linuxbrew permissions because we're running as root.
-RUN ansible-playbook -v /tmp/install-tools.ansible.yaml -i localhost, --connection=local \
-    && rm -rf /var/lib/apt/lists/* \
+RUN git clone "${DOTFILES_REPO}" /tmp/dotfiles-symm \
+    && git -C /tmp/dotfiles-symm checkout --quiet "${DOTFILES_REF}" \
+    && ansible-playbook -v /tmp/dotfiles-symm/ubuntu-zsh/install-tools.ansible.yaml \
+       -i localhost, --connection=local \
+    && rm -rf /tmp/dotfiles-symm /var/lib/apt/lists/* \
     && chown -R 1024:100 /home/linuxbrew
 
 COPY fix-permissions /usr/local/bin/fix-permissions
