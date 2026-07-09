@@ -162,9 +162,14 @@ oauth2-proxy:
   # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
   # (OnePasswordItem 'jupyterhub-oauth2-proxy'). Vault-item field labels must be
   # exactly client-id / client-secret / cookie-secret (the chart's existingSecret
-  # keys). client-id/secret from a GCP OAuth2 client with redirect URI
-  # https://notebook.{cluster}.symmatree.com/oauth2/callback; cookie-secret =
-  # openssl rand -base64 32 | head -c 32 | base64. existingSecret is required or
+  # keys). client-id/secret: REUSE the hub's existing Google client (behind
+  # google-oauth-secret) -- add redirect URI
+  # https://notebook.{cluster}.symmatree.com/oauth2/callback to it. Same
+  # client-id/secret as the hub, but a NEW item here, plus cookie-secret =
+  # openssl rand -base64 32 | head -c 32 | base64. Sharing the client makes the
+  # hub's own OAuth a silent redirect (single interactive login); collapsing the
+  # second layer entirely is a follow-up (header authenticator, see #605).
+  # existingSecret is required or
   # the chart renders its own XXXXXXX placeholder secret and collides (ArgoCD #600).
   config:
     existingSecret: jupyterhub-oauth2-proxy
