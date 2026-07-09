@@ -141,10 +141,72 @@ jupyterhub:
     chp:
       networkPolicy:
         enabled: false
+    # proxy-public is now internal-only: the oauth2-proxy sub-chart is the entry
+    # point and terminates TLS at the shared Cilium front door (cert-manager
+    # real-cert). So the hub's own LoadBalancer + self-signed TLS are dropped.
+    service:
+      type: ClusterIP
     https:
-      enabled: true
-      type: secret
-      secret:
-        name: jupyterhub-tls
-        key: tls.key
-        crt: tls.crt
+      enabled: false
+
+# oauth2-proxy perimeter gate in front of JupyterHub -- the hardened ArgoCD
+# pattern (refs #593-#604). Google login + email allowlist is the real gate;
+# the hub's own Google auth (allow_all) sits behind it as a separate layer.
+# NOTE: this is the on-LAN-testable form (shared front door, internal ingress
+# IP). The WAN cutover (external-dns target -> lhitw) is a separate gated PR.
+oauth2-proxy:
+  # Chart 7.7.0 defaults to the older v7.6.0; pin the current patched release
+  # since this becomes internet-facing (see ArgoCD #602 image-bump rationale).
+  image:
+    tag: v7.15.3
+  # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
+  # (OnePasswordItem 'jupyterhub-oauth2-proxy'). Vault-item field labels must be
+  # exactly client-id / client-secret / cookie-secret (the chart's existingSecret
+  # keys). client-id/secret from a GCP OAuth2 client with redirect URI
+  # https://notebook.{cluster}.symmatree.com/oauth2/callback; cookie-secret =
+  # openssl rand -base64 32 | head -c 32 | base64. existingSecret is required or
+  # the chart renders its own XXXXXXX placeholder secret and collides (ArgoCD #600).
+  config:
+    existingSecret: jupyterhub-oauth2-proxy
+    # Drop the chart's default email_domains = [ "*" ] (allowAll) -- with it, the
+    # allowlist is never consulted (ArgoCD #603). Only the dummy upstream remains;
+    # the real upstream is --upstream in extraArgs.
+    configFile: |-
+      upstreams = [ "file:///dev/null" ]
+  extraArgs:
+    - --provider=google
+    # No --email-domain: validation is OR, and --email-domain=* is allowAll
+    # (ArgoCD #602). The authenticated-emails-file is the sole gate.
+    - --upstream=http://proxy-public:80
+    - --pass-host-header=true
+    - --set-xauthrequest=true
+    - --silence-ping-logging=true
+    - --skip-provider-button=true
+    - --reverse-proxy=true
+    # Trust X-Forwarded-* only from the in-cluster pod CIDR (the Cilium ingress
+    # Envoy SNATs into it), not 0.0.0.0/0 (ArgoCD #604).
+    - --trusted-proxy-ip=10.0.144.0/20
+  # The ONLY emails allowed through the perimeter.
+  authenticatedEmailsFile:
+    enabled: true
+    restricted_access: |
+      seth.porter@gmail.com
+  ingress:
+    enabled: true
+    className: cilium
+    # Prefix, not the chart default ImplementationSpecific, which under Cilium
+    # matches only the exact "/" and 404s /oauth2/callback + the app (ArgoCD #601).
+    path: /
+    pathType: Prefix
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+      # Ride the shared cilium-ingress front door (pinned LB IP). No external-dns
+      # target override yet -> published at the internal ingress IP, LAN-testable.
+      # WAN cutover (external-dns target -> lhitw) is a separate gated PR.
+      ingress.cilium.io/loadbalancer-mode: shared
+    hosts:
+      - notebook.placeholder.symmatree.com
+    tls:
+      - secretName: jupyterhub-oauth2-proxy-tls
+        hosts:
+          - notebook.placeholder.symmatree.com

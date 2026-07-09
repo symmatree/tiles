@@ -24,14 +24,22 @@ spec:
           hub:
             config:
               OAuthenticator:
+                # The hub's own (inner) Google auth callback -- still reached
+                # through the oauth2-proxy perimeter. proxy.service.type ClusterIP
+                # and proxy.https.enabled=false are set in values.yaml; the old
+                # LoadBalancer external-dns hostname annotation is dropped so the
+                # dedicated notebook LB record is cleaned up (external-dns sync)
+                # and the host is now published from the oauth2-proxy ingress.
                 oauth_callback_url: 'https://notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com/hub/oauth_callback'
-          proxy:
-            service:
-              annotations:
-                external-dns.alpha.kubernetes.io/hostname: 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-            https:
-              hosts:
-                - 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+        # Perimeter gate host, per-cluster (chart default is the placeholder host).
+        oauth2-proxy:
+          ingress:
+            hosts:
+              - 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            tls:
+              - secretName: jupyterhub-oauth2-proxy-tls
+                hosts:
+                  - 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: jupyterhub
