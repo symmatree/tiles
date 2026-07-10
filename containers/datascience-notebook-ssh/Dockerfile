@@ -29,7 +29,7 @@ RUN apt-get update \
 # at build time and pinned by SHA -- no local copy to drift, no submodule.
 # Bump DOTFILES_REF to adopt upstream changes. See symmatree/tiles#607.
 ARG DOTFILES_REPO=https://github.com/symmatree/dotfiles-symm.git
-ARG DOTFILES_REF=5321890b65f4a1bf1c9c4fe7d7344d7bc93d05b4
+ARG DOTFILES_REF=9abc64e154a9b3766bd7454041d0364d301f2cd2
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 # Fix linuxbrew permissions because we're running as root.
 RUN git clone "${DOTFILES_REPO}" /tmp/dotfiles-symm \
