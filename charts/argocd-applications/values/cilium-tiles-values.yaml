@@ -1,1 +1,13 @@
 # Per-cluster overrides for tiles.
+cilium:
+  ingressController:
+    service:
+      # Pin the shared ingress (the WAN-forwarded front door) to a static IP:
+      # opt into lb-static-pool (label) and request the IP (lbipam annotation).
+      # See charts/cilium-config/templates/lb-static-pool.helm.yaml. The IP MUST
+      # equal tf/nodes/prod.tfvars ingress_lb_ip (which the UniFi port-forward
+      # targets) and fall inside that pool's /24 -- keep them in sync.
+      labels:
+        tiles.symmatree.com/static-lb: "true"
+      annotations:
+        lbipam.cilium.io/ips: "10.0.130.1"

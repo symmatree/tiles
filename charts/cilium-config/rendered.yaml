@@ -25,22 +25,3 @@ metadata:
 spec:
   blocks:
     - cidr: "placeholder"
-
----
-# Source: cilium-config/templates/lb-ingress-ip-pool.helm.yaml
-# Pin the shared Cilium ingress service (the WAN-forwarded front door) to a
-# fixed LoadBalancer IP, so the UniFi 443 port-forward and the DNS target have a
-# stable address. The serviceSelector targets only the shared `cilium-ingress`
-# service (by name/namespace), not per-ingress dedicated services.
-apiVersion: cilium.io/v2alpha1
-kind: CiliumLoadBalancerIPPool
-metadata:
-  namespace: "cilium-config"
-  name: lb-ingress-pool
-spec:
-  serviceSelector:
-    matchLabels:
-      io.kubernetes.service.namespace: cilium
-      io.kubernetes.service.name: cilium-ingress
-  blocks:
-    - cidr: "placeholder/32"
