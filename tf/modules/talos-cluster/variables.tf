@@ -51,9 +51,9 @@ variable "metal_intel_nodes" {
 }
 
 variable "metal_apply_mode" {
-  description = "talosctl apply-config mode for bare-metal nodes (auto | no_reboot | reboot | staged). Use \"reboot\" during a cluster rebuild so re-applied metal workers reboot and rejoin the new etcd. See docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot."
+  description = "talosctl apply-config mode for bare-metal nodes (auto | no_reboot | reboot | staged). Defaults to \"reboot\": the metal config-apply only re-runs when the config actually changes (no replace_triggered_by, stable inputs), so this is not a reboot-every-apply -- but when the config does change, rebooting guarantees it fully takes effect (Talos \"auto\" reboots only when it judges a field requires it, which is not fully reliable) and lets a rebuilt node rejoin the new etcd. See docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot."
   type        = string
-  default     = "auto"
+  default     = "reboot"
 
   validation {
     condition     = contains(["auto", "no_reboot", "reboot", "staged"], var.metal_apply_mode)
