@@ -20,6 +20,16 @@ jupyterhub:
     cookieSecret: "placeholder-for-rendered-yaml"
     networkPolicy:
       enabled: false
+    # The hub sqlite DB uses a reap-able dynamic NFS PVC (cluster-nfs) instead of
+    # the default local-path storageClass. Hub state is not meant to persist
+    # across cluster rebuilds; we only need the volume to be node-independent so
+    # the hub pod can reschedule to any host. local-path pins the PV to one node's
+    # disk by hostname affinity, which stranded the hub (Pending) when that node
+    # was renamed/lost after a power event. NFS has no node affinity, and a single
+    # hub writer makes sqlite-on-NFS safe.
+    db:
+      pvc:
+        storageClassName: cluster-nfs
     extraEnv:
       OAUTH_CLIENT_ID:
         valueFrom:
