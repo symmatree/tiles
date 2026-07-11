@@ -14,6 +14,7 @@ metadata:
     app.kubernetes.io/version: "v1.20.2"
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: cert-manager-v1.20.2
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/serviceaccount.yaml
 apiVersion: v1
@@ -30,6 +31,7 @@ metadata:
     app.kubernetes.io/version: "v1.20.2"
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: cert-manager-v1.20.2
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/webhook-serviceaccount.yaml
 apiVersion: v1
@@ -46,6 +48,7 @@ metadata:
     app.kubernetes.io/version: "v1.20.2"
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: cert-manager-v1.20.2
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/serviceaccount.yaml
 apiVersion: v1
@@ -753,6 +756,7 @@ subjects:
   - name: cert-manager
     namespace: cert-manager
     kind: ServiceAccount
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/webhook-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -775,6 +779,7 @@ subjects:
 - kind: ServiceAccount
   name: cert-manager-webhook
   namespace: cert-manager
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/clusterrolebinding.yaml
 kind: ClusterRoleBinding
@@ -963,6 +968,7 @@ subjects:
   - kind: ServiceAccount
     name: cert-manager-cainjector
     namespace: cert-manager
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/rbac.yaml
 # grant cert-manager permission to manage the leaderelection configmap in the
@@ -1102,6 +1108,7 @@ spec:
     app.kubernetes.io/name: cainjector
     app.kubernetes.io/instance: cert-manager
     app.kubernetes.io/component: "cainjector"
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/service.yaml
 apiVersion: v1
@@ -1128,6 +1135,7 @@ spec:
     app.kubernetes.io/name: cert-manager
     app.kubernetes.io/instance: cert-manager
     app.kubernetes.io/component: "controller"
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/webhook-service.yaml
 apiVersion: v1
@@ -1158,6 +1166,7 @@ spec:
     app.kubernetes.io/name: webhook
     app.kubernetes.io/instance: cert-manager
     app.kubernetes.io/component: "webhook"
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/metrics-service.yaml
 apiVersion: v1
@@ -1181,6 +1190,7 @@ spec:
       name: metrics
   selector:
     app: trust-manager
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/webhook.yaml
 apiVersion: v1
@@ -1273,6 +1283,7 @@ spec:
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
           operator: Exists
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/deployment.yaml
 apiVersion: apps/v1
@@ -1373,6 +1384,7 @@ spec:
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
           operator: Exists
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/webhook-deployment.yaml
 apiVersion: apps/v1
@@ -1473,6 +1485,7 @@ spec:
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
           operator: Exists
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/deployment.yaml
 apiVersion: apps/v1
@@ -1590,6 +1603,7 @@ spec:
         secret:
           defaultMode: 420
           secretName: trust-manager-tls
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/webhook-mutating-webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -1679,6 +1693,7 @@ webhooks:
         name: cert-manager-webhook
         namespace: cert-manager
         path: /validate
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -1716,6 +1731,7 @@ webhooks:
         name: trust-manager
         namespace: cert-manager
         path: /validate-trust-cert-manager-io-v1alpha1-bundle
+
 ---
 # Source: cert-manager/templates/ca-bundle.yaml
 apiVersion: trust.cert-manager.io/v1alpha1
@@ -1736,6 +1752,7 @@ spec:
     namespaceSelector:
       matchLabels:
         trust-bundle: enabled
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/certificate.yaml
 apiVersion: cert-manager.io/v1
@@ -1857,6 +1874,7 @@ spec:
             serviceAccountSecretRef:
               name: cert-manager-dns01-sa-key
               key: private_key.json
+
 ---
 # Source: cert-manager/templates/self-signed-issuer.yaml
 apiVersion: cert-manager.io/v1
@@ -1874,6 +1892,7 @@ metadata:
 spec:
   ca:
     secretName: "placeholder-ca-tls"
+
 ---
 # Source: cert-manager/charts/trust-manager/templates/certificate.yaml
 apiVersion: cert-manager.io/v1
@@ -1900,6 +1919,7 @@ type: Opaque
 spec:
   # secret name is specified in tf/modules/k8s-cluster/k8s-cert-manager.tf
   itemPath: vaults/placeholder/items/placeholder-cert-manager-dns01-sa-key
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
@@ -1967,6 +1987,7 @@ metadata:
     app.kubernetes.io/version: "v1.20.2"
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: cert-manager-v1.20.2
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/startupapicheck-rbac.yaml
 # create certificate role
@@ -2018,6 +2039,7 @@ subjects:
   - kind: ServiceAccount
     name: cert-manager-startupapicheck
     namespace: cert-manager
+
 ---
 # Source: cert-manager/charts/cert-manager/templates/startupapicheck-job.yaml
 apiVersion: batch/v1
@@ -2084,3 +2106,4 @@ spec:
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
           operator: Exists
+
