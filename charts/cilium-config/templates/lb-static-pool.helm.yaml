@@ -1,0 +1,18 @@
+{{- if eq .Values.cluster_name "tiles" }}
+# Dedicated static-IP pool for the WAN-forwarded front door. A service opts in
+# with the label below AND requests a specific IP via the lbipam.cilium.io/ips
+# annotation (the shared cilium-ingress does both -- see charts/cilium/application.yaml).
+# The /24 is hardcoded (prod-only); it MUST agree with the ingress_lb_ip value in
+# tf/nodes/prod.tfvars (which must fall inside this range).
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  namespace: "{{ .Release.Namespace }}"
+  name: lb-static-pool
+spec:
+  serviceSelector:
+    matchLabels:
+      tiles.symmatree.com/static-lb: "true"
+  blocks:
+    - cidr: "10.0.130.0/24"
+{{- end }}

@@ -14,9 +14,11 @@ kubelet_eviction_memory_available = "512Mi"
 # Network configuration for tiles cluster (10.0.128.0/18 block)
 control_plane_vip = "10.0.128.10"
 external_ip_cidr  = "10.0.129.0/24"
-# Fixed IP for the shared Cilium ingress (the WAN-forwarded front door). Inside
-# external_ip_cidr; reserve it out of DHCP on the UniFi side.
-ingress_lb_ip = "10.0.129.2"
+# Fixed IP for the shared Cilium ingress (the WAN-forwarded front door), served
+# from the dedicated static-LB pool. MUST be inside the /24 hardcoded in
+# charts/cilium-config/templates/lb-static-pool.helm.yaml -- keep the two in
+# sync. Reserve it out of DHCP on the UniFi side.
+ingress_lb_ip = "10.0.130.1"
 service_cidr  = "10.0.136.0/21"
 pod_cidr      = "10.0.144.0/20"
 
