@@ -8,10 +8,11 @@ repos:
       - id: trailing-whitespace
         exclude: "^(.*/dist/.*\\.js.*)|(.*/(.*-)?rendered\\.yaml)$"
       - id: end-of-file-fixer
-        # Exclude generated rendered.yaml (same as trailing-whitespace above):
-        # `helm template` output is a byte-for-byte CI artifact (build.sh +
-        # `git diff --exit-code`), and some charts emit a trailing blank line
-        # under helm 4.2.0 that this hook would strip, breaking the CI gate.
+        # rendered.yaml is committed helm output that must match build.sh
+        # byte-for-byte (CI `git diff --exit-code`); helm can emit *multiple*
+        # trailing newlines, which this hook strips -> the gate fails. Excluded
+        # here; drop the exclude if helm output stops doing that. (check-yaml
+        # still runs on these files -- YAML validity is not bypassed.)
         exclude: "^(.*/dist/.*\\.js.*)|(.*/(.*-)?rendered\\.yaml)$"
       - id: fix-byte-order-marker
       - id: mixed-line-ending
