@@ -11,6 +11,7 @@ metadata:
     app.kubernetes.io/instance: onepassword
     app.kubernetes.io/version: "1.8.2"
     app.kubernetes.io/managed-by: Helm
+
 ---
 # Source: onepassword/charts/connect/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -100,6 +101,7 @@ rules:
   - patch
   - update
   - watch
+
 ---
 # Source: onepassword/charts/connect/templates/clusterrolebinding.yaml
 kind: ClusterRoleBinding
@@ -120,6 +122,7 @@ roleRef:
   kind: ClusterRole
   name: onepassword-connect-operator
   apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: onepassword/charts/connect/templates/service.yaml
 apiVersion: v1
@@ -143,6 +146,8 @@ spec:
       name: connect-sync
     - port: 8080
       name: connect-api
+  
+
 ---
 # Source: onepassword/charts/connect/templates/connect-deployment.yaml
 apiVersion: apps/v1
@@ -284,6 +289,7 @@ spec:
             - name: credentials
               mountPath: /home/opuser/.op/1password-credentials.json
               subPath: 1password-credentials.json
+
 ---
 # Source: onepassword/charts/connect/templates/operator-deployment.yaml
 apiVersion: apps/v1
@@ -375,6 +381,7 @@ spec:
             periodSeconds: 20
             initialDelaySeconds: 15
           volumeMounts:
+
 ---
 # Source: onepassword/charts/connect/templates/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
@@ -440,3 +447,4 @@ spec:
           drop:
           - ALL
         readOnlyRootFilesystem: true
+

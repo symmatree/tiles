@@ -129,6 +129,7 @@ spec:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
         trust-bundle: enabled
+
 ---
 # Source: argocd-applications/templates/alloy-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -163,6 +164,7 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/apprise-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -205,6 +207,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -257,6 +260,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/argocd-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -291,6 +295,7 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/bond-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -326,6 +331,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/cert-manager-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -364,6 +370,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/cert-manager-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -398,6 +405,7 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/cilium-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -450,6 +458,7 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
+
 ---
 # Source: argocd-applications/templates/cilium-config-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -482,6 +491,7 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
+
 ---
 # Source: argocd-applications/templates/cilium-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -516,6 +526,7 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/coredns-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -550,6 +561,7 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/external-dns-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -590,6 +602,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/flight-analysis-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -628,6 +641,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/grafana-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -693,6 +707,7 @@ spec:
       labels:
         pod-security.kubernetes.io/warn: baseline
         trust-bundle: enabled
+
 ---
 # Source: argocd-applications/templates/jupyterhub-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -743,6 +758,7 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
+
 ---
 # Source: argocd-applications/templates/kubernetes-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -777,6 +793,7 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/local-path-provisioner-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -811,6 +828,7 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/warn: privileged
+
 ---
 # Source: argocd-applications/templates/loki-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -893,6 +911,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/mimir-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -1012,6 +1031,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/nfs-csi-driver-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -1054,6 +1074,7 @@ spec:
       labels:
         pod-security.kubernetes.io/warn: privileged
         pod-security.kubernetes.io/enforce: privileged
+
 ---
 # Source: argocd-applications/templates/node-exporter-mixin-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -1088,6 +1109,7 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
 ---
 # Source: argocd-applications/templates/odm-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -1127,6 +1149,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/onepassword-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -1155,6 +1178,7 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+
 ---
 # Source: argocd-applications/templates/postgres-operator-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -1203,6 +1227,7 @@ spec:
       labels:
         pod-security.kubernetes.io/warn: baseline
         trust-bundle: enabled
+
 ---
 # Source: argocd-applications/templates/postgres-operator-ui-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -1254,6 +1279,7 @@ spec:
       labels:
         pod-security.kubernetes.io/warn: baseline
         trust-bundle: enabled
+
 ---
 # Source: argocd-applications/templates/static-certs-application.yaml
 apiVersion: argoproj.io/v1alpha1

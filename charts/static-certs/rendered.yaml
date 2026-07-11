@@ -150,6 +150,7 @@ spec:
     rotationPolicy: Always
     size: 384
   secretName: laserjet-cert
+
 ---
 # Source: static-certs/templates/laserjet.yaml
 apiVersion: onepassword.com/v1

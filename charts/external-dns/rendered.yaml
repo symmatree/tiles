@@ -12,6 +12,7 @@ metadata:
     app.kubernetes.io/version: "0.20.0"
     app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
+
 ---
 # Source: external-dns/charts/external-dns/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -40,6 +41,7 @@ rules:
   - apiGroups: ["extensions","networking.k8s.io"]
     resources: ["ingresses"]
     verbs: ["get","watch","list"]
+
 ---
 # Source: external-dns/charts/external-dns/templates/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -60,6 +62,7 @@ subjects:
   - kind: ServiceAccount
     name: external-dns
     namespace: external-dns
+
 ---
 # Source: external-dns/charts/external-dns/templates/service.yaml
 apiVersion: v1
@@ -83,6 +86,7 @@ spec:
       port: 7979
       targetPort: http
       protocol: TCP
+
 ---
 # Source: external-dns/charts/external-dns/templates/deployment.yaml
 apiVersion: apps/v1
@@ -184,6 +188,7 @@ spec:
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
           operator: Exists
+
 ---
 # Source: external-dns/templates/clouddns-sa-secret.yaml
 apiVersion: onepassword.com/v1
@@ -195,6 +200,7 @@ type: Opaque
 spec:
   # secret name is specified in tf/modules/k8s-cluster/external-dns.tf
   itemPath: vaults/placeholder/items/placeholder-external-dns-clouddns-sa-key
+
 ---
 # Source: external-dns/charts/external-dns/templates/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
