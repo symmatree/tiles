@@ -18,6 +18,23 @@ locals {
     }
   })
 
+  # The talos provider injects a `HostnameConfig` document with `auto: stable`,
+  # which makes a node self-assign a deterministic `talos-xxx` hostname when no
+  # DHCP/platform hostname is available. After a power event that took the UniFi
+  # UDM (our DHCP source) down at boot, nodes came up under those fallback names
+  # and joined as *new* Node objects -- orphaning hostname-pinned local-path PVs
+  # and leaving collided duplicates of every node. `auto: off` keeps the nice
+  # DHCP-discovered hostnames (auto is the lowest-priority source, so normal
+  # boots are unchanged) but drops the self-assign fallback: with no DHCP name a
+  # node simply fails to join and recovers once the UDM is back, instead of
+  # joining under a bogus identity. See:
+  # https://docs.siderolabs.com/talos/v1.12/reference/configuration/network/hostnameconfig
+  hostname_auto_off_patch_yaml = yamlencode({
+    "apiVersion" = "v1alpha1"
+    "kind"       = "HostnameConfig"
+    "auto"       = "off"
+  })
+
   # See: https://docs.siderolabs.com/talos/v1.12/reference/configuration/network/layer2vipconfig
   layer2_vip_patch_yaml = yamlencode({
     apiVersion = "v1alpha1"
@@ -80,6 +97,7 @@ module "talos-vm" {
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],
+    [local.hostname_auto_off_patch_yaml],
     local.eviction_patches,
     [yamlencode({
       "machine" = {
@@ -115,6 +133,7 @@ module "talos-amd-metal" {
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],
+    [local.hostname_auto_off_patch_yaml],
     local.eviction_patches,
     [yamlencode({
       "machine" = {
@@ -157,6 +176,7 @@ module "talos-intel-metal" {
   config_patches = concat(
     [local.base_config_yaml],
     [local.common_patch_yaml],
+    [local.hostname_auto_off_patch_yaml],
     local.eviction_patches,
     [yamlencode({
       "machine" = {
