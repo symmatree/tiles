@@ -26,6 +26,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Resolve dotfiles-symm main to a concrete SHA and pass it in as a
+      # build-arg. This adopts dotfiles main automatically (no manual pin-bump
+      # PR) while keeping builds reproducible and cache-correct: the SHA is a
+      # unique ARG value, so the git-clone/ansible layer busts only when main
+      # actually moves. The resolved SHA is logged and baked into image labels.
+      - name: Resolve dotfiles-symm main
+        id: dotfiles
+        run: |
+          sha=$(git ls-remote https://github.com/symmatree/dotfiles-symm.git refs/heads/main | cut -f1)
+          if [ -z "$sha" ]; then echo "could not resolve dotfiles-symm main" >&2; exit 1; fi
+          echo "Building against dotfiles-symm main = $sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - name: Docker Metadata
         id: docker-metadata
         uses: docker/metadata-action@v6
@@ -53,6 +66,7 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ env.BASE_IMAGE }}
             BASE_TAG=${{ env.BASE_TAG }}
+            DOTFILES_REF=${{ steps.dotfiles.outputs.sha }}
           extra-args: |
             --disable-compression=false
             --cache-from=${{ env.IMAGE_NAME }}-cache
