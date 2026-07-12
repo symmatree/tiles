@@ -25,3 +25,23 @@ metadata:
 spec:
   blocks:
     - cidr: "placeholder"
+
+---
+# Source: cilium-config/templates/lb-static-pool.helm.yaml
+# Dedicated static-IP pool for LoadBalancer services (created on every cluster;
+# inert where no service opts in). A service opts in with the label below AND
+# requests a specific IP via the lbipam.cilium.io/ips annotation (the shared
+# cilium-ingress does both -- see charts/argocd-applications/values/cilium-tiles-values.yaml).
+# The /24 is hardcoded; the ingress_lb_ip in tf/nodes/prod.tfvars MUST fall
+# inside it -- keep the two in sync.
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  namespace: "cilium-config"
+  name: lb-static-pool
+spec:
+  serviceSelector:
+    matchLabels:
+      tiles.symmatree.com/static-lb: "true"
+  blocks:
+    - cidr: "10.0.130.0/24"
