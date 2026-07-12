@@ -97,7 +97,7 @@ jupyterhub:
       # IfNotPresent still fetches genuinely new builds (the tag changes) without
       # re-pulling an unchanged image. Roll forward by bumping this to the newer
       # sha-<...> tag from the build-datascience-notebook-ssh run.
-      tag: sha-bf1a791
+      tag: sha-abf26df
       pullPolicy: IfNotPresent
     storage:
       # Static shared NFS volume (templates/home-nfs.yaml) instead of a dynamic
