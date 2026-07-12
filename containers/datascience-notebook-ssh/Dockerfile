@@ -27,7 +27,11 @@ RUN apt-get update \
 
 # Dev toolchain comes from the single source of truth (dotfiles-symm), fetched
 # at build time and pinned by SHA -- no local copy to drift, no submodule.
-# Bump DOTFILES_REF to adopt upstream changes. See symmatree/tiles#607.
+# CI resolves dotfiles-symm main to its current SHA and passes it as a
+# --build-arg (see .github/workflows/build-datascience-notebook-ssh.yaml), so
+# merges to dotfiles main are adopted automatically -- no manual bump PR. The
+# pinned default below is only a fallback for local/manual `buildah bud` runs
+# that do not pass --build-arg; keep it roughly current. See symmatree/tiles#607.
 ARG DOTFILES_REPO=https://github.com/symmatree/dotfiles-symm.git
 ARG DOTFILES_REF=bded044ada2225e27a204794a0bfa9e628818461
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
