@@ -122,14 +122,24 @@ sync_argocd_admin_password() {
 		return 0
 	fi
 
-	if op item edit "${item}" --vault "${vault}" "${field}[password]=${pw}" >/dev/null 2>&1; then
+	# Update the existing password field with a plain `field=value` assignment.
+	# A `field[password]=value` *type* annotation targets a NEW field and fails
+	# on a Login item's existing password field -- that was the original bug.
+	# Capture op's stderr so a failure is diagnosable, but never print it if it
+	# could contain the secret value.
+	local op_err=""
+	if op_err=$(op item edit "${item}" --vault "${vault}" "${field}=${pw}" 2>&1 >/dev/null); then
 		echo "Updated 1Password item '${item}' (vault '${vault}', field '${field}') with the current Argo CD admin password"
 	else
 		echo "WARNING: could not update 1Password item '${item}' in vault '${vault}'." >&2
-		echo "         Ensure the item exists and the service account has write access, then set it manually from:" >&2
-		echo "         kubectl -n ${ARGOCD_NAMESPACE} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d" >&2
+		if [[ ${op_err} == *"${pw}"* ]]; then
+			echo "  op: <error withheld: it referenced the secret value>" >&2
+		else
+			printf '  op: %s\n' "${op_err}" >&2
+		fi
+		echo "  Fallback: kubectl -n ${ARGOCD_NAMESPACE} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d" >&2
 	fi
-	unset pw
+	unset pw op_err
 	return 0
 }
 sync_argocd_admin_password
