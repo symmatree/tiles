@@ -123,12 +123,14 @@ sync_argocd_admin_password() {
 	fi
 
 	# Update the existing password field with a plain `field=value` assignment.
-	# A `field[password]=value` *type* annotation targets a NEW field and fails
-	# on a Login item's existing password field -- that was the original bug.
+	# `< /dev/null` is essential: `op item edit` reads stdin as a JSON *template*
+	# whenever stdin is not a TTY (i.e. always in CI), and then fails with
+	# "invalid JSON provided" -- unrelated to the assignment. Feeding it an empty
+	# stdin makes it use only the assignment arg.
 	# Capture op's stderr so a failure is diagnosable, but never print it if it
 	# could contain the secret value.
 	local op_err=""
-	if op_err=$(op item edit "${item}" --vault "${vault}" "${field}=${pw}" 2>&1 >/dev/null); then
+	if op_err=$(op item edit "${item}" --vault "${vault}" "${field}=${pw}" </dev/null 2>&1 >/dev/null); then
 		echo "Updated 1Password item '${item}' (vault '${vault}', field '${field}') with the current Argo CD admin password"
 	else
 		echo "WARNING: could not update 1Password item '${item}' in vault '${vault}'." >&2
