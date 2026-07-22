@@ -125,6 +125,13 @@ jobs:
           pod_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/pod_cidr"
           cluster_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_name"
           external_ip_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/external_ip_cidr"
+          # Front-door LB IP for the shared Cilium ingress. Written to misc-config
+          # by Terraform (tf/modules/talos-cluster/main.tf), consumed by
+          # install-application.sh via envsubst into the root Application's
+          # valuesObject -> cilium-config lb-static-pool. Empty on tiles-test.
+          # Was missing here -> root Application got ingress_lb_ip="" -> no
+          # lb-static-pool -> cilium-ingress <pending>. See issue #627.
+          ingress_lb_ip: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/ingress_lb_ip"
           vault_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/vault_name"
           project_id: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/project_id"
           seed_project_id: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/seed_project_id"
