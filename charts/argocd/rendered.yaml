@@ -2932,7 +2932,7 @@ spec:
         name: application-controller
         env:
           - name: GOMEMLIMIT
-            value: 340MiB
+            value: 690MiB
           - name: ARGOCD_CONTROLLER_REPLICAS
             value: "1"
           - name: ARGOCD_APPLICATION_CONTROLLER_NAME
@@ -3230,7 +3230,7 @@ spec:
           failureThreshold: 3
         resources:
           limits:
-            memory: 384Mi
+            memory: 768Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
