@@ -24,6 +24,9 @@ kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.
 kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_probes.yaml"
 kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_prometheusrules.yaml"
 kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_scrapeconfigs.yaml"
+# AlertmanagerConfig: consumed by Alloy's mimir.alerts.kubernetes to push the
+# alertmanager routing (-> apprise webhook) into the Mimir alertmanager per tenant.
+kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_alertmanagerconfigs.yaml"
 # gateway-api
 kubectl apply --server-side --force-conflicts -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
 # cert-manager

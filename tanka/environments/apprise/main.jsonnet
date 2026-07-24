@@ -29,6 +29,7 @@ local apprise = {
     // Ref https://github.com/caronc/apprise-api#environment-variables
     envSecret: APP.app_settings.apprise_env,
     htpasswdSecret: APP.app_settings.apprise_admin,
+    configSecret: APP.app_settings.apprise_config,
     port: kPort.newNamed(8000, 'http'),
     ingressAnnotations: {
       'cert-manager.io/cluster-issuer': APP.app_settings.cluster_issuer,
@@ -41,9 +42,10 @@ local apprise = {
     local config = defaults + overrides,
     envSecret: op.item.new(config.envSecret, 'vaults/' + APP.vault_name + '/items/' + config.envSecret),
     htpasswd: op.item.new(config.htpasswdSecret, 'vaults/' + APP.vault_name + '/items/' + config.htpasswdSecret),
-    configPvc: kPersistentVolumeClaim.new(std.format('%s-config', config.name))
-               + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
-               + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '1Gi' }),
+    // Notification config (Slack/Gmail URLs) synced from 1Password 'apprise-config'
+    // (field config.yml), mounted read-only at /config/apprise.yml so /notify/apprise
+    // uses it. Off local-path so a node rebuild can't silently empty it (issue #635).
+    configSecret: op.item.new(config.configSecret, 'vaults/' + APP.vault_name + '/items/' + config.configSecret),
     attachPvc: kPersistentVolumeClaim.new(std.format('%s-attach', config.name))
                + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
                + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '10Gi' }),
@@ -93,7 +95,15 @@ local apprise = {
         + readinessProbe.withFailureThreshold(3),
       ])
       + kDeployment.spec.template.spec.withTerminationGracePeriodSeconds(30)
-      + k_util.pvcVolumeMount(appriseObj.configPvc.metadata.name, '/config')
+      // /config is a writable emptyDir (apprise's store/ cache lives here); the
+      // per-key notification config is layered in read-only from the secret.
+      + k_util.emptyVolumeMount('config', '/config')
+      + k_util.secretVolumeMount(
+        appriseObj.configSecret.metadata.name,
+        '/config/apprise.yml',
+        420,
+        kVolumeMount.withSubPath('config.yml') + kVolumeMount.withReadOnly(true)
+      )
       + k_util.pvcVolumeMount(appriseObj.attachPvc.metadata.name, '/attach')
       + k_util.configMapVolumeMount(
         appriseObj.nginxConfig,
