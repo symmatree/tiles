@@ -2080,22 +2080,6 @@ spec:
       - notebook.placeholder.symmatree.com
       secretName: jupyterhub-oauth2-proxy-tls
 ---
-# Source: jupyterhub/templates/jupyterhub-cert.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: jupyterhub-cert
-  namespace: "jupyterhub"
-spec:
-  dnsNames:
-    - "notebook.placeholder.symmatree.com"
-  secretName: jupyterhub-tls
-  issuerRef:
-    name: real-cert
-    kind: ClusterIssuer
-    group: cert-manager.io
-
----
 # Source: jupyterhub/templates/google-oauth-secret.yaml
 apiVersion: onepassword.com/v1
 kind: OnePasswordItem
