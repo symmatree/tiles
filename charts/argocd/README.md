@@ -206,15 +206,16 @@ kubectl logs -n argocd -l app.kubernetes.io/name=argocd-dex-server
 
 **Google login (Dex) not working:**
 
-- The most common cause: the `argocd-oauth2-proxy` Secret is missing the
-  `app.kubernetes.io/part-of: argocd` label, so ArgoCD cannot read it and the Dex
-  connector's `clientID`/`clientSecret` stay literal. The dex-server log shows
-  `config referenced '$argocd-oauth2-proxy:client-id', but key does not exist in secret`.
-  Confirm the label: `kubectl get secret -n argocd argocd-oauth2-proxy -o jsonpath='{.metadata.labels}'`.
+- On a fresh cluster, make sure the shared GCP OAuth client has BOTH redirect
+  URIs registered: `.../oauth2/callback` (proxy) and `.../api/dex/callback`
+  (Dex). A missing `/api/dex/callback` shows up as `redirect_uri_mismatch` at
+  Google.
 - Verify the Secret exists and is synced: `kubectl get onepassworditem,secret -n argocd argocd-oauth2-proxy`
-- Ensure the shared GCP OAuth client has BOTH redirect URIs registered:
-  `.../oauth2/callback` (proxy) and `.../api/dex/callback` (Dex).
-- Check Dex pod logs (see Logs section above).
+- Check Dex pod logs (see Logs section above). If they show
+  `config referenced '$argocd-oauth2-proxy:client-id', but key does not exist in secret`,
+  ArgoCD can't read the Secret -- it must carry `app.kubernetes.io/part-of: argocd`
+  (set on the OnePasswordItem in `templates/oauth2-proxy-secret.yaml`; a rendered
+  cluster gets this automatically).
 
 ### Health Checks
 
