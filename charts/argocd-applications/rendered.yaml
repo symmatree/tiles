@@ -35,29 +35,29 @@ spec:
                 create: false
                 embed: true
           extraObjects:
-            # Base Alertmanager config pushed to the Mimir alertmanager (tenant =
-            # cluster name) by the mimir.alerts.kubernetes component below. Routes
-            # every alert to the in-pod alert-forward sidecar -> Apprise. Issue #635.
-            - apiVersion: v1
-              kind: ConfigMap
+            # Per-tenant Alertmanager routing, pushed to the Mimir alertmanager by
+            # mimir.alerts.kubernetes below. Labelled by tenant so each tenant's
+            # routing is its own git object. With strategy=None this route is a
+            # tenant-wide catch-all -> the in-pod alert-forward sidecar -> Apprise.
+            # route.receiver must be a REAL receiver here (not "null"), or alerts
+            # fall through the merged config and get dropped. Issue #635.
+            - apiVersion: monitoring.coreos.com/v1alpha1
+              kind: AlertmanagerConfig
               metadata:
-                name: alertmgr-global
+                name: apprise-catchall
                 namespace: "alloy"
-              data:
-                config: |
-                  route:
-                    receiver: apprise
-                    group_by: ['alertname', 'severity']
-                    group_wait: 30s
-                    group_interval: 5m
-                    repeat_interval: 4h
-                  receivers:
-                    - name: apprise
-                      webhook_configs:
-                        # alert-forward sidecar shares the mimir-alertmanager pod,
-                        # so localhost:3000; it forwards to apprise /notify/apprise.
-                        - url: http://localhost:3000?template=alertmanager&key=apprise
-                          send_resolved: true
+                labels:
+                  mimir_tenant: 'placeholder'
+              spec:
+                route:
+                  receiver: apprise
+                receivers:
+                  - name: apprise
+                    webhookConfigs:
+                      # alert-forward sidecar shares the mimir-alertmanager pod,
+                      # so localhost:3000; it forwards to apprise /notify/apprise.
+                      - url: http://localhost:3000?template=alertmanager&key=apprise
+                        sendResolved: true
             - apiVersion: monitoring.coreos.com/v1
               kind: Probe
               metadata:
@@ -129,29 +129,37 @@ spec:
                               port:
                                 number: 4318
           alloy-singleton:
+            alloy:
+              # mimir.alerts.kubernetes is an experimental Alloy component.
+              stabilityLevel: experimental
             extraConfig: |-
               mimir.rules.kubernetes "default" {
                 address = "http://mimir-gateway.mimir.svc"
                 tenant_id = "placeholder"
               }
-              // Push the Alertmanager routing (-> apprise webhook sidecar) into the
-              // Mimir alertmanager for this tenant. global_config carries the full
-              // config; AlertmanagerConfig CRs labelled mimir.alerts=enabled merge in.
-              // Tenant is set via the X-Scope-OrgID header (no tenant_id arg here).
-              remote.kubernetes.configmap "alertmgr_global" {
-                namespace = "alloy"
-                name      = "alertmgr-global"
-              }
+              // Push per-tenant Alertmanager routing to the Mimir alertmanager. This
+              // component has no tenant_id arg, so the tenant is the X-Scope-OrgID
+              // header. global_config is only a null default -- the real routing lives
+              // in per-tenant AlertmanagerConfig CRs (label mimir_tenant=<cluster>),
+              // merged as a tenant-wide catch-all via strategy=None.
               mimir.alerts.kubernetes "default" {
                 address       = "http://mimir-gateway.mimir.svc"
-                global_config = remote.kubernetes.configmap.alertmgr_global.data["config"]
+                global_config = "global:\n  resolve_timeout: 5m\nroute:\n  receiver: \"null\"\nreceivers:\n- name: \"null\"\n"
                 http_headers  = {
                   "X-Scope-OrgID" = ["placeholder"],
                 }
                 alertmanagerconfig_selector {
                   match_labels = {
-                    "mimir.alerts" = "enabled",
+                    mimir_tenant = "placeholder",
                   }
+                }
+                alertmanagerconfig_namespace_selector {
+                  match_labels = {
+                    "kubernetes.io/metadata.name" = "alloy",
+                  }
+                }
+                alertmanagerconfig_matcher {
+                  strategy = "None"
                 }
               }
     - repoURL: https://github.com/symmatree/tiles.git
