@@ -60,9 +60,9 @@ Configuration is managed through the Application's plugin parameters:
 - **Apprise Admin**: Stored in 1Password as `{cluster_name}-apprise-admin`
   - Created by Terraform (`tf/modules/k8s-cluster/apprise.tf`)
   - Contains admin username/password and `.htpasswd` file
-- **Apprise Config**: Stored in 1Password as `apprise-config` (manually created)
-  - Contains notification service configuration (Slack, Gmail, etc.)
-  - Must be pasted into the Apprise UI if it gets wiped
+- **Apprise Config**: Stored in 1Password as `apprise-config` (shared across clusters, field `config.yml`)
+  - Contains the notification routing (Slack, Gmail, etc.)
+  - Synced to a Secret by the OnePassword operator and mounted read-only at `/config/apprise.yml`; `/notify/apprise` uses it. Edit in 1Password and restart the pod to apply -- no longer pasted into the UI, so a cluster rebuild can't silently empty it (issue #635).
 
 ### Required Infrastructure
 
@@ -145,11 +145,11 @@ kubectl logs -n apprise -l app=apprise
 - Check `.htpasswd` file is correct in the secret
 - Verify OnePasswordItem is synced: `kubectl get onepassworditem {cluster_name}-apprise-admin -n apprise`
 
-**Config lost:**
+**Config lost / not delivering:**
 
-- Apprise config is stored in PVC and may be lost if PVC is deleted
-- Restore from 1Password `apprise-config` item via the configuration UI
-- TODO: Move config to a proper provisioned secret
+- Config is provisioned from the 1Password `apprise-config` item (secret-mounted at `/config/apprise.yml`); it is not on a PVC and cannot be lost on rebuild.
+- If targets are wrong/empty, fix the `config.yml` field in the `apprise-config` 1Password item and restart the pod (`kubectl -n apprise rollout restart deploy/apprise`).
+- Confirm the sync: `kubectl -n apprise get secret apprise-config` and `kubectl -n apprise get onepassworditem apprise-config`.
 
 ### Health Checks
 
@@ -168,13 +168,13 @@ kubectl logs -n apprise -l app=apprise
 
 ### Backup Requirements
 
-- **Apprise Config**: Stored in PVC, should be backed up from 1Password `apprise-config` item
+- **Apprise Config**: Lives in the 1Password `apprise-config` item (source of truth; secret-mounted into the pod)
 - **Admin Credentials**: Stored in 1Password, backed up there
 - **Environment Secret**: Stored in 1Password, backed up there
 
 ### Known Limitations
 
-- **Config Storage**: Apprise config is stored in PVC and may be lost if PVC is deleted (should be moved to a provisioned secret)
+- **Config editing**: The notification config is secret-mounted read-only from 1Password `apprise-config` (survives rebuilds); it is not editable via the web UI -- change it in 1Password and restart the pod.
 - **Single Instance**: Apprise runs as a single instance (no HA)
 
 ## Usage
@@ -190,7 +190,7 @@ Services can send notifications to Apprise via:
 
 ### Configuration Management
 
-Apprise configuration is managed via the web UI at `https://apprise.{cluster_name}.symmatree.com/cfg/apprise`. The configuration YAML is stored in 1Password `apprise-config` item and should be pasted back into the UI if it gets wiped.
+The notification config (the `apprise` key) is provisioned declaratively: the `config.yml` field of the 1Password `apprise-config` item is synced to a Secret by the OnePassword operator and mounted read-only at `/config/apprise.yml`. To change routing, edit the item in 1Password and restart the pod. (The web UI at `/cfg/apprise` reflects the mounted config but cannot persist edits -- the mount is read-only by design so a rebuild can't empty it.)
 
 ### Key Services Pattern
 
