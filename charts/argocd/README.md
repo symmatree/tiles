@@ -96,6 +96,17 @@ After bootstrap, [`install-application.sh`](../argocd-applications/install-appli
 
 ## Access & Endpoints
 
+### Perimeter (oauth2-proxy)
+
+`argocd.{cluster}.symmatree.com` is internet-reachable and sits behind an
+oauth2-proxy front door (Google + email allowlist); `argocd-server` is
+`ClusterIP`, so the UI/API below are reachable only through that gate. The
+`oauth2-proxy:` block in `values.yaml` carries the reference config (with inline
+rationale for every flag). The shared access-path pattern, the WAN exposure
+switch, and the hardening gotchas are documented in
+[docs/remote-access.md](../../docs/remote-access.md). The Web UI auth below is the
+*inner* layer, reached only after passing the perimeter.
+
 ### Web UI
 
 - **URL**: `https://argocd.{cluster_name}.symmatree.com`

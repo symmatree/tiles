@@ -6,8 +6,40 @@ Wraps [zero-to-jupyterhub-k8s](https://z2jh.jupyter.org/) (`hub.jupyter.org/helm
 
 | URL | Purpose |
 |-----|---------|
-| `https://notebook.{cluster_name}.symmatree.com` | JupyterHub web UI (Google OAuth) |
-| `notebook-ssh.{cluster_name}.symmatree.com:22` | Direct SSH into singleuser pod |
+| `https://notebook.{cluster_name}.symmatree.com` | JupyterHub web UI, behind the oauth2-proxy perimeter (Google + email allowlist) |
+| `notebook-ssh.{cluster_name}.symmatree.com:22` | Direct SSH into singleuser pod (SSH key; **separate door**, not behind the gate) |
+
+The web UI is internet-reachable and gated by an identity-aware proxy. The access
+path, the WAN exposure switch, and the perimeter hardening gotchas are the shared
+pattern documented in [docs/remote-access.md](../../docs/remote-access.md); this
+section covers the JupyterHub-specific parts.
+
+## Access perimeter (oauth2-proxy)
+
+`prod` (and `test` on-LAN) put JupyterHub behind an
+[oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/) subchart
+(`charts/jupyterhub/Chart.yaml` dependency): Google login + an email allowlist is
+the gate, `proxy-public` is flipped to `ClusterIP` so the hub is reachable **only**
+through the gate, and TLS terminates at the shared Cilium ingress. The generic
+wiring and the `#593-#604` hardening rules live in
+[docs/remote-access.md](../../docs/remote-access.md). JupyterHub-specific notes:
+
+- **Two Google logins, one interactive.** The perimeter (oauth2-proxy) and the
+  hub (`authenticator_class: google`, `allow_all: true`) each do their own OAuth
+  round-trip on different callback paths (`/oauth2/callback` vs
+  `/hub/oauth_callback`), so they do not collide. Both reuse the **same** Google
+  client, so the inner login is a near-silent redirect -- the user sees one
+  interactive prompt. Collapsing to a single layer (hub trusting the proxy's
+  `X-Auth-Request-Email` behind a NetworkPolicy) is a tracked follow-up.
+- **Websockets.** Jupyter terminals and kernels are websocket-based; oauth2-proxy
+  passes the upgrades by default. Verified live: a terminal + kernel run through
+  the proxy.
+- **SSH is not behind the gate.** `notebook-ssh...:22` is a separate LoadBalancer
+  to the pod, gated by SSH key, LAN-only. The only WAN path to a shell is the
+  Jupyter UI terminal, which *is* behind oauth2-proxy.
+- **The gate exposes a root-capable shell** (`singleuser.uid: 0`, `GRANT_SUDO`,
+  privileged) once inside, so the allowlist is the whole ballgame -- verify it
+  (see the truth table in [docs/remote-access.md](../../docs/remote-access.md)).
 
 ## Image
 
@@ -48,6 +80,7 @@ The `ssh-service` LoadBalancer (`external-dns` → `notebook-ssh.{cluster}.symma
 | `CryptKeeper.keys` | Terraform `random_password` | `{cluster_name}-jupyterhub-hub-credentials` | Per-cluster; via `hub.existingSecret` at runtime |
 | `proxy.secretToken` (auth_token) | Chart placeholder in `values.yaml` | — | Cannot be externalized: the chart hardwires `CONFIGPROXY_AUTH_TOKEN` from the chart-managed Secret, bypassing `existingSecret`. Stable across upgrades via Helm `lookup()`. |
 | Google OAuth `client_id`/`client_secret` | Manual | `jupyterhub-oauth-client` | Shared (no cluster prefix): both clusters use the same GCP OAuth app with both redirect URIs registered. See below. |
+| oauth2-proxy gate (`client-id`/`client-secret`/`cookie-secret`) | Manual | `jupyterhub-oauth2-proxy` | Perimeter gate. `client-id`/`client-secret` **reuse** the `jupyterhub-oauth-client` values (add the `/oauth2/callback` redirect URI to that same GCP client); `cookie-secret` is a fresh URL-safe 32-byte value. See [docs/remote-access.md](../../docs/remote-access.md). |
 | SSH authorized key | Manual | `jupyterhub-ssh-key` | Shared (no cluster prefix): same keypair works across clusters. |
 
 ### OAuth scopes
