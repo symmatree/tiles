@@ -53,10 +53,21 @@ argo-cd:
             name: Google
             config:
               issuer: https://accounts.google.com
-              # Connector config values starting with "$" reference Kubernetes secrets.
-              # Format: $<secret-name>:<key>
-              clientID: $google-oauth-secret:OAUTH_CLIENT_ID
-              clientSecret: $google-oauth-secret:OAUTH_CLIENT_SECRET
+              # Values starting with "$" are resolved by ARGOCD (not Dex) against
+              # Secrets labeled app.kubernetes.io/part-of=argocd, in the form
+              # $<secret-name>:<key>. If the referenced Secret lacks that label
+              # ArgoCD cannot see it, leaves the reference literal, and Google
+              # login breaks with "key does not exist in secret" in the dex log.
+              #
+              # We reuse the oauth2-proxy perimeter's Google client for Dex: one
+              # GCP OAuth client, with BOTH redirect URIs registered on it --
+              # /oauth2/callback (proxy) and /api/dex/callback (Dex). So the
+              # argocd-oauth2-proxy Secret is the single source of the client
+              # id/secret, and it is labeled part-of=argocd in
+              # templates/oauth2-proxy-secret.yaml precisely so these two
+              # references resolve. One client to rotate; no second 1Password item.
+              clientID: $argocd-oauth2-proxy:client-id
+              clientSecret: $argocd-oauth2-proxy:client-secret
       # Override this whole value just to remove Endpoints (needed for Cilium)
       resource.exclusions: |
         ### Network resources created by the Kubernetes control plane and excluded to reduce the number of watched events and UI clutter
@@ -347,8 +358,14 @@ oauth2-proxy:
   # 'argocd-oauth2-proxy'. The vault item's field labels must be exactly
   # 'client-id', 'client-secret', 'cookie-secret' -- those become the Secret keys
   # that the chart's existingSecret path reads.
-  #   - client-id / client-secret: from the GCP OAuth2 client 'argocd-oauth-proxy'
-  #     (redirect URI https://argocd.{cluster}.symmatree.com/oauth2/callback)
+  #   - client-id / client-secret: from the GCP OAuth2 client 'argocd-oauth-proxy'.
+  #     This one client is shared by BOTH auth layers, so register both redirect
+  #     URIs on it:
+  #       https://argocd.{cluster}.symmatree.com/oauth2/callback   (this proxy)
+  #       https://argocd.{cluster}.symmatree.com/api/dex/callback  (Dex/SSO)
+  #     The Dex "Log in with Google" button reads its client from THIS Secret
+  #     (see argo-cd.configs.cm 'dex.config' above), which is why this
+  #     OnePasswordItem is labeled part-of=argocd.
   #   - cookie-secret: openssl rand -base64 32 | head -c 32 | base64
   #
   # existingSecret is required: without it the chart renders its OWN Secret of the

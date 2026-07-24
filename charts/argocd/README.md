@@ -42,7 +42,10 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 ### Environment-Specific Settings
 
 - Domain configuration is cluster-specific and set during bootstrap
-- OAuth credentials are stored in `google-oauth-secret` Kubernetes secret
+- Google login (Dex) and the oauth2-proxy perimeter share one GCP OAuth client,
+  stored in the `argocd-oauth2-proxy` Kubernetes secret (keys `client-id` /
+  `client-secret`). That secret is labeled `app.kubernetes.io/part-of: argocd` so
+  ArgoCD's `$secret:key` substitution in `dex.config` can read it.
 - Slack notification token stored in `slack-token` secret (referenced by notifications controller)
 
 ### Dependencies
@@ -56,7 +59,7 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 
 ### Required Secrets
 
-- **google-oauth-secret**: Contains `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` for Google OAuth
+- **argocd-oauth2-proxy**: Contains `client-id` / `client-secret` / `cookie-secret`. The `client-id`/`client-secret` are the shared Google OAuth client used by both the oauth2-proxy perimeter and the Dex "Log in with Google" button; the Secret is labeled `app.kubernetes.io/part-of: argocd` so Dex's references resolve.
 - **slack-token**: Slack API token for notifications (referenced as `$slack-token` in notifications config)
 - **GitHub repository secret**: For accessing private Git repositories (TODO: document secret name and format)
 
@@ -201,12 +204,17 @@ kubectl logs -n argocd -l app.kubernetes.io/name=argocd-dex-server
 - Verify `cmp-tanka` ConfigMap exists: `kubectl get configmap -n argocd cmp-tanka`
 - Check plugin generate script: `kubectl get configmap -n argocd cmp-tanka -o yaml`
 
-**OAuth not working:**
+**Google login (Dex) not working:**
 
-- Note: OAuth is currently not functional (work in progress)
-- Verify `google-oauth-secret` exists: `kubectl get secret -n argocd google-oauth-secret`
-- Check Dex pod logs (see Logs section above)
-- Verify OAuth credentials are correct in the secret
+- The most common cause: the `argocd-oauth2-proxy` Secret is missing the
+  `app.kubernetes.io/part-of: argocd` label, so ArgoCD cannot read it and the Dex
+  connector's `clientID`/`clientSecret` stay literal. The dex-server log shows
+  `config referenced '$argocd-oauth2-proxy:client-id', but key does not exist in secret`.
+  Confirm the label: `kubectl get secret -n argocd argocd-oauth2-proxy -o jsonpath='{.metadata.labels}'`.
+- Verify the Secret exists and is synced: `kubectl get onepassworditem,secret -n argocd argocd-oauth2-proxy`
+- Ensure the shared GCP OAuth client has BOTH redirect URIs registered:
+  `.../oauth2/callback` (proxy) and `.../api/dex/callback` (Dex).
+- Check Dex pod logs (see Logs section above).
 
 ### Health Checks
 
@@ -227,7 +235,7 @@ Previously, ArgoCD was deployed as an umbrella chart with a `Chart.yaml` contain
 
 ### Backup Requirements
 
-All ArgoCD configuration is defined as code in Git and can be recreated from the repository. All secrets (including `google-oauth-secret`, `slack-token`, and GitHub repository credentials) are managed via OnePasswordItem CRDs that sync from 1Password. Runtime state (application sync status, etc.) is ephemeral and recreated automatically by ArgoCD on startup.
+All ArgoCD configuration is defined as code in Git and can be recreated from the repository. All secrets (including `argocd-oauth2-proxy`, `slack-token`, and GitHub repository credentials) are managed via OnePasswordItem CRDs that sync from 1Password. Runtime state (application sync status, etc.) is ephemeral and recreated automatically by ArgoCD on startup.
 
 **No Kubernetes resource backups are needed for ArgoCD** - everything can be recreated from Git and 1Password.
 
