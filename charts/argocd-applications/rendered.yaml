@@ -35,6 +35,29 @@ spec:
                 create: false
                 embed: true
           extraObjects:
+            # Base Alertmanager config pushed to the Mimir alertmanager (tenant =
+            # cluster name) by the mimir.alerts.kubernetes component below. Routes
+            # every alert to the in-pod alert-forward sidecar -> Apprise. Issue #635.
+            - apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: alertmgr-global
+                namespace: "alloy"
+              data:
+                config: |
+                  route:
+                    receiver: apprise
+                    group_by: ['alertname', 'severity']
+                    group_wait: 30s
+                    group_interval: 5m
+                    repeat_interval: 4h
+                  receivers:
+                    - name: apprise
+                      webhook_configs:
+                        # alert-forward sidecar shares the mimir-alertmanager pod,
+                        # so localhost:3000; it forwards to apprise /notify/apprise.
+                        - url: http://localhost:3000?template=alertmanager&key=apprise
+                          send_resolved: true
             - apiVersion: monitoring.coreos.com/v1
               kind: Probe
               metadata:
@@ -110,6 +133,26 @@ spec:
               mimir.rules.kubernetes "default" {
                 address = "http://mimir-gateway.mimir.svc"
                 tenant_id = "placeholder"
+              }
+              // Push the Alertmanager routing (-> apprise webhook sidecar) into the
+              // Mimir alertmanager for this tenant. global_config carries the full
+              // config; AlertmanagerConfig CRs labelled mimir.alerts=enabled merge in.
+              // Tenant is set via the X-Scope-OrgID header (no tenant_id arg here).
+              remote.kubernetes.configmap "alertmgr_global" {
+                namespace = "alloy"
+                name      = "alertmgr-global"
+              }
+              mimir.alerts.kubernetes "default" {
+                address       = "http://mimir-gateway.mimir.svc"
+                global_config = remote.kubernetes.configmap.alertmgr_global.data["config"]
+                http_headers  = {
+                  "X-Scope-OrgID" = ["placeholder"],
+                }
+                alertmanagerconfig_selector {
+                  match_labels = {
+                    "mimir.alerts" = "enabled",
+                  }
+                }
               }
     - repoURL: https://github.com/symmatree/tiles.git
       targetRevision: 'placeholder'
@@ -194,6 +237,8 @@ spec:
             cluster_issuer: "real-cert"
             apprise_env: 'placeholder-apprise-env'
             apprise_admin: 'placeholder-apprise-admin'
+            # Shared across clusters (no prefix); field config.yml holds the Slack/Gmail URLs.
+            apprise_config: 'apprise-config'
   destination:
     server: https://kubernetes.default.svc
     namespace: apprise

@@ -142,6 +142,19 @@ Future clients to add when those components are set up:
 
 See `charts/jupyterhub/README.md` for the full secrets architecture.
 
+## Apprise
+
+Apprise (the notification service) uses three 1Password items in the cluster vault:
+
+### Terraform-managed (automatic)
+
+* `{cluster_name}-apprise-env` -- `SECRET_KEY` for the Apprise API. Created by `tf/modules/k8s-cluster/apprise.tf`.
+* `{cluster_name}-apprise-admin` -- admin username/password and `.htpasswd` for the web UI. Created by `apprise.tf`.
+
+### Manual (one-time, shared across clusters)
+
+* `apprise-config` -- **no cluster prefix**; a Secure Note with a `config.yml` field holding the actual notification routing (Slack URLs, Gmail echo, tags). Synced to an `apprise-config` Secret by the OnePassword operator and mounted read-only at `/config/apprise.yml`, so `/notify/apprise` uses it. **This is the delivery config itself -- if it is empty or wrong, alerts reach nobody.** It is intentionally declarative (secret-mounted, not the old paste-into-the-UI PVC), so it survives a cluster rebuild; edit it in 1Password and restart the apprise pod to apply. See `tanka/environments/apprise/README.md`.
+
 ## Runtime / Github Actions
 
 Github has a single secret, `ONEPASSWORD_SA_TOKEN`, which allows a workflow to call

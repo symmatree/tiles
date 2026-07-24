@@ -12,7 +12,7 @@
 * [Workload Identity](https://github.com/symmatree/tiles/issues/41) for the cluster(s),
   enrolling in federated identity so any KSA can be matched to a GSA and we don't need
   actual SA keys any longer, only the email addresses.
-* [Setup](https://github.com/symmatree/tiles/issues/30) ArgoCD notifications to be sent to Apprise
+* Alertmanager alerts -> Apprise delivery is gitops-managed via Alloy `mimir.alerts.kubernetes` (#635). The old #30 (ArgoCD's native notifications -> Apprise) is closed; revisit only if that separate channel is wanted.
 * Transition DNS and certs for external servers (unifi, home assistant, etc)
   from "tales" cluster to "tiles". Either hand over the `local.symmatree.com` domain
   or just switch to using `tiles.symmatree.com`.
