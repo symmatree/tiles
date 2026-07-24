@@ -292,10 +292,21 @@ argo-cd:
     # webhooks-github-token:
 
   repoServer:
-    # Repo-server main container: allow healthz to survive brief load spikes (default timeout 1s is tight).
+    # The Tanka CMP's MatchRepository/GenerateManifest stalls run ~60s (see the
+    # gRPC-deadline note under params below), far longer than the old 5s liveness
+    # timeout -- so the deep /healthz?full=true probe timed out and kubelet SIGKILL'd
+    # a repo-server that was only slow, crashlooping it and blocking every Tanka and
+    # multi-source app from rendering (this is #573, whose "OOM" title is a
+    # misdiagnosis: exit 137 came from "failed liveness probe", no mem limit is set,
+    # and the node was not under memory pressure). Tolerate the known stalls.
     livenessProbe:
-      timeoutSeconds: 5
-      failureThreshold: 3
+      timeoutSeconds: 30
+      failureThreshold: 6
+    # Default readiness (timeoutSeconds 1) also flaps the single repo-server out of
+    # its Service under the same load; give it headroom too.
+    readinessProbe:
+      timeoutSeconds: 10
+      failureThreshold: 6
     ## Repo-server metrics service configuration
     metrics:
       # -- Deploy metrics service

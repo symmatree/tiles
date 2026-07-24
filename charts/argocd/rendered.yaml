@@ -1929,18 +1929,18 @@ spec:
             port: metrics
           initialDelaySeconds: 10
           periodSeconds: 10
-          timeoutSeconds: 5
+          timeoutSeconds: 30
           successThreshold: 1
-          failureThreshold: 3
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             path: /healthz
             port: metrics
           initialDelaySeconds: 10
           periodSeconds: 10
-          timeoutSeconds: 1
+          timeoutSeconds: 10
           successThreshold: 1
-          failureThreshold: 3
+          failureThreshold: 6
         resources:
           {}
         securityContext:
