@@ -153,6 +153,16 @@ argo-cd:
     env:
     - name: GOMEMLIMIT
       value: "690MiB"  # ~90% of the 768Mi memory limit above; GOMEMLIMIT uses MiB/GiB units
+    # client-go's own rate limiter (not server-side API Priority & Fairness) was
+    # the dominant bottleneck: at defaults (QPS 50 / Burst 100) the controller
+    # logged "client-side throttling, not priority and fairness ... Waited before
+    # sending request" with delays up to ~25m during cold-start cache sync, which
+    # kept it from ever going Ready. The control plane has ample headroom, so lift
+    # the client limits. Applied to all argocd components via the shared env var.
+    - name: ARGOCD_K8S_CLIENT_QPS
+      value: "100"
+    - name: ARGOCD_K8S_CLIENT_BURST
+      value: "200"
     ## Application controller metrics configuration
     metrics:
       # -- Deploy metrics service
