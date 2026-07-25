@@ -139,6 +139,35 @@ A config *apply* is not a *reset*. PKI is preserved across the recreate (both ap
 2. Run **`nodes-plan-apply`** with **apply** for that workspace (**`metal_apply_mode`** defaults to **`reboot`**, which the rebuild needs).
 3. Verify: `talosctl -n <NODE_IP> get members` and `kubectl get nodes` show the metal node; any pinned pods (e.g. `ntrip`, `mavproxy`) return to `Running`.
 
+## Recovery: power loss and phantom `talos-xxx` nodes
+
+**Symptom.** After a power event, one or both **bare-metal** nodes appear in `kubectl get nodes` under Talos's fallback name `talos-<rand>` (e.g. `talos-acj-gi5`), **Ready**, while the real `acebase` / `lancer` Node objects sit **NotReady** with the *same* INTERNAL-IP. Pods pinned to the real node by `kubernetes.io/hostname` (GNSS: `ntrip/rtkbase`, `mavproxy`; anything on a hostname-pinned `local-path` PV) go **Pending**. (Observed 2026-07-11 and again 2026-07-25.)
+
+**Mechanism.** The siderolabs/talos provider injects `HostnameConfig: {auto: stable}` (a provider default, not in this repo). A node's hostname comes from **DHCP** -- the UniFi fixed-IP reservation hands back the name -- and `auto: stable` is only the *fallback* that self-assigns a deterministic `talos-<rand>` when no hostname is available at boot. On a whole-site power loss the bare-metal nodes boot fastest, **before the UniFi UDM (the DHCP server) is back serving names**, so they get their reserved **IP** but **no hostname**, fall through to `auto: stable`, and register as a brand-new Node object. That orphans hostname-pinned `local-path` PVs and leaves a NotReady duplicate of each node. The Proxmox **VMs** are unaffected because they boot later (after the Proxmox hosts), by which time DHCP is back.
+
+> **DNS is a red herring here -- do not fixate on it.** The hostname is delivered by **DHCP**, not DNS. Reverse DNS (PTR) for the node IPs is served by **raconteur (the Synology)** because UniFi does not serve the reverse zone; a missing or stale PTR during the outage is a *symptom of the same power event*, not a cause of the naming, and has **no bearing** on whether a rebooted node comes back correctly named. In the 2026-07-25 event `acebase` (PTR present) and `lancer` (PTR absent) recovered **identically** on reboot. Look at the UDM/DHCP, not DNS.
+
+**Recovery (once the UDM is back serving DHCP):**
+
+1. **Reboot each mis-named metal node** so it re-DHCPs and picks up its reserved hostname:
+
+   ```bash
+   talosctl --talosconfig ~/.talos/tiles.yaml reboot --nodes <NODE_IP>   # e.g. 10.0.99.14 (acebase), 10.0.128.51 (lancer)
+   ```
+
+   A plain `terraform apply` will **not** do this: the metal config is unchanged, so `talos_machine_configuration_apply` is a no-op and never reboots (see [Rebuilds](#rebuilds-metal-reapply--reboot)). Reboot directly via `talosctl`, or use `taint-vms` + apply.
+2. **Confirm** the node returns under its real name, Ready, with age reset: `kubectl get nodes -o wide`. The old `talos-<rand>` object flips NotReady.
+3. **Delete the phantom Node and its stale CiliumNode.** Safe because the phantom is NotReady and carries only unschedulable DaemonSet pods (`cilium`, `alloy`, `nfs-csi-node`), while the real node -- same INTERNAL-IP -- is back Ready:
+
+   ```bash
+   kubectl delete node       talos-<rand> [talos-<rand2>]
+   kubectl delete ciliumnode talos-<rand> [talos-<rand2>]   # cilium-operator normally GCs these on node deletion; do it by hand if the operator is unhealthy
+   ```
+
+**Gotcha -- pinned pods stay Pending after the node is Ready.** A freshly-rebooted node carries the **`node.cilium.io/agent-not-ready:NoSchedule`** taint, which is removed by **cilium-operator** (not the agent) once the node's cilium agent is healthy. If `cilium-operator` is itself unhealthy (e.g. `CrashLoopBackOff`), the taint is **never removed**, so hostname-pinned pods (`rtkbase`, `mavproxy`) stay `Pending` even though the node and its cilium agent are Ready. Check `kubectl -n cilium get pods | grep operator` first. Since the taint's precondition (agent ready) is already satisfied, a safe stopgap is to remove it by hand: `kubectl taint node <name> node.cilium.io/agent-not-ready-`.
+
+**History / the real fix.** The durable fix -- pinning a static `machine.network.hostname` per node so naming never depends on boot-time DHCP -- was proposed after 2026-07-11 but **not implemented**. The first attempt (`HostnameConfig auto: off`, [PR #610](https://github.com/symmatree/tiles/pull/610)) is **invalid** on a real node: `off` is the enum zero value, so with no static `hostname` Talos rejects the config (`either 'auto' or 'hostname' must be set`). It passed `talosctl validate` as a false positive and caused a prod outage when applied -- reverted in [PR #611](https://github.com/symmatree/tiles/pull/611). A valid static-`hostname:` pin (hostname *is* set, so the config is accepted) remains the real fix and **must be validated on the test cluster first**, not just with `talosctl validate`.
+
 ## Related docs
 
 - [talos.md](talos.md) -- version pin, installer URL shape, `talosctl`
