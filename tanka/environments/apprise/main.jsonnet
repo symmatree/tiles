@@ -92,7 +92,10 @@ local apprise = {
         + healthProbe(livenessProbe)
         + livenessProbe.withFailureThreshold(6)
         + healthProbe(readinessProbe)
-        + readinessProbe.withFailureThreshold(3),
+        + readinessProbe.withFailureThreshold(3)
+        // 3-day peak working-set ~108Mi (Mimir); request=limit=128Mi.
+        + kContainer.resources.withRequests({ memory: '128Mi' })
+        + kContainer.resources.withLimits({ memory: '128Mi' }),
       ])
       + kDeployment.spec.template.spec.withTerminationGracePeriodSeconds(30)
       // /config is a writable emptyDir (apprise's store/ cache lives here); the
