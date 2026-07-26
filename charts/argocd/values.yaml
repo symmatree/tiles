@@ -134,8 +134,8 @@ argo-cd:
       otlp.address: ""
       server.insecure: true
       # Cap concurrent manifest generation and git ls-remote during cold start (see repoServer.livenessProbe).
-      reposerver.parallelism.limit: "4"
-      reposerver.git.lsremote.parallelism.limit: "4"
+      reposerver.parallelism.limit: "2"
+      reposerver.git.lsremote.parallelism.limit: "2"
       # Tanka CMP MatchRepository / GenerateManifest stalls are observed to last
       # ~60s and consistently hit the default controller -> repo-server gRPC
       # deadline of 60s, leaving the affected apps stuck in Unknown. We have
@@ -292,6 +292,14 @@ argo-cd:
     # webhooks-github-token:
 
   repoServer:
+    # Requests only (no limit yet): give the scheduler a realistic footprint so
+    # the repo-server pod stops bin-packing onto a full node as if it needs zero
+    # RAM. Sized from 21d Mimir working-set (repo-server container ~170Mi avg,
+    # tanka sidecar ~193Mi avg -- tanka is the bigger of the two). A limit is
+    # deferred until we see the effect of the parallelism 4->2 reduction.
+    resources:
+      requests:
+        memory: 160Mi
     # The Tanka CMP's MatchRepository/GenerateManifest stalls run ~60s (see the
     # gRPC-deadline note under params below), far longer than the old 5s liveness
     # timeout -- so the deep /healthz?full=true probe timed out and kubelet SIGKILL'd
@@ -321,6 +329,9 @@ argo-cd:
       - name: tanka
         # We need git for downloading dependencies with jb.
         image: prontotools/alpine-git-curl:latest
+        resources:
+          requests:
+            memory: 192Mi
         # install jb and tk then start the argocd-cmp-server
         command:
           - sh

@@ -280,6 +280,12 @@ cilium:
   # Configure Cilium Envoy options.
   envoy:
     enabled: true
+    # 3-day peak working-set ~91Mi (Mimir); request/limit sized above it.
+    resources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     # -- Roll out cilium envoy pods automatically when configmap is updated.
     rollOutPods: true
     # Ingress/gateway Envoy stream_idle_timeout (default 300s). ArgoCD UI grpc-web Watch

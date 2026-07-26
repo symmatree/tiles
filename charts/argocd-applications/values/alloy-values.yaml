@@ -67,6 +67,13 @@ clusterMetrics:
   node-exporter:
     enabled: true
     deploy: true
+    # 3-day peak working-set ~31Mi (Mimir). Path assumes the prometheus-node-exporter
+    # subchart reads resources here; the render-diff confirms it lands on the DaemonSet.
+    resources:
+      requests:
+        memory: 64Mi
+      limits:
+        memory: 128Mi
     metricsTuning:
       useDefaultAllowList: true
       useIntegrationAllowList: true
