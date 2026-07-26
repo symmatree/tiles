@@ -289,10 +289,10 @@ data:
   otlp.address: ""
   redis.server: argocd-redis:6379
   repo.server: argocd-repo-server:8081
-  reposerver.git.lsremote.parallelism.limit: "4"
+  reposerver.git.lsremote.parallelism.limit: "2"
   reposerver.log.format: text
   reposerver.log.level: trace
-  reposerver.parallelism.limit: "4"
+  reposerver.parallelism.limit: "2"
   reposerver.repo.cache.expiration: 30m
   server.dex.server: https://argocd-dex-server:5556
   server.dex.server.strict.tls: "false"
@@ -1321,7 +1321,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-applicationset-controller
@@ -1616,7 +1616,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
         checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2
@@ -1942,7 +1942,8 @@ spec:
           successThreshold: 1
           failureThreshold: 6
         resources:
-          {}
+          requests:
+            memory: 160Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -1964,6 +1965,9 @@ spec:
           /var/run/argocd/argocd-cmp-server
         image: prontotools/alpine-git-curl:latest
         name: tanka
+        resources:
+          requests:
+            memory: 192Mi
         securityContext:
           runAsNonRoot: true
           runAsUser: 999
@@ -1989,7 +1993,8 @@ spec:
         imagePullPolicy: IfNotPresent
         name: copyutil
         resources:
-          {}
+          requests:
+            memory: 160Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -2076,7 +2081,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
         checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2
@@ -2540,7 +2545,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
         checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2
@@ -2920,7 +2925,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
         checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2

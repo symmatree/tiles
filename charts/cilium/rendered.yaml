@@ -2091,6 +2091,11 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "7445"
         
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            memory: 128Mi
         securityContext:
           seLinuxOptions:
             level: s0

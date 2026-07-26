@@ -1276,6 +1276,11 @@ spec:
               drop:
               - ALL
             readOnlyRootFilesystem: true
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 128Mi
       nodeSelector:
         kubernetes.io/os: "linux"
         node-role.kubernetes.io/control-plane: ""
@@ -1478,6 +1483,11 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              memory: 64Mi
       nodeSelector:
         kubernetes.io/os: "linux"
         node-role.kubernetes.io/control-plane: ""
