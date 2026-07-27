@@ -105,11 +105,14 @@ datasetsPvc: datasetsPvc,
 local nodeOdmLabels = {
   app: 'nodeodm',
 },
+// Match lancer's taint (dedicated=heavy:PreferNoSchedule) so nodeodm can land on
+// it via the prod-only nodeSelector below -- same pin the jupyterhub singleuser
+// uses. The old dedicated=nodeodm toleration was a no-op (no such taint exists).
 local nodeOdmToleration = {
   key: 'dedicated',
   operator: 'Equal',
-  value: 'nodeodm',
-  effect: 'NoSchedule',
+  value: 'heavy',
+  effect: 'PreferNoSchedule',
 },
 local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
   kContainer.new('nodeodm', image='opendronemap/nodeodm')
@@ -120,6 +123,12 @@ local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
 + kDeployment.spec.selector.withMatchLabels(nodeOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(nodeOdmLabels)
 + kDeployment.spec.template.spec.withTolerationsMixin([nodeOdmToleration])
+// Prod-only: pin the big nodeodm (6Gi + image unpack) to lancer (128GB metal),
+// the reserved heavy-workload node -- keeps it off the packed g2/g3 workers.
+// Test has no lancer, so no nodeSelector there.
++ (if APP.cluster_name == "tiles"
+   then kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': 'lancer' })
+   else {})
 + kDeployment.emptyVolumeMount("working-dir", '/cm/local'),
 nodeOdmDeployment: nodeOdmDeployment,
 local nodeOdmService = k_util.serviceFor(nodeOdmDeployment),

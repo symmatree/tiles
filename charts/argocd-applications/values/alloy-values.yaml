@@ -67,13 +67,11 @@ clusterMetrics:
   node-exporter:
     enabled: true
     deploy: true
-    # 3-day peak working-set ~31Mi (Mimir). Path assumes the prometheus-node-exporter
-    # subchart reads resources here; the render-diff confirms it lands on the DaemonSet.
-    resources:
-      requests:
-        memory: 64Mi
-      limits:
-        memory: 128Mi
+    # Intentionally BestEffort (no request/limit). node-exporter is a
+    # must-run-on-every-node DaemonSet, so a memory *request* can block it from a
+    # node whose allocatable is fully committed -- and it can't relocate, so that
+    # node just goes dark. Hit exactly that on wk-3 (99% committed) with a 64Mi
+    # request. Its ~31Mi footprint is trivial; keep it schedulable everywhere.
     metricsTuning:
       useDefaultAllowList: true
       useIntegrationAllowList: true
