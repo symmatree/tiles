@@ -105,6 +105,14 @@ topk(20, count by (__name__) ({cluster="bond"}))
 Blocks, ruler, and alertmanager state live on the shared **NFS** volume mounted at
 `/mnt/mimir-nfs` (`filesystem` backend). See [`nfs-storage-architecture.md`](nfs-storage-architecture.md).
 
+## Analysis notebooks
+
+Standing capture-then-analyze notebooks (see [notebooks.md](notebooks.md), #644) in
+[`notebooks/`](../notebooks/): [`mimir-health.ipynb`](../notebooks/mimir-health.ipynb)
+(general status + logs/alerts cross-checks), [`mimir-usage.ipynb`](../notebooks/mimir-usage.ipynb)
+(tenants/series budget/capacity), [`mimir-nolgtm.ipynb`](../notebooks/mimir-nolgtm.ipynb)
+(kube-API-only assessment for when Mimir can't answer about itself).
+
 ## Related
 
 - [`monitoring-mixins.md`](monitoring-mixins.md) — recording/alerting rules
