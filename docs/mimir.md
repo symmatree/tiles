@@ -5,6 +5,22 @@ deployed by Argo CD via [`charts/argocd-applications/templates/mimir-application
 Static values are in [`charts/argocd-applications/values/mimir-values.yaml`](../charts/argocd-applications/values/mimir-values.yaml);
 per-cluster overrides in `mimir-<cluster>-values.yaml`.
 
+## Design decisions
+
+Mostly a stock mimir-distributed deployment; the deliberate choices (moved here from
+the fables KB, where this was `Tiles/Software/mimir.md`):
+
+- **Tenanted from day one**, though so far a single active tenant per cluster --
+  expecting external resources to push eventually.
+- **Mimir Alertmanager for metrics-based alerting, not Grafana alerting.** Based on a
+  Grafana dev's comment on a bug recommending exactly this split: use Grafana alerting
+  only for combining multiple datasources or other fanciness only it can do.
+  (Per-tenant alert routing since reworked in #635.)
+- **No self-scraping**: metrics are pushed to it from Alloy; rules are pushed to it by
+  Alloy; it evaluates and sends alerts.
+- **Notifications** go through a sidecar that accepts a webhook and reformats for
+  AppRise.
+
 ## Tenancy
 
 Mimir runs with **`multitenancy_enabled: true`** and **`tenant_federation.enabled: true`**.
@@ -31,7 +47,10 @@ Set under `mimir.structuredConfig.limits`:
   prod was hitting the per-tenant active-series cap and refusing edge (Synology) metrics.
 - **`cardinality_analysis_enabled: true`** — enables the on-demand cardinality API
   (see below). Default is `false`.
-- `max_fetched_chunks_per_query`, `ruler_max_rules_per_rule_group`.
+- `max_fetched_chunks_per_query`, `ruler_max_rules_per_rule_group` (raised from the
+  default 20 -- first to 50 for real ~26-rule groups, currently 100), and
+  `ruler_max_rule_groups_per_tenant` (70 -> 200, 54e8682). Live values are visible in
+  `cortex_limits_defaults`.
 
 ## Self-monitoring
 
