@@ -1370,3 +1370,42 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+
+---
+# Source: argocd-applications/templates/vio-offline-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vio-offline
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: vio-offline
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: app_settings
+          map:
+            nfs_server: 'placeholder'
+            datasets_nfs_path: 'placeholder'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vio-offline
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
