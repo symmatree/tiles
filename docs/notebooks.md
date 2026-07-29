@@ -6,12 +6,36 @@ does the thinking; the notebook does the data collection -- instead of an agent
 re-deriving "check mimir health" through dozens of ad-hoc tool calls each
 session, it reads one artifact whose rote layer is mechanized and re-runnable.
 Tracking issue: [#644](https://github.com/symmatree/tiles/issues/644). Deeper
-design rationale lives in the facts KB (`notebook-analysis/design-intent.md`);
-the first exemplar of the pattern is `flight-analysis.ipynb` in the fables repo.
+design rationale lives in the facts KB (`notebook-analysis/design-intent.md`,
+esp. section 2); the first exemplar of the pattern is `flight-analysis.ipynb` in
+the fables repo.
+
+Two ideas justify the form (design-intent.md section 2):
+
+- **Notebook-as-UI (rendering-surface).** A cell is *both* source (re-runnable,
+  diffable) and rendered output (the human sees the chart) -- one object, two
+  views, no "diagram stale relative to its code" seam. It lives **outside any one
+  agent's transcript scope**, shared like a git working tree: many agents, you,
+  and VS Code all point at the same `.ipynb`. The headless render is
+  self-validating -- a broken cell fails the run, so the loop closes without a
+  human in it.
+- **Notebook-as-dense-source-of-tokens (agent-economics).** You are not burning
+  40k tokens of context re-deriving log-scraping mechanics so 2k tokens of
+  judgment can happen at the end; you spend almost no context on the mechanics
+  and hand the agent a tight, pre-digested artifact to reason about. Higher-order
+  context in, better judgment out, cheaper -- and it checks the *same* things
+  every time instead of subtly different ones.
+
+Where this sits relative to alerting: **alerting is the push path** (something is
+wrong -> tell me); **these notebooks are the pull path** (something seems off, or
+I'm changing something -> show me everything densely). Same underlying capability
+viewed from the two ends.
 
 Current notebooks: [`notebooks/`](../notebooks/) -- `mimir-health.ipynb`,
-`mimir-usage.ipynb`, `mimir-nolgtm.ipynb`, sharing
-[`nb_capture.py`](../notebooks/nb_capture.py).
+`mimir-usage.ipynb`, `mimir-nolgtm.ipynb`, `loki-health.ipynb`,
+`loki-usage.ipynb`, `loki-nolgtm.ipynb`, sharing
+[`nb_capture.py`](../notebooks/nb_capture.py). Roadmap for the rest of the stack:
+see **Component roadmap** below.
 
 ## The shape
 
@@ -59,6 +83,28 @@ a different problem; revisit placement then.
   direct HTTP probes); the subject may appear as a labeled system-under-test
   smoke check, never as an instrument.
 
+## Component roadmap
+
+The pattern repeats across the stack. Each row is a tracking issue with the
+component specifics and query hints already worked out, so a future agent does
+not have to rediscover them. **Special-collection** rows are different in kind:
+they assess whether an *edge push source* is delivering (freshness/completeness
+against Mimir+Loki), not whether a deployed component is healthy.
+
+| Subject | Notebooks | Status | Issue |
+| --- | --- | --- | --- |
+| Mimir | health, usage, no-LGTM | built | [#644](https://github.com/symmatree/tiles/issues/644) |
+| Loki | health, usage, no-LGTM | built | [#649](https://github.com/symmatree/tiles/issues/649) |
+| Grafana | health, no-monitoring | planned | [#650](https://github.com/symmatree/tiles/issues/650) |
+| Alloy (head-end collection) | health, no-monitoring | planned | [#651](https://github.com/symmatree/tiles/issues/651) |
+| Synology / Raconteur (edge, special) | ingestion; later: hardware values | planned | [#652](https://github.com/symmatree/tiles/issues/652) |
+| Proxmox LXC (edge, special) | ingestion; later: hardware values | planned | [#653](https://github.com/symmatree/tiles/issues/653) |
+
+The **later hardware-values** notebooks (SD/SSD/SMART errors, temperatures, fan
+RPM) are deliberately deferred: prove the ingestion path first, then read the
+values. They read the *values* of edge hardware metrics, not their presence -- a
+different job from an ingestion notebook, filed only once ingestion is trusted.
+
 ## Authoring rules (earned in #644 / fables#11)
 
 - **Read the deployed mixin's alerts and dashboards first.** They are the
@@ -79,6 +125,20 @@ a different problem; revisit placement then.
   catches what the curated queries filtered out.
 - **Do not wildcard everything.** Each notebook collects a curated set; the
   deliberate overlap between independent views is the safety net, not volume.
+- **Totals + recency beat a windowed mean for episodic counters** (discards,
+  errors, restarts). A mean rate over a long window collapses time and dresses a
+  past spike as an ongoing condition -- the loki-usage first run showed ~790k
+  discarded lines as a nonzero 7d *mean* when in fact zero had been dropped in the
+  last 24h. Report `increase(...[window])` as a total alongside a recent
+  (e.g. 24h) slice, and let the finding say "historical, not ongoing" when the
+  recent slice is empty. The health notebook's shorter window is the natural
+  cross-check on the usage notebook's longer one; when they disagree, that is the
+  signal, not noise.
+- **Mixin thresholds when the mixin is deployed; upstream mixin (cited) when it
+  is not.** Mimir's mixin alerts run in-cluster; Loki's do not
+  (`monitoring.rules.enabled: false`), so the loki notebooks source thresholds
+  from the *upstream* loki-mixin and cite each one inline. Either way, a findings
+  threshold that cannot name its source is invented -- fix that before shipping.
 - Notebooks are code-first: brief markdown header with links out, short
   comments where the why is non-obvious. Substantial prose belongs in docs.
 
@@ -97,15 +157,34 @@ a different problem; revisit placement then.
   changes or the observation is worth recording, not on a timer (a scheduled
   runner writing rendered outputs to the NAS is the follow-up in #644).
 
-## Environment facts (verified 2026-07-27)
+## Environment facts (verified 2026-07-27; Loki facts 2026-07-29)
 
 - Mimir: `http://mimir-gateway.mimir.svc`, header `X-Scope-OrgID: tiles`.
   Alertmanager API at `<gateway>/alertmanager/api/v2/alerts`. Configured
   limits appear in `cortex_limits_defaults` (not `_overrides`).
-- Loki: `http://loki.loki.svc:3100` (not loki-gateway), same tenant header.
+- Loki: `http://loki.loki.svc:3100` (SingleBinary, `gateway.enabled: false`, so
+  no loki-gateway), same `X-Scope-OrgID: tiles` header (`auth_enabled: true`).
   `detected_level` is structured metadata: filter with
   `{...} | detected_level=~"error|warn"` as a pipeline stage -- in a stream
   selector it silently matches nothing.
+- Loki self-metrics (`loki_*`) are scraped **into Mimir** via serviceMonitor;
+  query them through `mimir-gateway.mimir.svc`, not Loki. Loki's own HTTP API is
+  used only for its logs (LogQL). Loki's mixin **rules are not deployed**
+  (`monitoring.rules.enabled: false`); thresholds come from the upstream
+  loki-mixin (see the authoring rule above).
+- Loki gotchas the notebooks bake around: (a) `loki-canary` (a DaemonSet) writes
+  and reads back a known line per node -- `loki_canary_missing_entries_total` /
+  `_mismatched_entries_total` are the sharpest end-to-end "logs actually flow"
+  signal, their own health section. (b) Compaction recency is
+  `loki_boltdb_shipper_compact_tables_operation_last_successful_run_timestamp_seconds`;
+  `loki_compactor_apply_retention_*` reads 0 when retention is disabled -- a
+  silent-empty trap. (c) `loki_ring_members` in SingleBinary exposes a series per
+  `(name,state)` including `Unhealthy` (value 0 when healthy) -- the value is the
+  count, so `{state="Unhealthy"}` is correct, but do not misread the series
+  *count*. (d) Loki exports no effective per-tenant limits as metrics; the usage
+  notebook reports consumption and flags limit-shaped discards, and the ceilings
+  live in `loki-values.yaml` config. (e) PVCs: `loki-loki-data` (NFS RWX,
+  chunks/rules) plus `storage-loki-0` (local-path, WAL) -- both must be Bound.
 - The JupyterHub singleuser pod's kubectl has read-only list access for
   pods/events/services/pvc (verified in the mimir namespace); the no-LGTM
   pattern depends on this.
