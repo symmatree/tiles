@@ -8,7 +8,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "3.7.1"
+      targetRevision: "3.8.11"
       chart: k8s-monitoring
       helm:
         valueFiles:
