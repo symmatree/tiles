@@ -8,8 +8,11 @@ to score against the FC EKF.
 
 ## What it does
 
-A `CronJob` (`0 5 * * *` UTC -- an hour after flight-analysis, whose output the VIO-quality notebook
-consumes) that, for every `*.feat` under the NAS `flights` share (`/mnt/flights`):
+**On-demand** (the CronJob ships `suspend: true` -- coordinator #139): now that the mainline
+analysis compares the onboard `VISP` directly, offline regen is a *leverage / gap-fill* tool
+(config sweeps, or flights that lack an online pose), not a nightly mainline. Trigger a run
+manually (see below); the `0 5 * * *` schedule is retained but inert until someone flips
+`suspend` back. For every `*.feat` under the NAS `flights` share (`/mnt/flights`) it:
 
 - regenerates `<stem>.vinspose.csv` -- the VINS trajectory (`t,qw..qz,px..pz,vx..vz`) -- via
   `vio-offline-runner` (`coordinator/containers/vio-estimator/offline_runner.py`, baked into the image);

@@ -92,7 +92,13 @@ local volumes = [
 
 local cronJob =
   kCronJob.new('vio-offline')
-  + kCronJob.spec.withSchedule('0 5 * * *')  // after flight-analysis (04:00 UTC); vinspose feeds vio-quality
+  // On-demand, not a nightly sweep (coordinator #139): now that the mainline compares onboard
+  // VISP directly, offline regen is a leverage/gap-fill tool (config sweeps, flights missing
+  // online pose), triggered manually via `kubectl create job --from=cronjob/vio-offline ...`.
+  // suspend=true keeps the manifest/jobTemplate but stops the schedule; the schedule is retained
+  // so re-enabling is a one-line flip if we later want gated nightly regen.
+  + kCronJob.spec.withSuspend(true)
+  + kCronJob.spec.withSchedule('0 5 * * *')  // retained for a future re-enable; inert while suspended
   + kCronJob.spec.withConcurrencyPolicy('Forbid')
   + kCronJob.spec.withSuccessfulJobsHistoryLimit(3)
   + kCronJob.spec.withFailedJobsHistoryLimit(3)
