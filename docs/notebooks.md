@@ -96,7 +96,7 @@ against Mimir+Loki), not whether a deployed component is healthy.
 | Mimir | health, usage, no-LGTM | built | [#644](https://github.com/symmatree/tiles/issues/644) |
 | Loki | health, usage, no-LGTM | built | [#649](https://github.com/symmatree/tiles/issues/649) |
 | Grafana | health, no-monitoring | planned | [#650](https://github.com/symmatree/tiles/issues/650) |
-| Alloy (head-end collection) | health, no-monitoring | planned | [#651](https://github.com/symmatree/tiles/issues/651) |
+| Alloy (head-end collection) | health, no-monitoring | built | [#651](https://github.com/symmatree/tiles/issues/651) |
 | Synology / Raconteur (edge, special) | ingestion; later: hardware values | planned | [#652](https://github.com/symmatree/tiles/issues/652) |
 | Proxmox LXC (edge, special) | ingestion; later: hardware values | planned | [#653](https://github.com/symmatree/tiles/issues/653) |
 
@@ -188,6 +188,18 @@ different job from an ingestion notebook, filed only once ingestion is trusted.
 - The JupyterHub singleuser pod's kubectl has read-only list access for
   pods/events/services/pvc (verified in the mimir namespace); the no-LGTM
   pattern depends on this.
+- Alloy (namespace `alloy`, `k8s-monitoring` chart) self-metrics (`alloy_*`,
+  `prometheus_remote_storage_*`, `loki_write_*`, `otelcol_receiver_*`) are
+  scraped into Mimir; that they are fresh is itself proof the Alloy->Mimir path
+  works. It is deployed as several instances: `alloy-metrics` (scrape +
+  remote_write), `alloy-logs` (DaemonSet), `alloy-receiver` (OTLP `:4318` for the
+  edge feeds), `alloy-singleton`, and the operator. **`alloy-singleton` runs
+  `mimir.rules.kubernetes` and `mimir.alerts.kubernetes`** -- i.e. it is what
+  syncs `PrometheusRule` + `AlertmanagerConfig` CRs into the Mimir ruler and
+  alertmanager, so if it is unhealthy, cluster alerting silently stops updating
+  (found live: [#656](https://github.com/symmatree/tiles/issues/656)). Each Alloy
+  instance serves `/-/ready` on `:12345` (the no-mon probe target); the metrics
+  WAL is emptyDir, so the `alloy` namespace normally has no PVCs.
 
 ## Known limitations
 
