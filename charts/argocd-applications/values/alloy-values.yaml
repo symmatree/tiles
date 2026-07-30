@@ -98,8 +98,13 @@ clusterEvents:
   enabled: true
   logFormat: json
 
+# Talos has no systemd journal, so the chart's journal-based node logs
+# (loki.source.journal on /var/log/journal) fail on every node -- a permanent
+# unhealthy component (#662). Talos instead writes machine/service + kernel logs
+# to /var/log/*.log; we collect those via loki.source.file in alloy-logs.extraConfig
+# below. So disable the journal source here rather than leaving it broken.
 nodeLogs:
-  enabled: true
+  enabled: false
 
 podLogs:
   enabled: true
@@ -163,6 +168,39 @@ alloy-logs:
     mounts:
       varlog: true
       dockercontainers: false
+  # Collect Talos node logs from /var/log/*.log (machined, kubelet, kernel, apid,
+  # controller-runtime, cri, containerd, ...) -- the machine-level logs otherwise
+  # only reachable via talosctl. This container already mounts /var/log and runs
+  # as root, so it can read the 0640 files. Ships to the same localLoki destination
+  # as pod logs. Replaces the broken journal source (nodeLogs disabled above, #662).
+  extraConfig: |-
+    local.file_match "talos" {
+      path_targets = [{
+        __path__ = "/var/log/*.log",
+        job      = "integrations/talos",
+        instance = sys.env("HOSTNAME"),
+      }]
+    }
+    loki.source.file "talos" {
+      targets    = local.file_match.talos.targets
+      forward_to = [loki.process.talos.receiver]
+    }
+    loki.process "talos" {
+      // service label from the file basename: machined, kubelet, kernel, apid, ...
+      stage.regex {
+        source     = "filename"
+        expression = "/var/log/(?P<service>[^/]+)\\.log$"
+      }
+      stage.labels {
+        values = { service = "" }
+      }
+      stage.static_labels {
+        values = { source = "talos" }
+      }
+      // Ingestion-time on purpose (no embedded-timestamp parse): tailing existing /
+      // rotated content on first start would otherwise be rejected 'entry too far behind'.
+      forward_to = [loki.write.localloki.receiver]
+    }
 
 alloy-receiver:
   enabled: true
