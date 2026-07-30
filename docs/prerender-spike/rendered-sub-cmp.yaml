@@ -1,0 +1,68 @@
+# Example (NOT wired into the running repo-server yet) -- the sync-time swap.
+#
+# This is the whole "runtime rendering" cost under the pre-render model: a literal
+# token replace over already-rendered YAML. No jsonnet, no `jb install`, no `tk
+# show`, no flock -- the slow, fragile work (charts/argocd/templates/tanka.yaml)
+# has moved to CI. Generation here is a sub-second sed.
+#
+# CRITICAL: this is a LITERAL token replace, never `envsubst`/`${VAR}` expansion.
+# Rendered manifests are full of legitimate `$`/`${...}` (Alloy/River config, Loki
+# and Mimir env expansion, shell scripts in ConfigMaps). A blind envsubst would
+# corrupt those. The sentinel `@@TILES_PROJECT@@` contains no `$` and cannot
+# collide with shell/kubelet expansion.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmp-rendered-sub
+  namespace: argocd
+data:
+  plugin.yaml: |
+    apiVersion: argoproj.io/v1alpha1
+    kind: ConfigManagementPlugin
+    metadata:
+      name: rendered-sub
+    spec:
+      # The Application selects this plugin explicitly (spec.source.plugin.name),
+      # so discovery is only a guard.
+      discover:
+        fileName: "./*.yaml"
+      generate:
+        # ARGOCD_ENV_PROJECT_ID is the REAL project_id, delivered live by the
+        # root app-of-apps valuesObject (which Terraform applies with its fresh
+        # output). So the value is late-bound at sync from Terraform, never baked
+        # into git, and never lagging.
+        command:
+          - sh
+          - -c
+          - |
+            : "${ARGOCD_ENV_PROJECT_ID:?rendered-sub: PROJECT_ID env not set}"
+            for f in ./*.yaml; do
+              sed "s|@@TILES_PROJECT@@|${ARGOCD_ENV_PROJECT_ID}|g" "$f"
+              echo "---"
+            done
+---
+# How an Application flips to this model. Its source becomes a plain directory of
+# pre-rendered YAML (published per cluster; see the README on git-vs-OCI), and the
+# only runtime input is project_id, passed as a plugin env from the propagated
+# (Terraform-delivered) value.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git      # or oci://... for OCI
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: 'rendered/{{ required ".Values.cluster_name is required" .Values.cluster_name }}/external-dns'
+    plugin:
+      name: rendered-sub
+      env:
+        - name: PROJECT_ID
+          value: '{{ required ".Values.project_id is required" .Values.project_id }}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-dns
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

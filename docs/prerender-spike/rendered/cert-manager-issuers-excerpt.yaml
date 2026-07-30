@@ -1,0 +1,60 @@
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Source: cert-manager/templates/lets-encrypt-issuers.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: staging-cert
+  namespace: "cert-manager"
+spec:
+  acme:
+    email: symmetry@pobox.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: lets-encrypt-staging
+    solvers:
+      # Solver for cluster's own domain (in main project)
+      - selector:
+          dnsZones:
+            - "examplecluster.symmatree.com"
+        dns01:
+          cloudDNS:
+            project: "@@TILES_PROJECT@@"
+            serviceAccountSecretRef:
+              # Secret name is created in charts/cert-manager/templates/clouddns-sa-secret.yaml
+              name: cert-manager-dns01-sa-key
+              # This key-name is created in tf/modules/k8s-cluster/k8s-cert-manager.tf
+              key: private_key.json
+      # Solver for ad.local.symmatree.com and local.symmatree.com (in seed project)
+      - selector:
+          dnsZones:
+            - "ad.local.symmatree.com"
+            - "local.symmatree.com"
+        dns01:
+          cloudDNS:
+            project: "seed-example"
+            serviceAccountSecretRef:
+              name: cert-manager-dns01-sa-key
+              key: private_key.json
+---
+# Source: cert-manager/templates/lets-encrypt-issuers.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: real-cert
+spec:
+  acme:
+    email: symmetry@pobox.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: lets-encrypt-real
+    solvers:
+      # Solver for cluster's own domain (in main project)
+      - selector:
+          dnsZones:
+            - "examplecluster.symmatree.com"
+        dns01:
+          cloudDNS:
+            project: "@@TILES_PROJECT@@"
+            serviceAccountSecretRef:

@@ -1,0 +1,17 @@
+# Example per-cluster inputs for scripts/render-app.sh.
+# In CI these come from 1Password misc-config (the same handoff bootstrap uses),
+# with project_id overwritten by the sentinel. Values here are fake on purpose so
+# this committed demo carries no real infrastructure config.
+cluster_name: examplecluster
+cluster_nfs_path: /volume/example
+datasets_nfs_path: /volume/datasets
+external_ip_cidr: 10.0.0.0/24
+ingress_lb_ip: 10.0.1.1
+nfs_server: nfs.example.com
+pod_cidr: 10.1.0.0/16
+seed_project_id: seed-example
+targetRevision: prod
+vault_name: example-secrets
+# The one Terraform *output* that reaches a manifest: sentinel, not a real value,
+# so this artifact never lags Terraform. Swapped for the real project_id at sync.
+project_id: '@@TILES_PROJECT@@'
