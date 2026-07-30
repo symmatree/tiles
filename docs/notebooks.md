@@ -102,7 +102,7 @@ debugging, not the premise of the notebook.
 | Loki | health, usage, no-LGTM | built | [#649](https://github.com/symmatree/tiles/issues/649) |
 | Grafana | health, no-monitoring | planned | [#650](https://github.com/symmatree/tiles/issues/650) |
 | Alloy (head-end collection) | health, no-monitoring | built | [#651](https://github.com/symmatree/tiles/issues/651) |
-| Synology / Raconteur (edge host) | host health: SMART/disk errors, temps, fans, resource pressure | planned | [#652](https://github.com/symmatree/tiles/issues/652) |
+| Synology / Raconteur (edge host) | host health: SMART/disk errors, temps, fans, resource pressure | built | [#652](https://github.com/symmatree/tiles/issues/652) |
 | Proxmox LXC (edge host) | host health: NVMe/SSD wear, hwmon temps, fans, pressure | planned | [#653](https://github.com/symmatree/tiles/issues/653) |
 
 For an edge host the **hardware signals are the health content** -- SMART/disk
