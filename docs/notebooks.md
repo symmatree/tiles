@@ -81,15 +81,20 @@ a different problem; revisit placement then.
   monitoring stack works** -- i.e. it *is* the monitoring stack (mimir, loki,
   alloy, grafana). It may use only instruments outside the stack (kube API,
   direct HTTP probes); the subject may appear as a labeled system-under-test
-  smoke check, never as an instrument.
+  smoke check, never as an instrument. A no-LGTM notebook still has to earn its
+  keep with real checks (alloy-nomon caught the #656 singleton crashloop kube-only)
+  -- it is not a licence for boilerplate; see the anti-LARP rule below.
 
 ## Component roadmap
 
 The pattern repeats across the stack. Each row is a tracking issue with the
 component specifics and query hints already worked out, so a future agent does
-not have to rediscover them. **Special-collection** rows are different in kind:
-they assess whether an *edge push source* is delivering (freshness/completeness
-against Mimir+Loki), not whether a deployed component is healthy.
+not have to rediscover them. **Edge-host** rows (Synology, Proxmox) are ordinary
+host-health notebooks -- they *assume LGTM works* and read the metrics/logs the
+host already ships. Their question is "is this host healthy," not "is the data
+arriving": collection-liveness is a single line in the assumptions cell (one
+fresh series, one recent log line), and if that trips it is the cue for deeper
+debugging, not the premise of the notebook.
 
 | Subject | Notebooks | Status | Issue |
 | --- | --- | --- | --- |
@@ -97,13 +102,15 @@ against Mimir+Loki), not whether a deployed component is healthy.
 | Loki | health, usage, no-LGTM | built | [#649](https://github.com/symmatree/tiles/issues/649) |
 | Grafana | health, no-monitoring | planned | [#650](https://github.com/symmatree/tiles/issues/650) |
 | Alloy (head-end collection) | health, no-monitoring | built | [#651](https://github.com/symmatree/tiles/issues/651) |
-| Synology / Raconteur (edge, special) | ingestion; later: hardware values | planned | [#652](https://github.com/symmatree/tiles/issues/652) |
-| Proxmox LXC (edge, special) | ingestion; later: hardware values | planned | [#653](https://github.com/symmatree/tiles/issues/653) |
+| Synology / Raconteur (edge host) | host health: SMART/disk errors, temps, fans, resource pressure | planned | [#652](https://github.com/symmatree/tiles/issues/652) |
+| Proxmox LXC (edge host) | host health: NVMe/SSD wear, hwmon temps, fans, pressure | planned | [#653](https://github.com/symmatree/tiles/issues/653) |
 
-The **later hardware-values** notebooks (SD/SSD/SMART errors, temperatures, fan
-RPM) are deliberately deferred: prove the ingestion path first, then read the
-values. They read the *values* of edge hardware metrics, not their presence -- a
-different job from an ingestion notebook, filed only once ingestion is trusted.
+For an edge host the **hardware signals are the health content** -- SMART/disk
+errors accumulating, temperatures, fan RPM, resource pressure: the things that
+were historically only visible through an awkward `talosctl`/SNMP CLI, which is
+the whole reason to surface them. Motivate each section from a signal that
+actually moves on this host (a mixin alert, a past incident, a SMART/hwmon metric
+with real variance), not a dump of everything the exporter emits.
 
 ## Authoring rules (earned in #644 / fables#11)
 
@@ -111,6 +118,16 @@ different job from an ingestion notebook, filed only once ingestion is trusted.
   checklist of what upstream thinks matters, and their thresholds are sourced.
   Prefer mixin thresholds over invented ones; every findings threshold should
   say where it came from.
+- **Ground every focused section in a real signal -- do not LARP.** A section
+  earns its place only if it targets a known or plausible-nascent failure class,
+  motivated by something real: a deployed mixin alert, a historical bug/incident,
+  a "true-crime" troubleshooting doc, or a metric/log that actually moves on this
+  system. Speculative "if this were broken, what might we look at" content has no
+  value until it is the query that actually worked when it broke -- writing it
+  blind is a costume of diligence. Link an existing Grafana dashboard when that is
+  the honest answer. Floor-boilerplate (pod health + a namespace-wide log tail) is
+  fine as a baseline; playing pretend is not. The goal is to surface existing data
+  in more focused ways, not to invent scenarios.
 - **Probe the exact query you will bake in, not an approximation.** The one
   bug in the first build came from probing a cousin of the final query.
 - **Silent-empty is the dominant failure mode, not errors.** PromQL/LogQL
