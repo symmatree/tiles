@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-tag-watcher
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: argo-tag-watcher
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argo-tag-watcher
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argo-tag-watcher
+    spec:
+      serviceAccountName: argo-tag-watcher
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: argo-tag-watcher
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            - name: REPO_URL
+              value: "{{ .Values.repoURL }}"
+            # The tag we deploy from is the tag we watch.
+            - name: WATCH_REF
+              value: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+            - name: ARGOCD_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+            - name: INTERVAL
+              value: "{{ .Values.interval }}"
+            - name: BATCH_SIZE
+              value: "{{ .Values.batchSize }}"
+            - name: BATCH_DELAY
+              value: "{{ .Values.batchDelay }}"
+            - name: HOME # git wants a writable HOME even for ls-remote
+              value: /tmp
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

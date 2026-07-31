@@ -1,0 +1,12 @@
+# Watcher tunables. The propagated values (targetRevision, cluster_name) are
+# injected by the app-of-apps via the Application valuesObject; targetRevision is
+# both where we deploy from and the ref we watch.
+image:
+  repository: ghcr.io/symmatree/tiles/argo-tag-watcher
+  tag: main
+repoURL: https://github.com/symmatree/tiles.git
+interval: 60s
+batchSize: 4
+batchDelay: 5s
+# Placeholder; overridden by --set / valuesObject at render time.
+targetRevision: placeholder

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-tag-watcher
+  namespace: "{{ .Release.Namespace }}"
+---
+# Least privilege: only read Applications and set the refresh annotation.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-tag-watcher
+  namespace: "{{ .Release.Namespace }}"
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-tag-watcher
+  namespace: "{{ .Release.Namespace }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-tag-watcher
+subjects:
+  - kind: ServiceAccount
+    name: argo-tag-watcher
+    namespace: "{{ .Release.Namespace }}"
