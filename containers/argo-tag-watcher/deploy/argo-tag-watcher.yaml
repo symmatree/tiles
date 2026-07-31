@@ -1,0 +1,99 @@
+# Deploy manifests for argo-tag-watcher (namespace: argocd).
+#
+# Plain YAML on purpose: this PR does not wire the watcher into the app-of-apps.
+# Going live is a deliberate follow-up -- build the image, then either
+# `kubectl apply -f` these or convert them to an Argo Application whose
+# valuesObject sets WATCH_REF from the cluster's propagated targetRevision
+# (prod on the prod cluster, test on tiles-test).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-tag-watcher
+  namespace: argocd
+---
+# Least privilege: it only needs to read Applications and set the refresh
+# annotation (patch). No get/update on anything else.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-tag-watcher
+  namespace: argocd
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-tag-watcher
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-tag-watcher
+subjects:
+  - kind: ServiceAccount
+    name: argo-tag-watcher
+    namespace: argocd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-tag-watcher
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argo-tag-watcher
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argo-tag-watcher
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argo-tag-watcher
+    spec:
+      serviceAccountName: argo-tag-watcher
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: argo-tag-watcher
+          image: ghcr.io/symmatree/tiles/argo-tag-watcher:main
+          env:
+            - name: REPO_URL
+              value: https://github.com/symmatree/tiles.git
+            - name: WATCH_REF
+              value: prod # tiles-test cluster: set to "test"
+            - name: ARGOCD_NAMESPACE
+              value: argocd
+            - name: INTERVAL
+              value: 60s
+            - name: BATCH_SIZE
+              value: "4"
+            - name: BATCH_DELAY
+              value: 5s
+            - name: HOME # git wants a writable HOME even for ls-remote
+              value: /tmp
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
