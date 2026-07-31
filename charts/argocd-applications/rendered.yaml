@@ -265,6 +265,42 @@ spec:
         pod-security.kubernetes.io/warn: baseline
 
 ---
+# Source: argocd-applications/templates/apprise-mixin-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apprise-mixin
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: apprise-mixin
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apprise-mixin
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
 # Source: argocd-applications/templates/argo-tag-watcher-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
