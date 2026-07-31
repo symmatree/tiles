@@ -37,7 +37,7 @@ once on startup, which converges any drift accumulated while it was down.
 ## RBAC
 
 Least privilege: `list` + `patch` on `applications.argoproj.io` in the argocd
-namespace, nothing else. See `deploy/argo-tag-watcher.yaml`.
+namespace, nothing else. See `charts/argo-tag-watcher/templates/rbac.yaml`.
 
 ## Tests
 
@@ -45,11 +45,14 @@ namespace, nothing else. See `deploy/argo-tag-watcher.yaml`.
 git resolution and the Kubernetes client are behind interfaces and faked, so no
 network or cluster is touched.
 
-## Not in this PR
+## Deployment
 
-- Not wired into the app-of-apps; going live means building the image and either
-  `kubectl apply`-ing `deploy/` or converting it to an Argo Application whose
-  `valuesObject` sets `WATCH_REF` from the propagated `targetRevision`.
+Deployed via `charts/argo-tag-watcher/`, wired into the app-of-apps. Its Argo
+Application sets `WATCH_REF` from the propagated `targetRevision`, so it watches
+whatever tag its cluster deploys from (`prod` / `test`).
+
+## Follow-ups
+
 - The image side (watch a floating image tag's digest, `rollout restart` opted-in
-  workloads) is a planned follow-up; the two share the "notice the ref moved, poke
-  the thing" shape but a restart is disruptive so it checks the digest per workload.
+  workloads) is planned; the two share the "notice the ref moved, poke the thing"
+  shape but a restart is disruptive so it checks the digest per workload.
