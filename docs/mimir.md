@@ -18,8 +18,10 @@ the fables KB, where this was `Tiles/Software/mimir.md`):
   (Per-tenant alert routing since reworked in #635.)
 - **No self-scraping**: metrics are pushed to it from Alloy; rules are pushed to it by
   Alloy; it evaluates and sends alerts.
-- **Notifications** go through a sidecar that accepts a webhook and reformats for
-  AppRise.
+- **Notifications** go through the in-pod `alert-forward` sidecar, which accepts the
+  Alertmanager webhook, reformats it, and POSTs to Apprise tagged with `cluster_name`
+  so it routes to this cluster's channels. Full delivery path:
+  [`tanka/environments/apprise/README.md`](../tanka/environments/apprise/README.md).
 
 ## Tenancy
 
