@@ -33,7 +33,8 @@ viewed from the two ends.
 
 Current notebooks: [`notebooks/`](../notebooks/) -- `mimir-health.ipynb`,
 `mimir-usage.ipynb`, `mimir-nolgtm.ipynb`, `loki-health.ipynb`,
-`loki-usage.ipynb`, `loki-nolgtm.ipynb`, sharing
+`loki-usage.ipynb`, `loki-nolgtm.ipynb`, `alloy-health.ipynb`,
+`alloy-nomon.ipynb`, `raconteur-health.ipynb`, `cilium-health.ipynb`, sharing
 [`nb_capture.py`](../notebooks/nb_capture.py). Roadmap for the rest of the stack:
 see **Component roadmap** below.
 
@@ -104,6 +105,16 @@ debugging, not the premise of the notebook.
 | Alloy (head-end collection) | health, no-monitoring | built | [#651](https://github.com/symmatree/tiles/issues/651) |
 | Synology / Raconteur (edge host) | host health: SMART/disk errors, temps, fans, resource pressure | built | [#652](https://github.com/symmatree/tiles/issues/652) |
 | Proxmox LXC (edge host) | host health: NVMe/SSD wear, hwmon temps, fans, pressure | planned | [#653](https://github.com/symmatree/tiles/issues/653) |
+| Cilium / cluster-network | health: node reachability, agent/endpoint health, datapath pressure (BPF/CT/NAT maps, drops), IPAM, mixin-alert state | built | -- |
+
+The **Cilium** notebook is a plain health notebook (cilium self-metrics are scraped into
+Mimir, so it assumes the stack works, like the edge-host rows). Its node-reachability section
+is grounded in the `CiliumUnreachableNodes` incident of 2026-07-25: a bare-metal reboot left
+stale cilium-health prober state falsely reporting acebase/lancer host-unreachable while the
+overlay path stayed healthy. It distinguishes that residue (host-path fail + overlay-path OK +
+recent reboot -> restart the agent) from a real partition (both paths fail), and reads the
+deployed cilium-mixin alert states rather than re-inventing their thresholds -- see
+[bare-metal-nodes.md](bare-metal-nodes.md#node-hostnames-and-dhcp-less-boot).
 
 For an edge host the **hardware signals are the health content** -- SMART/disk
 errors accumulating, temperatures, fan RPM, resource pressure: the things that
