@@ -56,7 +56,10 @@ spec:
                     webhookConfigs:
                       # alert-forward sidecar shares the mimir-alertmanager pod,
                       # so localhost:3000; it forwards to apprise /notify/apprise.
-                      - url: http://localhost:3000?template=alertmanager&key=apprise
+                      # tag=<cluster_name> so apprise routes to this cluster's targets
+                      # (#tiles / #tiles-test etc). A no-tag notify matches zero apprise
+                      # targets and is silently dropped -- the delivered-nothing bug.
+                      - url: http://localhost:3000?template=alertmanager&key=apprise&tag=placeholder
                         sendResolved: true
             - apiVersion: monitoring.coreos.com/v1
               kind: Probe
