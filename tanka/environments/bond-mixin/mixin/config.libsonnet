@@ -31,5 +31,10 @@ local snmpHexLabel(str) =
     raconteurDiskSsdTempFor: '15m',
     raconteurFanFailedFor: '2m',
     raconteurSnmpFanFailedValue: 2,
+    // Belt-and-suspenders for disk/array failure (DSM alerts on this natively too).
+    // Deliberately does NOT fire on the monthly scrub/resilver: those show as other
+    // raidStatus values (7 syncing, 8 parity-check, 13 scrubbing), not 11/12.
+    raconteurDiskHealthFor: '15m',
+    raconteurVolumeBadFor: '5m',
   },
 }
