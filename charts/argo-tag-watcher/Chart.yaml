@@ -1,0 +1,6 @@
+apiVersion: v2
+name: argo-tag-watcher
+description: Watches the prod/test git tag and refreshes Argo CD apps when it moves (tiles#667)
+type: application
+version: 0.1.0
+appVersion: 0.1.0
