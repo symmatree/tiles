@@ -32,7 +32,7 @@
             annotations: {
               summary: 'Apprise is returning server errors',
               description: |||
-                {{ printf "%%.1f" (mul $value 100) }}%% of Apprise HTTP responses have been 5xx over the last 5m (threshold %(servingErrorRatioThreshold)g), sustained for %(servingErrorRatioFor)s. This is the service failing, independent of downstream delivery.
+                {{ $value | humanizePercentage }} of Apprise HTTP responses have been 5xx over the last 5m (ratio threshold %(servingErrorRatioThreshold)g), sustained for %(servingErrorRatioFor)s. This is the service failing, independent of downstream delivery.
               ||| % $._config,
             },
           },
