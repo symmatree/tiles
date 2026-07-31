@@ -35,7 +35,7 @@ libMonResources.new(
           path: '/metrics',
           interval: '30s',
           relabelings: [
-            { targetLabel: 'job', replacement: 'apprise' },
+            { action: 'replace', targetLabel: 'job', replacement: 'apprise' },
           ],
         },
       ],
