@@ -104,13 +104,26 @@ Configuration is managed through the Application's plugin parameters:
 
 ## Monitoring & Observability
 
+Full monitoring (scrape + dashboard + alerts) lives in the sibling
+[`apprise-mixin`](../apprise-mixin/README.md) environment.
+
 ### Metrics
 
-- TODO: Document if Apprise exposes metrics
+- Apprise exposes Prometheus metrics at `/metrics` (django-prometheus, `apprise_django_*`).
+  The `apprise-mixin` `ServiceMonitor` scrapes them under `job="apprise"`. The key
+  series is `apprise_django_http_responses_total_by_status_view_method_total`
+  (`view="notify"`, `status="200"` delivered / `status="424"` not delivered).
 
 ### Dashboards
 
-- TODO: Document if Apprise has dashboards
+- **Apprise / Overview** (`apprise-overview`), from `apprise-mixin`: delivery success
+  rate, notify outcomes by status, serving errors, latency, and process resources.
+
+### Alerts
+
+- From `apprise-mixin`, in two groups: `apprise-serving` (`AppriseDown`,
+  `AppriseServingErrors`) and `apprise-delivery` (`AppriseDeliveryFailing`,
+  `AppriseAllDeliveriesFailing`).
 
 ### Logs
 
