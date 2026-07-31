@@ -20,13 +20,38 @@ Apprise is deployed using Tanka/Jsonnet as a single instance with:
 
 ### Notification Routing
 
-Notifications are routed using tags:
+Notifications are routed using tags (each `config.yml` entry declares the tags it
+accepts; a notification reaches an entry only if its tag matches):
 
-- **Bond**: For house-related things
-- **Tales**: For the cluster and internal stuff
-- **Priority**: Things that need immediate attention
+- **bond**: house-related things (`#bond`)
+- **tiles** / **tiles-test**: the cluster and internal stuff, one tag per cluster
+  (`#tiles`, `#tiles-test`) -- the retired `tales` cluster's tag is gone
+- **priority**: things that need immediate attention (`#priority`)
 
-Most notifications are delivered via Slack with an echo to Gmail (via app-password) for posterity, since free Slack doesn't keep long-term archives.
+Most notifications are delivered via Slack with an echo to Gmail (via app-password) for posterity, since free Slack doesn't keep long-term archives (the Gmail archive entry is tagged so it also catches the cluster's `tiles` notifications).
+
+### Alert delivery path (Mimir Alertmanager -> Apprise)
+
+Metrics-based alerts reach Apprise with no Apprise-specific code in the alert pipeline:
+
+1. **Mimir Alertmanager** holds a per-tenant `AlertmanagerConfig` (`apprise-catchall`),
+   pushed to it by Alloy's `mimir.alerts.kubernetes` from
+   [`alloy-application.yaml`](../../../charts/argocd-applications/templates/alloy-application.yaml)
+   (issue #635). It routes every firing alert to one webhook receiver.
+2. The webhook target is the **`alert-forward` sidecar** sharing the `mimir-alertmanager`
+   pod (`http://localhost:3000`) -- the small [`charts/mimir/webhook`](../../../charts/mimir/webhook)
+   service (image `ghcr.io/symmatree/tiles/mimir-webhook`, built by
+   `.github/workflows/build-mimir-webhook.yaml`). It renders the Alertmanager JSON through
+   the `alertmanager` template and POSTs to `http://apprise.apprise.svc:8000/notify/apprise`.
+3. The webhook URL carries **`tag=<cluster_name>`** (`tiles` / `tiles-test`), so Apprise
+   routes the alert to that cluster's targets. **A no-tag notify matches zero entries and is
+   silently dropped** (HTTP 424) -- the "alerts reach nobody" bug fixed in #677.
+4. Apprise fans the notification out to every `config.yml` entry whose tags match.
+
+A delivery break is therefore almost always one of: the sidecar can't reach Apprise, the
+tag matches no entry, `config.yml` is empty/wrong, or a target rejects it (Slack bot not in
+the channel, bad Gmail app-password). `notebooks/mimir-health.ipynb` cross-checks this end
+from Apprise's own logs (delivered vs not-sent).
 
 ## Configuration Values
 

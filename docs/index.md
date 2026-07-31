@@ -62,4 +62,4 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 ## Planning
 
-- **[todo.md](todo.md)**: Future work items and planned improvements, including OIDC setup for ArgoCD, porting components from the tales cluster, setting up LGTM stack, Grafana authentication, workload identity federation, and Synology management via Terraform.
+- **[todo.md](todo.md)**: Future work items and planned improvements, including OIDC setup for ArgoCD, Grafana authentication, workload identity federation, and Synology management via Terraform.
