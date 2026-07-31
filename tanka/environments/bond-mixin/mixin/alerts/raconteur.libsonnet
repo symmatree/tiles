@@ -78,6 +78,26 @@
               description: 'Disk {{ $labels.diskIndex }} above %(raconteurDiskSsdTempCelsius)g C for %(raconteurDiskSsdTempFor)s.' % c,
             },
           },
+          {
+            alert: 'BondRaconteurDiskUnhealthy',
+            expr: 'diskHealthStatus{%(snmp)s} > 1' % c,
+            'for': c.raconteurDiskHealthFor,
+            labels: { severity: 'warning' },
+            annotations: {
+              summary: 'Raconteur disk {{ $labels.diskIndex }} health not Normal',
+              description: 'Synology diskHealthStatus is {{ $value }} (1=Normal, 2=Warning, 3=Critical, 4=Failing). DSM alerts on this natively; this is the belt-and-suspenders copy.',
+            },
+          },
+          {
+            alert: 'BondRaconteurVolumeDegraded',
+            expr: 'raidStatus{%(snmp)s} >= 11 and raidStatus{%(snmp)s} <= 12' % c,
+            'for': c.raconteurVolumeBadFor,
+            labels: { severity: 'critical' },
+            annotations: {
+              summary: 'Raconteur volume/pool {{ $labels.raidIndex }} degraded or crashed',
+              description: 'Synology raidStatus is {{ $value }} (11=Degrade, 12=Crashed). The monthly scrub/resilver shows as other states and is intentionally not alerted.',
+            },
+          },
         ],
       },
     ],
