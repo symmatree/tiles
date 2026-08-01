@@ -1,4 +1,11 @@
-# Static k8s-monitoring values. Templated/extraObjects in alloy-application.yaml valuesObject.
+# Static k8s-monitoring v4 values. Templated/extraObjects in alloy-application.yaml valuesObject.
+#
+# v4 migration (#659): named Alloy instances (alloy-metrics/-singleton/-logs/-receiver)
+# became entries in the `collectors` map; supplemental services (kube-state-metrics,
+# node-exporter) moved to `telemetryServices`; node-exporter scraping/tuning moved to the
+# `hostMetrics` feature; `destinations` became a map (in valuesObject). Collector names are
+# kept identical to the v3 instance names so the operator-created Service names
+# (alloy-alloy-metrics-cluster, alloy-alloy-receiver) that extraObjects reference are preserved.
 
 global:
   extraEnv:
@@ -13,8 +20,89 @@ global:
       mountPath: /etc/ssl/certs
       readOnly: true
 
+# ---- Collectors (v4: replaces the v3 named-instance top-level keys) ----
+collectors:
+  alloy-metrics:
+    presets: [clustered, statefulset]
+    includeDestinations: [localMimir]
+    extraConfig: |-
+      prometheus.exporter.blackbox "blackbox_exporter" {
+        config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
+      }
+    alloy:
+      resources:
+        requests:
+          memory: 768Mi
+        limits:
+          memory: 1Gi
+
+  alloy-singleton:
+    presets: [singleton]
+    # clusterEvents runs here and ships to Loki. The mimir.rules/mimir.alerts extraConfig
+    # (in valuesObject) talks to Mimir directly via its own address, not a destination.
+    includeDestinations: [localLoki]
+    alloy:
+      # mimir.alerts.kubernetes is an experimental Alloy component. v4 validates at
+      # template time that the collector's stability level covers its components, so this
+      # is required for the render (and the runtime) to accept the extraConfig -- the #658
+      # CrashLoop class of failure is now caught before deploy.
+      stabilityLevel: experimental
+      resources:
+        limits:
+          memory: 512Mi
+
+  alloy-logs:
+    presets: [filesystem-log-reader, daemonset]
+    includeDestinations: [localLoki]
+    alloy:
+      mounts:
+        # The filesystem-log-reader preset also mounts /var/lib/docker/containers; Talos
+        # doesn't use it, so turn it back off (v3 alloy-logs.alloy.mounts.dockercontainers).
+        dockercontainers: false
+    # Collect Talos node logs from /var/log/*.log (machined, kubelet, kernel, apid,
+    # controller-runtime, cri, containerd, ...) -- the machine-level logs otherwise only
+    # reachable via talosctl. This container mounts /var/log (varlog preset) and runs as
+    # root, so it can read the 0640 files. Ships to the same localLoki destination as pod
+    # logs. Replaces the broken journal source (nodeLogs disabled below, #662).
+    extraConfig: |-
+      local.file_match "talos" {
+        path_targets = [{
+          __path__ = "/var/log/*.log",
+          job      = "integrations/talos",
+          instance = sys.env("HOSTNAME"),
+        }]
+      }
+      loki.source.file "talos" {
+        targets    = local.file_match.talos.targets
+        forward_to = [loki.process.talos.receiver]
+      }
+      loki.process "talos" {
+        // service label from the file basename: machined, kubelet, kernel, apid, ...
+        stage.regex {
+          source     = "filename"
+          expression = "/var/log/(?P<service>[^/]+)\\.log$"
+        }
+        stage.labels {
+          values = { service = "" }
+        }
+        stage.static_labels {
+          values = { source = "talos" }
+        }
+        // Ingestion-time on purpose (no embedded-timestamp parse): tailing existing /
+        // rotated content on first start would otherwise be rejected 'entry too far behind'.
+        forward_to = [loki.write.localloki.receiver]
+      }
+
+  alloy-receiver:
+    # otel-receiver opens the standard OTLP ports (4317 gRPC / 4318 HTTP) on the Service;
+    # deployment runs it as a single Deployment (v3 alloy-receiver.controller.type).
+    presets: [otel-receiver, deployment]
+    includeDestinations: [localMimir, localLoki]
+
+# ---- Features (v4: each enabled feature must name its collector) ----
 clusterMetrics:
   enabled: true
+  collector: alloy-metrics
   controlPlane:
     enabled: true
   apiServer:
@@ -61,17 +149,15 @@ clusterMetrics:
         - kube_job_spec_.*
         - kube_job_status_completion_time
         - kube_job_status_succeeded
-  windows-exporter:
-    enabled: false
-    deploy: false
-  node-exporter:
+
+# node-exporter host metrics (v3: clusterMetrics.node-exporter). The DaemonSet itself is
+# deployed under telemetryServices below; this feature scrapes + tunes it. source defaults
+# to "node-exporter", which auto-discovers the telemetryServices deployment.
+hostMetrics:
+  enabled: true
+  collector: alloy-metrics
+  linuxHosts:
     enabled: true
-    deploy: true
-    # Intentionally BestEffort (no request/limit). node-exporter is a
-    # must-run-on-every-node DaemonSet, so a memory *request* can block it from a
-    # node whose allocatable is fully committed -- and it can't relocate, so that
-    # node just goes dark. Hit exactly that on wk-3 (99% committed) with a 64Mi
-    # request. Its ~31Mi footprint is trivial; keep it schedulable everywhere.
     metricsTuning:
       useDefaultAllowList: true
       useIntegrationAllowList: true
@@ -87,30 +173,27 @@ clusterMetrics:
         - rootfs
         - iso9660
         - overlay
-    extraArgs:
-      - --collector.filesystem.fs-types-exclude=^(ramfs|tmpfs|nsfs|rootfs|iso9660|overlay)$
-  kepler:
-    enabled: false
-  opencost:
-    enabled: false
 
 clusterEvents:
   enabled: true
+  collector: alloy-singleton
   logFormat: json
 
-# Talos has no systemd journal, so the chart's journal-based node logs
-# (loki.source.journal on /var/log/journal) fail on every node -- a permanent
-# unhealthy component (#662). Talos instead writes machine/service + kernel logs
-# to /var/log/*.log; we collect those via loki.source.file in alloy-logs.extraConfig
-# below. So disable the journal source here rather than leaving it broken.
+# Talos has no systemd journal, so the chart's journal-based node logs fail on every node
+# (#662). Talos writes machine/service + kernel logs to /var/log/*.log; we collect those via
+# the alloy-logs collector's extraConfig above. So disable the journal source here.
 nodeLogs:
   enabled: false
 
-podLogs:
+podLogsViaLoki:
   enabled: true
+  collector: alloy-logs
 
 applicationObservability:
   enabled: true
+  collector: alloy-receiver
+  # Node/pod k8s enrichment is on by default in v4 (resourceDetection + k8sattributes
+  # processors), replacing the v3 processors.kubernetes_node toggle.
   receivers:
     otlp:
       grpc:
@@ -121,9 +204,6 @@ applicationObservability:
         enabled: true
         port: 4318
         includeMetadata: true
-  processors:
-    kubernetes_node:
-      enabled: true
   metrics:
     enabled: true
   logs:
@@ -133,93 +213,12 @@ applicationObservability:
 
 prometheusOperatorObjects:
   enabled: true
+  collector: alloy-metrics
   crds:
     deploy: false
 
-alloy-metrics:
-  enabled: true
-  serviceMonitor:
-    enabled: false
-  extraConfig: |-
-    prometheus.exporter.blackbox "blackbox_exporter" {
-      config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
-    }
-  alloy:
-    resources:
-      requests:
-        memory: 768Mi
-      limits:
-        memory: 1Gi
-
-alloy-singleton:
-  enabled: true
-  serviceMonitor:
-    enabled: false
-  alloy:
-    resources:
-      limits:
-        memory: 512Mi
-
-alloy-logs:
-  enabled: true
-  serviceMonitor:
-    enabled: false
-  alloy:
-    mounts:
-      varlog: true
-      dockercontainers: false
-  # Collect Talos node logs from /var/log/*.log (machined, kubelet, kernel, apid,
-  # controller-runtime, cri, containerd, ...) -- the machine-level logs otherwise
-  # only reachable via talosctl. This container already mounts /var/log and runs
-  # as root, so it can read the 0640 files. Ships to the same localLoki destination
-  # as pod logs. Replaces the broken journal source (nodeLogs disabled above, #662).
-  extraConfig: |-
-    local.file_match "talos" {
-      path_targets = [{
-        __path__ = "/var/log/*.log",
-        job      = "integrations/talos",
-        instance = sys.env("HOSTNAME"),
-      }]
-    }
-    loki.source.file "talos" {
-      targets    = local.file_match.talos.targets
-      forward_to = [loki.process.talos.receiver]
-    }
-    loki.process "talos" {
-      // service label from the file basename: machined, kubelet, kernel, apid, ...
-      stage.regex {
-        source     = "filename"
-        expression = "/var/log/(?P<service>[^/]+)\\.log$"
-      }
-      stage.labels {
-        values = { service = "" }
-      }
-      stage.static_labels {
-        values = { source = "talos" }
-      }
-      // Ingestion-time on purpose (no embedded-timestamp parse): tailing existing /
-      // rotated content on first start would otherwise be rejected 'entry too far behind'.
-      forward_to = [loki.write.localloki.receiver]
-    }
-
-alloy-receiver:
-  enabled: true
-  serviceMonitor:
-    enabled: false
-  controller:
-    type: "deployment"
-  alloy:
-    extraPorts:
-      - name: otlp-grpc
-        port: 4317
-        targetPort: 4317
-        protocol: TCP
-      - name: otlp-http
-        port: 4318
-        targetPort: 4318
-        protocol: TCP
-
 integrations:
+  collector: alloy-metrics
   alloy:
     instances:
       - name: alloy
@@ -252,3 +251,20 @@ integrations:
               - otelcol_process_memory_rss_bytes
               - otelcol_process_runtime_total_alloc_bytes_total
               - otelcol_process_uptime_seconds_total
+
+# ---- Telemetry services (v4: supplemental deployments, explicit) ----
+telemetryServices:
+  kube-state-metrics:
+    deploy: true
+  node-exporter:
+    deploy: true
+    # Intentionally BestEffort (no request/limit). node-exporter is a must-run-on-every-node
+    # DaemonSet, so a memory *request* can block it from a node whose allocatable is fully
+    # committed -- and it can't relocate, so that node just goes dark. Hit exactly that on
+    # wk-3 (99% committed) with a 64Mi request. Its ~31Mi footprint is trivial; keep it
+    # schedulable everywhere.
+    resources: {}
+    extraArgs:
+      - --collector.filesystem.fs-types-exclude=^(ramfs|tmpfs|nsfs|rootfs|iso9660|overlay)$
+  windows-exporter:
+    deploy: false
