@@ -1,25 +1,28 @@
 # Resource overrides for tiles (prod). Tune from observed usage plus headroom.
+# v4: resources live under the `collectors` map (was top-level named instances in v3).
+# Deep-merged over the base collector definitions in alloy-values.yaml.
 
-alloy-logs:
-  alloy:
-    resources:
-      requests:
-        memory: 128Mi
-      limits:
-        memory: 384Mi
+collectors:
+  alloy-logs:
+    alloy:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 384Mi
 
-alloy-receiver:
-  alloy:
-    resources:
-      requests:
-        memory: 128Mi
-      limits:
-        memory: 256Mi
+  alloy-receiver:
+    alloy:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 256Mi
 
-alloy-singleton:
-  alloy:
-    resources:
-      requests:
-        memory: 128Mi
-      limits:
-        memory: 256Mi
+  alloy-singleton:
+    alloy:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 256Mi

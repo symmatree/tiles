@@ -6,7 +6,7 @@ spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "3.8.11"
+      targetRevision: "4.3.2"
       chart: k8s-monitoring
       helm:
         valueFiles:
@@ -17,15 +17,16 @@ spec:
           cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
           cluster:
             name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+          # v4: destinations is a map keyed by name (was an array in v3).
           destinations:
-            - name: localMimir
+            localMimir:
               type: prometheus
               url: http://mimir-gateway.mimir.svc/api/v1/push
               tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
               secret:
                 create: false
                 embed: true
-            - name: localLoki
+            localLoki:
               type: loki
               url: http://loki.loki.svc:3100/loki/api/v1/push
               tenantId: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
@@ -129,40 +130,41 @@ spec:
                               name: alloy-alloy-receiver
                               port:
                                 number: 4318
-          alloy-singleton:
-            alloy:
-              # mimir.alerts.kubernetes is an experimental Alloy component.
-              stabilityLevel: experimental
-            extraConfig: |-
-              mimir.rules.kubernetes "default" {
-                address = "http://mimir-gateway.mimir.svc"
-                tenant_id = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
-              }
-              // Push per-tenant Alertmanager routing to the Mimir alertmanager. This
-              // component has no tenant_id arg, so the tenant is the X-Scope-OrgID
-              // header. global_config is only a null default -- the real routing lives
-              // in per-tenant AlertmanagerConfig CRs (label mimir_tenant=<cluster>),
-              // merged as a tenant-wide catch-all via strategy=None.
-              mimir.alerts.kubernetes "default" {
-                address       = "http://mimir-gateway.mimir.svc"
-                global_config = "global:\n  resolve_timeout: 5m\nroute:\n  receiver: \"null\"\nreceivers:\n- name: \"null\"\n"
-                http_headers  = {
-                  "X-Scope-OrgID" = ["{{ required ".Values.cluster_name is required" .Values.cluster_name }}"],
+          # v4: per-instance config lives under the collectors map. The singleton's
+          # presets/stabilityLevel/resources are in alloy-values.yaml; only this templated
+          # extraConfig (needs cluster_name) is set here and deep-merged onto it.
+          collectors:
+            alloy-singleton:
+              extraConfig: |-
+                mimir.rules.kubernetes "default" {
+                  address = "http://mimir-gateway.mimir.svc"
+                  tenant_id = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}"
                 }
-                alertmanagerconfig_selector {
-                  match_labels = {
-                    mimir_tenant = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}",
+                // Push per-tenant Alertmanager routing to the Mimir alertmanager. This
+                // component has no tenant_id arg, so the tenant is the X-Scope-OrgID
+                // header. global_config is only a null default -- the real routing lives
+                // in per-tenant AlertmanagerConfig CRs (label mimir_tenant=<cluster>),
+                // merged as a tenant-wide catch-all via strategy=None.
+                mimir.alerts.kubernetes "default" {
+                  address       = "http://mimir-gateway.mimir.svc"
+                  global_config = "global:\n  resolve_timeout: 5m\nroute:\n  receiver: \"null\"\nreceivers:\n- name: \"null\"\n"
+                  http_headers  = {
+                    "X-Scope-OrgID" = ["{{ required ".Values.cluster_name is required" .Values.cluster_name }}"],
+                  }
+                  alertmanagerconfig_selector {
+                    match_labels = {
+                      mimir_tenant = "{{ required ".Values.cluster_name is required" .Values.cluster_name }}",
+                    }
+                  }
+                  alertmanagerconfig_namespace_selector {
+                    match_labels = {
+                      "kubernetes.io/metadata.name" = "alloy",
+                    }
+                  }
+                  alertmanagerconfig_matcher {
+                    strategy = "None"
                   }
                 }
-                alertmanagerconfig_namespace_selector {
-                  match_labels = {
-                    "kubernetes.io/metadata.name" = "alloy",
-                  }
-                }
-                alertmanagerconfig_matcher {
-                  strategy = "None"
-                }
-              }
     - repoURL: https://github.com/symmatree/tiles.git
       targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
       ref: values

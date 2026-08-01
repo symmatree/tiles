@@ -8,7 +8,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "3.8.11"
+      targetRevision: "4.3.2"
       chart: k8s-monitoring
       helm:
         valueFiles:
@@ -19,15 +19,16 @@ spec:
           cluster_name: 'placeholder'
           cluster:
             name: 'placeholder'
+          # v4: destinations is a map keyed by name (was an array in v3).
           destinations:
-            - name: localMimir
+            localMimir:
               type: prometheus
               url: http://mimir-gateway.mimir.svc/api/v1/push
               tenantId: 'placeholder'
               secret:
                 create: false
                 embed: true
-            - name: localLoki
+            localLoki:
               type: loki
               url: http://loki.loki.svc:3100/loki/api/v1/push
               tenantId: 'placeholder'
@@ -131,40 +132,41 @@ spec:
                               name: alloy-alloy-receiver
                               port:
                                 number: 4318
-          alloy-singleton:
-            alloy:
-              # mimir.alerts.kubernetes is an experimental Alloy component.
-              stabilityLevel: experimental
-            extraConfig: |-
-              mimir.rules.kubernetes "default" {
-                address = "http://mimir-gateway.mimir.svc"
-                tenant_id = "placeholder"
-              }
-              // Push per-tenant Alertmanager routing to the Mimir alertmanager. This
-              // component has no tenant_id arg, so the tenant is the X-Scope-OrgID
-              // header. global_config is only a null default -- the real routing lives
-              // in per-tenant AlertmanagerConfig CRs (label mimir_tenant=<cluster>),
-              // merged as a tenant-wide catch-all via strategy=None.
-              mimir.alerts.kubernetes "default" {
-                address       = "http://mimir-gateway.mimir.svc"
-                global_config = "global:\n  resolve_timeout: 5m\nroute:\n  receiver: \"null\"\nreceivers:\n- name: \"null\"\n"
-                http_headers  = {
-                  "X-Scope-OrgID" = ["placeholder"],
+          # v4: per-instance config lives under the collectors map. The singleton's
+          # presets/stabilityLevel/resources are in alloy-values.yaml; only this templated
+          # extraConfig (needs cluster_name) is set here and deep-merged onto it.
+          collectors:
+            alloy-singleton:
+              extraConfig: |-
+                mimir.rules.kubernetes "default" {
+                  address = "http://mimir-gateway.mimir.svc"
+                  tenant_id = "placeholder"
                 }
-                alertmanagerconfig_selector {
-                  match_labels = {
-                    mimir_tenant = "placeholder",
+                // Push per-tenant Alertmanager routing to the Mimir alertmanager. This
+                // component has no tenant_id arg, so the tenant is the X-Scope-OrgID
+                // header. global_config is only a null default -- the real routing lives
+                // in per-tenant AlertmanagerConfig CRs (label mimir_tenant=<cluster>),
+                // merged as a tenant-wide catch-all via strategy=None.
+                mimir.alerts.kubernetes "default" {
+                  address       = "http://mimir-gateway.mimir.svc"
+                  global_config = "global:\n  resolve_timeout: 5m\nroute:\n  receiver: \"null\"\nreceivers:\n- name: \"null\"\n"
+                  http_headers  = {
+                    "X-Scope-OrgID" = ["placeholder"],
+                  }
+                  alertmanagerconfig_selector {
+                    match_labels = {
+                      mimir_tenant = "placeholder",
+                    }
+                  }
+                  alertmanagerconfig_namespace_selector {
+                    match_labels = {
+                      "kubernetes.io/metadata.name" = "alloy",
+                    }
+                  }
+                  alertmanagerconfig_matcher {
+                    strategy = "None"
                   }
                 }
-                alertmanagerconfig_namespace_selector {
-                  match_labels = {
-                    "kubernetes.io/metadata.name" = "alloy",
-                  }
-                }
-                alertmanagerconfig_matcher {
-                  strategy = "None"
-                }
-              }
     - repoURL: https://github.com/symmatree/tiles.git
       targetRevision: 'placeholder'
       ref: values
