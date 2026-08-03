@@ -87,13 +87,21 @@ resource "proxmox_virtual_environment_container" "alloy" {
     type      = "console"
   }
 
-  # Nesting: expose host procfs and sysfs to the guest (per Proxmox docs). With nesting we could use /proc and /sys in Alloy for host metrics; privileged + /host bind is an alternative.
+  # Nesting: expose host procfs and sysfs to the guest (per Proxmox docs), so node_exporter reads host /proc and /sys.
   features {
     nesting = true
   }
 
-  # Unprivileged + nesting: nesting exposes host /proc and /sys to the container, so we use those paths in Alloy (no privileged needed for metrics). /host bind still used for rootfs and host logs.
-  unprivileged = true
+  # Privileged (unprivileged = false): required to read the host systemd journal for log collection (#686).
+  # Host journal files are 0640 root:systemd-journal; in an unprivileged CT the container's root maps to
+  # host uid 100000, so through the /host bind mount those files appear owned by nobody:nogroup and the
+  # container's root is "other" with no read bit -- the read is denied (verified live on nuc-g3p-1: a
+  # container-root read of system.journal returned DENIED). loki.source.journal then opens the world-
+  # readable directory but reads no entries, silently (no unhealthy component). A privileged CT's root IS
+  # host root (no userns remap), so it can read them. Trade-off: the CT can now read every root-owned
+  # file under the read-only /host mount.
+  # Metrics/hwmon never needed this -- they read world-readable /proc and /sys via nesting.
+  unprivileged = false
   memory {
     dedicated = 512
   }
