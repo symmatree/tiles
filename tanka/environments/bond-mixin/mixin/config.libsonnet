@@ -16,6 +16,14 @@ local snmpHexLabel(str) =
     proxmoxCoreTempFor: '10m',
     proxmoxInstanceSelector: 'instance=~"nuc-g.*"',
 
+    // Bare-metal Talos workers (cluster="tiles"): CPU temp via chip_name join, so both
+    // Intel (coretemp) and AMD (k10temp) match without hardcoding node names or hashed chips.
+    metalNodeExporterJob: 'integrations/node_exporter',
+    metalCluster: 'tiles',
+    metalCpuChipNames: 'k10temp|coretemp',
+    metalCpuTempThresholdCelsius: 90,
+    metalCpuTempFor: '10m',
+
     raconteurInstance: 'raconteur',
     raconteurSnmpJob: 'integrations/snmp/raconteur',
     raconteurNodeExporterJob: 'integrations/node_exporter',
