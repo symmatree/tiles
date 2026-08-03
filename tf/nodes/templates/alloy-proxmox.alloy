@@ -1,14 +1,12 @@
 // Alloy configuration for Proxmox host monitoring
 // Collects node_exporter metrics (including hwmon sensors) and system logs, forwarding to prod OTLP
 
-// Node exporter for host system metrics.
-// procfs reads the host's live procfs bind-mounted at /host/proc (see proxmox-alloy.tf), NOT the
-// container's own /proc: lxcfs virtualizes the container /proc/meminfo down to the 512 MB cgroup
-// limit, which made node_memory_* report 512 MB instead of host RAM (#544). sysfs stays on the
-// nested /sys (hwmon temps etc. already read host-true there); rootfs stays /host.
+// Node exporter reads the host's procfs, sysfs, and rootfs, all bind-mounted under /host
+// (see proxmox-alloy.tf). Reading the container's own /proc instead would report lxcfs-virtualized
+// memory -- the 512 MB cgroup limit -- rather than host RAM (#544).
 prometheus.exporter.unix "node" {
   procfs_path = "/host/proc"
-  sysfs_path  = "/sys"
+  sysfs_path  = "/host/sys"
   rootfs_path = "/host"
 }
 
