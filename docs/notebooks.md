@@ -34,7 +34,8 @@ viewed from the two ends.
 Current notebooks: [`notebooks/`](../notebooks/) -- `mimir-health.ipynb`,
 `mimir-usage.ipynb`, `mimir-nolgtm.ipynb`, `loki-health.ipynb`,
 `loki-usage.ipynb`, `loki-nolgtm.ipynb`, `alloy-health.ipynb`,
-`alloy-nomon.ipynb`, `raconteur-health.ipynb`, `cilium-health.ipynb`, sharing
+`alloy-nomon.ipynb`, `raconteur-health.ipynb`, `proxmox-health.ipynb`,
+`metal-health.ipynb`, `cilium-health.ipynb`, sharing
 [`nb_capture.py`](../notebooks/nb_capture.py). Roadmap for the rest of the stack:
 see **Component roadmap** below.
 
@@ -104,7 +105,8 @@ debugging, not the premise of the notebook.
 | Grafana | health, no-monitoring | planned | [#650](https://github.com/symmatree/tiles/issues/650) |
 | Alloy (head-end collection) | health, no-monitoring | built | [#651](https://github.com/symmatree/tiles/issues/651) |
 | Synology / Raconteur (edge host) | host health: SMART/disk errors, temps, fans, resource pressure | built | [#652](https://github.com/symmatree/tiles/issues/652) |
-| Proxmox LXC (edge host) | host health: NVMe/SSD wear, hwmon temps, fans, pressure | planned | [#653](https://github.com/symmatree/tiles/issues/653) |
+| Proxmox LXC (edge host) | host health: hwmon temps, NVMe, throttle, host disk I/O, root LV | built | [#653](https://github.com/symmatree/tiles/issues/653) |
+| Bare-metal Talos (lancer, acebase) | host health: CPU/iGPU/storage temps, throttle, resources, `/var`, talos-`<rand>` gate | built | [#653](https://github.com/symmatree/tiles/issues/653) |
 | Cilium / cluster-network | health: node reachability, agent/endpoint health, datapath pressure (BPF/CT/NAT maps, drops), IPAM, mixin-alert state | built | -- |
 
 The **Cilium** notebook is a plain health notebook (cilium self-metrics are scraped into
