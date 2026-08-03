@@ -166,6 +166,16 @@ hostMetrics:
         - "node_xfs.*"
         - "node_time_seconds"
         - "node_bonding.*"
+        # Bare-metal hardware health (#580): the metal nodes (lancer, acebase) already
+        # load their sensor modules (k10temp+amdgpu / coretemp+drivetemp) and node-exporter's
+        # hwmon collector emits temps, but the default+integration allowlists drop node_hwmon_*,
+        # so no metal temperatures reach Mimir. Keep the hwmon family (temps + their max/crit
+        # thresholds + alarm flags + power/voltage), the cooling-device state (thermal-throttle
+        # response) and the ACPI thermal zone. Low cardinality: VMs emit none of these; edge
+        # hosts (raconteur/proxmox) ship temps via the OTLP path, not this allowlist.
+        - "node_hwmon_.*"
+        - "node_cooling_device_.*"
+        - "node_thermal_zone_.*"
       dropMetricsForFilesystem:
         - ramfs
         - tmpfs
