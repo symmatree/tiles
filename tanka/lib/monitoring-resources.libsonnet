@@ -28,6 +28,16 @@
 //       'news-serving'). This enables cross-cutting search in Grafana's
 //       dashboard list by cluster or application.
 //
+//   deployAnnotation  - When true (default), an "ArgoCD deploys" annotation
+//       query is injected into every dashboard's annotations list. It is a
+//       Prometheus (Mimir) query over the already-scraped argocd_app_sync_total
+//       counter, so a marker appears whenever an ArgoCD app finishes a sync and
+//       metric changes line up with the deploy that caused them. This is the
+//       "pull" side of the integration -- Grafana reads a metric rather than
+//       ArgoCD pushing annotations, so there is no ArgoCD->Grafana dependency
+//       and no API key. deployAnnotationDatasourceUid selects the datasource
+//       (default 'prom', the provisioned Mimir uid on every cluster).
+//
 local k = import 'k.libsonnet';
 local po = import 'github.com/jsonnet-libs/prometheus-operator-libsonnet/0.77/main.libsonnet';
 local libutil = import 'util.libsonnet';
@@ -45,6 +55,8 @@ local libutil = import 'util.libsonnet';
     ruleGroupsToDrop: [],
     tags: [],
     dirAnnotation: 'k8s-sidecar-target-directory',
+    deployAnnotation: true,  // See file header: inject an ArgoCD-deploy annotation.
+    deployAnnotationDatasourceUid: 'prom',
   },
   new(mixin, overrides)::
     {
@@ -94,6 +106,33 @@ local libutil = import 'util.libsonnet';
           local injected = std.sort(config.tags);
           dashboard { tags: std.setUnion(existing, injected) },
 
+      // See file header. Adds a Grafana annotation query that draws a marker on
+      // every panel whenever an ArgoCD app finishes a sync, so metric changes
+      // line up visually with the deploy that caused them. Pulled from the
+      // already-scraped argocd_app_sync_total counter (no ArgoCD->Grafana push
+      // dependency). Idempotent: skipped if a dashboard already declares one.
+      local deployAnnotationQuery = {
+        name: 'ArgoCD deploys',
+        enable: true,
+        hide: false,
+        iconColor: 'rgba(255, 96, 96, 1)',
+        datasource: { type: 'prometheus', uid: config.deployAnnotationDatasourceUid },
+        target: {
+          expr: 'changes(argocd_app_sync_total{phase="Succeeded"}[$__interval]) > 0',
+          refId: 'Anno',
+        },
+        titleFormat: 'deploy: {{name}}',
+        tagKeys: 'name,project',
+        step: '60s',
+      },
+      local setDeployAnnotation(dashboard) =
+        if !config.deployAnnotation then dashboard
+        else
+          local existing = std.get(dashboard, 'annotations', { list: [] });
+          local existingList = std.get(existing, 'list', []);
+          if std.member([std.get(a, 'name', '') for a in existingList], 'ArgoCD deploys') then dashboard
+          else dashboard { annotations+: { list: existingList + [deployAnnotationQuery] } },
+
       local dashBlobs = mixin.grafanaDashboards,
       assert dashBlobs != null,
       dashboards: std.filterMap(
@@ -101,7 +140,7 @@ local libutil = import 'util.libsonnet';
           !std.member(config.dashboardsToDrop, toK8s(name)),
         function(name)
           assert dashBlobs[name] != null;
-          local dashContent = std.manifestJsonEx(setTags(prefixUid(setDatasourceDefaults(dashBlobs[name]))), indent=' ', newline='\n');
+          local dashContent = std.manifestJsonEx(setDeployAnnotation(setTags(prefixUid(setDatasourceDefaults(dashBlobs[name])))), indent=' ', newline='\n');
           kConfigMap.new(toK8s(name))
           + kConfigMap.metadata.withNamespace(config.namespace)
           + kConfigMap.metadata.withLabelsMixin({ grafana_dashboard: '1' })
