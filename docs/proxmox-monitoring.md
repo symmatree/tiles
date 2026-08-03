@@ -34,7 +34,11 @@ After removing old CTs manually, apply **`prod`** workspace with **`deploy_proxm
 
 ```promql
 rate(node_cpu_seconds_total{cluster="bond", instance=~"nuc-g.*"}[5m])
+# host RAM -- should read ~15.4 GB, not 0.5 GB (#544)
+node_memory_MemTotal_bytes{cluster="bond", instance=~"nuc-g.*"}
 ```
+
+`node_exporter` reads `procfs_path = /host/proc` (a bind of the host's live procfs; see [`proxmox-alloy.tf`](../tf/nodes/proxmox-alloy.tf)) so `node_memory_*` reports **host** RAM/swap. Reading the container's own `/proc/meminfo` instead reports the ~512 MB **LXC cgroup** limit (lxcfs-virtualized), which is the #544 blindspot. `sysfs` stays on the nested `/sys` (hwmon temps read host-true there).
 
 **Logs (host systemd journal):**
 

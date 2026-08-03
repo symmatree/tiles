@@ -106,14 +106,28 @@ resource "proxmox_virtual_environment_container" "alloy" {
     dedicated = 512
   }
 
-  # Mount host root filesystem (read-only for safety)
-  # This gives access to /sys, /proc, /dev, /run from the host
-  # Same approach as Synology - bind mount host root to /host
+  # Mount host root filesystem (read-only) at /host, for node_exporter rootfs/filesystem metrics.
+  # NOTE: this bind is NON-recursive, so it does NOT carry the /proc, /sys, /dev, /run submounts --
+  # /host/proc is empty. The /proc and /sys binds below are what expose the live host procfs/sysfs.
+  # Same approach as Synology - bind mount host root to /host.
   mount_point {
     path          = "/host"
     read_only     = true
     mount_options = []
     volume        = "/"
+  }
+  # Bind the host's live procfs so node_exporter reads HOST memory, not the lxcfs-virtualized cgroup
+  # view (#544). Without this, procfs_path=/proc reads the container's /proc/meminfo, which lxcfs
+  # virtualizes down to the 512 MB cgroup limit -- so node_memory_* has been reporting 512 MB instead
+  # of the host's ~15.4 GB, leaving host memory/swap unmonitored. Pointing node_exporter at this bind
+  # (procfs_path=/host/proc in the template) is the standard containerized-node_exporter pattern.
+  # Requires the privileged CT above. Only /proc is affected -- sysfs (hwmon temps etc.) reads
+  # host-true already, so it is left on the nested /sys and not disturbed here.
+  mount_point {
+    path          = "/host/proc"
+    read_only     = true
+    mount_options = []
+    volume        = "/proc"
   }
   # Snippets dir bind mount at same path as host so we leave image /etc/alloy untouched (avoid unpack/permission issues).
   mount_point {
