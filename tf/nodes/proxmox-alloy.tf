@@ -116,18 +116,23 @@ resource "proxmox_virtual_environment_container" "alloy" {
     mount_options = []
     volume        = "/"
   }
-  # Bind the host's live procfs so node_exporter reads HOST memory, not the lxcfs-virtualized cgroup
-  # view (#544). Without this, procfs_path=/proc reads the container's /proc/meminfo, which lxcfs
-  # virtualizes down to the 512 MB cgroup limit -- so node_memory_* has been reporting 512 MB instead
-  # of the host's ~15.4 GB, leaving host memory/swap unmonitored. Pointing node_exporter at this bind
-  # (procfs_path=/host/proc in the template) is the standard containerized-node_exporter pattern.
-  # Requires the privileged CT above. Only /proc is affected -- sysfs (hwmon temps etc.) reads
-  # host-true already, so it is left on the nested /sys and not disturbed here.
+  # The /->/host bind above is NON-recursive, so it drops the /proc and /sys submounts -- /host/proc
+  # and /host/sys are empty without these. Bind them explicitly so node_exporter reads the whole host
+  # via /host (procfs_path=/host/proc, sysfs_path=/host/sys in the template). This is what fixes #544:
+  # otherwise procfs_path=/proc reads the container's own /proc/meminfo, which lxcfs virtualizes down
+  # to the 512 MB cgroup limit, so node_memory_* reported 512 MB instead of the host's ~15.4 GB.
+  # Standard containerized-node_exporter pattern; requires the privileged CT above.
   mount_point {
     path          = "/host/proc"
     read_only     = true
     mount_options = []
     volume        = "/proc"
+  }
+  mount_point {
+    path          = "/host/sys"
+    read_only     = true
+    mount_options = []
+    volume        = "/sys"
   }
   # Snippets dir bind mount at same path as host so we leave image /etc/alloy untouched (avoid unpack/permission issues).
   mount_point {
