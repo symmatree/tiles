@@ -88,6 +88,15 @@ collectors:
         stage.static_labels {
           values = { source = "talos" }
         }
+        // Drop lancer's WMI-mapper ACPI spam: its AMD firmware fires a PNP0C14 WMI notify
+        // every ~5s that no kernel driver claims, so Talos logs each as an 'ignoring ACPI
+        // event' warning (~17k lines/day, lancer-only, dead-flat -- benign firmware polling,
+        // not a fault). Scoped to the "wmi payload so a genuine ACPI event (thermal, button,
+        // different payload) still comes through.
+        stage.drop {
+          expression          = "ignoring ACPI event: \"wmi"
+          drop_counter_reason = "talos_wmi_acpi_noise"
+        }
         // Ingestion-time on purpose (no embedded-timestamp parse): tailing existing /
         // rotated content on first start would otherwise be rejected 'entry too far behind'.
         forward_to = [loki.write.localloki.receiver]
