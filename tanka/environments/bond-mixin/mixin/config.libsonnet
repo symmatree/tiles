@@ -23,6 +23,11 @@ local snmpHexLabel(str) =
     metalCpuChipNames: 'k10temp|coretemp',
     metalCpuTempThresholdCelsius: 90,
     metalCpuTempFor: '10m',
+    // iGPU: only AMD APUs expose a GPU hwmon (amdgpu); no temp_crit is reported, so fixed warn
+    // set above the CPU's (APU GPU runs hotter under load, throttles ~95-100 C).
+    metalGpuChipNames: 'amdgpu',
+    metalGpuTempThresholdCelsius: 95,
+    metalGpuTempFor: '10m',
 
     raconteurInstance: 'raconteur',
     raconteurSnmpJob: 'integrations/snmp/raconteur',
