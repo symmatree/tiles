@@ -1,12 +1,10 @@
 // Alloy configuration for Proxmox host monitoring
 // Collects node_exporter metrics (including hwmon sensors) and system logs, forwarding to prod OTLP
 
-// Node exporter reads the host's procfs, sysfs, and rootfs, all bind-mounted under /host
-// (see proxmox-alloy.tf). Reading the container's own /proc instead would report lxcfs-virtualized
-// memory -- the 512 MB cgroup limit -- rather than host RAM (#544).
+// Node exporter for host system metrics (nesting exposes host /proc and /sys to the container)
 prometheus.exporter.unix "node" {
-  procfs_path = "/host/proc"
-  sysfs_path  = "/host/sys"
+  procfs_path = "/proc"
+  sysfs_path  = "/sys"
   rootfs_path = "/host"
 }
 
@@ -80,30 +78,31 @@ otelcol.processor.attributes "main" {
   }
 }
 
-// Log collection from host.
-// PVE 9 hosts run Debian 13 (trixie), which is journald-only: rsyslog is not installed
-// and /var/log/{syslog,messages,auth.log,daemon.log} never exist, so the previous
-// loki.source.file tail collected nothing (0 lines/90d, #686). Read the host's persistent
-// journal, bind-mounted read-only at /host/var/log/journal, instead. (Mirror image of #662:
-// in-cluster Talos has no journal so we tail files there; the Proxmox host is the opposite.)
-loki.relabel "journal" {
-  forward_to = []
-
-  // Promote the systemd unit to a real label so host logs are filterable by service.
-  rule {
-    source_labels = ["__journal__systemd_unit"]
-    target_label  = "unit"
-  }
-}
-
-loki.source.journal "host" {
-  path          = "/host/var/log/journal"
-  max_age       = "12h"
-  relabel_rules = loki.relabel.journal.rules
-  labels        = {
-    job  = "proxmox-journal",
-    host = "${hostname}",
-  }
+// Log collection from host
+// Proxmox uses systemd, so we can collect from journald or traditional syslog
+loki.source.file "syslog" {
+  targets = [
+    {
+      __path__ = "/host/var/log/syslog",
+      job      = "proxmox-syslog",
+      host     = "${hostname}",
+    },
+    {
+      __path__ = "/host/var/log/messages",
+      job      = "proxmox-messages",
+      host     = "${hostname}",
+    },
+    {
+      __path__ = "/host/var/log/auth.log",
+      job      = "proxmox-auth",
+      host     = "${hostname}",
+    },
+    {
+      __path__ = "/host/var/log/daemon.log",
+      job      = "proxmox-daemon",
+      host     = "${hostname}",
+    },
+  ]
   forward_to = [otelcol.receiver.loki.main.receiver]
 }
 
