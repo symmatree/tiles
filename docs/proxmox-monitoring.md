@@ -1,6 +1,8 @@
 # Proxmox host monitoring (Alloy LXC)
 
-Each **Proxmox cluster node** can run an **unprivileged LXC** with **Grafana Alloy**, bind-mounting the host root read-only at `/host` and Proxmox **snippets** at `/var/lib/vz/snippets`. Alloy scrapes **unix/node_exporter-style** metrics (including **hwmon** via nesting + host paths), tails **host log files**, and ships everything to the **tiles** (prod) cluster over **OTLP HTTP**, with **`cluster="bond"`** and per-node **`hostname`** / **`instance`** labels.
+Each **Proxmox cluster node** can run an **unprivileged LXC** with **Grafana Alloy**, bind-mounting the host root read-only at `/host` and its Alloy **config** at `/etc/alloy`. Alloy scrapes **unix/node_exporter-style** metrics (including **hwmon** via nesting + host paths), tails **host log files**, and ships everything to the **tiles** (prod) cluster over **OTLP HTTP**, with **`cluster="bond"`** and per-node **`hostname`** / **`instance`** labels.
+
+**Config delivery (#695):** the config is uploaded as the snippet **`config.alloy`** and the snippets dir is bind-mounted over the container's **`/etc/alloy`**, so it lands at **`/etc/alloy/config.alloy`** -- exactly where the OCI image's **default entrypoint** (`/bin/alloy run /etc/alloy/config.alloy --storage.path=...`) reads it. We deliberately do **not** set `initialization.entrypoint`: the bpg provider doesn't reliably apply `initialization` settings to OCI-image containers on create ([bpg#2789](https://github.com/bpg/terraform-provider-proxmox/issues/2789)), so an overridden entrypoint is silently dropped on recreate and the CT falls back to the image's demo config -- what left the feed dark after the #692/#694 incident. Letting the default entrypoint load our config makes a recreate self-correcting.
 
 OTLP ingress and receiver behavior: [synology-monitoring.md](synology-monitoring.md).
 
@@ -20,7 +22,7 @@ OTLP ingress and receiver behavior: [synology-monitoring.md](synology-monitoring
 
 ## Deploy / config changes
 
-Network and entrypoint changes often do not affect a **running** CT until restart. Practical sequence: **stop** Alloy CTs, **`terraform apply`**, **start** (or apply while already stopped, then start). Afterward, **`/interfaces`** should list an IPv4 on **`eth0`**.
+Changes do not all affect a **running** CT the same way. **Config content** (`config.alloy`) updates the snippet, but a running CT keeps the old file open until restarted. **Mount and network** changes are **`ForceNew`** (recreate the CT). Practical sequence: **`terraform apply`**, then **stop/start** (or let the recreate happen). Afterward, **`/interfaces`** should list an IPv4 on **`eth0`**, and `cat /proc/1/cmdline` in the CT should show `/bin/alloy run /etc/alloy/config.alloy` loading the mounted config.
 
 After removing old CTs manually, apply **`prod`** workspace with **`deploy_proxmox_alloy = true`** to recreate containers.
 
