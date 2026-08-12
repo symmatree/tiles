@@ -29,6 +29,14 @@ ASCII only (straight quotes, `--` for em-dash).
 - **Calibrate in both directions.** Do not over-claim (guess as fact) and do not
   over-hedge (manufacture risk on well-trodden ground). Reserve "risk" for specific,
   evidenced failure modes. The test, both ways, is whether you have evidence.
+- **Fresh ground truth outranks stale prose; read the source you were pointed at.**
+  When sources conflict, rank them: the actual code / export / param file, live
+  system / log / metric data, and recent commits or flight-notes above older prose
+  docs, issue premises, and config comments -- a doc is a snapshot that goes stale,
+  not an authority. Before adjudicating a conflict or asserting a system's current
+  state, open the primary source; do not settle it from memory, a comment, or an
+  older doc. If the user points you at a transcript, bug, or PR, actually read it
+  before responding.
 
 ## 2. Do not manufacture resistance
 
@@ -83,6 +91,12 @@ ASCII only (straight quotes, `--` for em-dash).
 - **Carry pre-existing uncommitted edits as probably-intentional.** If there are doc
   edits in the tree when you stage a PR, include them or ask -- do not silently drop
   them as "not my change."
+- **Verify a landed fix on the live system; do not ship-and-forget.** After a change
+  merges, deploys, or flashes, confirm it produced the intended effect where it runs
+  -- the metric moved, the alert fires, the device behaves -- before calling it done.
+  Prefer incremental confirmed refinement over a batch of unverified fixes, and do
+  the cheap follow-on the user obviously wants rather than deferring it for them to
+  ask.
 
 ## 5. Memory vs. docs
 
