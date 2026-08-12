@@ -8,11 +8,13 @@
 # VM/CT IDs are unique cluster-wide in Proxmox, so we assign one per node (200, 201, ...).
 # When deploy_proxmox_alloy is false, no containers/OCI/images/snippets are created.
 #
-# Operational note: config is delivered as the snippet config.alloy bind-mounted at /var/lib/vz/snippets
-# and loaded via the entrypoint override (see the initialization block; the #696 "mount over /etc/alloy"
-# approach was reverted because it breaks OCI container spawn). A config-content change updates the
-# snippet but a running CT keeps the old file open until restarted. After a full CT *recreate*, the
-# override may not apply (bpg#2789) -- re-set it by hand (`pct set --entrypoint ... && pct start`).
+# Operational note: config is delivered as the snippet config.alloy bind-mounted over the CT's
+# /etc/alloy, and loaded by an entrypoint set to the image default (`/bin/alloy run
+# /etc/alloy/config.alloy ...`); see the initialization block. A config-content change updates the
+# snippet but a running CT keeps the old file open until restarted. This layout is robust to bpg#2789:
+# the entrypoint and mount both converge on our config regardless of whether the provider applies our
+# override or the image default -- and it always boots (an OCI CT with no entrypoint execs the
+# nonexistent /sbin/init and dies; that was the #696 outage, not the mount).
 locals {
   alloy_nodes  = var.deploy_proxmox_alloy ? toset(data.proxmox_virtual_environment_nodes.nodes.names) : toset([])
   alloy_vm_ids = { for i, n in sort(tolist(local.alloy_nodes)) : n => var.alloy_vm_base_id + i }
@@ -50,17 +52,21 @@ resource "proxmox_virtual_environment_container" "alloy" {
   }
 
   # Initialization
-  # Entrypoint override points Alloy at our config (uploaded as config.alloy, bind-mounted at
-  # /var/lib/vz/snippets). We tried removing the override and letting the image's default entrypoint
-  # load our config via a bind mount over /etc/alloy (#695/#696) -- but bind-mounting over /etc/alloy
-  # makes the unprivileged OCI container fail to START ("sync_wait ... Failed to spawn container"),
-  # which took the whole edge feed down. So we keep the override. KNOWN CAVEAT: the bpg provider does
-  # not reliably apply this override to OCI containers on *create* (bpg#2789), so after a full recreate
-  # a CT may come up on the image's demo config and ship nothing until the entrypoint is re-set by hand
-  # (`pct set <id> --entrypoint ... && pct start <id>`). See #695 for the durable fix (custom image).
+  # Entrypoint is set explicitly to the SAME command the OCI image already uses --
+  # `/bin/alloy run /etc/alloy/config.alloy ...` -- and we bind-mount our config over /etc/alloy below.
+  # This is robust to bpg#2789 (the provider not reliably applying our entrypoint to OCI containers on
+  # create): whether the provider applies THIS value or falls back to the image-derived one, both are
+  # `/bin/alloy run /etc/alloy/config.alloy`, and /etc/alloy/config.alloy is our config via the mount --
+  # so the CT boots and loads our config either way.
+  #
+  # Why an explicit entrypoint (rather than none): #696 removed the entrypoint entirely, expecting
+  # Proxmox to fall back to the image's entrypoint. It does NOT -- it execs `/sbin/init`, which does not
+  # exist in the app-container image (`Failed to exec "/sbin/init"` -> spawn fails -> the whole feed went
+  # down). The `/etc/alloy` mount itself is fine (an OCI CT boots with it as long as an entrypoint is
+  # set); the missing entrypoint was the actual #696 failure.
   initialization {
     hostname   = "alloy-${each.value}"
-    entrypoint = "/bin/alloy run /var/lib/vz/snippets/config.alloy '--storage.path=/var/lib/alloy/data' '--server.http.listen-addr=0.0.0.0:12345'"
+    entrypoint = "/bin/alloy run /etc/alloy/config.alloy '--storage.path=/var/lib/alloy/data' '--server.http.listen-addr=0.0.0.0:12345'"
     ip_config {
       ipv4 {
         address = "dhcp"
@@ -116,11 +122,13 @@ resource "proxmox_virtual_environment_container" "alloy" {
     mount_options = []
     volume        = "/"
   }
-  # Bind-mount the snippets dir (holds our config.alloy) into the CT. Mounted at the SAME path as the
-  # host -- do NOT mount it over /etc/alloy: that makes the unprivileged OCI container fail to spawn
-  # (sync_wait, #696). The entrypoint override above points Alloy at config.alloy under this path.
+  # Bind-mount the snippets dir (holds our config.alloy) over the container's /etc/alloy, so
+  # /etc/alloy/config.alloy IS our config -- exactly where the entrypoint above reads it. This shadows
+  # the image's demo /etc/alloy/config.alloy (the snippets dir holds only our file). Mounting here is
+  # fine as long as an entrypoint is set (verified: boots + ships); #696's outage was the *removed*
+  # entrypoint (-> /sbin/init), not this mount.
   mount_point {
-    path          = "/var/lib/vz/snippets"
+    path          = "/etc/alloy"
     read_only     = true
     mount_options = []
     volume        = "/var/lib/vz/snippets"
@@ -135,8 +143,9 @@ resource "proxmox_virtual_environment_container" "alloy" {
   description = "Alloy monitoring container for ${each.value} - collects host metrics and logs via node_exporter (hwmon sensors) and system logs"
 }
 
-# Upload the Alloy config as a snippet named config.alloy (bind-mounted at /var/lib/vz/snippets; the
-# entrypoint override points Alloy at /var/lib/vz/snippets/config.alloy).
+# Upload the Alloy config as a snippet named config.alloy. The snippets dir is bind-mounted over the
+# CT's /etc/alloy, so this lands at /etc/alloy/config.alloy -- where the entrypoint reads it. Must be
+# named config.alloy (it shadows the image's demo /etc/alloy/config.alloy).
 resource "proxmox_virtual_environment_file" "alloy_config" {
   for_each = local.alloy_nodes
   provider = proxmox.proxmox_root
