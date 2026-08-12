@@ -26,7 +26,24 @@ docker run --rm -it --privileged \
 
 ## Boot
 
-`rtk-base-user-on-bootup` runs as ExecStartPre on `rtkbase_web.service` and starts `str2str_tcp.service` and `str2str_local_ntrip_caster.service`. Base coords, mountpoint, and caster auth live in [`tanka/environments/ntrip/settings.conf`](../../tanka/environments/ntrip/settings.conf) (ConfigMap seed).
+`rtk-base-user-on-bootup` runs as ExecStartPre on `rtkbase_web.service` and starts `str2str_tcp.service`, `str2str_local_ntrip_caster.service`, and `str2str_file.service`. Base coords, mountpoint, and caster auth live in [`tanka/environments/ntrip/settings.conf`](../../tanka/environments/ntrip/settings.conf) (ConfigMap seed).
+
+### str2str topology (why raw logging is free)
+
+`str2str_tcp` is the only service that opens the serial device (`/dev/gnss`); it republishes the receiver stream on `127.0.0.1:5015`. Every other service consumes that TCP relay:
+
+```
+/dev/gnss --[str2str_tcp]--> 127.0.0.1:5015 --+--> str2str_local_ntrip_caster  (RTCM, port 2101)
+                                              +--> str2str_file               (raw log to PVC)
+```
+
+So `str2str_file` (`run_cast.sh in_tcp out_file`) is **additive** -- enabling raw logging does not contend for the receiver and does not interrupt RTK.
+
+### Raw logging
+
+Raw UBX lands in `/persist/rtkbase/data` (`[local_storage]` in `settings.conf`), rotating every 24 h; `rtkbase_archive.timer` zips daily at 04:00 and keeps `archive_rotate=60` archives. Measured stream rate is ~4.7 KiB/s, so roughly **420 MB/day** uncompressed against 200+ GB free on the PVC.
+
+The receiver emits `UBX-RXM-RAWX` (1 Hz) and `UBX-RXM-SFRBX`, so these logs are **PPP-usable**: `convbin` them to RINEX and submit to a PPP service to re-solve the base position. That is the point of keeping them -- the current fixed position's derivation is not recorded (see [`facts` `geospatial/locations/base_station.md`](https://github.com/symmatree/facts/blob/main/geospatial/locations/base_station.md)).
 
 ## Kubernetes (phase 3)
 
