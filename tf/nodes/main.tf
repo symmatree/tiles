@@ -40,6 +40,15 @@ provider "proxmox" {
   username = "root@pam"
   password = var.proxmox_root_password
   insecure = true
+
+  # Needed so proxmox_virtual_environment_file can upload a snippet with an executable file_mode via
+  # SFTP (the API upload path can't set the exec bit). Only the hookscript upload sets upload_mode =
+  # "sftp"; other uploads (config.alloy) stay on the API path. bpg resolves node addresses via the API.
+  ssh {
+    username = "root"
+    password = var.proxmox_root_password
+    agent    = false
+  }
 }
 
 provider "unifi" {

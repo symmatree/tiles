@@ -78,31 +78,33 @@ otelcol.processor.attributes "main" {
   }
 }
 
-// Log collection from host
-// Proxmox uses systemd, so we can collect from journald or traditional syslog
-loki.source.file "syslog" {
-  targets = [
-    {
-      __path__ = "/host/var/log/syslog",
-      job      = "proxmox-syslog",
-      host     = "${hostname}",
-    },
-    {
-      __path__ = "/host/var/log/messages",
-      job      = "proxmox-messages",
-      host     = "${hostname}",
-    },
-    {
-      __path__ = "/host/var/log/auth.log",
-      job      = "proxmox-auth",
-      host     = "${hostname}",
-    },
-    {
-      __path__ = "/host/var/log/daemon.log",
-      job      = "proxmox-daemon",
-      host     = "${hostname}",
-    },
-  ]
+// Host log collection from the systemd journal (#686).
+// PVE 9 hosts run Debian 13 (trixie), which is journald-only -- rsyslog is not installed and
+// /var/log/{syslog,messages,auth.log,daemon.log} never exist, so the old loki.source.file tail
+// collected nothing (0 lines/90d). Read the host's persistent journal, bind-mounted read-only at
+// /host/var/log/journal. dmesg/kernel logs come along for free (journalctl -k lives in the journal).
+//
+// The journal files are 0640 root:systemd-journal and this CT is unprivileged, so its mapped root
+// (host uid 100000) can't read them by default. The CT's hook_script_file_id (see proxmox-alloy.tf)
+// runs on the host at pre-start and grants that uid read via setfacl -- so this reads unprivileged.
+loki.relabel "journal" {
+  forward_to = []
+
+  // Promote the systemd unit to a real label so host logs are filterable by service.
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+}
+
+loki.source.journal "host" {
+  path          = "/host/var/log/journal"
+  max_age       = "12h"
+  relabel_rules = loki.relabel.journal.rules
+  labels        = {
+    job  = "proxmox-journal",
+    host = "${hostname}",
+  }
   forward_to = [otelcol.receiver.loki.main.receiver]
 }
 
