@@ -1,6 +1,11 @@
 name: build-mavproxy
 on:
   workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - containers/mavproxy/**
+      - .github/workflows/build-mavproxy.yaml
   schedule:
     - cron: 0 9 * * *
 jobs:
