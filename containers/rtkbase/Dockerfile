@@ -23,6 +23,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY rtk-base-user-on-bootup /usr/local/bin/
+# str2str_file logs to the PVC, which upstream's ProtectSystem=strict forbids.
+COPY str2str_file-persist-datadir.conf /etc/systemd/system/str2str_file.service.d/
 RUN chmod +x /usr/local/bin/rtk-base-user-on-bootup \
     && sed -i '/^ExecStart=.*/i ExecStartPre=/usr/local/bin/rtk-base-user-on-bootup' /etc/systemd/system/rtkbase_web.service \
     && rm -f /usr/sbin/policy-rc.d

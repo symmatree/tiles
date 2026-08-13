@@ -43,6 +43,8 @@ So `str2str_file` (`run_cast.sh in_tcp out_file`) is **additive** -- enabling ra
 
 Raw UBX lands in `/persist/rtkbase/data` (`[local_storage]` in `settings.conf`), rotating every 24 h; `rtkbase_archive.timer` zips daily at 04:00 and keeps `archive_rotate=60` archives. Measured stream rate is ~4.7 KiB/s, so roughly **420 MB/day** uncompressed against 200+ GB free on the PVC.
 
+Upstream's `str2str_file.service` ships `ProtectSystem=strict` with `ReadWritePaths=/root/rtkbase`, which assumes the datadir sits inside the RTKBase install. Ours is on the PVC, so systemd mounts it read-only and str2str exits 1 with `stream server start error`, crash-looping on its 30 s `RestartSec`. [`str2str_file-persist-datadir.conf`](str2str_file-persist-datadir.conf) is a drop-in granting `ReadWritePaths=/persist/rtkbase` and nothing else. **If the datadir ever moves, that drop-in has to move with it.**
+
 The receiver emits `UBX-RXM-RAWX` (1 Hz) and `UBX-RXM-SFRBX`, so these logs are **PPP-usable**: `convbin` them to RINEX and submit to a PPP service to re-solve the base position. That is the point of keeping them -- the current fixed position's derivation is not recorded (see [`facts` `geospatial/locations/base_station.md`](https://github.com/symmatree/facts/blob/main/geospatial/locations/base_station.md)).
 
 ## Kubernetes (phase 3)
