@@ -118,14 +118,29 @@ resource "proxmox_virtual_environment_container" "alloy" {
     dedicated = 512
   }
 
-  # Mount host root filesystem (read-only for safety)
-  # This gives access to /sys, /proc, /dev, /run from the host
-  # Same approach as Synology - bind mount host root to /host
+  # Mount host root filesystem (read-only) at /host for node_exporter rootfs/filesystem metrics.
+  # NOTE: this bind is NON-recursive, so it does NOT carry the /proc and /sys submounts (/host/proc is
+  # empty without the explicit binds below). Same approach as Synology - bind mount host root to /host.
   mount_point {
     path          = "/host"
     read_only     = true
     mount_options = []
     volume        = "/"
+  }
+  # Bind the host's live procfs and sysfs so node_exporter reads HOST memory/CPU, not the
+  # lxcfs-virtualized 512 MB cgroup view (#544). procfs_path=/host/proc, sysfs_path=/host/sys in the
+  # template. No privilege needed (/proc/meminfo, /sys are world-readable).
+  mount_point {
+    path          = "/host/proc"
+    read_only     = true
+    mount_options = []
+    volume        = "/proc"
+  }
+  mount_point {
+    path          = "/host/sys"
+    read_only     = true
+    mount_options = []
+    volume        = "/sys"
   }
   # Bind-mount the snippets dir (holds our config.alloy) over the container's /etc/alloy, so
   # /etc/alloy/config.alloy IS our config -- exactly where the entrypoint above reads it. This shadows
