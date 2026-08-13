@@ -127,9 +127,21 @@ resource "proxmox_virtual_environment_container" "alloy" {
     mount_options = []
     volume        = "/"
   }
+  # Bind-mount the snippets dir (holds our config.alloy) over the container's /etc/alloy, so
+  # /etc/alloy/config.alloy IS our config -- exactly where the entrypoint above reads it. This shadows
+  # the image's demo /etc/alloy/config.alloy (the snippets dir holds only our file). Mounting here is
+  # fine as long as an entrypoint is set (verified: boots + ships); #696's outage was the *removed*
+  # entrypoint (-> /sbin/init), not this mount.
+  mount_point {
+    path          = "/etc/alloy"
+    read_only     = true
+    mount_options = []
+    volume        = "/var/lib/vz/snippets"
+  }
   # Bind the host's live procfs and sysfs so node_exporter reads HOST memory/CPU, not the
   # lxcfs-virtualized 512 MB cgroup view (#544). procfs_path=/host/proc, sysfs_path=/host/sys in the
-  # template. No privilege needed (/proc/meminfo, /sys are world-readable).
+  # template. No privilege needed (/proc/meminfo, /sys are world-readable). Ordered LAST so they append
+  # as mp2/mp3 (mount_point is ForceNew -- matching the live CTs' mp numbering keeps the apply a no-op).
   mount_point {
     path          = "/host/proc"
     read_only     = true
@@ -141,17 +153,6 @@ resource "proxmox_virtual_environment_container" "alloy" {
     read_only     = true
     mount_options = []
     volume        = "/sys"
-  }
-  # Bind-mount the snippets dir (holds our config.alloy) over the container's /etc/alloy, so
-  # /etc/alloy/config.alloy IS our config -- exactly where the entrypoint above reads it. This shadows
-  # the image's demo /etc/alloy/config.alloy (the snippets dir holds only our file). Mounting here is
-  # fine as long as an entrypoint is set (verified: boots + ships); #696's outage was the *removed*
-  # entrypoint (-> /sbin/init), not this mount.
-  mount_point {
-    path          = "/etc/alloy"
-    read_only     = true
-    mount_options = []
-    volume        = "/var/lib/vz/snippets"
   }
   # Start on boot
   start_on_boot = true
