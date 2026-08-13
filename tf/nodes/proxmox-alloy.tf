@@ -35,10 +35,15 @@ resource "proxmox_oci_image" "alloy" {
 resource "proxmox_virtual_environment_container" "alloy" {
   for_each   = local.alloy_nodes
   provider   = proxmox.proxmox_root
-  depends_on = [proxmox_virtual_environment_file.alloy_config]
+  depends_on = [proxmox_virtual_environment_file.alloy_config, proxmox_virtual_environment_file.alloy_journal_hook]
 
   node_name = each.value
   vm_id     = local.alloy_vm_ids[each.key]
+
+  # Hookscript runs on the host at pre-start and setfacls the systemd journal so this unprivileged
+  # CT can read it for host-log collection (#686; see alloy-journal-hook.sh + the loki.source.journal
+  # block in the template). Must be executable, which is why the file below uploads via SFTP w/ 0755.
+  hook_script_file_id = proxmox_virtual_environment_file.alloy_journal_hook[each.value].id
 
   # Use OCI image - grafana/alloy:latest (same as Synology setup)
   operating_system {
@@ -159,5 +164,24 @@ resource "proxmox_virtual_environment_file" "alloy_config" {
       hostname   = each.value
     })
     file_name = "config.alloy"
+  }
+}
+
+# Upload the CT hookscript as an EXECUTABLE snippet. Proxmox refuses a non-executable hookscript, and
+# the API upload path can't set the exec bit -- so this uses upload_mode = "sftp" + file_mode = "0755"
+# (requires the provider `ssh` block in main.tf). Referenced by hook_script_file_id on the CT above;
+# it grants the CT read on the host journal at pre-start so loki.source.journal works unprivileged (#686).
+resource "proxmox_virtual_environment_file" "alloy_journal_hook" {
+  for_each = local.alloy_nodes
+  provider = proxmox.proxmox_root
+
+  node_name    = each.value
+  datastore_id = "local"
+  content_type = "snippets"
+  file_mode    = "0755"
+  upload_mode  = "sftp"
+  source_raw {
+    data      = file("${path.root}/templates/alloy-journal-hook.sh")
+    file_name = "alloy-journal-hook"
   }
 }

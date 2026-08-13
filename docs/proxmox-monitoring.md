@@ -1,6 +1,6 @@
 # Proxmox host monitoring (Alloy LXC)
 
-Each **Proxmox cluster node** can run an **unprivileged LXC** with **Grafana Alloy**, bind-mounting the host root read-only at `/host` and its Alloy **config** over `/etc/alloy`. Alloy scrapes **unix/node_exporter-style** metrics (including **hwmon** via nesting + host paths), tails **host log files**, and ships everything to the **tiles** (prod) cluster over **OTLP HTTP**, with **`cluster="bond"`** and per-node **`hostname`** / **`instance`** labels.
+Each **Proxmox cluster node** can run an **unprivileged LXC** with **Grafana Alloy**, bind-mounting the host root read-only at `/host` and its Alloy **config** over `/etc/alloy`. Alloy scrapes **unix/node_exporter-style** metrics (including **hwmon** via nesting + host paths), reads the **host systemd journal**, and ships everything to the **tiles** (prod) cluster over **OTLP HTTP**, with **`cluster="bond"`** and per-node **`hostname`** / **`instance`** labels.
 
 **Config delivery:** the config is uploaded as the snippet **`config.alloy`**, bind-mounted over the CT's **`/etc/alloy`** (so `/etc/alloy/config.alloy` is our config), and the entrypoint is set to the **image default** command `/bin/alloy run /etc/alloy/config.alloy ...`. This is **robust to bpg#2789** (the provider not reliably applying the entrypoint to OCI containers on *create*): whether the provider applies our value or falls back to the image-derived one, both are `/bin/alloy run /etc/alloy/config.alloy`, and that path is our config via the mount -- so the CT boots and loads our config either way. **Do not remove the entrypoint** to "let the image default run": an OCI app-container with no entrypoint execs `/sbin/init`, which doesn't exist in the image (`Failed to exec "/sbin/init"` -> the CT fails to spawn). That -- not the `/etc/alloy` mount -- was the #695/#696 outage; the mount itself boots fine with an entrypoint set. (A fully self-contained alternative -- bake a custom Alloy image with the config as the default -- is noted in #695.)
 
@@ -34,12 +34,16 @@ After removing old CTs manually, apply **`prod`** workspace with **`deploy_proxm
 rate(node_cpu_seconds_total{cluster="bond", instance=~"nuc-g.*"}[5m])
 ```
 
-**Logs (when working):**
+**Logs (host systemd journal, #686):**
 
 ```logql
-{job=~"proxmox.*"}
-{host=~"nuc-g.*"}
+{job="proxmox-journal"}
+{job="proxmox-journal", host="nuc-g3p-1", unit="pveproxy.service"}
 ```
+
+Host logs come from the **systemd journal** (`loki.source.journal` reading `/host/var/log/journal`), labeled `job="proxmox-journal"`, `host="<node>"`, with the systemd `unit` promoted to a label. dmesg/kernel logs are included (`journalctl -k` is in the journal). PVE 9 is journald-only, so the old `loki.source.file` tail of `/var/log/{syslog,messages,...}` collected nothing.
+
+**How an unprivileged CT reads the `0640 root:systemd-journal` journal:** a Proxmox **hookscript** (`tf/nodes/templates/alloy-journal-hook.sh`, wired via `hook_script_file_id`) runs on the host at CT **pre-start** and `setfacl`s `u:100000:rX` (the CT's mapped root) onto `/var/log/journal` (installing the `acl` package first if missing) -- so Alloy reads the journal without a privileged CT (privileged is impossible here: OCI images can't create privileged, bpg#2513). The hookscript is best-effort and always exits 0 (a failing pre-start hook would abort the CT start), so a journal-ACL problem degrades to "no host logs this boot", never a down CT. It's delivered as an **executable** snippet (`file_mode = "0755"`, `upload_mode = "sftp"` -- the API upload can't set the exec bit; needs the provider `ssh` block).
 
 **Proxmox API (eth0 has an address):** `GET /nodes/{node}/lxc/{vmid}/interfaces`
 
