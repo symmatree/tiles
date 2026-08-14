@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/backpack-mixin"
+  },
+  "spec": {
+    "namespace": "backpack-mixin",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}
