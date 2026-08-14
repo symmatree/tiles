@@ -11,9 +11,7 @@ If the documentation changes upstream, you may need to update the `fables/` subm
 * Router claims 10.0.0.0/16.
 * DHCP: 10.0.11.1 - 10.0.12.254
 * 10.0.0.0/24: UniFi infrastructure
-* 10.0.1.0/24: Physical Proxmox hosts + old Tales cluster nodes
-  * Tales legacy: 10.0.4.0/23 (pods), 10.0.6.0/23 (services) - to be reclaimed
-  * 10.0.8.0/24 (Tales external)
+* 10.0.1.0/24: Physical Proxmox hosts
 * 10.0.98.0/24: Client machines (laptops, workstations)
 * 10.0.99.0/24: Servers, IoT services, cameras
 
