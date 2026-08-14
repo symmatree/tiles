@@ -32,7 +32,10 @@ After removing old CTs manually, apply **`prod`** workspace with **`deploy_proxm
 
 ```promql
 rate(node_cpu_seconds_total{cluster="bond", instance=~"nuc-g.*"}[5m])
+node_memory_MemTotal_bytes{cluster="bond", instance=~"nuc-g.*"}   # host RAM ~15GB, not 0.5GB (#544)
 ```
+
+`node_exporter` reads `procfs_path=/host/proc` + `sysfs_path=/host/sys` (host `/proc`,`/sys` bind-mounted; see [`proxmox-alloy.tf`](../tf/nodes/proxmox-alloy.tf)), so `node_memory_*` reports **host** RAM/swap. The container's own `/proc/meminfo` is lxcfs-virtualized to the ~512 MB LXC cgroup limit (the #544 blindspot). The `/`->`/host` bind is non-recursive, so `/proc` and `/sys` are bound explicitly.
 
 **Logs (host systemd journal, #686):**
 
