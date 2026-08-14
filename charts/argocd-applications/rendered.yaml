@@ -36,6 +36,143 @@ spec:
                 create: false
                 embed: true
           extraObjects:
+            # json_exporter: the JSON counterpart to the blackbox exporter that
+            # alloy-metrics runs as a component. Alloy has no JSON exporter
+            # component, so it has to be its own process -- but like blackbox it is
+            # a shared multi-target prober (/probe?module=&target=), so it lives
+            # here with the rest of the probe plumbing rather than next to any one
+            # workload. Per-device Probe CRs live with the workload they belong to
+            # (e.g. `backpack-mavlink` in the mavproxy namespace) and just point
+            # their prober at this Service.
+            - apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: json-exporter
+                namespace: "alloy"
+                labels:
+                  app: json-exporter
+              data:
+                config.yml: |
+                  ---
+                  # Module definitions for the shared json_exporter deployed by
+                  # templates/alloy-application.yaml (mounted as its config.yml; the Deployment
+                  # carries this file's checksum, so editing it rolls the pod). One module per
+                  # JSON endpoint shape; the per-device target lives in that device's Probe CR.
+                  #
+                  # `backpack`: the ELRS TX backpack's GET /mavlink status endpoint
+                  # (coordinator#190). Probe: `backpack-mavlink` in the mavproxy namespace.
+                  modules:
+                    backpack:
+                      metrics:
+                        - name: backpack_mavlink_enabled
+                          help: 1 when the backpack WiFi service is the MAVLink bridge (Telem mode = WiFi).
+                          path: '{ .enabled }'
+                          valuetype: gauge
+                        - name: backpack_wifi_rssi_dbm
+                          help: Backpack-to-AP RSSI reported by the esp8285.
+                          path: '{ .link.rssi }'
+                          valuetype: gauge
+                        - name: backpack_wifi_reconnects_total
+                          help: STA reconnects since boot -- rising while still reachable means the reconnect patch is riding out drops instead of falling back to AP mode.
+                          path: '{ .link.reconnects }'
+                          valuetype: counter
+                        - name: backpack_uptime_milliseconds
+                          help: millis() since backpack boot; a drop to near zero is a reboot.
+                          path: '{ .link.uptime_ms }'
+                          valuetype: gauge
+                        - name: backpack_mavlink_packets_up_total
+                          help: MAVLink packets bridged uplink (ground -> air), including RTCM.
+                          path: '{ .counters.packets_up }'
+                          valuetype: counter
+                        - name: backpack_mavlink_packets_down_total
+                          help: MAVLink packets bridged downlink (air -> ground).
+                          path: '{ .counters.packets_down }'
+                          valuetype: counter
+                        - name: backpack_mavlink_drops_down_total
+                          help: Downlink drops counted by the backpack; a per-source sequence artifact, not necessarily real loss.
+                          path: '{ .counters.drops_down }'
+                          valuetype: counter
+                        - name: backpack_mavlink_overflows_down_total
+                          help: Downlink buffer overflows -- genuine link-capacity pressure.
+                          path: '{ .counters.overflows_down }'
+                          valuetype: counter
+                        - name: backpack_wifi_link
+                          help: WiFi association the backpack is on; value is always 1.
+                          type: object
+                          valuetype: gauge
+                          path: '{ .link }'
+                          labels:
+                            ssid: '{ .ssid }'
+                            bssid: '{ .bssid }'
+                          values:
+                            info: 1
+                        - name: backpack_mavlink_gcs
+                          help: GCS the backpack has latched onto; value is always 1. "IP UNSET" means it is still broadcasting.
+                          type: object
+                          valuetype: gauge
+                          path: '{ .ip }'
+                          labels:
+                            gcs: '{ .gcs }'
+                          values:
+                            info: 1
+                  
+            - apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: json-exporter
+                namespace: "alloy"
+                labels:
+                  app: json-exporter
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: json-exporter
+                template:
+                  metadata:
+                    labels:
+                      app: json-exporter
+                    annotations:
+                      json-exporter-config-hash: '49a8aab4835b2d02'
+                  spec:
+                    containers:
+                      - name: json-exporter
+                        image: quay.io/prometheuscommunity/json-exporter:v0.8.0
+                        args:
+                          - --config.file=/etc/json_exporter/config.yml
+                        ports:
+                          - name: http
+                            containerPort: 7979
+                        readinessProbe:
+                          httpGet:
+                            path: /
+                            port: 7979
+                        resources:
+                          requests:
+                            memory: 32Mi
+                          limits:
+                            memory: 64Mi
+                        volumeMounts:
+                          - name: config
+                            mountPath: /etc/json_exporter
+                    volumes:
+                      - name: config
+                        configMap:
+                          name: json-exporter
+            - apiVersion: v1
+              kind: Service
+              metadata:
+                name: json-exporter
+                namespace: "alloy"
+                labels:
+                  app: json-exporter
+              spec:
+                selector:
+                  app: json-exporter
+                ports:
+                  - name: http
+                    port: 7979
+                    targetPort: 7979
             # Per-tenant Alertmanager routing, pushed to the Mimir alertmanager by
             # mimir.alerts.kubernetes below. Labelled by tenant so each tenant's
             # routing is its own git object. With strategy=None this route is a

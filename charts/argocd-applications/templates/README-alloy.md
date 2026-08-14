@@ -27,6 +27,24 @@ All instances run with clustering enabled for high availability.
 - kube-proxy metrics disabled (Cilium replaces kube-proxy)
 - Blackbox exporter embedded in alloy-metrics instance
 
+### Probers
+
+Two shared multi-target probers, both driven by `Probe` CRs
+(`/probe?module=<module>&target=<url>`):
+
+| Prober | Where it runs | For |
+|--------|---------------|-----|
+| **blackbox** | `prometheus.exporter.blackbox` component inside alloy-metrics | HTTP up/down + response time (`http_2xx` module) |
+| **json_exporter** | Own Deployment + Service `json-exporter.alloy.svc:7979` (`extraObjects`) | Turning a device's JSON endpoint into metrics; Alloy has no JSON exporter component, so it cannot be an Alloy module |
+
+Module definitions for both live here (json_exporter's in the
+`$jsonExporterConfig` variable at the top of `alloy-application.yaml`, whose
+checksum is on the pod so a module edit actually rolls it). The per-device
+`Probe` CRs live with the workload they belong to and just point at the prober:
+`hubitat` / `raconteur` / `morpheus` here, and `backpack-mavlink` in the
+`mavproxy` namespace (module `backpack`, see
+[`tanka/environments/mavproxy/README.md`](../../../tanka/environments/mavproxy/README.md)).
+
 ### Log Collection
 
 - Collects pod logs from `/var/log/pods`

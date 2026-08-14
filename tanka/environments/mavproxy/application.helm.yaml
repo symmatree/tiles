@@ -23,7 +23,6 @@ spec:
         - name: app_settings
           map:
             image: ghcr.io/symmatree/tiles/mavproxy:main
-            json_exporter_image: quay.io/prometheuscommunity/json-exporter:v0.8.0
             backpack_mavlink_url: http://10.0.6.120/mavlink
             tcp_hostname: mavproxy.tiles.symmatree.com
             ntrip_caster: ntrip.tiles.symmatree.com
