@@ -26,7 +26,7 @@ docker run --rm -it --privileged \
 
 ## Boot
 
-`rtk-base-user-on-bootup` runs as ExecStartPre on `rtkbase_web.service` and starts `str2str_tcp.service`, `str2str_local_ntrip_caster.service`, and `str2str_file.service`. Base coords, mountpoint, and caster auth live in [`tanka/environments/ntrip/settings.conf`](../../tanka/environments/ntrip/settings.conf) (ConfigMap seed).
+`rtk-base-user-on-bootup` runs as ExecStartPre on `rtkbase_web.service` and starts `str2str_tcp.service`, `str2str_local_ntrip_caster.service`, and `str2str_file.service`. Base coords, mountpoint, RTCM message set and caster auth live in [`tanka/environments/ntrip/settings.conf`](../../tanka/environments/ntrip/settings.conf), which is authoritative -- it is re-copied over the PVC on every pod start.
 
 ### str2str topology (why raw logging is free)
 
@@ -49,4 +49,4 @@ The receiver emits `UBX-RXM-RAWX` (1 Hz) and `UBX-RXM-SFRBX`, so these logs are 
 
 ## Kubernetes (phase 3)
 
-Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). Init container seeds persisted `settings.conf` from the ConfigMap on first boot. Web UI uses the upstream default `admin` / `admin`.
+Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). The `seed-settings` init container **overwrites** `/persist/rtkbase/settings.conf` from the ConfigMap on **every** start, so git is authoritative and web-UI edits revert on the next restart -- see [that README](../../tanka/environments/ntrip/README.md#configuration-git-is-authoritative). Web UI uses the upstream default `admin` / `admin`.
