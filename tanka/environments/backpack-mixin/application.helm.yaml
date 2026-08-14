@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: mavproxy
+  name: backpack-mixin
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
@@ -12,7 +12,7 @@ spec:
     plugin:
       env:
         - name: TK_ENV
-          value: mavproxy
+          value: backpack-mixin
       parameters:
         - name: cluster_name
           string: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
@@ -21,17 +21,10 @@ spec:
         - name: project_id
           string: '{{ required ".Values.project_id is required" .Values.project_id }}'
         - name: app_settings
-          map:
-            image: ghcr.io/symmatree/tiles/mavproxy:main
-            json_exporter_image: quay.io/prometheuscommunity/json-exporter:v0.8.0
-            backpack_mavlink_url: http://10.0.6.120/mavlink
-            tcp_hostname: mavproxy.tiles.symmatree.com
-            ntrip_caster: ntrip.tiles.symmatree.com
-            ntrip_mountpoint: ATTIC
-            ntrip_caster_auth: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ntrip-caster-auth'
+          map: {}
   destination:
     server: https://kubernetes.default.svc
-    namespace: mavproxy
+    namespace: backpack-mixin
   syncPolicy:
     automated:
       prune: true
@@ -39,8 +32,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/enforce: privileged
-        pod-security.kubernetes.io/warn: privileged
 {{- end }}
