@@ -24,20 +24,21 @@ Both hostnames resolve to private **10.x** addresses on site LAN. Mission Planne
 Pod uses **hostNetwork** on acebase (privileged namespace, `dedicated=gnss` toleration) so ELRS backpack UDP broadcast on `:14550` reaches the proxy. MAVProxy runs with **`--daemon`** and **`--nowait`** as GCS **sysid 255**. NTRIP is configured via **`$HOME/.mavproxy/mavinit.scr`** written by the container entrypoint. No **liveness** probe -- k8s must not restart this hub. Readiness is **`kill -0 1`** only (never TCP `:5760`; `tcpin` accepts one Mission Planner client).
 
 
-## Backpack link health (`json-exporter`)
+## Backpack link health (`backpack-mavlink` Probe)
 
-Second workload in this namespace, unrelated to the proxy process: it scrapes the
-Boxer backpack's own status endpoint so its WiFi link is trendable over time
-(coordinator [#190](https://github.com/symmatree/coordinator/issues/190),
+One `Probe` CR in this namespace, unrelated to the proxy process: it has Alloy
+scrape the Boxer backpack's own status endpoint so its WiFi link is trendable
+over time (coordinator
+[#190](https://github.com/symmatree/coordinator/issues/190),
 [#99](https://github.com/symmatree/coordinator/issues/99)). The patched backpack
 firmware reports link health **only** on `GET http://10.0.6.120/mavlink` -- it is
 never in the MAVLink channel, so mavproxy cannot see it.
 
-| Piece | What it is |
-|-------|------------|
-| `json-exporter` Deployment + ConfigMap | [prometheus-community/json_exporter](https://github.com/prometheus-community/json_exporter), module `backpack`: maps the `/mavlink` JSON to `backpack_*` metrics |
-| `json-exporter` Service `:7979` | multi-target `/probe?module=backpack&target=...` endpoint |
-| `backpack-mavlink` Probe | Alloy scrapes the exporter every **30s** with `job="backpack"`, `instance=http://10.0.6.120/mavlink` |
+| Piece | Where |
+|-------|-------|
+| `backpack-mavlink` Probe | **here**: target `http://10.0.6.120/mavlink`, module `backpack`, every **30s**, `job="backpack"` |
+| json_exporter (the prober) | shared, in the `alloy` namespace -- `json-exporter.alloy.svc:7979`, deployed by the [Alloy app](../../../charts/argocd-applications/templates/README-alloy.md) alongside blackbox |
+| module `backpack` (JSON -> metrics mapping) | with the prober, in `alloy-application.yaml` |
 
 Metrics: `backpack_wifi_rssi_dbm`, `backpack_wifi_reconnects_total`,
 `backpack_uptime_milliseconds`, `backpack_mavlink_{enabled,packets_up_total,packets_down_total,drops_down_total,overflows_down_total}`,

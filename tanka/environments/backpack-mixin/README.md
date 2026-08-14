@@ -10,9 +10,10 @@ Prod only (`cluster_name: tiles`) -- the backpack is site hardware.
 
 ## Metrics it needs
 
-Produced by the `json-exporter` + `backpack-mavlink` Probe in the
-[mavproxy](../mavproxy/README.md) environment, which scrape the backpack's
-`GET /mavlink` endpoint every 30s under `job="backpack"`:
+Produced by the `backpack-mavlink` Probe in the
+[mavproxy](../mavproxy/README.md) environment, which has Alloy scrape the
+backpack's `GET /mavlink` endpoint every 30s under `job="backpack"`, through the
+shared json_exporter in the `alloy` namespace:
 
 - `up` -- scrape success; doubles as "is the backpack on the network".
 - `backpack_wifi_rssi_dbm`, `backpack_wifi_reconnects_total`,
