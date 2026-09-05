@@ -1,7 +1,9 @@
 #! /usr/bin/env bash
 set -euo pipefail
 
-export PROMETHEUS_OPERATOR_VERSION="v0.86.2"
+# Prometheus Operator CRDs are NOT here: Terraform installs them via the
+# upstream prometheus-operator-crds Helm chart (tf/nodes/k8s-bootstrap.tf).
+
 export CERT_MANAGER_VERSION="v1.19.2"
 export ARGOCD_VERSION="v3.2.3"
 export TRUST_MANAGER_VERSION="v0.20.3"
@@ -18,15 +20,6 @@ export ROLLOUT_OPERATOR_VERSION="v0.36.1"
 set -x
 kubectl apply --server-side --force-conflicts -f "https://github.com/grafana/alloy-operator/releases/download/${ALLOY_OPERATOR_VERSION}/collectors.grafana.com_alloy.yaml"
 
-# Prometheus Operator
-kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_servicemonitors.yaml"
-kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_podmonitors.yaml"
-kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_probes.yaml"
-kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_prometheusrules.yaml"
-kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_scrapeconfigs.yaml"
-# AlertmanagerConfig: consumed by Alloy's mimir.alerts.kubernetes to push the
-# alertmanager routing (-> apprise webhook) into the Mimir alertmanager per tenant.
-kubectl apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/${PROMETHEUS_OPERATOR_VERSION}/example/prometheus-operator-crd-full/monitoring.coreos.com_alertmanagerconfigs.yaml"
 # gateway-api
 kubectl apply --server-side --force-conflicts -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
 # cert-manager
