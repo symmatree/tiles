@@ -1,0 +1,85 @@
+{{- range $name, $target := .Values.certSync }}
+{{- if $target.enabled }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ printf "%s-sync-%s" $.Release.Name $name | quote }}
+  namespace: "{{ $.Release.Namespace }}"
+spec:
+  schedule: {{ $target.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: default
+          volumes:
+            - name: scripts
+              configMap:
+                name: {{ printf "%s-sync-%s" $.Release.Name $name | quote }}
+                defaultMode: 0755
+{{- if $target.sshKeySecretKey }}
+            - name: ssh-key
+              secret:
+                secretName: {{ $target.onePasswordItem.name | quote }}
+                defaultMode: 0400
+{{- end }}
+{{- range $target.certificates }}
+            - name: {{ printf "tls-%s" .secretName | quote }}
+              secret:
+                secretName: {{ .secretName | quote }}
+{{- end }}
+          containers:
+            - name: sync
+              image: {{ $.Values.certSyncImage | quote }}
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache openssl bash curl git ca-certificates openssh-client >/dev/null
+                  exec /bin/bash /scripts/run.sh
+              env:
+                - name: DEPLOY_HOOK
+                  value: {{ $target.deployHook | quote }}
+{{- if $target.sshKeySecretKey }}
+                # acme.sh's ssh hook shells out to these; point them at the mounted key.
+                - name: DEPLOY_SSH_USE_SCP
+                  value: "yes"
+                - name: DEPLOY_SSH_CMD
+                  value: {{ printf "ssh -i /ssh/%s -o StrictHostKeyChecking=accept-new" $target.sshKeySecretKey | quote }}
+                - name: DEPLOY_SSH_SCP_CMD
+                  value: {{ printf "scp -q -i /ssh/%s -o StrictHostKeyChecking=accept-new" $target.sshKeySecretKey | quote }}
+{{- end }}
+{{- range $key, $value := $target.env }}
+                - name: {{ $key }}
+                  value: {{ $value | quote }}
+{{- end }}
+{{- range $key, $secretKey := $target.envFromSecret }}
+                - name: {{ $key }}
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ $target.onePasswordItem.name | quote }}
+                      key: {{ $secretKey | quote }}
+{{- end }}
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+{{- if $target.sshKeySecretKey }}
+                - name: ssh-key
+                  mountPath: /ssh
+                  readOnly: true
+{{- end }}
+{{- range $target.certificates }}
+                - name: {{ printf "tls-%s" .secretName | quote }}
+                  mountPath: {{ printf "/certs/%s" .secretName | quote }}
+                  readOnly: true
+{{- end }}
+{{- end }}
+{{- end }}

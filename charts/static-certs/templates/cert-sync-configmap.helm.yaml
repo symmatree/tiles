@@ -1,0 +1,16 @@
+{{- range $name, $target := .Values.certSync }}
+{{- if $target.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-sync-%s" $.Release.Name $name | quote }}
+  namespace: "{{ $.Release.Namespace }}"
+data:
+  run.sh: |
+{{ $.Files.Get "scripts/acme-deploy-run.sh" | nindent 4 }}
+{{- range $target.certificates }}
+    one "{{ .fqdn }}" "/certs/{{ .secretName }}/tls.crt" "/certs/{{ .secretName }}/tls.key"
+{{- end }}
+{{- end }}
+{{- end }}
