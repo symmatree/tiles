@@ -75,7 +75,17 @@ same two files that hook would have written, and to run the same reload command:
 - `systemctl restart unifi-core`
 
 `/data` persists across UniFi OS firmware updates. If an update does reset the files, the
-next daily run restores them. UniFi OS serves the ECDSA P-384 keys this chart issues.
+next daily run restores them. UniFi OS serves the ECDSA P-384 keys this chart issues -- the
+certificate morpheus was serving before this target existed was P-384.
+
+The push logs in as the `beeblebrox` console account, which therefore needs write access to
+`/data/unifi-core/config` and permission to restart `unifi-core`.
+
+The SSH key must be stored in OpenSSH's own private-key format -- the one whose PEM banner
+names `OPENSSH`. OpenSSH cannot load an Ed25519 key in PKCS#8 wrapping (banner without
+`OPENSSH`) and fails with `Load key: invalid format`, even though the key is perfectly
+valid and openssl reads it. A 1Password SSH Key item yields the right format; pasting a
+PKCS#8 PEM into a field does not.
 
 ### Adding a target
 

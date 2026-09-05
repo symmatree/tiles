@@ -78,7 +78,7 @@ certSync:
       itemPath: vaults/tiles-secrets/items/unifi-cert-ssh
     sshKeySecretKey: private-key
     env:
-      DEPLOY_SSH_USER: root
+      DEPLOY_SSH_USER: beeblebrox
       DEPLOY_SSH_SERVER: "morpheus.local.symmatree.com:22"
       DEPLOY_SSH_KEYFILE: /data/unifi-core/config/unifi-core.key
       DEPLOY_SSH_FULLCHAIN: /data/unifi-core/config/unifi-core.crt
