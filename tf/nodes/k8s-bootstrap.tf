@@ -1,0 +1,75 @@
+# Cluster bootstrap resources installed by Terraform directly into the cluster,
+# after (and depending on) the Talos cluster itself.
+#
+# Why this can work at all: helm_release never contacts the API server during
+# plan. The provider's ModifyPlan only dry-runs against the cluster when the
+# "manifest" experiment is enabled, which we deliberately leave off -- so a plan
+# succeeds even when the cluster does not exist yet, and the ordinary
+# depends_on/graph edge is enough. (Enabling that experiment breaks plan with
+# "cluster was unreachable at create time", so do not turn it on.) This is
+# unlike kubernetes_manifest, which the hashicorp/kubernetes docs state
+# "requires API access during planning time ... and thus cannot be created in
+# the same apply operation".
+#
+# The cost of leaving the experiment off is that a plan shows no rendered-manifest
+# diff for a release. Chart content review happens through the committed
+# charts/*/rendered.yaml files instead (see build.sh).
+
+provider "helm" {
+  kubernetes = {
+    # The kubeconfig Talos issues points at control_plane_vip, which does not
+    # answer until Cilium is up -- so during a cold bootstrap we would be
+    # talking to an address that only exists once something we have not
+    # installed yet is running. Target the first control plane node directly;
+    # the API server certificate covers it (the bootstrap-cluster workflow has
+    # rewritten the kubeconfig this way since before Terraform did any of this).
+    host                   = "https://${module.cluster.bootstrap_ip}:6443"
+    cluster_ca_certificate = module.cluster.kubernetes_client_configuration.ca_certificate
+    client_certificate     = module.cluster.kubernetes_client_configuration.client_certificate
+    client_key             = module.cluster.kubernetes_client_configuration.client_key
+  }
+}
+
+# Prometheus Operator CRDs.
+#
+# These are the CRDs that charts/install-crds.sh used to apply as six raw YAML
+# URLs. CRDs stay out of Argo CD (it does not diff resources whose types it has
+# not seen, and the blobs are large), so something has to install them ahead of
+# the app-of-apps tree: that something is now Terraform.
+#
+# Upstream publishes a CRD-only chart at the same appVersion, so this set needs
+# no repackaging on our side. Its CRDs live in the subchart's templates/, not in
+# a crds/ directory -- which matters, because Helm never upgrades or deletes
+# files in crds/, so a CRD parked there would silently never move again.
+resource "helm_release" "prometheus_operator_crds" {
+  name = "prometheus-operator-crds"
+  # Release metadata only; the CRDs themselves are cluster-scoped.
+  namespace  = "kube-system"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "prometheus-operator-crds"
+  # Chart 24.0.2 is appVersion v0.86.2, the version install-crds.sh pinned.
+  version = "24.0.2"
+
+  # The CRDs already exist on tiles, applied by kubectl with no Helm ownership
+  # metadata, so a plain install would fail on ownership. Adopt them instead.
+  # (On tiles-test they do not exist yet and are simply created.)
+  take_ownership = true
+
+  # Install only the CRDs this cluster actually consumes. The operator itself is
+  # not deployed here; Alloy and the Mimir stack are the consumers of these types.
+  #
+  # Note on AlertmanagerConfig: this chart ships only v1alpha1, while the
+  # prometheus-operator-crd-full YAML install-crds.sh used also served v1beta1,
+  # so the v1beta1 version goes away. Deliberate -- nothing here reads it. Alloy's
+  # mimir.alerts.kubernetes uses the v1alpha1 lister, the single
+  # AlertmanagerConfig object is authored v1alpha1 in alloy-application.yaml,
+  # status.storedVersions is ["v1alpha1"], and no prometheus-operator runs.
+  set = [
+    { name = "crds.alertmanagers.enabled", value = "false" },
+    { name = "crds.prometheusagents.enabled", value = "false" },
+    { name = "crds.prometheuses.enabled", value = "false" },
+    { name = "crds.thanosrulers.enabled", value = "false" },
+  ]
+
+  depends_on = [module.cluster]
+}

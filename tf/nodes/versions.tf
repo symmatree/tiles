@@ -27,8 +27,10 @@ terraform {
       version = ">= 2.11.0"
     }
     helm = {
-      source  = "hashicorp/helm"
-      version = ">= 2.7.0"
+      source = "hashicorp/helm"
+      # v3 provider schema: `kubernetes` is a nested object attribute
+      # (`kubernetes = { ... }`), not a block. tf/nodes/k8s-bootstrap.tf uses it.
+      version = ">= 3.2.0"
     }
     cloudflare = {
       source  = "cloudflare/cloudflare"
