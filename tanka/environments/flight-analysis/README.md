@@ -1,6 +1,6 @@
 # flight-analysis: nightly notebook CronJob
 
-Nightly Kubernetes CronJob that runs [`Drones/rekon10/flight-analysis.ipynb`](https://github.com/symmatree/fables/blob/main/Drones/rekon10/flight-analysis.ipynb) against every ArduPilot `.bin` flight log on the raconteur NAS, writing a rendered `.ipynb`, `.pdf`, and a `polisher.json` provenance sidecar alongside each log.
+Nightly Kubernetes CronJob that runs [`docs/rekon10/flight-analysis.ipynb`](https://github.com/symmatree/coordinator/blob/main/docs/rekon10/flight-analysis.ipynb) against every ArduPilot `.bin` flight log on the raconteur NAS, writing a rendered `.ipynb`, `.pdf`, and a `polisher.json` provenance sidecar alongside each log.
 
 **Schedule:** `0 4 * * *` (04:00 UTC daily). `ConcurrencyPolicy: Forbid` -- overlapping runs are dropped.
 
@@ -21,12 +21,14 @@ For each `.bin` file found anywhere under `/volume2/datasets/flights`:
 ## Freshness / incremental runs
 
 A log is **skipped** if `polisher.json` already exists in its directory with:
-- `instrument.sha` matching the current fables notebook commit SHA
+- `instrument.sha` matching the current notebook's git **blob** hash
 - `object[0].sha256` matching the `.bin` file's sha256
 
 This means:
 - New `.bin` files are always processed.
-- If the notebook changes in fables (new commit), **all** logs re-run on the next nightly job.
+- If the notebook's content changes, **all** logs re-run on the next nightly job. Unrelated
+  commits to `coordinator` do not: `instrument.sha` is the notebook's blob hash, not the
+  repo HEAD, so an active repo does not invalidate the whole cache on every push.
 - To force reprocessing of a specific directory: delete its `polisher.json`.
 
 ## Architecture
@@ -34,7 +36,7 @@ This means:
 | Component | Detail |
 |-----------|--------|
 | Image | [`containers/datascience-notebook-ssh/`](../../../containers/datascience-notebook-ssh/) -- papermill, playwright/Chromium, LaTeX, folium |
-| Notebook source | Public fables repo cloned fresh each run into an emptyDir (`/workspace/fables`) |
+| Notebook source | Public `coordinator` repo cloned fresh each run into an emptyDir (`/workspace/notebook-repo`). Repo, path, and dir are overridable via `NOTEBOOK_REPO` / `NOTEBOOK_REL` / `NOTEBOOK_DIR`. |
 | NFS mount | `raconteur.ad.local.symmatree.com:/volume2/datasets/flights` at `/mnt/flights` (ReadWriteMany, Retain PV) |
 | Runner script | [`runner.py`](runner.py) -- embedded in a ConfigMap via `importstr` in [`main.jsonnet`](main.jsonnet) |
 | Namespace | `flight-analysis` |
@@ -66,5 +68,5 @@ kubectl logs -n flight-analysis -l job-name=<name> -c runner -f
 ## Dependencies
 
 - raconteur NAS reachable from the cluster on NFS (static PV -- no dynamic provisioner involved)
-- [`github.com/symmatree/fables`](https://github.com/symmatree/fables) public (cloned at runtime, no credentials needed)
+- [`github.com/symmatree/coordinator`](https://github.com/symmatree/coordinator) public (cloned at runtime, no credentials needed)
 - [`containers/datascience-notebook-ssh/`](../../../containers/datascience-notebook-ssh/) image built and pushed to GHCR
