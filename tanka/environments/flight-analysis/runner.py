@@ -20,9 +20,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 FLIGHTS_DIR = Path("/mnt/flights")
-FABLES_DIR = Path("/workspace/fables")
-NOTEBOOK_REL = "Drones/rekon10/flight-analysis.ipynb"
-FABLES_REPO = "https://github.com/symmatree/fables.git"
+
+# The notebook moved from `fables` to `coordinator` (coordinator#213): it now
+# lives next to the code and FC config it analyses. Overridable by env so the next
+# move is configuration rather than a code change -- though the real fix for this
+# coupling is publishing the notebook as a release artifact the runner just pulls,
+# instead of a cron in one repo hard-coding another repo's URL and layout.
+NOTEBOOK_REPO = os.environ.get(
+    "NOTEBOOK_REPO", "https://github.com/symmatree/coordinator.git"
+)
+NOTEBOOK_REL = os.environ.get("NOTEBOOK_REL", "docs/rekon10/flight-analysis.ipynb")
+NOTEBOOK_DIR = Path(os.environ.get("NOTEBOOK_DIR", "/workspace/notebook-repo"))
 IMAGE_DIGEST = os.environ.get("IMAGE_DIGEST", "unknown")
 
 
@@ -32,9 +40,21 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def git_sha(repo_dir: Path) -> str:
+def notebook_blob_sha(repo_dir: Path, rel: str) -> str:
+    """Git blob hash of the notebook itself, not the repo HEAD.
+
+    This used to be `rev-parse HEAD`, which was fine while the notebook lived in
+    `fables` -- a low-traffic docs repo where a new commit almost always meant a
+    new notebook. In `coordinator` it would be actively wrong: `instrument.sha`
+    feeds the freshness check, so every unrelated commit to an active repo would
+    invalidate every cached result and re-run every .bin on the NAS.
+
+    The blob hash changes exactly when the notebook's content changes, which is
+    also what `instrument.sha` is supposed to mean. `rev-parse HEAD:<path>` reads
+    it straight out of the tree, so it still works on a --depth 1 clone.
+    """
     return subprocess.check_output(
-        ["git", "-C", str(repo_dir), "rev-parse", "HEAD"],
+        ["git", "-C", str(repo_dir), "rev-parse", f"HEAD:{rel}"],
         text=True,
     ).strip()
 
@@ -104,25 +124,31 @@ def process(bin_path: Path, notebook_path: Path, notebook_sha: str) -> None:
     print(f"  done: {out_pdf.name}", flush=True)
 
 
-def clone_or_update_fables() -> None:
-    if not FABLES_DIR.exists():
+def clone_or_update_notebook_repo() -> None:
+    if not NOTEBOOK_DIR.exists():
         subprocess.run(
-            ["git", "clone", "--depth", "1", FABLES_REPO, str(FABLES_DIR)],
+            ["git", "clone", "--depth", "1", NOTEBOOK_REPO, str(NOTEBOOK_DIR)],
             check=True,
         )
     else:
         subprocess.run(
-            ["git", "-C", str(FABLES_DIR), "pull", "--ff-only"],
+            ["git", "-C", str(NOTEBOOK_DIR), "pull", "--ff-only"],
             check=True,
         )
 
 
 def main() -> None:
-    clone_or_update_fables()
+    clone_or_update_notebook_repo()
 
-    notebook_path = FABLES_DIR / NOTEBOOK_REL
-    notebook_sha = git_sha(FABLES_DIR)
-    print(f"notebook SHA: {notebook_sha}", flush=True)
+    notebook_path = NOTEBOOK_DIR / NOTEBOOK_REL
+    if not notebook_path.exists():
+        print(
+            f"notebook not found: {NOTEBOOK_REL} in {NOTEBOOK_REPO}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    notebook_sha = notebook_blob_sha(NOTEBOOK_DIR, NOTEBOOK_REL)
+    print(f"notebook: {NOTEBOOK_REL} blob {notebook_sha}", flush=True)
 
     errors = 0
     for bin_path in sorted(FLIGHTS_DIR.rglob("*.bin")):
