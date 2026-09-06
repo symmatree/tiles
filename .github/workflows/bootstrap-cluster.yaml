@@ -1,5 +1,5 @@
 name: "bootstrap-cluster"
-run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [crds=${{ inputs.crds }}, cilium=${{ inputs.cilium }}, argocd=${{ inputs.argocd }}, 1p=${{ inputs.onepassword }}, apps=${{ inputs.argocd_applications }}]"
+run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [cilium=${{ inputs.cilium }}, argocd=${{ inputs.argocd }}, 1p=${{ inputs.onepassword }}, apps=${{ inputs.argocd_applications }}]"
 on:
   workflow_dispatch:
     inputs:
@@ -10,11 +10,6 @@ on:
         options:
           - tiles-test
           - tiles
-      crds:
-        description: "Install CRDs"
-        required: false
-        type: boolean
-        default: false
       cilium:
         description: "Reset and bootstrap Cilium"
         required: false
@@ -146,9 +141,6 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          if [ "${{ github.event.inputs.crds }}" == "true" ]; then
-            ./charts/install-crds.sh
-          fi
           if [ "${{ github.event.inputs.cilium }}" == "true" ]; then
             ./charts/cilium/bootstrap.sh
           fi

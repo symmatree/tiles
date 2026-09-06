@@ -90,9 +90,8 @@ Some things have to be in the cluster before Argo CD's app-of-apps tree can
 render, and CRDs are the main one: Argo CD cannot diff resources whose types it
 has not seen yet, and the CRD blobs are large enough to be unpleasant for it to
 carry. `k8s-bootstrap.tf` installs them as `helm_release` resources that depend
-on `module.cluster`. The CRDs not listed below are still applied as raw
-`kubectl apply` URLs by `charts/install-crds.sh` from the `bootstrap-cluster`
-workflow.
+on `module.cluster`. This is the only place cluster CRDs are installed; the
+`bootstrap-cluster` workflow no longer has a CRD step.
 
 This works because **`helm_release` does not contact the API server during
 plan** -- the provider only dry-runs against the cluster when the `manifest`
@@ -115,12 +114,32 @@ Currently installed here:
 
 | Release | Source | Replaces |
 |---|---|---|
-| `prometheus-operator-crds` | upstream `prometheus-community/prometheus-operator-crds` chart 24.0.2 (appVersion v0.86.2, the version `install-crds.sh` pinned) | the six `monitoring.coreos.com` CRD URLs |
+| `prometheus-operator-crds` | upstream `prometheus-community/prometheus-operator-crds` chart 24.0.2 (appVersion v0.86.2) | six `monitoring.coreos.com` CRDs |
+| `helm_release.crds["argo-cd-crds"]` | generated, `oci://ghcr.io/symmatree/tiles/charts` | Application, ApplicationSet, AppProject |
+| `helm_release.crds["cert-manager-crds"]` | generated | cert-manager CRDs |
+| `helm_release.crds["trust-manager-crds"]` | generated | Bundle |
+| `helm_release.crds["gateway-api-crds"]` | generated | Gateway API standard channel |
+| `helm_release.crds["onepassword-crds"]` | generated | OnePasswordItem |
+| `helm_release.crds["external-snapshotter-crds"]` | generated | VolumeSnapshot types |
 
 One deliberate difference from the URLs this replaces: the chart's
 `AlertmanagerConfig` CRD serves only `v1alpha1`, where the
 `prometheus-operator-crd-full` YAML also served `v1beta1`. Nothing in this
 cluster reads `v1beta1` -- see the comment in `k8s-bootstrap.tf`.
 
-Third-party CRD YAML is never committed to this repo: where upstream publishes a
-CRD-only chart, it is installed from upstream directly.
+The generated charts are built from upstream CRD YAML by
+`ci-tools/crd-charts/build.py` and pushed to GHCR by the `publish-crd-charts`
+workflow. Third-party CRD YAML is never committed to this repo -- it is fetched
+at build time and packaged. Where upstream publishes a usable CRD-only chart
+(`prometheus-operator-crds`), that is installed directly instead.
+
+## Which CRDs are *not* here
+
+A CRD whose only consumers are inside the Argo CD application that ships it is
+left to that application, and is not installed by Terraform: the alloy-operator
+`Alloy` CRD (via `k8s-monitoring`), the rollout-operator CRDs (via
+`mimir-distributed`), the `acid.zalan.do` CRDs (via `postgres-operator`), and
+`DNSEndpoint` (via `external-dns`). Pulling those out would separate the CRD's
+lifecycle from the custom resources that carry finalizers, which needs a
+teardown strategy -- reaping the instances before the operator goes away -- that
+these upstream charts do not give us a clean way to express.

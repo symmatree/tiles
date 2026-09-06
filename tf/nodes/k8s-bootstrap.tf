@@ -78,3 +78,45 @@ resource "helm_release" "prometheus_operator_crds" {
 
   depends_on = [module.cluster]
 }
+
+# CRDs whose consumers live in Argo CD applications other than the one that
+# ships them -- OnePasswordItem shows up in argocd, cert-manager, external-dns,
+# grafana, jupyterhub and static-certs; the Gateway API types are consumed by
+# Cilium; Argo CD cannot bootstrap its own. The type has to exist before the
+# app-of-apps sync, which is why these are installed here rather than left to
+# the chart that ships them.
+#
+# The charts are built from upstream CRD YAML by ci-tools/crd-charts/build.py
+# and pushed to GHCR by .github/workflows/publish-crd-charts.yaml. Nothing
+# third-party is committed to this repo; the CRD documents land in each chart's
+# templates/, not crds/, so Helm can upgrade them.
+#
+# Versions are duplicated between here and ci-tools/crd-charts/sources.yaml.
+# Consolidating them into one Renovate-readable file is issue #720.
+locals {
+  crd_charts = {
+    "argo-cd-crds"              = "0.1.0"
+    "cert-manager-crds"         = "0.1.0"
+    "external-snapshotter-crds" = "0.1.0"
+    "gateway-api-crds"          = "0.1.0"
+    "onepassword-crds"          = "0.1.0"
+    "trust-manager-crds"        = "0.1.0"
+  }
+}
+
+resource "helm_release" "crds" {
+  for_each = local.crd_charts
+
+  name = each.key
+  # Release metadata only; the CRDs themselves are cluster-scoped.
+  namespace  = "kube-system"
+  repository = "oci://ghcr.io/symmatree/tiles/charts"
+  chart      = each.key
+  version    = each.value
+
+  # These CRDs already exist on both clusters, applied by the kubectl calls this
+  # replaces, with no Helm ownership metadata. Adopt rather than fail.
+  take_ownership = true
+
+  depends_on = [module.cluster]
+}

@@ -10,7 +10,8 @@ spec:
     chart: postgres-operator
     helm:
       valuesObject:
-        # Disable CRD registration since we install CRDs separately via install-crds.sh
+        # Disable CRD registration: this Application owns the acid.zalan.do CRDs itself
+        # (they arrive with the chart), so the operator must not also register them.
         configGeneral:
           enable_crd_registration: false
         configKubernetes:
