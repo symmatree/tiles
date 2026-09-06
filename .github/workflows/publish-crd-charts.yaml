@@ -1,0 +1,61 @@
+name: publish-crd-charts
+run-name: "Publish CRD charts from ${{ github.ref_name }} by @${{ github.actor }}"
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - ci-tools/crd-charts/**
+      - .github/workflows/publish-crd-charts.yaml
+  push:
+    branches: [main]
+    paths:
+      - ci-tools/crd-charts/**
+      - .github/workflows/publish-crd-charts.yaml
+
+# Charts are versioned in ci-tools/crd-charts/sources.yaml and pinned by
+# tf/nodes/k8s-bootstrap.tf, so publishing on a PR is deliberate: the tag has to
+# exist in GHCR before the Terraform apply that pulls it, and both this workflow
+# and nodes-plan-apply fire on push to main with nothing ordering them. Pushing
+# from the PR closes that gap -- the version is already there at merge time.
+jobs:
+  publish-crd-charts:
+    name: publish-crd-charts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      CHART_REGISTRY: oci://ghcr.io/${{ github.repository }}/charts
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: "v4.2.2"
+
+      - name: Build charts from upstream CRD YAML
+        run: ./ci-tools/crd-charts/build.py
+
+      - name: Lint and package
+        run: |
+          set -euo pipefail
+          mkdir -p build/packages
+          for chart in build/crd-charts/*/; do
+            helm lint "${chart}"
+            helm package "${chart}" -d build/packages
+          done
+          ls -l build/packages
+
+      - name: Log in to GHCR
+        run: |
+          set -euo pipefail
+          helm registry login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin <<<"${{ github.token }}"
+
+      - name: Push charts
+        run: |
+          set -euo pipefail
+          for package in build/packages/*.tgz; do
+            helm push "${package}" "${CHART_REGISTRY}"
+          done
