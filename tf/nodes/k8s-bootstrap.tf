@@ -23,10 +23,15 @@ provider "helm" {
     # installed yet is running. Target the first control plane node directly;
     # the API server certificate covers it (the bootstrap-cluster workflow has
     # rewritten the kubeconfig this way since before Terraform did any of this).
-    host                   = "https://${module.cluster.bootstrap_ip}:6443"
-    cluster_ca_certificate = module.cluster.kubernetes_client_configuration.ca_certificate
-    client_certificate     = module.cluster.kubernetes_client_configuration.client_certificate
-    client_key             = module.cluster.kubernetes_client_configuration.client_key
+    host = "https://${module.cluster.bootstrap_ip}:6443"
+    # base64decode is required: the talos provider hands these back exactly as a
+    # kubeconfig stores them, base64-encoded (talos_cluster_kubeconfig_resource.go
+    # wraps each in bytesToBase64). The helm provider wants raw PEM, and without
+    # the decode it fails at apply with "Kubernetes cluster unreachable: unable to
+    # load root certificates: unable to parse bytes as PEM block".
+    cluster_ca_certificate = base64decode(module.cluster.kubernetes_client_configuration.ca_certificate)
+    client_certificate     = base64decode(module.cluster.kubernetes_client_configuration.client_certificate)
+    client_key             = base64decode(module.cluster.kubernetes_client_configuration.client_key)
   }
 }
 
