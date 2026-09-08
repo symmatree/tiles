@@ -110,6 +110,13 @@ The `helm` provider is pointed at `module.cluster.bootstrap_ip`, not
 `control_plane_vip`, because the VIP does not answer until Cilium is running --
 the same substitution `bootstrap-cluster.yaml` makes on the kubeconfig.
 
+Also here: the `onepassword` namespace and the 1Password operator's own two
+secrets. Those cannot come from an `OnePasswordItem` -- they are what the
+operator needs before it can serve one -- and `charts/argocd/bootstrap.sh`
+applies `OnePasswordItem` CRs, so they must exist before Argo CD does. Terraform
+is the namespace's only writer; the `onepassword` Application sets no
+`CreateNamespace` or `managedNamespaceMetadata`.
+
 Currently installed here:
 
 | Release | Source | Replaces |

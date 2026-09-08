@@ -1438,11 +1438,12 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
+      # No CreateNamespace/managedNamespaceMetadata: Terraform owns the
+      # onepassword namespace (tf/nodes/k8s-bootstrap.tf), because it has to
+      # exist before Terraform creates the operator secrets in it, which happens
+      # before Argo CD exists at all. Leaving both writers on it is the dual
+      # ownership we are trying to avoid.
       - ServerSideApply=true
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/warn: baseline
 
 ---
 # Source: argocd-applications/templates/postgres-operator-application.yaml

@@ -120,3 +120,84 @@ resource "helm_release" "crds" {
 
   depends_on = [module.cluster]
 }
+
+# The 1Password operator's own credentials, which cannot come from 1Password the
+# way every other secret in the cluster does: the operator needs these before it
+# can serve any OnePasswordItem. charts/onepassword/make-secrets.sh created them
+# from the bootstrap workflow's environment; Terraform reads the same two items
+# directly.
+#
+# Typed kubernetes_* resources, not kubernetes_manifest -- the manifest resource
+# "requires API access during planning time ... and thus cannot be created in the
+# same apply operation" (hashicorp/kubernetes docs). Typed resources have no such
+# restriction, so this plans against a cluster that does not exist yet.
+provider "kubernetes" {
+  host                   = "https://${module.cluster.bootstrap_ip}:6443"
+  cluster_ca_certificate = base64decode(module.cluster.kubernetes_client_configuration.ca_certificate)
+  client_certificate     = base64decode(module.cluster.kubernetes_client_configuration.client_certificate)
+  client_key             = base64decode(module.cluster.kubernetes_client_configuration.client_key)
+}
+
+data "onepassword_item" "onepassword_operator" {
+  vault = data.onepassword_vault.tf_secrets.uuid
+  title = "${var.cluster_name}-onepassword-operator"
+}
+
+data "onepassword_item" "onepassword_connect_credentials" {
+  vault = data.onepassword_vault.tf_secrets.uuid
+  title = "${var.cluster_name}-onepassword-connect-credentials"
+}
+
+# Argo CD no longer sets CreateNamespace/managedNamespaceMetadata on the
+# onepassword Application, so this is the only writer.
+resource "kubernetes_namespace_v1" "onepassword" {
+  metadata {
+    name   = "onepassword"
+    labels = { "pod-security.kubernetes.io/warn" = "baseline" }
+  }
+
+  depends_on = [module.cluster]
+}
+
+resource "kubernetes_secret_v1" "onepassword_token" {
+  metadata {
+    name      = "onepassword-token"
+    namespace = kubernetes_namespace_v1.onepassword.metadata[0].name
+  }
+  data = { token = data.onepassword_item.onepassword_operator.credential }
+}
+
+resource "kubernetes_secret_v1" "op_credentials" {
+  metadata {
+    name      = "op-credentials"
+    namespace = kubernetes_namespace_v1.onepassword.metadata[0].name
+  }
+  # Connect mounts this key as a file and reads it as raw JSON. Kubernetes
+  # base64-encodes secret data itself, so the value here must be plain JSON --
+  # an extra base64 layer produces a file Connect cannot parse.
+  data = {
+    "1password-credentials.json" = one([
+      for f in data.onepassword_item.onepassword_connect_credentials.file :
+      f.content if f.name == "1password-credentials.json"
+    ])
+  }
+}
+
+# One-time adoption of the objects make-secrets.sh created. Both clusters have
+# all three, so these are unconditional. An import block whose target is already
+# in state is a no-op, so they are harmless to leave; delete them once both
+# workspaces have applied.
+import {
+  to = kubernetes_namespace_v1.onepassword
+  id = "onepassword"
+}
+
+import {
+  to = kubernetes_secret_v1.onepassword_token
+  id = "onepassword/onepassword-token"
+}
+
+import {
+  to = kubernetes_secret_v1.op_credentials
+  id = "onepassword/op-credentials"
+}
