@@ -86,6 +86,11 @@ certSync:
       DEPLOY_SSH_SERVER: "morpheus.local.symmatree.com:22"
       DEPLOY_SSH_KEYFILE: /data/unifi-core/config/acme-staging.key
       DEPLOY_SSH_FULLCHAIN: /data/unifi-core/config/acme-staging.crt
+      # acme.sh backs up each destination before writing it, which fails on the
+      # first run because the staging files do not exist yet. Backing up a
+      # staging path is meaningless regardless -- remoteScript backs up the real
+      # pair as .acme-bak before overwriting it.
+      DEPLOY_SSH_BACKUP: "no"
     certificates:
       - fqdn: morpheus.local.symmatree.com
         secretName: morpheus-cert
