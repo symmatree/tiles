@@ -15,6 +15,8 @@ certSyncImage: alpine:3.20
 #   onePasswordItem  -- credential item; also the name of the synced Secret
 #   sshKeySecretKey  -- if set, mount that Secret key and wire up acme.sh's ssh
 #                       transport (implies the ssh hook's scp mode)
+#   remoteScript     -- optional chart-relative script run on the target host
+#                       after the files land, as DEPLOY_SSH_REMOTE_CMD
 #   env              -- plain env for the hook
 #   envFromSecret    -- env var -> key in the onePasswordItem Secret
 #   certificates     -- fqdn + the Certificate's secretName, mounted at
@@ -65,10 +67,11 @@ certSync:
       - fqdn: homeassistant.local.symmatree.com
         secretName: homeassistant-cert
 
-  # UniFi Dream Machine SE (morpheus). acme.sh's dedicated unifi hook only works
-  # when run on the device itself, so this uses the generic ssh hook to write the
-  # files that hook would have written. /data survives firmware updates; a
-  # restart of unifi-core bounces the management UI and API.
+  # UniFi Dream Machine SE (morpheus). acme.sh's dedicated unifi hook is
+  # local-only, so this uses the generic ssh hook -- but it stages the cert
+  # rather than deploying it, because on this console nginx serves a UUID-named
+  # pair chosen through the UI, not unifi-core.crt. remoteScript installs from
+  # the staging paths into whatever local-certs.conf currently points at.
   unifi:
     enabled: false
     schedule: "30 7 * * *"
@@ -77,12 +80,12 @@ certSync:
       name: unifi-cert-ssh
       itemPath: vaults/tiles-secrets/items/unifi-cert-ssh
     sshKeySecretKey: private-key
+    remoteScript: scripts/unifi-install-cert.sh
     env:
       DEPLOY_SSH_USER: root
       DEPLOY_SSH_SERVER: "morpheus.local.symmatree.com:22"
-      DEPLOY_SSH_KEYFILE: /data/unifi-core/config/unifi-core.key
-      DEPLOY_SSH_FULLCHAIN: /data/unifi-core/config/unifi-core.crt
-      DEPLOY_SSH_REMOTE_CMD: systemctl restart unifi-core
+      DEPLOY_SSH_KEYFILE: /data/unifi-core/config/acme-staging.key
+      DEPLOY_SSH_FULLCHAIN: /data/unifi-core/config/acme-staging.crt
     certificates:
       - fqdn: morpheus.local.symmatree.com
         secretName: morpheus-cert
