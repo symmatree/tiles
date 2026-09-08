@@ -90,6 +90,16 @@ jobs:
             [ -n "$addr" ] && terraform taint "$addr"
           done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
 
+          # The CRD Helm releases (tf/nodes/k8s-bootstrap.tf) live in the cluster
+          # this rebuild replaces, so the new cluster comes up without them and
+          # charts/argocd/bootstrap.sh then fails applying its OnePasswordItem CRs.
+          # A refresh cannot catch this: at plan time the old cluster is still
+          # reachable, so the releases read as present and no change is planned.
+          # Derived from state so new releases are picked up automatically.
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep '^helm_release\.' || true)
+
       # Prod cluster VM tainting
       - name: Taint prod cluster VMs
         if: inputs.taint_prod == true
@@ -123,6 +133,16 @@ jobs:
           while IFS= read -r addr; do
             [ -n "$addr" ] && terraform taint "$addr"
           done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
+
+          # The CRD Helm releases (tf/nodes/k8s-bootstrap.tf) live in the cluster
+          # this rebuild replaces, so the new cluster comes up without them and
+          # charts/argocd/bootstrap.sh then fails applying its OnePasswordItem CRs.
+          # A refresh cannot catch this: at plan time the old cluster is still
+          # reachable, so the releases read as present and no change is planned.
+          # Derived from state so new releases are picked up automatically.
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep '^helm_release\.' || true)
 
       - name: De-wireguard
         if: always()

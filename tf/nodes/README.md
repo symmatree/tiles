@@ -133,6 +133,15 @@ workflow. Third-party CRD YAML is never committed to this repo -- it is fetched
 at build time and packaged. Where upstream publishes a usable CRD-only chart
 (`prometheus-operator-crds`), that is installed directly instead.
 
+## Rebuilds
+
+`taint-vms` taints these releases along with the VMs. Without that, a rebuild
+brings up a cluster with no CRDs while Terraform state still believes they are
+installed: at plan time the old cluster is still reachable, so a refresh reads
+the releases as present and plans no change. The next `bootstrap-cluster` run
+then fails in `charts/argocd/bootstrap.sh`, which applies two `OnePasswordItem`
+CRs and needs that CRD to exist.
+
 ## Which CRDs are *not* here
 
 A CRD whose only consumers are inside the Argo CD application that ships it is
