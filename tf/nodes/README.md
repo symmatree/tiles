@@ -135,12 +135,9 @@ at build time and packaged. Where upstream publishes a usable CRD-only chart
 
 ## Rebuilds
 
-`taint-vms` taints these releases along with the VMs. Without that, a rebuild
-brings up a cluster with no CRDs while Terraform state still believes they are
-installed: at plan time the old cluster is still reachable, so a refresh reads
-the releases as present and plans no change. The next `bootstrap-cluster` run
-then fails in `charts/argocd/bootstrap.sh`, which applies two `OnePasswordItem`
-CRs and needs that CRD to exist.
+`taint-vms` taints these releases along with the VMs. Nothing binds a release's
+lifetime to the cluster it was installed into, so a rebuild would otherwise
+bring up a cluster with no CRDs while state still believes they are installed.
 
 ## Which CRDs are *not* here
 
