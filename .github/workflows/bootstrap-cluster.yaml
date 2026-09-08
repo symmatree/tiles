@@ -1,5 +1,5 @@
 name: "bootstrap-cluster"
-run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [cilium=${{ inputs.cilium }}, argocd=${{ inputs.argocd }}, 1p=${{ inputs.onepassword }}, apps=${{ inputs.argocd_applications }}]"
+run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [cilium=${{ inputs.cilium }}, argocd=${{ inputs.argocd }}, apps=${{ inputs.argocd_applications }}]"
 on:
   workflow_dispatch:
     inputs:
@@ -17,11 +17,6 @@ on:
         default: false
       argocd:
         description: "Reset and bootstrap ArgoCD"
-        required: false
-        type: boolean
-        default: false
-      onepassword:
-        description: "Create OnePassword secrets"
         required: false
         type: boolean
         default: false
@@ -133,8 +128,6 @@ jobs:
           cluster_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_nfs_path"
           datasets_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/datasets_nfs_path"
           nfs_server: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/nfs_server"
-          onepassword_operator_token: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-operator/credential"
-          onepassword_connect_credentials: "op://tiles-secrets/${{ github.event.inputs.cluster }}-onepassword-connect-credentials/1password-credentials.json"
       - uses: 1password/install-cli-action@v2
       - name: Bootstrap cluster
         id: bootstrap-cluster
@@ -146,9 +139,6 @@ jobs:
           fi
           if [ "${{ github.event.inputs.argocd }}" == "true" ]; then
             ./charts/argocd/bootstrap.sh
-          fi
-          if [ "${{ github.event.inputs.onepassword }}" == "true" ]; then
-            ./charts/onepassword/make-secrets.sh
           fi
           if [ "${{ github.event.inputs.argocd_applications }}" == "true" ]; then
             ./charts/argocd-applications/install-application.sh

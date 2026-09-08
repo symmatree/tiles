@@ -23,8 +23,9 @@ terraform {
       version = ">= 2.1.2"
     }
     kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = ">= 2.11.0"
+      source = "hashicorp/kubernetes"
+      # tf/nodes/k8s-bootstrap.tf uses kubernetes_namespace_v1 / kubernetes_secret_v1.
+      version = ">= 3.0.0"
     }
     helm = {
       source = "hashicorp/helm"

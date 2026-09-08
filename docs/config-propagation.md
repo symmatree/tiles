@@ -83,11 +83,10 @@ The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) pe
 3. **Runs optional bootstrap steps** - Each step is gated by a `workflow_dispatch` boolean (see the workflow file for the exact list). When enabled, the job runs, in order:
    - **`cilium`** - `./charts/cilium/bootstrap.sh`
    - **`argocd`** - `./charts/argocd/bootstrap.sh` - this installed ArgoCD itself and the AppProject but not the actual Application resources.
-   - **`onepassword`** - `./charts/onepassword/make-secrets.sh` creates the `onepassword` namespace (if needed) and the operator/connect secrets from 1Password-loaded env vars. **Required on first bootstrap** (or after secret loss) so the 1Password operator can run before workloads rely on `OnePasswordItem` CRs.
    - **`argocd_applications`** - `./charts/argocd-applications/install-application.sh` waits for Argo CD prerequisites (namespace, `AppProject` `cluster_name`, redis, repo-server, application-controller), then `envsubst` on `application.yaml.tmpl` and `kubectl apply`s the root Application. The waits are to avoid a race where the AppProject can be
    installed but not yet available, and the entire cluster fails to get off the ground.
 
-**Defaults:** Only **`argocd_applications`** defaults to **true**; **`cilium`**, **`argocd`**, and **`onepassword`** default to **false**. A cold or recreated cluster should enable the full set above so nodes get a CNI, Argo CD exists before Application CRs are applied, and operator secrets exist. CRDs are no longer a bootstrap step: Terraform installs them (see [`tf/nodes/README.md`](../tf/nodes/README.md#in-cluster-bootstrap-k8s-bootstraptf)) during `nodes-plan-apply`, which runs before this workflow. Re-running `make-secrets.sh` is mostly idempotent; that does not mean skipping **`onepassword`** on first bring-up after a recreate.
+**Defaults:** Only **`argocd_applications`** defaults to **true**; **`cilium`** and **`argocd`** default to **false**. A cold or recreated cluster should enable the full set above so nodes get a CNI and Argo CD exists before Application CRs are applied. CRDs and the 1Password operator secrets are no longer bootstrap steps: Terraform installs both (see [`tf/nodes/README.md`](../tf/nodes/README.md#in-cluster-bootstrap-k8s-bootstraptf)) during `nodes-plan-apply`, which runs before this workflow.
 
 #### Argo CD readiness and install-application
 
