@@ -56,6 +56,12 @@ spec:
                 - name: DEPLOY_SSH_SCP_CMD
                   value: {{ printf "scp -q -i /ssh/%s -o StrictHostKeyChecking=accept-new" $target.sshKeySecretKey | quote }}
 {{- end }}
+{{- if $target.remoteScript }}
+                # Shipped as a file so it is reviewable and shellcheck-linted;
+                # base64 because acme.sh wraps the remote command in single quotes.
+                - name: DEPLOY_SSH_REMOTE_CMD
+                  value: {{ printf "echo %s | base64 -d | sh" ($.Files.Get $target.remoteScript | b64enc) | quote }}
+{{- end }}
 {{- range $key, $value := $target.env }}
                 - name: {{ $key }}
                   value: {{ $value | quote }}
