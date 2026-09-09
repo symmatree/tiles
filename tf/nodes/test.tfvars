@@ -34,6 +34,7 @@ virtual_machines = {
 alloy_vm_base_id      = 500
 deploy_synology_alloy = false
 deploy_proxmox_alloy  = false
+deploy_cilium         = true
 metal_amd_nodes       = {}
 metal_intel_nodes     = {}
 

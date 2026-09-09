@@ -200,6 +200,12 @@ jobs:
           set -euo pipefail
           terraform get -update
 
+      # Vendors chart dependencies (ci-tools/helm-update-all.sh) so the Helm
+      # releases in tf/nodes can load charts/cilium, whose cilium subchart is
+      # not committed. Cached; see docs/caching-strategy.md.
+      - uses: ./.github/actions/helm-setup
+        if: steps.charts_only.outputs.run_terraform == 'true'
+
       - uses: ./.github/actions/wg-quick
         id: wireguard
         if: steps.charts_only.outputs.run_terraform == 'true'
