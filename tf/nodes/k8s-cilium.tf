@@ -48,34 +48,18 @@ resource "helm_release" "cilium" {
       cilium = {
         ipv4NativeRoutingCIDR = var.pod_cidr
         cluster               = { name = var.cluster_name }
-        hubble = {
-          tls = {
-            auto = {
-              certManagerIssuerRef = { name = "${var.cluster_name}-ca-issuer" }
-            }
-          }
-          ui = {
-            ingress = {
-              hosts = ["hubble.${var.cluster_name}.symmatree.com"]
-              tls = [{
-                secretName = "hubble-ui-tls"
-                hosts      = ["hubble.${var.cluster_name}.symmatree.com"]
-              }]
-            }
-          }
-        }
       }
     }),
   ]
 
-  # Deliberately no wait: Helm's readiness gate covers the whole release, and
-  # hubble-relay cannot become ready on a cold cluster. hubble.tls.auto.method is
-  # certmanager, so it mounts a secret cert-manager issues -- and cert-manager
-  # arrives with the Argo CD tree, which cannot schedule until this release has
-  # given the cluster a CNI. Waiting turns that ordering into a deadlock that
-  # ends in a timeout. The agent and operator come up regardless; hubble
-  # converges once cert-manager exists.
-  wait = false
+  # Wait, so everything after this starts against a cluster that can actually
+  # schedule. This is only satisfiable because Hubble is off in
+  # charts/cilium/values.yaml -- with it on, the release gates on certs
+  # cert-manager has not been installed to issue yet. It also requires every
+  # registered Node to be real: a stale Node object (#641) holds a Pending
+  # DaemonSet pod and will hang this for the full timeout.
+  wait    = true
+  timeout = 900
 
   # On tiles the objects were applied by bootstrap.sh with no Helm ownership
   # metadata, so this first apply adopts them rather than failing.

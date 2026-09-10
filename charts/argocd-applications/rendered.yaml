@@ -685,19 +685,6 @@ spec:
             ipv4NativeRoutingCIDR: 'placeholder'
             cluster:
               name: 'placeholder'
-            hubble:
-              tls:
-                auto:
-                  certManagerIssuerRef:
-                    name: 'placeholder-ca-issuer'
-              ui:
-                ingress:
-                  hosts:
-                    - 'hubble.placeholder.symmatree.com'
-                  tls:
-                    - secretName: hubble-ui-tls
-                      hosts:
-                        - 'hubble.placeholder.symmatree.com'
     - repoURL: https://github.com/symmatree/tiles.git
       targetRevision: 'placeholder'
       ref: values

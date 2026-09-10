@@ -18,19 +18,6 @@ spec:
             ipv4NativeRoutingCIDR: '{{ required ".Values.pod_cidr is required" .Values.pod_cidr }}'
             cluster:
               name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
-            hubble:
-              tls:
-                auto:
-                  certManagerIssuerRef:
-                    name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ca-issuer'
-              ui:
-                ingress:
-                  hosts:
-                    - 'hubble.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-                  tls:
-                    - secretName: hubble-ui-tls
-                      hosts:
-                        - 'hubble.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
     - repoURL: https://github.com/symmatree/tiles.git
       targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
       ref: values

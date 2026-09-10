@@ -97,11 +97,13 @@ jobs:
             [ -n "$addr" ] && terraform taint "$addr"
           done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
 
-          # CRD Helm releases (tf/nodes/k8s-bootstrap.tf). Without these,
-          # charts/argocd/bootstrap.sh fails applying its OnePasswordItem CRs.
+          # Everything Terraform puts inside the cluster: the CRD and Cilium
+          # Helm releases, the onepassword namespace and operator secrets, the
+          # cilium namespace. Without these, charts/argocd/bootstrap.sh fails
+          # applying its OnePasswordItem CRs and the new cluster has no CNI.
           while IFS= read -r addr; do
             [ -n "$addr" ] && terraform taint "$addr"
-          done < <(terraform state list | grep '^helm_release\.' || true)
+          done < <(terraform state list | grep -E '^(helm_release|kubernetes_)' || true)
 
       # Prod cluster VM tainting
       - name: Taint prod cluster VMs
@@ -132,11 +134,13 @@ jobs:
             [ -n "$addr" ] && terraform taint "$addr"
           done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
 
-          # CRD Helm releases (tf/nodes/k8s-bootstrap.tf). Without these,
-          # charts/argocd/bootstrap.sh fails applying its OnePasswordItem CRs.
+          # Everything Terraform puts inside the cluster: the CRD and Cilium
+          # Helm releases, the onepassword namespace and operator secrets, the
+          # cilium namespace. Without these, charts/argocd/bootstrap.sh fails
+          # applying its OnePasswordItem CRs and the new cluster has no CNI.
           while IFS= read -r addr; do
             [ -n "$addr" ] && terraform taint "$addr"
-          done < <(terraform state list | grep '^helm_release\.' || true)
+          done < <(terraform state list | grep -E '^(helm_release|kubernetes_)' || true)
 
       - name: De-wireguard
         if: always()
