@@ -201,8 +201,3 @@ variable "deploy_proxmox_alloy" {
   description = "Whether to deploy Alloy LXC containers on Proxmox nodes (one per node). When true, collects host metrics/logs and forwards OTLP to the prod cluster. Enable in prod.tfvars only."
   type        = bool
 }
-
-variable "deploy_cilium" {
-  description = "Whether Terraform installs Cilium (tf/nodes/k8s-cilium.tf). True in test only for now: tiles-test has no Argo CD, so Terraform is its only writer, while on tiles the cilium Application still syncs it. Flipping prod means dropping that Application's automated sync in the same change, so there is exactly one writer."
-  type        = bool
-}

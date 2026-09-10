@@ -81,12 +81,11 @@ The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) pe
 1. **Loads sensitive secrets from 1Password** - Retrieves kubeconfig, GCP service account credentials, and VPN config
 2. **Loads cluster config from 1Password** - Uses the `1password/load-secrets-action` with `export-env: true` to retrieve fields from the `{cluster_name}-misc-config` item's `config` section (written by Terraform) plus operator tokens, and export them as environment variables (for example `targetRevision`, `pod_cidr`, `cluster_name`, `external_ip_cidr`, `vault_name`, `project_id`, and NFS-related fields)
 3. **Runs optional bootstrap steps** - Each step is gated by a `workflow_dispatch` boolean (see the workflow file for the exact list). When enabled, the job runs, in order:
-   - **`cilium`** - `./charts/cilium/bootstrap.sh`. Only for clusters where Terraform does not install Cilium; see `deploy_cilium` in [`tf/nodes/README.md`](../tf/nodes/README.md#cilium-k8s-ciliumtf).
    - **`argocd`** - `./charts/argocd/bootstrap.sh` - this installed ArgoCD itself and the AppProject but not the actual Application resources.
    - **`argocd_applications`** - `./charts/argocd-applications/install-application.sh` waits for Argo CD prerequisites (namespace, `AppProject` `cluster_name`, redis, repo-server, application-controller), then `envsubst` on `application.yaml.tmpl` and `kubectl apply`s the root Application. The waits are to avoid a race where the AppProject can be
    installed but not yet available, and the entire cluster fails to get off the ground.
 
-**Defaults:** Only **`argocd_applications`** defaults to **true**; **`cilium`** and **`argocd`** default to **false**. A cold or recreated cluster should enable the full set above so nodes get a CNI and Argo CD exists before Application CRs are applied. CRDs and the 1Password operator secrets are no longer bootstrap steps: Terraform installs both (see [`tf/nodes/README.md`](../tf/nodes/README.md#in-cluster-bootstrap-k8s-bootstraptf)) during `nodes-plan-apply`, which runs before this workflow.
+**Defaults:** **`argocd_applications`** defaults to **true**; **`argocd`** defaults to **false**. A cold or recreated cluster should enable both, so Argo CD exists before Application CRs are applied. CRDs, the 1Password operator secrets and Cilium are no longer bootstrap steps: Terraform installs all three (see [`tf/nodes/README.md`](../tf/nodes/README.md#in-cluster-bootstrap-k8s-bootstraptf)) during `nodes-plan-apply`, which runs before this workflow.
 
 #### Argo CD readiness and install-application
 

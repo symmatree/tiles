@@ -1,5 +1,5 @@
 name: "bootstrap-cluster"
-run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [cilium=${{ inputs.cilium }}, argocd=${{ inputs.argocd }}, apps=${{ inputs.argocd_applications }}]"
+run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [argocd=${{ inputs.argocd }}, apps=${{ inputs.argocd_applications }}]"
 on:
   workflow_dispatch:
     inputs:
@@ -10,11 +10,6 @@ on:
         options:
           - tiles-test
           - tiles
-      cilium:
-        description: "Reset and bootstrap Cilium"
-        required: false
-        type: boolean
-        default: false
       argocd:
         description: "Reset and bootstrap ArgoCD"
         required: false
@@ -134,9 +129,6 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          if [ "${{ github.event.inputs.cilium }}" == "true" ]; then
-            ./charts/cilium/bootstrap.sh
-          fi
           if [ "${{ github.event.inputs.argocd }}" == "true" ]; then
             ./charts/argocd/bootstrap.sh
           fi

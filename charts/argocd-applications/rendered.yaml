@@ -705,16 +705,13 @@ spec:
     server: https://kubernetes.default.svc
     namespace: cilium
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # No automated sync: Terraform installs this chart (tf/nodes/k8s-cilium.tf),
+    # and two writers on the CNI is worse than drift you can see. Argo CD keeps
+    # the Application so it still renders, diffs and reports; syncing is manual.
+    # No CreateNamespace/managedNamespaceMetadata either -- Terraform owns the
+    # namespace, because it has to exist before the release goes in.
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/enforce: privileged
-        pod-security.kubernetes.io/warn: privileged
 
 ---
 # Source: argocd-applications/templates/cilium-config-application.yaml
