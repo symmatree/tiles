@@ -144,6 +144,11 @@ cilium:
       # -- Configure automatic TLS certificates generation.
       auto:
         enabled: true
+        # certmanager rather than the chart default of helm: the helm method
+        # left Argo CD with a permadiff, and it mints a one-off self-signed cert
+        # instead of one from the cluster CA that trust-manager distributes --
+        # so a cert you end up debugging chains to the same root as everything
+        # else.
         method: certmanager
         certValidityDuration: 365
         certManagerIssuerRef:
