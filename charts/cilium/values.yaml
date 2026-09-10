@@ -111,17 +111,105 @@ cilium:
     # -- Enable ExternalIPs service support.
     enabled: true
   hubble:
-    # Off deliberately. Hubble's certs come from cert-manager
-    # (tls.auto.method: certmanager), and cert-manager arrives with the Argo CD
-    # tree, which cannot schedule until Cilium has given the cluster a CNI. With
-    # Hubble on, the release can never become ready on a fresh cluster, so
-    # Cilium could not be installed synchronously -- see wait in
-    # tf/nodes/k8s-cilium.tf.
-    #
-    # Nothing consumed it: no dashboard, mixin or tanka environment references a
-    # hubble_ metric. Re-enabling means restoring the relay/ui/tls settings from
-    # the upstream chart and giving up that synchronous install.
-    enabled: false
+    # -- Hubble metrics configuration.
+    # See https://docs.cilium.io/en/stable/observability/metrics/#hubble-metrics
+    # for more comprehensive documentation about Hubble metrics.
+    metrics:
+      enabled:
+        - dns:query;ignoreAAAA
+        - drop
+        - tcp
+        - flow
+        - icmp
+        - httpV2
+      # -- Enables exporting hubble metrics in OpenMetrics format.
+      enableOpenMetrics: true
+      serviceMonitor:
+        enabled: true
+        metricsRelabelings:
+          # Drop all grpc_server metrics; high cardinality for inside baseball.
+          - sourceLabels: [ __name__ ]
+            regex: "grpc_server.*"
+            action: drop
+      dashboards:
+        enabled: false
+        annotations:
+          k8s-sidecar-target-directory: /tmp/Cilium
+    # -- TLS configuration for Hubble
+    tls:
+      # -- Enable mutual TLS for listenAddress. Setting this value to false is
+      # highly discouraged as the Hubble API provides access to potentially
+      # sensitive network flow metadata and is exposed on the host network.
+      enabled: true
+      # -- Configure automatic TLS certificates generation.
+      auto:
+        enabled: true
+        method: certmanager
+        certValidityDuration: 365
+        certManagerIssuerRef:
+          group: cert-manager.io
+          kind: ClusterIssuer
+          name: "placeholder-ca-issuer"
+    relay:
+      # -- Enable Hubble Relay (requires hubble.enabled=true)
+      enabled: true
+      # -- Roll out Hubble Relay pods automatically when configmap is updated.
+      rollOutPods: true
+      # Keep more core infra on the control plane.
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ""
+      # -- Enable prometheus metrics for hubble-relay on the configured port at
+      # /metrics
+      prometheus:
+        enabled: true
+        port: 9966
+        serviceMonitor:
+          trustCRDsExist: true
+          enabled: true
+          labels:
+            suppress-diff: "true"
+          metricsRelabelings:
+            # Drop all grpc_server metrics; high cardinality for inside baseball.
+            - sourceLabels: [ __name__ ]
+              regex: "grpc_server.*"
+              action: drop
+    ui:
+      # -- Whether to enable the Hubble UI.
+      enabled: true
+      # -- Roll out Hubble-ui pods automatically when configmap is updated.
+      rollOutPods: true
+      backend:
+        livenessProbe:
+          # -- Enable liveness probe for Hubble-ui backend (requires Hubble-ui 0.12+)
+          # Fails and prevents any error message from showing up.
+          enabled: false
+        readinessProbe:
+          # -- Enable readiness probe for Hubble-ui backend (requires Hubble-ui 0.12+)
+          enabled: false
+      # Keep more core infra on the control plane.
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ""
+      ingress:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: real-cert
+        className: cilium
+        hosts:
+          - placeholder
+        tls:
+          - secretName: hubble-ui-tls
+            hosts:
+              - placeholder
   ipam:
     # -- Configure IP Address Management mode.
     # ref: https://docs.cilium.io/en/stable/network/concepts/ipam/
