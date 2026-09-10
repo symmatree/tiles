@@ -1,14 +1,13 @@
 # Cilium, the CNI. Replaces charts/cilium/bootstrap.sh (`helm template |
-# kubectl apply`) for clusters where var.deploy_cilium is set.
+# kubectl apply`).
 #
-# Rolled out per-cluster on purpose. tiles-test has no Argo CD at all, so
-# Terraform installing Cilium there creates no second writer. tiles is still
-# synced by the cilium Application, and moving it means dropping that
-# Application's automated sync in the same change so ownership never overlaps.
+# Terraform is the only writer: the cilium Application drops automated sync in
+# the same change, so Argo CD reports drift on this chart without correcting it.
 #
 # The chart is the local umbrella at charts/cilium, not the upstream chart
 # directly, so Terraform and Argo CD render byte-identical output from the same
-# values -- which is what makes adopting the prod install safe later. The
+# values -- which is what lets this first apply adopt the live tiles install
+# without rewriting it. The
 # umbrella carries no templates of its own; it exists to pin the version and
 # nest values under the `cilium` subchart key.
 #
@@ -21,8 +20,6 @@ locals {
 }
 
 resource "kubernetes_namespace_v1" "cilium" {
-  count = var.deploy_cilium ? 1 : 0
-
   metadata {
     name = "cilium"
     # Matches the cilium Application's managedNamespaceMetadata, which is what
@@ -37,10 +34,8 @@ resource "kubernetes_namespace_v1" "cilium" {
 }
 
 resource "helm_release" "cilium" {
-  count = var.deploy_cilium ? 1 : 0
-
   name      = "cilium"
-  namespace = kubernetes_namespace_v1.cilium[0].metadata[0].name
+  namespace = kubernetes_namespace_v1.cilium.metadata[0].name
   chart     = local.cilium_chart
 
   # Mirrors charts/cilium/application.yaml: the chart's own values.yaml is
@@ -79,8 +74,7 @@ resource "helm_release" "cilium" {
   timeout = 900
 
   # On tiles the objects were applied by bootstrap.sh with no Helm ownership
-  # metadata. Set now so enabling prod later is a values change, not a
-  # behavioural one.
+  # metadata, so this first apply adopts them rather than failing.
   take_ownership = true
 
   depends_on = [module.cluster]

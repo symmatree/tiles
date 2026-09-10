@@ -148,16 +148,11 @@ bring up a cluster with no CRDs while state still believes they are installed.
 
 ## Cilium (`k8s-cilium.tf`)
 
-Controlled by **`deploy_cilium`**: **`true`** in `test.tfvars`, **`false`** in
-`prod.tfvars`. Where it is on, Terraform installs the local `charts/cilium`
-umbrella with the same values `charts/cilium/application.yaml` feeds Argo CD, so
-both render identical output. Where it is off, `charts/cilium/bootstrap.sh` and
-the `cilium` Application still own it.
-
-Only one writer per cluster, ever. `tiles-test` has no Argo CD, so Terraform
-installing there overlaps with nothing. Turning it on for `tiles` means dropping
-`automated` from the cilium Application in the same change, leaving Argo CD to
-monitor and report drift without correcting it.
+Terraform installs the local `charts/cilium` umbrella with the same values
+`charts/cilium/application.yaml` feeds Argo CD, so both render identical output.
+Terraform is the only writer: that Application has no `automated` sync, so Argo
+CD renders, diffs and reports drift on the CNI without correcting it, and
+syncing it is a manual action.
 
 The `cilium` subchart is not committed, so `nodes-plan-apply` runs
 `.github/actions/helm-setup` to vendor it before Terraform loads the chart.
