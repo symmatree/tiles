@@ -124,9 +124,17 @@ Current OAuth clients:
   - `https://notebook.tiles.symmatree.com/hub/oauth_callback`
   - `https://notebook.tiles-test.symmatree.com/hub/oauth_callback`
 
-Future clients to add when those components are set up:
-* `argocd-oauth-client` — ArgoCD Dex Google login. Redirect URIs will be `https://argocd.{cluster}.symmatree.com/api/dex/callback`.
-* `oauth-proxy-client` — oauth2-proxy (if used). Redirect URIs will be `/oauth2/callback` on protected services.
+* **`argocd-oauth-proxy`** (GCP client) — stored in the 1Password item
+  **`argocd-oauth2-proxy`** with fields `client-id` / `client-secret` /
+  `cookie-secret`. **One client, shared by both of ArgoCD's auth layers**: the
+  oauth2-proxy perimeter and the Dex "Log in with Google" button. Register both
+  redirect URIs on it:
+  - `https://argocd.tiles.symmatree.com/oauth2/callback` (+ `tiles-test`) — proxy
+  - `https://argocd.tiles.symmatree.com/api/dex/callback` (+ `tiles-test`) — Dex
+  Dex reads its client from this same Secret via ArgoCD's `$secret:key`
+  substitution, which requires the Secret to carry the label
+  `app.kubernetes.io/part-of: argocd` (set on the OnePasswordItem in
+  `charts/argocd/templates/oauth2-proxy-secret.yaml`).
 
 #### SSH key
 
@@ -141,6 +149,19 @@ Future clients to add when those components are set up:
   ```
 
 See `charts/jupyterhub/README.md` for the full secrets architecture.
+
+## Apprise
+
+Apprise (the notification service) uses three 1Password items in the cluster vault:
+
+### Terraform-managed (automatic)
+
+* `{cluster_name}-apprise-env` -- `SECRET_KEY` for the Apprise API. Created by `tf/modules/k8s-cluster/apprise.tf`.
+* `{cluster_name}-apprise-admin` -- admin username/password and `.htpasswd` for the web UI. Created by `apprise.tf`.
+
+### Manual (one-time, shared across clusters)
+
+* `apprise-config` -- **no cluster prefix**; a Secure Note with a `config.yml` field holding the actual notification routing (Slack URLs, Gmail echo, tags). Synced to an `apprise-config` Secret by the OnePassword operator and mounted read-only at `/config/apprise.yml`, so `/notify/apprise` uses it. **This is the delivery config itself -- if it is empty or wrong, alerts reach nobody.** It is intentionally declarative (secret-mounted, not the old paste-into-the-UI PVC), so it survives a cluster rebuild; edit it in 1Password and restart the apprise pod to apply. See `tanka/environments/apprise/README.md`.
 
 ## Runtime / Github Actions
 

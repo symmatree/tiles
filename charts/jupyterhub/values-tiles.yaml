@@ -1,1 +1,20 @@
-# Per-cluster overrides for tiles (prod). Add overrides here as needed.
+# Per-cluster overrides for tiles (prod).
+
+# lancer (128 GB metal) is reserved for memory-intensive / big-image workloads
+# via a soft taint `dedicated=heavy:PreferNoSchedule` (declared in tf:
+# metal_amd_nodes.lancer.taint / .taint_effect), so routine workload prefers
+# wk-1/2/3 while lancer stays free for notebooks / ODM but still takes overflow.
+# The singleuser belongs on lancer -- its ~4 GB image unpacks in containerd
+# (podruntime/runtime) at node level, not bounded by any pod limit (see facts
+# fables/Tiles/tiles-host-instability.md T-B1, issue #576) -- so it gets the
+# nodeSelector (put it there) plus a matching toleration. Prod-only (test has no
+# lancer).
+jupyterhub:
+  singleuser:
+    nodeSelector:
+      kubernetes.io/hostname: lancer
+    extraTolerations:
+      - key: dedicated
+        operator: Equal
+        value: heavy
+        effect: PreferNoSchedule

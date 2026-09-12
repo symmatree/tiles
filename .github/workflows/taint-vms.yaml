@@ -1,5 +1,16 @@
 name: "taint-vms"
 run-name: "Taint VMs test=${{ inputs.taint_test }} prod=${{ inputs.taint_prod }} by @${{ github.actor }}"
+# Marks a cluster's resources for replacement ahead of a rebuild via
+# nodes-plan-apply (with metal_apply_mode=reboot).
+#
+# Beyond the VMs themselves, everything tainted below lives *in* the cluster but
+# has no lifetime binding to it in Terraform's graph. A rebuild blows the old
+# copy away with the cluster, yet Terraform still holds it in state and plans an
+# update or a no-op rather than a fresh create -- so the new cluster comes up
+# missing it and only a second apply notices. The taint is what forces a create.
+#
+# Dynamic sets are derived from `terraform state list` so new instances are
+# picked up without editing this workflow.
 on:
   workflow_dispatch:
     inputs:
@@ -79,16 +90,20 @@ jobs:
           terraform taint 'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.talos_machine_bootstrap.this'
 
-          # Bare-metal workers are not recreated like VMs: a rebuild re-applies
-          # byte-identical config, so talos_machine_configuration_apply is a no-op
-          # under apply_mode="auto" and the node never rejoins the new etcd. Taint
-          # it (derived from state, so it tracks metal_{amd,intel}_nodes) so it
-          # re-runs, then run nodes-plan-apply with metal_apply_mode=reboot so the
-          # re-apply reboots the node. Empty in workspaces with no metal nodes.
+          # Metal nodes: config re-applies byte-identical, so the apply is a no-op
+          # under apply_mode="auto" and the node never rejoins the new etcd.
           # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
           while IFS= read -r addr; do
             [ -n "$addr" ] && terraform taint "$addr"
           done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
+
+          # Everything Terraform puts inside the cluster: the CRD and Cilium
+          # Helm releases, the onepassword namespace and operator secrets, the
+          # cilium namespace. Without these, charts/argocd/bootstrap.sh fails
+          # applying its OnePasswordItem CRs and the new cluster has no CNI.
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep -E '^(helm_release|kubernetes_)' || true)
 
       # Prod cluster VM tainting
       - name: Taint prod cluster VMs
@@ -112,17 +127,20 @@ jobs:
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-3"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.talos_machine_bootstrap.this'
 
-          # Bare-metal workers (e.g. acebase) are not recreated like VMs: a rebuild
-          # re-applies byte-identical config, so talos_machine_configuration_apply
-          # is a no-op under apply_mode="auto" and the node never rejoins the new
-          # etcd. Taint it (derived from state, so it tracks metal_{amd,intel}_nodes
-          # -- replaces the old hardcoded, commented-out "lancer" line) so it
-          # re-runs, then run nodes-plan-apply with metal_apply_mode=reboot so the
-          # re-apply reboots the node.
+          # Metal nodes: config re-applies byte-identical, so the apply is a no-op
+          # under apply_mode="auto" and the node never rejoins the new etcd.
           # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
           while IFS= read -r addr; do
             [ -n "$addr" ] && terraform taint "$addr"
           done < <(terraform state list | grep -E '^module\.cluster\.module\.talos-(amd|intel)-metal\[.*\]\.talos_machine_configuration_apply\.this$' || true)
+
+          # Everything Terraform puts inside the cluster: the CRD and Cilium
+          # Helm releases, the onepassword namespace and operator secrets, the
+          # cilium namespace. Without these, charts/argocd/bootstrap.sh fails
+          # applying its OnePasswordItem CRs and the new cluster has no CNI.
+          while IFS= read -r addr; do
+            [ -n "$addr" ] && terraform taint "$addr"
+          done < <(terraform state list | grep -E '^(helm_release|kubernetes_)' || true)
 
       - name: De-wireguard
         if: always()

@@ -25,6 +25,8 @@ spec:
             cluster_issuer: "real-cert"
             apprise_env: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-apprise-env'
             apprise_admin: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-apprise-admin'
+            # Shared across clusters (no prefix); field config.yml holds the Slack/Gmail URLs.
+            apprise_config: 'apprise-config'
   destination:
     server: https://kubernetes.default.svc
     namespace: apprise

@@ -14,5 +14,13 @@ secrets.yaml
 *.tmp
 *.bak
 
+# Jupyter notebook checkpoint dirs (created wherever notebooks are opened)
+.ipynb_checkpoints/
+
 # Claude Code transient client state (worktree checkouts); keep the rest of .claude/
 .claude/worktrees/
+__pycache__/
+
+# Charts generated from upstream CRD YAML by ci-tools/crd-charts/build.py.
+# Third-party CRDs are never committed; they are fetched and packaged at build time.
+build/

@@ -1,0 +1,98 @@
+---
+# Source: argo-tag-watcher/templates/rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-tag-watcher
+  namespace: "argo-tag-watcher"
+---
+# Source: argo-tag-watcher/templates/rbac.yaml
+# Least privilege: only read Applications and set the refresh annotation.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-tag-watcher
+  namespace: "argo-tag-watcher"
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["list", "patch"]
+---
+# Source: argo-tag-watcher/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-tag-watcher
+  namespace: "argo-tag-watcher"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-tag-watcher
+subjects:
+  - kind: ServiceAccount
+    name: argo-tag-watcher
+    namespace: "argo-tag-watcher"
+
+---
+# Source: argo-tag-watcher/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-tag-watcher
+  namespace: "argo-tag-watcher"
+  labels:
+    app.kubernetes.io/name: argo-tag-watcher
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argo-tag-watcher
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argo-tag-watcher
+    spec:
+      serviceAccountName: argo-tag-watcher
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: argo-tag-watcher
+          image: "ghcr.io/symmatree/tiles/argo-tag-watcher:main"
+          env:
+            - name: REPO_URL
+              value: "https://github.com/symmatree/tiles.git"
+            # The tag we deploy from is the tag we watch.
+            - name: WATCH_REF
+              value: 'placeholder'
+            - name: ARGOCD_NAMESPACE
+              value: "argo-tag-watcher"
+            - name: INTERVAL
+              value: "60s"
+            - name: BATCH_SIZE
+              value: "4"
+            - name: BATCH_DELAY
+              value: "5s"
+            - name: HOME # git wants a writable HOME even for ls-remote
+              value: /tmp
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

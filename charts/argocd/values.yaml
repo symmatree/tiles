@@ -53,10 +53,21 @@ argo-cd:
             name: Google
             config:
               issuer: https://accounts.google.com
-              # Connector config values starting with "$" reference Kubernetes secrets.
-              # Format: $<secret-name>:<key>
-              clientID: $google-oauth-secret:OAUTH_CLIENT_ID
-              clientSecret: $google-oauth-secret:OAUTH_CLIENT_SECRET
+              # Values starting with "$" are resolved by ARGOCD (not Dex) against
+              # Secrets labeled app.kubernetes.io/part-of=argocd, in the form
+              # $<secret-name>:<key>. If the referenced Secret lacks that label
+              # ArgoCD cannot see it, leaves the reference literal, and Google
+              # login breaks with "key does not exist in secret" in the dex log.
+              #
+              # We reuse the oauth2-proxy perimeter's Google client for Dex: one
+              # GCP OAuth client, with BOTH redirect URIs registered on it --
+              # /oauth2/callback (proxy) and /api/dex/callback (Dex). So the
+              # argocd-oauth2-proxy Secret is the single source of the client
+              # id/secret, and it is labeled part-of=argocd in
+              # templates/oauth2-proxy-secret.yaml precisely so these two
+              # references resolve. One client to rotate; no second 1Password item.
+              clientID: $argocd-oauth2-proxy:client-id
+              clientSecret: $argocd-oauth2-proxy:client-secret
       # Override this whole value just to remove Endpoints (needed for Cilium)
       resource.exclusions: |
         ### Network resources created by the Kubernetes control plane and excluded to reduce the number of watched events and UI clutter
@@ -123,8 +134,8 @@ argo-cd:
       otlp.address: ""
       server.insecure: true
       # Cap concurrent manifest generation and git ls-remote during cold start (see repoServer.livenessProbe).
-      reposerver.parallelism.limit: "4"
-      reposerver.git.lsremote.parallelism.limit: "4"
+      reposerver.parallelism.limit: "2"
+      reposerver.git.lsremote.parallelism.limit: "2"
       # Tanka CMP MatchRepository / GenerateManifest stalls are observed to last
       # ~60s and consistently hit the default controller -> repo-server gRPC
       # deadline of 60s, leaving the affected apps stuck in Unknown. We have
@@ -149,10 +160,20 @@ argo-cd:
   controller:
     resources:
       limits:
-        memory: 384Mi
+        memory: 768Mi
     env:
     - name: GOMEMLIMIT
-      value: "340MiB"  # ~90% of the 384Mi memory limit above; GOMEMLIMIT uses MiB/GiB units
+      value: "690MiB"  # ~90% of the 768Mi memory limit above; GOMEMLIMIT uses MiB/GiB units
+    # client-go's own rate limiter (not server-side API Priority & Fairness) was
+    # the dominant bottleneck: at defaults (QPS 50 / Burst 100) the controller
+    # logged "client-side throttling, not priority and fairness ... Waited before
+    # sending request" with delays up to ~25m during cold-start cache sync, which
+    # kept it from ever going Ready. The control plane has ample headroom, so lift
+    # the client limits. Applied to all argocd components via the shared env var.
+    - name: ARGOCD_K8S_CLIENT_QPS
+      value: "100"
+    - name: ARGOCD_K8S_CLIENT_BURST
+      value: "200"
     ## Application controller metrics configuration
     metrics:
       # -- Deploy metrics service
@@ -181,22 +202,10 @@ argo-cd:
       serviceMonitor:
         # -- Enable a prometheus ServiceMonitor
         enabled: true
-    # Argo CD server ingress configuration
+    # Ingress disabled: oauth2-proxy is the external entry point.
+    # argocd-server has no direct external exposure.
     ingress:
-      # -- Enable an ingress resource for the Argo CD server
-      enabled: true
-      # -- Specific implementation for ingress controller. One of `generic`, `aws` or `gke`
-      ## Additional configuration might be required in related configuration sections
-      controller: generic
-      annotations:
-        cert-manager.io/cluster-issuer: real-cert
-        # Note: Cilium automatically syncs TLS secrets from the ingress namespace
-        # to cilium-secrets namespace when enable-ingress-secrets-sync is true
-      ingressClassName: cilium
-      # -- Enable TLS configuration for the hostname defined at `server.ingress.hostname`
-      ## TLS certificate will be retrieved from a TLS secret `argocd-server-tls`
-      ## You can create this secret via `certificate` or `certificateSecret` option
-      tls: true
+      enabled: false
     # Dedicated gRPC ingress for ingress controllers that supports only single backend protocol per Ingress resource
     # Ref: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-2-multiple-ingress-objects-and-hosts
     ingressGrpc:
@@ -283,10 +292,29 @@ argo-cd:
     # webhooks-github-token:
 
   repoServer:
-    # Repo-server main container: allow healthz to survive brief load spikes (default timeout 1s is tight).
+    # Requests only (no limit yet): give the scheduler a realistic footprint so
+    # the repo-server pod stops bin-packing onto a full node as if it needs zero
+    # RAM. Sized from 21d Mimir working-set (repo-server container ~170Mi avg,
+    # tanka sidecar ~193Mi avg -- tanka is the bigger of the two). A limit is
+    # deferred until we see the effect of the parallelism 4->2 reduction.
+    resources:
+      requests:
+        memory: 160Mi
+    # The Tanka CMP's MatchRepository/GenerateManifest stalls run ~60s (see the
+    # gRPC-deadline note under params below), far longer than the old 5s liveness
+    # timeout -- so the deep /healthz?full=true probe timed out and kubelet SIGKILL'd
+    # a repo-server that was only slow, crashlooping it and blocking every Tanka and
+    # multi-source app from rendering (this is #573, whose "OOM" title is a
+    # misdiagnosis: exit 137 came from "failed liveness probe", no mem limit is set,
+    # and the node was not under memory pressure). Tolerate the known stalls.
     livenessProbe:
-      timeoutSeconds: 5
-      failureThreshold: 3
+      timeoutSeconds: 30
+      failureThreshold: 6
+    # Default readiness (timeoutSeconds 1) also flaps the single repo-server out of
+    # its Service under the same load; give it headroom too.
+    readinessProbe:
+      timeoutSeconds: 10
+      failureThreshold: 6
     ## Repo-server metrics service configuration
     metrics:
       # -- Deploy metrics service
@@ -301,6 +329,9 @@ argo-cd:
       - name: tanka
         # We need git for downloading dependencies with jb.
         image: prontotools/alpine-git-curl:latest
+        resources:
+          requests:
+            memory: 192Mi
         # install jb and tk then start the argocd-cmp-server
         command:
           - sh
@@ -334,3 +365,99 @@ argo-cd:
       - name: cmp-tanka
         configMap:
           name: cmp-tanka
+
+oauth2-proxy:
+  # Pin a current patched image (chart 7.7.0 defaults to the older v7.6.0). This
+  # is the internet-facing auth gate, so track upstream security fixes. Bumped for
+  # the WAN cutover. 7.6 -> 7.15 uses only long-stable flags/config keys; the
+  # provider (google), classic --config file, and --authenticated-emails-file are
+  # unaffected by the interim breaking changes (Alpha Config v2, Azure/keycloak
+  # provider deprecations, upstream request signatures -- none of which we use).
+  image:
+    tag: v7.15.3
+  # Credentials come from 1Password via the OnePasswordItem in
+  # templates/oauth2-proxy-secret.yaml, which creates a Secret named
+  # 'argocd-oauth2-proxy'. The vault item's field labels must be exactly
+  # 'client-id', 'client-secret', 'cookie-secret' -- those become the Secret keys
+  # that the chart's existingSecret path reads.
+  #   - client-id / client-secret: from the GCP OAuth2 client 'argocd-oauth-proxy'.
+  #     This one client is shared by BOTH auth layers, so register both redirect
+  #     URIs on it:
+  #       https://argocd.{cluster}.symmatree.com/oauth2/callback   (this proxy)
+  #       https://argocd.{cluster}.symmatree.com/api/dex/callback  (Dex/SSO)
+  #     The Dex "Log in with Google" button reads its client from THIS Secret
+  #     (see argo-cd.configs.cm 'dex.config' above), which is why this
+  #     OnePasswordItem is labeled part-of=argocd.
+  #   - cookie-secret: openssl rand -base64 32 | head -c 32 | base64
+  #
+  # existingSecret is required: without it the chart renders its OWN Secret of the
+  # same name full of "XXXXXXX" placeholders, which collides with the OnePasswordItem
+  # and (Argo self-heal winning the race) sends client_id=XXXXXXX to Google -- the
+  # authorize step is rejected and no callback ever returns.
+  config:
+    existingSecret: argocd-oauth2-proxy
+    # Override the chart's default configFile, which sets email_domains = [ "*" ]
+    # (allowAll). oauth2-proxy merges --config with CLI args, so dropping the
+    # --email-domain arg alone was NOT enough -- the wildcard lived here too and
+    # kept letting every Google account in. With no email_domains anywhere, the
+    # authenticated-emails-file below is the sole gate. (upstreams here is the
+    # chart's required dummy; the real upstream is --upstream in extraArgs.)
+    configFile: |-
+      upstreams = [ "file:///dev/null" ]
+  extraArgs:
+    - --provider=google
+    # Do NOT set --email-domain: in oauth2-proxy email validation is OR, not AND
+    # (valid = domain-matches OR in-emails-file), and --email-domain=* sets allowAll
+    # -> every Google account passes and the emails file below is never consulted.
+    # The wildcard must also be absent from config.configFile above (chart default).
+    - --upstream=http://argocd-server:80
+    - --pass-host-header=true
+    - --set-xauthrequest=true
+    - --silence-ping-logging=true
+    - --skip-provider-button=true
+    - --reverse-proxy=true
+    # Restrict who may set X-Forwarded-* to the in-cluster pod CIDR
+    # (cilium ipv4-native-routing-cidr). Without this, --reverse-proxy trusts
+    # X-Forwarded-* from 0.0.0.0/0 -- fine when only the ingress could reach us,
+    # but this is now internet-facing. The Cilium ingress Envoy SNATs its backend
+    # connections into this CIDR (observed proxy source IPs 10.0.145/148/149.x all
+    # land here), so trusting it covers every legitimate ingress source while
+    # excluding external clients. Node IPs are heterogeneous (10.0.128.x and
+    # 10.0.99.x) so the pod CIDR -- not node subnets -- is the reliable boundary.
+    - --trusted-proxy-ip=10.0.144.0/20
+  # Allowlist: the ONLY emails permitted. The chart writes them to a ConfigMap and
+  # passes --authenticated-emails-file automatically. This is the actual restriction --
+  # it works precisely because --email-domain is unset (see extraArgs above).
+  authenticatedEmailsFile:
+    enabled: true
+    restricted_access: |
+      seth.porter@gmail.com
+  ingress:
+    enabled: true
+    className: cilium
+    # Prefix (not the chart's default ImplementationSpecific): under Cilium,
+    # ImplementationSpecific + path "/" matches ONLY the exact "/", so /oauth2/callback
+    # and the whole Argo CD UI 404 at Envoy before reaching the proxy. Every other
+    # ingress in this cluster uses Prefix "/"; match that so all paths route.
+    path: /
+    pathType: Prefix
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+      # Ride the single shared front door (the pinned cilium-ingress LB IP)
+      # rather than a dedicated per-ingress LB IP. With no external-dns target
+      # override, external-dns publishes this host at that internal ingress IP,
+      # so it is reachable and testable on-LAN. The WAN cutover (external-dns
+      # target -> lhitw.symmatree.com + the UniFi 443 port-forward) is a
+      # separate follow-up PR, so nothing is exposed until that is applied.
+      ingress.cilium.io/loadbalancer-mode: shared
+      # WAN cutover: publish as a CNAME to the UniFi dynamic-DNS record (WAN IP)
+      # instead of the internal ingress IP, so the host resolves for external
+      # clients and tracks the dynamic address. Paired with the UniFi 443
+      # port-forward (tf/nodes/port-forwards.tf) -- this is the exposure switch.
+      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    hosts:
+      - argocd.placeholder.symmatree.com
+    tls:
+      - secretName: argocd-proxy-tls
+        hosts:
+          - argocd.placeholder.symmatree.com

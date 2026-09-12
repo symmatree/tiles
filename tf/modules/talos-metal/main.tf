@@ -15,9 +15,12 @@ resource "talos_machine_configuration_apply" "this" {
   node                        = var.ip_address
   config_patches              = var.config_patches
 
-  # "auto" (default) applies live and reboots only when a field requires it. A
-  # cluster rebuild re-applies byte-identical config, so "auto" is a no-op and
-  # the node never rejoins the new etcd -- set apply_mode="reboot" for rebuilds.
+  # Defaults to "reboot" (var.apply_mode): this resource only re-runs when the
+  # metal config actually changes, and rebooting then guarantees the change
+  # fully takes effect and lets a rebuilt node rejoin the new etcd. "auto" would
+  # reboot only when Talos judges a field requires it (unreliable -- Talos can
+  # hold state until reboot), and on a rebuild's byte-identical re-apply "auto"
+  # is a no-op that leaves the node orphaned.
   # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
   apply_mode = var.apply_mode
 

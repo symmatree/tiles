@@ -15,3 +15,12 @@ store_gateway:
   resources:
     requests:
       memory: 1Gi
+
+alertmanager:
+  # 3-day peak working-set ~78Mi (Mimir). (The alert-forward sidecar, ~88Mi, is
+  # a separate container and is left unbounded for now.)
+  resources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 256Mi

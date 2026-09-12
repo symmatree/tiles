@@ -61,9 +61,9 @@ variable "config_patches" {
 # re-applied metal node reboots and rejoins the new etcd. See
 # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot.
 variable "apply_mode" {
-  description = "talosctl apply-config mode for the metal node: auto | no_reboot | reboot | staged"
+  description = "talosctl apply-config mode for the metal node: auto | no_reboot | reboot | staged. Defaults to \"reboot\" so a config change fully applies (and a rebuild rejoins the new etcd); the resource only re-runs on an actual config change, so this is not a reboot-every-apply."
   type        = string
-  default     = "auto"
+  default     = "reboot"
 
   validation {
     condition     = contains(["auto", "no_reboot", "reboot", "staged"], var.apply_mode)

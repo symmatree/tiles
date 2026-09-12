@@ -2,55 +2,98 @@ baseDomain: local.symmatree.com
 clusterIssuer: real-cert
 namespace: static-certs
 
-# Push TLS material from selected Certificate secrets to Synology DSM (acme.sh synology_dsm deploy hook).
-# DSM login Secret is synced from 1Password via OnePasswordItem (same pattern as laserjet password).
-synologyDsmSync:
-  enabled: false
-  schedule: "0 7 * * *"
-  image: alpine:3.20
-  synology:
-    scheme: https
-    hostname: raconteur.ad.local.symmatree.com
-    port: "5001"
-  loginOnePasswordItem:
-    name: raconteur-login
-    itemPath: vaults/tiles-secrets/items/raconteur-login
-  loginSecretKeys:
-    usernameKey: username
-    passwordKey: password
-  certificates:
-    - fqdn: raconteur.ad.local.symmatree.com
-      secretName: raconteur-cert
-      volumeMountPath: raconteur
-    - fqdn: cam.local.symmatree.com
-      secretName: cam-cert
-      volumeMountPath: cam
-    - fqdn: photos.local.symmatree.com
-      secretName: photos-cert
-      volumeMountPath: photos
+# Image for the certSync CronJobs. Alpine plus a handful of apk packages; the
+# work is done by acme.sh, cloned at run time.
+certSyncImage: alpine:3.20
 
-# Push homeassistant-cert to HA Yellow over SSH (acme.sh ssh deploy hook).
-# Deploy key Secret is synced from 1Password. Paths match ha-config configuration.yaml.
-homeassistantSshSync:
-  enabled: false
-  schedule: "15 7 * * *"
-  image: alpine:3.20
-  ssh:
-    user: root
-    host: 10.0.99.9
-    port: "22"
-    remotePaths:
-      fullchain: /config/ssl/homeassistant-cert.crt
-      privkey: /config/ssl/homeassistant-cert.key
-    remoteCmd: ha core restart
-  sshKeyOnePasswordItem:
-    name: homeassistant-cert-ssh
-    itemPath: vaults/tiles-secrets/items/homeassistant-cert-ssh
-  sshKeySecretKey: "private-key"
-  certificates:
-    - fqdn: homeassistant.local.symmatree.com
-      secretName: homeassistant-cert
-      volumeMountPath: homeassistant
+# Push cert-manager-issued certs to hosts that are not in the cluster, using
+# acme.sh deploy hooks. Every target has the same shape:
+#
+#   enabled          -- create the CronJob/ConfigMap/OnePasswordItem
+#   schedule         -- cron spec (UTC); stagger targets so restarts do not overlap
+#   deployHook       -- acme.sh deploy hook name (acme.sh/deploy/<name>.sh)
+#   onePasswordItem  -- credential item; also the name of the synced Secret
+#   sshKeySecretKey  -- if set, mount that Secret key and wire up acme.sh's ssh
+#                       transport (implies the ssh hook's scp mode)
+#   remoteScript     -- optional chart-relative script run on the target host
+#                       after the files land, as DEPLOY_SSH_REMOTE_CMD
+#   env              -- plain env for the hook
+#   envFromSecret    -- env var -> key in the onePasswordItem Secret
+#   certificates     -- fqdn + the Certificate's secretName, mounted at
+#                       /certs/<secretName>
+certSync:
+  # Synology DSM on Raconteur, which also fronts cam and photos. DSM decides for
+  # itself whether to restart httpd after an upload.
+  synology:
+    enabled: false
+    schedule: "0 7 * * *"
+    deployHook: synology_dsm
+    onePasswordItem:
+      name: raconteur-login
+      itemPath: vaults/tiles-secrets/items/raconteur-login
+    env:
+      SYNO_SCHEME: https
+      SYNO_HOSTNAME: raconteur.ad.local.symmatree.com
+      SYNO_PORT: "5001"
+    envFromSecret:
+      SYNO_USERNAME: username
+      SYNO_PASSWORD: password
+    certificates:
+      - fqdn: raconteur.ad.local.symmatree.com
+        secretName: raconteur-cert
+      - fqdn: cam.local.symmatree.com
+        secretName: cam-cert
+      - fqdn: photos.local.symmatree.com
+        secretName: photos-cert
+
+  # Home Assistant Yellow. Paths match ha-config's configuration.yaml. The
+  # remote command runs every time, so HA restarts daily whether or not the
+  # cert changed -- that is accepted, not an oversight.
+  homeassistant:
+    enabled: false
+    schedule: "15 7 * * *"
+    deployHook: ssh
+    onePasswordItem:
+      name: homeassistant-cert-ssh
+      itemPath: vaults/tiles-secrets/items/homeassistant-cert-ssh
+    sshKeySecretKey: private-key
+    env:
+      DEPLOY_SSH_USER: root
+      DEPLOY_SSH_SERVER: "10.0.99.9:22"
+      DEPLOY_SSH_KEYFILE: /config/ssl/homeassistant-cert.key
+      DEPLOY_SSH_FULLCHAIN: /config/ssl/homeassistant-cert.crt
+      DEPLOY_SSH_REMOTE_CMD: ha core restart
+    certificates:
+      - fqdn: homeassistant.local.symmatree.com
+        secretName: homeassistant-cert
+
+  # UniFi Dream Machine SE (morpheus). acme.sh's dedicated unifi hook is
+  # local-only, so this uses the generic ssh hook -- but it stages the cert
+  # rather than deploying it, because on this console nginx serves a UUID-named
+  # pair chosen through the UI, not unifi-core.crt. remoteScript installs from
+  # the staging paths into whatever local-certs.conf currently points at.
+  unifi:
+    enabled: false
+    schedule: "30 7 * * *"
+    deployHook: ssh
+    onePasswordItem:
+      name: unifi-cert-ssh
+      itemPath: vaults/tiles-secrets/items/unifi-cert-ssh
+    sshKeySecretKey: private-key
+    remoteScript: scripts/unifi-install-cert.sh
+    env:
+      DEPLOY_SSH_USER: root
+      DEPLOY_SSH_SERVER: "morpheus.local.symmatree.com:22"
+      DEPLOY_SSH_KEYFILE: /data/unifi-core/config/acme-staging.key
+      DEPLOY_SSH_FULLCHAIN: /data/unifi-core/config/acme-staging.crt
+      # acme.sh backs up each destination before writing it, which fails on the
+      # first run because the staging files do not exist yet. Backing up a
+      # staging path is meaningless regardless -- remoteScript backs up the real
+      # pair as .acme-bak before overwriting it.
+      DEPLOY_SSH_BACKUP: "no"
+    certificates:
+      - fqdn: morpheus.local.symmatree.com
+        secretName: morpheus-cert
 
 staticCerts:
   - name: raconteur

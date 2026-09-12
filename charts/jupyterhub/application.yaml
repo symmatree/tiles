@@ -15,20 +15,31 @@ spec:
       valuesObject:
         cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        nfs_server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+        cluster_nfs_path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}'
+        datasets_nfs_path: '{{ required ".Values.datasets_nfs_path is required" .Values.datasets_nfs_path }}'
         hostname: 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
         sshHostname: 'notebook-ssh.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
         jupyterhub:
           hub:
             config:
               OAuthenticator:
+                # The hub's own (inner) Google auth callback -- still reached
+                # through the oauth2-proxy perimeter. proxy.service.type ClusterIP
+                # and proxy.https.enabled=false are set in values.yaml; the old
+                # LoadBalancer external-dns hostname annotation is dropped so the
+                # dedicated notebook LB record is cleaned up (external-dns sync)
+                # and the host is now published from the oauth2-proxy ingress.
                 oauth_callback_url: 'https://notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com/hub/oauth_callback'
-          proxy:
-            service:
-              annotations:
-                external-dns.alpha.kubernetes.io/hostname: 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
-            https:
-              hosts:
-                - 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+        # Perimeter gate host, per-cluster (chart default is the placeholder host).
+        oauth2-proxy:
+          ingress:
+            hosts:
+              - 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            tls:
+              - secretName: jupyterhub-oauth2-proxy-tls
+                hosts:
+                  - 'notebook.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: jupyterhub

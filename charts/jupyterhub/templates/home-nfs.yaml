@@ -1,0 +1,41 @@
+# Static NFS-backed home for singleuser servers.
+#
+# The default z2jh storage is a per-user *dynamic* PVC on the default storage
+# class (local-path here), which (a) can be reaped and (b) pins the pod to the
+# one node holding that local disk -- which starved a small worker and fought
+# the lancer nodeSelector. Instead, one shared RWX volume on the NAS with a
+# per-user subPath ({username}, set in values) gives each user a stable, named,
+# persistent directory (…/jupyterhub-home/<username>) that survives app/PVC
+# deletion (Retain) and imposes no node affinity. Mirrors the Loki/Mimir
+# static-PV pattern; the jupyterhub-home directory must exist under the cluster
+# NFS share (manual NAS step, same as loki-data/mimir-data).
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jupyterhub-home
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - vers=4.1
+  nfs:
+    server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+    path: '{{ required ".Values.cluster_nfs_path is required" .Values.cluster_nfs_path }}/jupyterhub-home'
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jupyterhub-home
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  volumeName: jupyterhub-home
+  storageClassName: ""

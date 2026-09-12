@@ -1,0 +1,73 @@
+# Source manifest for the CRD charts published to
+# oci://ghcr.io/symmatree/tiles/charts and installed by tf/nodes/k8s-bootstrap.tf.
+#
+# These are the CRDs that cannot be left to the chart that ships them, because
+# their consumers live in *other* Argo CD applications: a ServiceMonitor or an
+# OnePasswordItem shows up all over the tree, so the type has to exist before
+# the app-of-apps sync rather than arriving with one app inside it.
+#
+# Nothing fetched here is committed. build.py downloads at build time and emits
+# chart directories under build/crd-charts/, which is gitignored.
+#
+# The CRD YAML goes in the chart's templates/, NOT crds/. Helm never upgrades or
+# deletes anything in crds/, so a CRD parked there can only ever be created once.
+#
+# Fields:
+#   name        chart name; becomes oci://ghcr.io/symmatree/tiles/charts/<name>
+#   version     OUR chart version. Bump on any change to ref, urls, or packaging.
+#               This is the version tf/nodes/k8s-bootstrap.tf pins, and the OCI
+#               tag, so it must be a valid tag: no '+' build metadata.
+#   ref         upstream tag/branch the URLs pin. Becomes the chart appVersion.
+#   urls        CRD YAML to fetch. '{ref}' is substituted. Every document in
+#               every file must be a CustomResourceDefinition; build.py fails
+#               otherwise, which is what catches a 404 body or an upstream file
+#               that has quietly grown a Namespace or Deployment.
+charts:
+  - name: argo-cd-crds
+    version: 0.1.0
+    ref: v3.2.3
+    description: Argo CD CRDs (Application, ApplicationSet, AppProject)
+    urls:
+      - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/application-crd.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/applicationset-crd.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/appproject-crd.yaml
+
+  - name: cert-manager-crds
+    version: 0.1.0
+    ref: v1.19.2
+    description: cert-manager CRDs (Certificate, Issuer, ClusterIssuer, and friends)
+    urls:
+      - https://github.com/cert-manager/cert-manager/releases/download/{ref}/cert-manager.crds.yaml
+
+  - name: trust-manager-crds
+    version: 0.1.0
+    ref: v0.20.3
+    description: trust-manager CRDs (Bundle)
+    urls:
+      - https://raw.githubusercontent.com/cert-manager/trust-manager/{ref}/deploy/crds/trust.cert-manager.io_bundles.yaml
+
+  - name: gateway-api-crds
+    version: 0.1.0
+    ref: v1.4.0
+    description: Gateway API standard-channel CRDs, consumed by Cilium
+    urls:
+      - https://github.com/kubernetes-sigs/gateway-api/releases/download/{ref}/standard-install.yaml
+
+  - name: onepassword-crds
+    version: 0.1.0
+    ref: v1.8.1
+    description: 1Password operator CRDs (OnePasswordItem)
+    urls:
+      - https://raw.githubusercontent.com/1Password/onepassword-operator/refs/tags/{ref}/config/crd/bases/onepassword.com_onepassworditems.yaml
+
+  # No snapshot controller is installed; the NFS CSI driver still wants the
+  # VolumeSnapshot types present. Replace this source if a real snapshot
+  # implementation ever lands.
+  - name: external-snapshotter-crds
+    version: 0.1.0
+    ref: release-6.0
+    description: VolumeSnapshot CRDs, required by the NFS CSI driver
+    urls:
+      - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/{ref}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+      - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/{ref}/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+      - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/{ref}/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml

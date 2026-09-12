@@ -1,0 +1,40 @@
+# Static NFS-backed "datasets" share, mounted read-write into every singleuser
+# server at /home/jovyan/datasets (see singleuser.storage.extraVolumeMounts in
+# values.yaml).
+#
+# This is the pre-existing `datasets` share on the NAS (raconteur:/volume2/datasets,
+# also mounted by ODM under a webodm-media subPath -- see tanka/environments/odm).
+# Unlike jupyterhub-home, the share root already exists (used by ODM), so there is
+# no manual NAS mkdir step. A separate PV object pointing at the same NFS export as
+# odm-datasets is fine -- NFS allows concurrent mounts. Static PV + Retain mirrors
+# the Loki/Mimir/home pattern so the binding survives app/PVC deletion.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jupyterhub-datasets
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - vers=4.1
+  nfs:
+    server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+    path: '{{ required ".Values.datasets_nfs_path is required" .Values.datasets_nfs_path }}'
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jupyterhub-datasets
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  volumeName: jupyterhub-datasets
+  storageClassName: ""

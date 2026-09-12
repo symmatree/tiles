@@ -1,6 +1,9 @@
 # Passed by jupyterhub-application.yaml valuesObject.
 cluster_name: placeholder
 vault_name: placeholder
+nfs_server: placeholder
+cluster_nfs_path: placeholder
+datasets_nfs_path: placeholder
 hostname: notebook.placeholder.symmatree.com
 sshHostname: notebook-ssh.placeholder.symmatree.com
 
@@ -17,6 +20,16 @@ jupyterhub:
     cookieSecret: "placeholder-for-rendered-yaml"
     networkPolicy:
       enabled: false
+    # The hub sqlite DB uses a reap-able dynamic NFS PVC (cluster-nfs) instead of
+    # the default local-path storageClass. Hub state is not meant to persist
+    # across cluster rebuilds; we only need the volume to be node-independent so
+    # the hub pod can reschedule to any host. local-path pins the PV to one node's
+    # disk by hostname affinity, which stranded the hub (Pending) when that node
+    # was renamed/lost after a power event. NFS has no node affinity, and a single
+    # hub writer makes sqlite-on-NFS safe.
+    db:
+      pvc:
+        storageClassName: cluster-nfs
     extraEnv:
       OAUTH_CLIENT_ID:
         valueFrom:
@@ -78,13 +91,31 @@ jupyterhub:
     cmd: null
     image:
       name: ghcr.io/symmatree/tiles/datascience-notebook-ssh
-      tag: edge
-      pullPolicy: Always
+      # Pin an immutable per-build tag (the build workflow's docker/metadata
+      # `type=sha` produces sha-<short>) and pull only when absent. The image is
+      # ~4GB; `edge` + Always re-pulled it on every pod spawn. A unique tag means
+      # IfNotPresent still fetches genuinely new builds (the tag changes) without
+      # re-pulling an unchanged image. Roll forward by bumping this to the newer
+      # sha-<...> tag from the build-datascience-notebook-ssh run.
+      tag: sha-cfc5bef
+      pullPolicy: IfNotPresent
     storage:
-      capacity: 100Gi
+      # Static shared NFS volume (templates/home-nfs.yaml) instead of a dynamic
+      # local-path PVC: each user gets a persistent, named directory
+      # …/jupyterhub-home/<username> on the NAS, with no node affinity so the
+      # pod is free to honor the nodeSelector (e.g. lancer) rather than being
+      # pinned to whichever node held the local disk.
+      type: static
+      static:
+        pvcName: jupyterhub-home
+        subPath: "{username}"
       extraVolumeMounts:
         - name: keys
           mountPath: /mnt/keys
+        # Shared "datasets" NFS share (templates/datasets-nfs.yaml), read-write,
+        # under the notebook root so it shows up in the Jupyter file browser.
+        - name: datasets
+          mountPath: /home/jovyan/datasets
       extraVolumes:
         - name: keys
           secret:
@@ -92,6 +123,9 @@ jupyterhub:
             items:
               - key: public-key
                 path: authorized_keys
+        - name: datasets
+          persistentVolumeClaim:
+            claimName: jupyterhub-datasets
 
   scheduling:
     userScheduler:
@@ -107,10 +141,86 @@ jupyterhub:
     chp:
       networkPolicy:
         enabled: false
+    # proxy-public is now internal-only: the oauth2-proxy sub-chart is the entry
+    # point and terminates TLS at the shared Cilium front door (cert-manager
+    # real-cert). So the hub's own LoadBalancer + self-signed TLS are dropped.
+    service:
+      type: ClusterIP
     https:
-      enabled: true
-      type: secret
-      secret:
-        name: jupyterhub-tls
-        key: tls.key
-        crt: tls.crt
+      enabled: false
+
+# oauth2-proxy perimeter gate in front of JupyterHub -- the hardened ArgoCD
+# pattern (refs #593-#604). Google login + email allowlist is the real gate;
+# the hub's own Google auth (allow_all) sits behind it as a separate layer.
+# WAN-exposed: the ingress rides the shared Cilium front door and publishes via
+# external-dns target -> lhitw (the UniFi 443 port-forward), same as ArgoCD. The
+# security boundary (allowlist as sole gate, no email_domains, trusted-proxy-ip)
+# is identical to the already-WAN-live ArgoCD gate; a broken proxy fails closed.
+oauth2-proxy:
+  # Chart 7.7.0 defaults to the older v7.6.0; pin the current patched release
+  # since this becomes internet-facing (see ArgoCD #602 image-bump rationale).
+  image:
+    tag: v7.15.3
+  # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
+  # (OnePasswordItem 'jupyterhub-oauth2-proxy'). Vault-item field labels must be
+  # exactly client-id / client-secret / cookie-secret (the chart's existingSecret
+  # keys). client-id/secret: REUSE the hub's existing Google client (behind
+  # google-oauth-secret) -- add redirect URI
+  # https://notebook.{cluster}.symmatree.com/oauth2/callback to it. Same
+  # client-id/secret as the hub, but a NEW item here, plus cookie-secret =
+  # openssl rand -base64 32 | tr -- '+/' '-_' (URL-safe: oauth2-proxy decodes the
+  # secret with base64.RawURLEncoding, so standard-base64 '+'/'/' fails to decode
+  # and it falls back to the raw 44-byte string -> not a valid AES key length ->
+  # startup error. URL-safe base64 of 32 bytes decodes cleanly to a 32-byte key).
+  # Sharing the client makes the
+  # hub's own OAuth a silent redirect (single interactive login); collapsing the
+  # second layer entirely is a follow-up (header authenticator, see #605).
+  # existingSecret is required or
+  # the chart renders its own XXXXXXX placeholder secret and collides (ArgoCD #600).
+  config:
+    existingSecret: jupyterhub-oauth2-proxy
+    # Drop the chart's default email_domains = [ "*" ] (allowAll) -- with it, the
+    # allowlist is never consulted (ArgoCD #603). Only the dummy upstream remains;
+    # the real upstream is --upstream in extraArgs.
+    configFile: |-
+      upstreams = [ "file:///dev/null" ]
+  extraArgs:
+    - --provider=google
+    # No --email-domain: validation is OR, and --email-domain=* is allowAll
+    # (ArgoCD #602). The authenticated-emails-file is the sole gate.
+    - --upstream=http://proxy-public:80
+    - --pass-host-header=true
+    - --set-xauthrequest=true
+    - --silence-ping-logging=true
+    - --skip-provider-button=true
+    - --reverse-proxy=true
+    # Trust X-Forwarded-* only from the in-cluster pod CIDR (the Cilium ingress
+    # Envoy SNATs into it), not 0.0.0.0/0 (ArgoCD #604).
+    - --trusted-proxy-ip=10.0.144.0/20
+  # The ONLY emails allowed through the perimeter.
+  authenticatedEmailsFile:
+    enabled: true
+    restricted_access: |
+      seth.porter@gmail.com
+  ingress:
+    enabled: true
+    className: cilium
+    # Prefix, not the chart default ImplementationSpecific, which under Cilium
+    # matches only the exact "/" and 404s /oauth2/callback + the app (ArgoCD #601).
+    path: /
+    pathType: Prefix
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+      # Ride the shared cilium-ingress front door (pinned LB IP)...
+      ingress.cilium.io/loadbalancer-mode: shared
+      # ...and publish as a CNAME to the UniFi dynamic-DNS record (WAN IP) instead
+      # of the internal ingress IP, so the host resolves for external clients and
+      # tracks the dynamic address. Paired with the UniFi 443 port-forward
+      # (tf/nodes/port-forwards.tf) -- this is the exposure switch, same as ArgoCD.
+      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    hosts:
+      - notebook.placeholder.symmatree.com
+    tls:
+      - secretName: jupyterhub-oauth2-proxy-tls
+        hosts:
+          - notebook.placeholder.symmatree.com

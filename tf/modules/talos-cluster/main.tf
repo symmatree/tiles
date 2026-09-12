@@ -114,6 +114,10 @@ resource "onepassword_item" "misc_config" {
       value = var.external_ip_cidr
     }
     field {
+      label = "ingress_lb_ip"
+      value = var.ingress_lb_ip
+    }
+    field {
       label = "vault_name"
       value = var.onepassword_vault_name
     }
@@ -263,4 +267,15 @@ output "cluster_name" {
 output "control_plane_vip" {
   description = "Control plane VIP"
   value       = var.control_plane_vip
+}
+
+output "bootstrap_ip" {
+  description = "First control plane IP. The API server is reachable here before Cilium brings up the VIP, so Kubernetes-facing providers target it rather than control_plane_vip."
+  value       = local.bootstrap_ip
+}
+
+output "kubernetes_client_configuration" {
+  description = "Kubernetes client credentials (CA, client cert/key) issued by Talos, for the helm and kubernetes providers. host is the VIP; callers targeting bootstrap_ip override it."
+  value       = talos_cluster_kubeconfig.this.kubernetes_client_configuration
+  sensitive   = true
 }

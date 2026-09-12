@@ -8,3 +8,6 @@ dependencies:
   - name: jupyterhub
     version: ~4.2
     repository: https://hub.jupyter.org/helm-chart
+  - name: oauth2-proxy
+    version: 7.7.0
+    repository: https://oauth2-proxy.github.io/manifests

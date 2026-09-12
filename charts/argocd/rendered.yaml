@@ -14,6 +14,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-applicationset/serviceaccount.yaml
 apiVersion: v1
@@ -30,6 +31,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-repo-server/serviceaccount.yaml
 apiVersion: v1
@@ -46,6 +48,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/serviceaccount.yaml
 apiVersion: v1
@@ -62,6 +65,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
 ---
 # Source: argocd/charts/argo-cd/templates/dex/serviceaccount.yaml
 apiVersion: v1
@@ -78,6 +82,24 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
+---
+# Source: argocd/charts/oauth2-proxy/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+automountServiceAccountToken: true
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-secret.yaml
 apiVersion: v1
@@ -94,6 +116,7 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
 type: Opaque
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-cm.yaml
 apiVersion: v1
@@ -120,10 +143,21 @@ data:
         name: Google
         config:
           issuer: https://accounts.google.com
-          # Connector config values starting with "$" reference Kubernetes secrets.
-          # Format: $<secret-name>:<key>
-          clientID: $google-oauth-secret:OAUTH_CLIENT_ID
-          clientSecret: $google-oauth-secret:OAUTH_CLIENT_SECRET
+          # Values starting with "$" are resolved by ARGOCD (not Dex) against
+          # Secrets labeled app.kubernetes.io/part-of=argocd, in the form
+          # $<secret-name>:<key>. If the referenced Secret lacks that label
+          # ArgoCD cannot see it, leaves the reference literal, and Google
+          # login breaks with "key does not exist in secret" in the dex log.
+          #
+          # We reuse the oauth2-proxy perimeter's Google client for Dex: one
+          # GCP OAuth client, with BOTH redirect URIs registered on it --
+          # /oauth2/callback (proxy) and /api/dex/callback (Dex). So the
+          # argocd-oauth2-proxy Secret is the single source of the client
+          # id/secret, and it is labeled part-of=argocd in
+          # templates/oauth2-proxy-secret.yaml precisely so these two
+          # references resolve. One client to rotate; no second 1Password item.
+          clientID: $argocd-oauth2-proxy:client-id
+          clientSecret: $argocd-oauth2-proxy:client-secret
   exec.enabled: "true"
   resource.customizations.ignoreResourceUpdates.ConfigMap: |
     jqPathExpressions:
@@ -223,6 +257,7 @@ data:
   timeout.reconciliation: 120s
   timeout.reconciliation.jitter: 60s
   url: https://argocd.placeholder.symmatree.com
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-cmd-params-cm.yaml
 apiVersion: v1
@@ -254,10 +289,10 @@ data:
   otlp.address: ""
   redis.server: argocd-redis:6379
   repo.server: argocd-repo-server:8081
-  reposerver.git.lsremote.parallelism.limit: "4"
+  reposerver.git.lsremote.parallelism.limit: "2"
   reposerver.log.format: text
   reposerver.log.level: trace
-  reposerver.parallelism.limit: "4"
+  reposerver.parallelism.limit: "2"
   reposerver.repo.cache.expiration: 30m
   server.dex.server: https://argocd-dex-server:5556
   server.dex.server.strict.tls: "false"
@@ -265,6 +300,7 @@ data:
   server.log.format: text
   server.log.level: info
   server.repo.server.strict.tls: "false"
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-gpg-keys-cm.yaml
 apiVersion: v1
@@ -279,6 +315,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-rbac-cm.yaml
 apiVersion: v1
@@ -299,6 +336,7 @@ data:
   policy.default: role:admin
   policy.matchMode: glob
   scopes: '[groups]'
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-ssh-known-hosts-cm.yaml
 apiVersion: v1
@@ -329,6 +367,8 @@ data:
     gitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsj2bNKTBSpIYDEGk9KxsGh3mySTRgMtXL583qmBpzeQ+jqCMRgBqB98u3z++J1sKlXHWfM9dyhSevkMwSbhoR8XIq/U0tCNyokEi/ueaBMCvbcTHhO7FcwzY92WK4Yt0aGROY5qX2UKSeOvuP4D6TPqKF1onrSzH9bx9XUf2lEdWT/ia1NEKjunUqu1xOB/StKDHMoX4/OKyIzuS0q/T1zOATthvasJFoPrAjkohTyaDUz2LN5JoH839hViyEG82yB+MjcFV5MU3N1l1QL3cVUCh93xSaua1N85qivl+siMkPGbO5xR/En4iEY6K2XPASUEMaieWVNTRCtJ4S8H+9
     ssh.dev.azure.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7Hr1oTWqNqOlzGJOfGJ4NakVyIzf1rXYd4d7wo6jBlkLvCA4odBlL0mDUyZ0/QUfTTqeu+tm22gOsv+VrVTMk6vwRU75gY/y9ut5Mb3bR5BV58dKXyq9A9UeB5Cakehn5Zgm6x1mKoVyf+FFn26iYqXJRgzIZZcZ5V6hrE0Qg39kZm4az48o0AUbf6Sp4SLdvnuMa2sVNwHBboS7EJkm57XQPVU3/QpyNLHbWDdzwtrlS+ez30S3AdYhLKEOxAG8weOnyrtLJAUen9mTkol8oII1edf7mWWbWVf0nBmly21+nZcmCTISQBtdcyPaEno7fFQMDD26/s0lfKob4Kw8H
     vs-ssh.visualstudio.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7Hr1oTWqNqOlzGJOfGJ4NakVyIzf1rXYd4d7wo6jBlkLvCA4odBlL0mDUyZ0/QUfTTqeu+tm22gOsv+VrVTMk6vwRU75gY/y9ut5Mb3bR5BV58dKXyq9A9UeB5Cakehn5Zgm6x1mKoVyf+FFn26iYqXJRgzIZZcZ5V6hrE0Qg39kZm4az48o0AUbf6Sp4SLdvnuMa2sVNwHBboS7EJkm57XQPVU3/QpyNLHbWDdzwtrlS+ez30S3AdYhLKEOxAG8weOnyrtLJAUen9mTkol8oII1edf7mWWbWVf0nBmly21+nZcmCTISQBtdcyPaEno7fFQMDD26/s0lfKob4Kw8H
+    
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-configs/argocd-tls-certs-cm.yaml
 apiVersion: v1
@@ -343,6 +383,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
 ---
 # Source: argocd/charts/argo-cd/templates/redis/health-configmap.yaml
 apiVersion: v1
@@ -385,6 +426,45 @@ data:
       exit 1
     fi
     echo "response=$response"
+
+---
+# Source: argocd/charts/oauth2-proxy/templates/configmap-authenticated-emails-file.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy-accesslist
+  namespace: argocd
+data:
+  restricted_user_access: "seth.porter@gmail.com\n"
+
+---
+# Source: argocd/charts/oauth2-proxy/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+data:
+  oauth2_proxy.cfg: "upstreams = [ \"file:///dev/null\" ]"
+
 ---
 # Source: argocd/templates/tanka.yaml
 apiVersion: v1
@@ -445,6 +525,7 @@ data:
       "environments/${ARGOCD_ENV_TK_ENV}" \
       --dangerous-allow-redirect \
       --ext-str ARGOCD_APP_PARAMETERS="${ARGOCD_APP_PARAMETERS}"
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -470,6 +551,7 @@ rules:
     - '*'
     verbs:
     - '*'
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -537,6 +619,7 @@ rules:
     verbs:
       
       - create
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -559,6 +642,7 @@ subjects:
 - kind: ServiceAccount
   name: argocd-application-controller
   namespace: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -581,6 +665,7 @@ subjects:
 - kind: ServiceAccount
   name: argocd-server
   namespace: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -635,6 +720,7 @@ rules:
   - get
   - list
   - watch
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-applicationset/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -739,6 +825,7 @@ rules:
     - get
     - update
     - create
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-repo-server/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -755,6 +842,7 @@ metadata:
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
 rules:
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -811,6 +899,7 @@ rules:
   - pods/exec
   verbs:
   - create
+
 ---
 # Source: argocd/charts/argo-cd/templates/dex/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -836,6 +925,7 @@ rules:
   - get
   - list
   - watch
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -859,6 +949,7 @@ subjects:
   - kind: ServiceAccount
     name: argocd-application-controller
     namespace: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-applicationset/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -882,6 +973,7 @@ subjects:
   - kind: ServiceAccount
     name: argocd-applicationset-controller
     namespace: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-repo-server/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -905,6 +997,7 @@ subjects:
 - kind: ServiceAccount
   name: argocd-repo-server
   namespace: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -928,6 +1021,7 @@ subjects:
 - kind: ServiceAccount
   name: argocd-server
   namespace: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/dex/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -951,6 +1045,7 @@ subjects:
 - kind: ServiceAccount
   name: argocd-dex-server
   namespace: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/metrics.yaml
 apiVersion: v1
@@ -976,6 +1071,7 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-applicationset/service.yaml
 apiVersion: v1
@@ -1000,6 +1096,7 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-applicationset-controller
     app.kubernetes.io/instance: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-repo-server/metrics.yaml
 apiVersion: v1
@@ -1025,6 +1122,7 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-repo-server/service.yaml
 apiVersion: v1
@@ -1049,6 +1147,7 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/metrics.yaml
 apiVersion: v1
@@ -1074,6 +1173,7 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/service.yaml
 apiVersion: v1
@@ -1104,6 +1204,8 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
+
+
 ---
 # Source: argocd/charts/argo-cd/templates/dex/service.yaml
 apiVersion: v1
@@ -1136,6 +1238,7 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/redis/service.yaml
 apiVersion: v1
@@ -1159,6 +1262,40 @@ spec:
   selector:
     app.kubernetes.io/name: argocd-redis
     app.kubernetes.io/instance: argocd
+
+---
+# Source: argocd/charts/oauth2-proxy/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      appProtocol: http
+      name: http
+    - port: 44180
+      protocol: TCP
+      appProtocol: http
+      targetPort: metrics
+      name: metrics
+  selector:    
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-applicationset/deployment.yaml
 apiVersion: apps/v1
@@ -1184,7 +1321,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-applicationset-controller
@@ -1453,6 +1590,7 @@ spec:
               - key: applicationsetcontroller.profile.enabled
                 path: profiler.enabled
       dnsPolicy: ClusterFirst
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-repo-server/deployment.yaml
 apiVersion: apps/v1
@@ -1478,8 +1616,8 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
-        checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
+        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-repo-server
@@ -1791,20 +1929,21 @@ spec:
             port: metrics
           initialDelaySeconds: 10
           periodSeconds: 10
-          timeoutSeconds: 5
+          timeoutSeconds: 30
           successThreshold: 1
-          failureThreshold: 3
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             path: /healthz
             port: metrics
           initialDelaySeconds: 10
           periodSeconds: 10
-          timeoutSeconds: 1
+          timeoutSeconds: 10
           successThreshold: 1
-          failureThreshold: 3
+          failureThreshold: 6
         resources:
-          {}
+          requests:
+            memory: 160Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -1826,6 +1965,9 @@ spec:
           /var/run/argocd/argocd-cmp-server
         image: prontotools/alpine-git-curl:latest
         name: tanka
+        resources:
+          requests:
+            memory: 192Mi
         securityContext:
           runAsNonRoot: true
           runAsUser: 999
@@ -1851,7 +1993,8 @@ spec:
         imagePullPolicy: IfNotPresent
         name: copyutil
         resources:
-          {}
+          requests:
+            memory: 160Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -1912,6 +2055,7 @@ spec:
           - key: ca.crt
             path: ca.crt
       dnsPolicy: ClusterFirst
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/deployment.yaml
 apiVersion: apps/v1
@@ -1937,8 +2081,8 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
-        checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
+        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-server
@@ -2375,6 +2519,7 @@ spec:
           - key: server.profile.enabled
             path: profiler.enabled
       dnsPolicy: ClusterFirst
+
 ---
 # Source: argocd/charts/argo-cd/templates/dex/deployment.yaml
 apiVersion: apps/v1
@@ -2400,8 +2545,8 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
-        checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
+        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-dex-server
@@ -2530,6 +2675,7 @@ spec:
           - key: ca.crt
             path: ca.crt
       dnsPolicy: ClusterFirst
+
 ---
 # Source: argocd/charts/argo-cd/templates/redis/deployment.yaml
 apiVersion: apps/v1
@@ -2618,6 +2764,141 @@ spec:
             name: argocd-redis-health-configmap
             defaultMode: 493
       dnsPolicy: ClusterFirst
+
+---
+# Source: argocd/charts/oauth2-proxy/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:      
+      app.kubernetes.io/name: oauth2-proxy
+      app.kubernetes.io/instance: argocd
+  template:
+    metadata:
+      annotations:
+        checksum/config: 9c1ecd9f0889c5271728298190b5b9b1104baac2492387267c860173bb7765e8
+        checksum/config-emails: 27a8e7f3520c51f2b1fb340fc9cfb18be7d5fd195077b86c4521f37ca9d80c24
+        checksum/secret: 8fa6fdae65861caa2986544b8860a5205be1937328c8ec2bad6bad076b9e2425
+        checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+      labels:
+        app: oauth2-proxy        
+        helm.sh/chart: oauth2-proxy-7.7.0
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: authentication-proxy
+        app.kubernetes.io/part-of: oauth2-proxy
+        app.kubernetes.io/name: oauth2-proxy
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/version: "7.6.0"
+    spec:
+      serviceAccountName: argocd-oauth2-proxy
+      automountServiceAccountToken: true
+      containers:
+      - name: oauth2-proxy
+        image: "quay.io/oauth2-proxy/oauth2-proxy:v7.15.3"
+        imagePullPolicy: IfNotPresent
+        args:
+          - --http-address=0.0.0.0:4180
+          - --https-address=0.0.0.0:4443
+          - --metrics-address=0.0.0.0:44180
+          - --provider=google
+          - --upstream=http://argocd-server:80
+          - --pass-host-header=true
+          - --set-xauthrequest=true
+          - --silence-ping-logging=true
+          - --skip-provider-button=true
+          - --reverse-proxy=true
+          - --trusted-proxy-ip=10.0.144.0/20
+          - --config=/etc/oauth2_proxy/oauth2_proxy.cfg
+          - --authenticated-emails-file=/etc/oauth2-proxy/argocd-oauth2-proxy-accesslist
+        env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name:  argocd-oauth2-proxy
+              key: client-id
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  argocd-oauth2-proxy
+              key: client-secret
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  argocd-oauth2-proxy
+              key: cookie-secret
+        ports:
+          - containerPort: 4180
+            name: http
+            protocol: TCP
+          - containerPort: 44180
+            protocol: TCP
+            name: metrics
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 5
+          successThreshold: 1
+          periodSeconds: 10
+        resources:
+          {}
+        volumeMounts:
+        - mountPath: /etc/oauth2_proxy/oauth2_proxy.cfg
+          name: configmain
+          subPath: oauth2_proxy.cfg
+        - mountPath: /etc/oauth2-proxy
+          name: configaccesslist
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 2000
+          seccompProfile:
+            type: RuntimeDefault
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: argocd-oauth2-proxy
+        name: configmain
+      - configMap:
+          name: argocd-oauth2-proxy-accesslist
+          items:
+          - key: restricted_user_access
+            path: argocd-oauth2-proxy-accesslist
+        name: configaccesslist
+      tolerations:
+        []
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/statefulset.yaml
 apiVersion: apps/v1
@@ -2644,8 +2925,8 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: dcae8d8ffc248c16abbd852d384b92fadf4611373c0e28824bebd33b0a0b6899
-        checksum/cm: c889b4387d64060cf16f98b7d2e890cd239eb05964f383e1b42f5a9614b891a6
+        checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
+        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-application-controller
@@ -2667,7 +2948,11 @@ spec:
         name: application-controller
         env:
           - name: GOMEMLIMIT
-            value: 340MiB
+            value: 690MiB
+          - name: ARGOCD_K8S_CLIENT_QPS
+            value: "100"
+          - name: ARGOCD_K8S_CLIENT_BURST
+            value: "200"
           - name: ARGOCD_CONTROLLER_REPLICAS
             value: "1"
           - name: ARGOCD_APPLICATION_CONTROLLER_NAME
@@ -2965,7 +3250,7 @@ spec:
           failureThreshold: 3
         resources:
           limits:
-            memory: 384Mi
+            memory: 768Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -3020,40 +3305,44 @@ spec:
           - key: controller.profile.enabled
             path: profiler.enabled
       dnsPolicy: ClusterFirst
+
 ---
-# Source: argocd/charts/argo-cd/templates/argocd-server/ingress.yaml
+# Source: argocd/charts/oauth2-proxy/templates/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: argocd-server
-  namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-9.5.2
-    app.kubernetes.io/name: argocd-server
-    app.kubernetes.io/instance: argocd
-    app.kubernetes.io/component: server
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: argocd
-    app.kubernetes.io/version: "v3.3.7"
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/version: "7.6.0"
+  name: argocd-oauth2-proxy
+  namespace: argocd
   annotations:
-    cert-manager.io/cluster-issuer: "real-cert"
+    cert-manager.io/cluster-issuer: real-cert
+    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    ingress.cilium.io/loadbalancer-mode: shared
 spec:
-  ingressClassName: cilium
+  ingressClassName: "cilium"
   rules:
-    - host: argocd.placeholder.symmatree.com
+    - host: "argocd.placeholder.symmatree.com"
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: argocd-server
+                name: argocd-oauth2-proxy
                 port:
                   number: 80
   tls:
     - hosts:
       - argocd.placeholder.symmatree.com
-      secretName: argocd-server-tls
+      secretName: argocd-proxy-tls
 ---
 # Source: argocd/templates/tiles-appproject.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -3101,6 +3390,7 @@ spec:
         name: lets-encrypt-real
       - kind: Secret
         name: lets-encrypt-staging
+
 ---
 # Source: argocd/templates/argocd-notifications-secret.yaml
 apiVersion: onepassword.com/v1
@@ -3111,16 +3401,27 @@ metadata:
 type: Opaque
 spec:
   itemPath: 'vaults/placeholder/items/argocd-slack-token'
+
 ---
-# Source: argocd/templates/google-oauth-secret.yaml
+# Source: argocd/templates/oauth2-proxy-secret.yaml
 apiVersion: onepassword.com/v1
 kind: OnePasswordItem
 metadata:
-  name: google-oauth-secret
+  name: argocd-oauth2-proxy
   namespace: "argocd"
+  # The 1Password operator copies these labels onto the generated Secret.
+  # ArgoCD's $<secret>:<key> substitution -- used by dex.config in values.yaml to
+  # reuse this same Google client for the "Log in with Google" (Dex) button --
+  # only reads Secrets labeled part-of=argocd. Without this label the Dex
+  # connector's clientID/clientSecret references stay literal and Google login
+  # breaks. (oauth2-proxy itself reads the Secret via existingSecret regardless
+  # of this label; the label is purely for the ArgoCD/Dex side.)
+  labels:
+    app.kubernetes.io/part-of: argocd
 type: Opaque
 spec:
-  itemPath: 'vaults/placeholder/items/argocd-google-oauth'
+  itemPath: 'vaults/placeholder/items/argocd-oauth2-proxy'
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-application-controller/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
@@ -3150,6 +3451,7 @@ spec:
       app.kubernetes.io/name: argocd-metrics
       app.kubernetes.io/instance: argocd
       app.kubernetes.io/component: application-controller
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-repo-server/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
@@ -3179,6 +3481,7 @@ spec:
       app.kubernetes.io/name: argocd-repo-server-metrics
       app.kubernetes.io/instance: argocd
       app.kubernetes.io/component: repo-server
+
 ---
 # Source: argocd/charts/argo-cd/templates/argocd-server/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
@@ -3208,6 +3511,7 @@ spec:
       app.kubernetes.io/name: argocd-server-metrics
       app.kubernetes.io/instance: argocd
       app.kubernetes.io/component: server
+
 ---
 # Source: argocd/charts/argo-cd/templates/dex/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
@@ -3256,6 +3560,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argocd
     app.kubernetes.io/version: "v3.3.7"
+
 ---
 # Source: argocd/charts/argo-cd/templates/redis-secret-init/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -3289,6 +3594,7 @@ rules:
       - secrets
     verbs:
       - create
+
 ---
 # Source: argocd/charts/argo-cd/templates/redis-secret-init/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -3314,6 +3620,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: argocd-redis-secret-init
+
 ---
 # Source: argocd/charts/argo-cd/templates/redis-secret-init/job.yaml
 apiVersion: batch/v1
@@ -3377,3 +3684,4 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: argocd-redis-secret-init
+

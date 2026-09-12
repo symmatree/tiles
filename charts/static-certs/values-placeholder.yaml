@@ -1,3 +1,2 @@
 # Used when helm-common supplies targetRevision=placeholder (e.g. build.sh).
-synologyDsmSync:
-  enabled: false
+# All certSync targets default to enabled: false in values.yaml.

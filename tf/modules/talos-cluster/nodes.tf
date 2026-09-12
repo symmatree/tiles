@@ -126,7 +126,7 @@ module "talos-amd-metal" {
       "machine" = {
         "kubelet" = {
           "extraArgs" = {
-            "register-with-taints" = "dedicated=${each.value.taint}:NoSchedule"
+            "register-with-taints" = "dedicated=${each.value.taint}:${each.value.taint_effect}"
           }
         }
       }
@@ -168,7 +168,7 @@ module "talos-intel-metal" {
       "machine" = {
         "kubelet" = {
           "extraArgs" = {
-            "register-with-taints" = "dedicated=${each.value.taint}:NoSchedule"
+            "register-with-taints" = "dedicated=${each.value.taint}:${each.value.taint_effect}"
           }
         }
       }

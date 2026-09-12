@@ -100,9 +100,15 @@ local ntrip = {
             if [ -d /persist/rtkbase/settings.conf ]; then
               rm -rf /persist/rtkbase/settings.conf
             fi
-            if [ ! -f /persist/rtkbase/settings.conf ]; then
-              cp /seed/settings.conf /persist/rtkbase/settings.conf
-            fi
+            # Always overwrite: the ConfigMap is the source of truth for this file.
+            # Previously this was "copy only if absent", which made the ConfigMap a
+            # first-boot seed -- editing settings.conf in git changed the pod-template
+            # hash annotation (settingsConfigMapHash above), so Argo restarted the pod,
+            # but the init container then declined to copy and the change never applied.
+            # Restart with no effect: the worst of both. RTKBase regenerates
+            # flask_secret_key on boot, which is the only field it writes back here, so
+            # overwriting costs nothing but invalidated web sessions.
+            cp /seed/settings.conf /persist/rtkbase/settings.conf
           |||,
         ])
         + kContainer.withVolumeMountsMixin([

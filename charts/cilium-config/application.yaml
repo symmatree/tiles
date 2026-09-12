@@ -12,6 +12,7 @@ spec:
       # Inject values from Terraform or that vary by environment.
       valuesObject:
         external_ip_cidr: '{{ required ".Values.external_ip_cidr is required" .Values.external_ip_cidr }}'
+        ingress_lb_ip: '{{ .Values.ingress_lb_ip | default "" }}'
         targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
   destination:
     server: https://kubernetes.default.svc

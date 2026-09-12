@@ -85,6 +85,7 @@ variable "metal_amd_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
 }
@@ -97,6 +98,7 @@ variable "metal_intel_nodes" {
     mac_address            = string
     ip_address             = string
     taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
     machine_config_patches = optional(list(string), [])
   }))
 }
@@ -126,6 +128,12 @@ variable "kubelet_eviction_memory_available" {
 variable "external_ip_cidr" {
   description = "External IP CIDR for the cluster"
   type        = string
+}
+
+variable "ingress_lb_ip" {
+  description = "Fixed LoadBalancer IP to pin the shared Cilium ingress (the WAN-forwarded front door) to. Must be inside external_ip_cidr and reserved out of DHCP. Empty = let Cilium assign dynamically (e.g. test)."
+  type        = string
+  default     = ""
 }
 
 variable "pod_cidr" {

@@ -87,23 +87,28 @@ N/A - OnePassword Operator is bootstrapped via CI workflow. The secrets it syncs
 
 ## Bootstrap Process
 
-The operator is bootstrapped via the CI workflow (`.github/workflows/bootstrap-cluster.yaml`) which runs [`make-secrets.sh`](make-secrets.sh) to create the initial secrets:
+Terraform creates the namespace and both secrets in `tf/nodes/k8s-bootstrap.tf`,
+during `nodes-plan-apply` and so before Argo CD exists:
 
-1. **Create namespace** (if it doesn't exist)
-2. **Create `onepassword-token` secret**: Contains the 1Password service account token
-3. **Create `op-credentials` secret**: Contains the Connect credentials file as raw `1password-credentials.json` (Kubernetes base64-encodes secret data; the mounted file is plaintext JSON)
+1. **`onepassword` namespace** -- Terraform is its only writer; the Application
+   below deliberately sets no `CreateNamespace` or `managedNamespaceMetadata`.
+2. **`onepassword-token`** -- the service account token, from the `credential`
+   field of the `{cluster_name}-onepassword-operator` item.
+3. **`op-credentials`** -- the Connect credentials, from the
+   `1password-credentials.json` file attached to the
+   `{cluster_name}-onepassword-connect-credentials` item. Stored as raw JSON:
+   Kubernetes base64-encodes secret data itself, so an extra base64 layer would
+   produce a file Connect cannot parse.
 
-The workflow loads the required secrets from 1Password:
-
-- `onepassword_operator_token`: From `{cluster_name}-onepassword-operator` item
-- `onepassword_connect_credentials`: From `{cluster_name}-onepassword-connect-credentials` item
+These cannot come from an `OnePasswordItem` like every other secret here -- they
+are what the operator needs in order to serve `OnePasswordItem` at all.
 
 ### Initial Setup
 
 1. Create a 1Password Connect server in your 1Password vault
 2. Save the `1password-credentials.json` file to a 1Password item named `{cluster_name}-onepassword-connect-credentials`
 3. Create a 1Password service account with read access to the vault, store the token in `{cluster_name}-onepassword-operator` item
-4. Trigger the `bootstrap-cluster` workflow with the `onepassword` option enabled
+4. Apply `tf/nodes` (the `nodes-plan-apply` workflow) to create the namespace and secrets
 
 ## Access & Endpoints
 

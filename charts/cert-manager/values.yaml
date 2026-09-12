@@ -41,6 +41,12 @@ cert-manager:
             sourceLabels:
               - __name__
   webhook:
+    # 3-day peak working-set ~41Mi (Mimir).
+    resources:
+      requests:
+        memory: 64Mi
+      limits:
+        memory: 64Mi
     tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/control-plane
@@ -49,6 +55,12 @@ cert-manager:
       kubernetes.io/os: linux
       node-role.kubernetes.io/control-plane: ""
   cainjector:
+    # 3-day peak working-set ~71Mi (Mimir); 64 would OOMKill it, so 128.
+    resources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 128Mi
     tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/control-plane

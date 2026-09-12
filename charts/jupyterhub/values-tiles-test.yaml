@@ -19,8 +19,8 @@ jupyterhub:
     userScheduler:
       replicas: 0
   singleuser:
-    storage:
-      capacity: 10Gi
+    # storage is now the shared static NFS home (see base values.yaml); capacity
+    # no longer applies since we don't provision a per-user dynamic PVC.
     memory:
       guarantee: 512M
       limit: 1G

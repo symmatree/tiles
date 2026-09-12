@@ -40,7 +40,12 @@ monitoring:
   serviceMonitor:
     enabled: true
   rules:
-    enabled: false
+    # Deploy the Loki mixin PrometheusRules (alerting rules included by chart
+    # default: monitoring.rules.alerting=true). Alloy's cluster-wide
+    # mimir.rules.kubernetes loads them into the Mimir ruler, same path as the
+    # other mixins -- so LokiRequestErrors/Latency/Panics/compaction alerts
+    # finally exist here rather than only being cited from the upstream mixin. #655
+    enabled: true
   selfMonitoring:
     enabled: false
 

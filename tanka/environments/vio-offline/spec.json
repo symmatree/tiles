@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/vio-offline"
+  },
+  "spec": {
+    "namespace": "vio-offline",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}

@@ -1,6 +1,11 @@
 name: build-rtkbase
 on:
   workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - containers/rtkbase/**
+      - .github/workflows/build-rtkbase.yaml
   schedule:
     - cron: 0 9 * * *
 jobs:

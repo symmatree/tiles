@@ -162,6 +162,10 @@ kubectl logs -n cilium -l app.kubernetes.io/name=hubble-ui
 - Verify pod CIDR matches cluster configuration: `kubectl get configmap -n cilium cilium-config -o yaml`
 - Check node connectivity: `cilium status` (if cilium CLI available)
 
+**Node stays tainted `node.cilium.io/agent-not-ready`, pods stuck `Pending`:**
+
+- This taint is applied to a node at startup and removed by **cilium-operator** (not the agent) once that node's agent is healthy. If a node keeps the taint after its agent pod is `Running`/`Ready`, suspect the operator: `kubectl -n cilium get pods -l name=cilium-operator`. A CrashLooping or missing operator leaves newly-joined or rebooted nodes tainted, so pods that do not tolerate the taint stay `Pending` even though the node itself is `Ready`.
+
 **Hubble UI not accessible:**
 
 - Verify ingress is created: `kubectl get ingress -n cilium`

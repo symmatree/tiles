@@ -1,3 +1,3 @@
-# tiles-test and local renders: do not push to Raconteur DSM (prod cluster owns sync).
-synologyDsmSync:
-  enabled: false
+# tiles-test and local renders push to nothing -- prod owns the hardware, and
+# two clusters uploading different certs to the same host would fight.
+# All certSync targets default to enabled: false in values.yaml.

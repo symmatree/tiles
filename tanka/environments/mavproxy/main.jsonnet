@@ -39,6 +39,15 @@ local mavproxy = {
     ntripSecret: APP.app_settings.ntrip_caster_auth,
     sourceSystem: 255,
     sourceComponent: 190,
+
+    // Shared json_exporter prober, deployed with the Alloy app in the alloy
+    // namespace (charts/argocd-applications/templates/alloy-application.yaml).
+    jsonExporterProber: 'json-exporter.alloy.svc:7979',
+    backpackMavlinkUrl: APP.app_settings.backpack_mavlink_url,
+    // 30s, not 5s: the backpack is a single-threaded esp8285 on a marginal link
+    // (coordinator#190). Alloy's default scrape timeout (10s) applies, so a
+    // backpack that is off or off-network just yields up=0 for that interval.
+    backpackScrapeInterval: '30s',
   },
 
   new(overrides):: {
@@ -91,6 +100,40 @@ local mavproxy = {
       + kDeployment.spec.template.spec.withDnsPolicy('ClusterFirstWithHostNet')
       + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': config.nodeHostname })
       + kDeployment.spec.template.spec.withTolerationsMixin([gnssToleration]),
+
+    // ---- backpack link health (coordinator#190) ------------------------------
+    // The patched ELRS TX backpack reports its WiFi link health only on its own
+    // HTTP endpoint (GET /mavlink), never in the MAVLink channel, so scraping that
+    // endpoint is the only way to trend it. This is the backpack<->AP link, which
+    // mavproxy never sees -- orthogonal to FC telemetry. The JSON-to-metrics
+    // mapping (module `backpack`) lives in the shared json_exporter with the rest
+    // of the probe plumbing; only this per-device Probe belongs here.
+    // Scraped by Alloy (prometheusOperatorObjects discovers Probes in every
+    // namespace). jobName pins job="backpack"; instance becomes the target URL.
+    // Expect frequent up=0 -- the backpack is only on WiFi when the radio is on
+    // and in Telem=WiFi mode -- that gap IS the availability signal, not an error.
+    backpackProbe: {
+      apiVersion: 'monitoring.coreos.com/v1',
+      kind: 'Probe',
+      metadata: {
+        name: 'backpack-mavlink',
+        labels: { 'app.kubernetes.io/name': 'backpack-mavlink' },
+      },
+      spec: {
+        jobName: 'backpack',
+        interval: config.backpackScrapeInterval,
+        module: 'backpack',
+        prober: {
+          url: config.jsonExporterProber,
+          path: '/probe',
+        },
+        targets: {
+          staticConfig: {
+            static: [config.backpackMavlinkUrl],
+          },
+        },
+      },
+    },
 
     tcpService: {
       apiVersion: 'v1',

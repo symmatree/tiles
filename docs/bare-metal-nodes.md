@@ -58,10 +58,23 @@ Use the talosconfig for the right cluster ([secrets.md](secrets.md#talos-client-
 3. **Add the node** in workspace tfvars: `metal_amd_nodes` for AMD (e.g. Rising -- facts repo `fables/Tiles/Rising.md`) or `metal_intel_nodes` for Intel (e.g. AceBase -- `facts/fables/kb/Computers/AceBase.md`).
 4. **Prepare USB** -- From `tf/nodes/`, run `terraform plan` or `terraform apply` with the right `-var-file=...`, then read **`metal_amd_iso_url`** or **`metal_intel_iso_url`** as appropriate. Download that `metal-amd64.iso`, then write it to USB.
 5. **Boot the machine** from USB into the Talos installer (in-memory maintenance mode).
-6. **`terraform apply`** -- Once the Talos API answers on the node IP, `talos_machine_configuration_apply` runs and the node installs to disk from `machine.install.image` (`metal-installer` schematic).
-7. **Verify** -- After reboot, `kubectl get nodes` and/or `talosctl get members --nodes <NODE_IP>`.
+6. **`terraform apply`** -- Once the Talos API answers on the node IP, `talos_machine_configuration_apply` sends the config and the node installs to disk from `machine.install.image` (`metal-installer` schematic). This resource is **fire-and-forget**: it returns as soon as the maintenance-mode node accepts the config (often `Creation complete after 0s`) and does **not** wait for the install or cluster join. A green apply means "config delivered", not "node installed" -- always confirm with step 7.
+7. **Verify** -- After reboot, `kubectl get nodes` and `talosctl get members --nodes <NODE_IP>`. If the node never appears, check whether it is still in maintenance mode: `talosctl -n <NODE_IP> version --insecure` answering means it booted the ISO but did **not** install -- see [Install disk](#install-disk-machine-with-an-existing-os).
 
 You may run `terraform apply` once before the machine is booted: UniFi objects are created first; `talos_machine_configuration_apply` fails or times out until the node is reachable. Boot from USB, then apply again.
+
+### Install disk (machine with an existing OS)
+
+The shared config sets no `machine.install.disk`, so Talos auto-selects one. That works on an empty or spare disk (AceBase installed onto an empty SATA SSD). It does **not** work when the node's **only** disk already holds another OS: Talos won't clobber the occupied disk, so the config is accepted but the install never runs and the node **silently stays in maintenance mode** (Lancer shipped with Windows on its sole NVMe and did exactly this). Add a per-node patch pinning the disk and wiping it -- see [tf/nodes/patches/lancer-install-disk.yaml](../tf/nodes/patches/lancer-install-disk.yaml):
+
+```yaml
+machine:
+  install:
+    disk: /dev/nvme0n1   # target disk; find it with: talosctl -n <IP> get disks --insecure
+    wipe: true           # overwrites the existing OS
+```
+
+Wire it in via `machine_config_patches` on the node's tfvars entry. Changing `config_patches` is a real diff, so a plain `terraform apply` re-applies (no taint needed) and the install proceeds. Maintenance mode exposes only `version` / `get` / `disks` / `apply-config` over `--insecure` -- **not** `dmesg`, service `logs`, or `events` -- so watch an install attempt on console/serial, not via `talosctl`.
 
 ### 2. Remove a bare-metal worker from the cluster
 
@@ -105,16 +118,16 @@ The [Recreating cluster](../README.md#recreating-cluster) flow taints the Proxmo
 
 ### Rebuilds: metal reapply + reboot
 
-**The trap.** A metal worker's machine config is derived from `talos_machine_secrets`, which a bootstrap recreate does **not** change. Re-applying it therefore produces byte-identical config, and `talos_machine_configuration_apply` under the default `apply_mode = "auto"` is a **no-op -- no reboot**. The node keeps its old in-memory etcd/kubelet identity, its Node object was wiped with the old etcd, and the long-running kubelet loops `nodes "<name>" not found`; `NodeRestriction` then denies every pod pinned there. (Observed 2026-06-30 -> 07-01: `acebase` -- the GNSS base -- sat orphaned ~35h, so `ntrip/rtkbase` + `mavproxy` were `Pending` and **RTK was down**. See [tiles#547](https://github.com/symmatree/tiles/issues/547).)
+**The trap.** A metal worker's machine config is derived from `talos_machine_secrets`, which a bootstrap recreate does **not** change. Re-applying it therefore produces byte-identical config, and `talos_machine_configuration_apply` under `apply_mode = "auto"` is a **no-op -- no reboot** (this is exactly why `apply_mode` now **defaults to `reboot`**; see below). The node keeps its old in-memory etcd/kubelet identity, its Node object was wiped with the old etcd, and the long-running kubelet loops `nodes "<name>" not found`; `NodeRestriction` then denies every pod pinned there. (Observed 2026-06-30 -> 07-01: `acebase` -- the GNSS base -- sat orphaned ~35h, so `ntrip/rtkbase` + `mavproxy` were `Pending` and **RTK was down**. See [tiles#547](https://github.com/symmatree/tiles/issues/547).)
 
 A config *apply* is not a *reset*. PKI is preserved across the recreate (both apid mTLS and the kubelet client cert still authenticate), so the node needs neither new certs nor a reinstall -- it only needs to **reboot** (or at minimum `talosctl -n <NODE_IP> service kubelet restart`) to rejoin. Since `auto` won't reboot on unchanged config, we force it.
 
 **The mechanism -- two knobs, both required:**
 
 1. **[`taint-vms`](../.github/workflows/taint-vms.yaml)** taints each metal `talos_machine_configuration_apply` (derived from state, so it tracks `metal_{amd,intel}_nodes` automatically) so the apply re-runs on the next Terraform apply.
-2. **[`nodes-plan-apply`](../.github/workflows/nodes-plan-apply.yaml)** takes a **`metal_apply_mode`** input, threaded via `TF_VAR_metal_apply_mode` into the metal module's `apply_mode`. Set it to **`reboot`** for a rebuild: the re-applied node reboots and rejoins the new etcd. The metal modules `depends_on` `talos_machine_bootstrap`, so the reboot lands **after** the new etcd exists.
+2. **[`nodes-plan-apply`](../.github/workflows/nodes-plan-apply.yaml)** takes a **`metal_apply_mode`** input, threaded via `TF_VAR_metal_apply_mode` into the metal module's `apply_mode`. It **defaults to `reboot`**, which a rebuild requires: the re-applied node reboots and rejoins the new etcd. The metal modules `depends_on` `talos_machine_bootstrap`, so the reboot lands **after** the new etcd exists.
 
-Routine applies (PR / push / daily schedule) leave `metal_apply_mode = "auto"`, so this is inert outside a deliberate rebuild. The same `reboot` knob is also the general way to push a machine-config change that needs a reboot to a metal node.
+`metal_apply_mode` now **defaults to `reboot`** for every apply (PR / push / daily schedule / dispatch). This is **not** a reboot-every-apply: the metal `talos_machine_configuration_apply` has no `replace_triggered_by` and stable inputs, so Terraform only re-runs it -- and only reboots -- when the metal config **actually changes** (or on a `taint-vms` rebuild). Rebooting on a real change guarantees the config fully applies (Talos `auto` reboots only when it judges a changed field requires it, which is unreliable -- it can hold state until reboot) and lets a rebuilt node rejoin the new etcd. Override to `auto` / `no_reboot` / `staged` only when you deliberately want a live-only apply.
 
 > **apply-config modes** ([Talos v1.13](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed; `reboot` always reboots to apply; `staged` applies on next reboot. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#3-wipe-and-reinstall-talos-on-the-same-machine).
 >
@@ -123,8 +136,30 @@ Routine applies (PR / push / daily schedule) leave `metal_apply_mode = "auto"`, 
 **Rebuild runbook**
 
 1. Run **`taint-vms`** for the workspace (taints VMs, `talos_machine_bootstrap`, and metal config-apply).
-2. Run **`nodes-plan-apply`** with **apply** for that workspace and **`metal_apply_mode = reboot`**.
+2. Run **`nodes-plan-apply`** with **apply** for that workspace (**`metal_apply_mode`** defaults to **`reboot`**, which the rebuild needs).
 3. Verify: `talosctl -n <NODE_IP> get members` and `kubectl get nodes` show the metal node; any pinned pods (e.g. `ntrip`, `mavproxy`) return to `Running`.
+
+## Node hostnames and DHCP-less boot
+
+A node's hostname comes from **DHCP**: the UniFi fixed-IP reservation supplies the name. The provider-injected `HostnameConfig: {auto: stable}` (a siderolabs/talos default, not set in this repo) is only a fallback -- when no hostname is available at boot, the node self-assigns a deterministic `talos-<rand>` name. The shared config sets no static `machine.network.hostname`, so naming depends on DHCP being reachable at boot.
+
+Hostname is DHCP, **not DNS**. Reverse DNS (PTR) has no role in naming; a missing PTR neither causes nor predicts a `talos-<rand>` name. PTR coverage is split by address range: raconteur is authoritative for `0.10.in-addr.arpa` (all of `10.0.0.0/16`) but holds records only for `10.0.0.x` and `10.0.99.x`, so `acebase` (`10.0.99.14`) reverses there while node IPs in the Tiles `10.0.128.0/18` allocation are served only by UniFi. Because raconteur is authoritative for the whole reverse zone, its forwarder is never consulted for that gap -- it returns an authoritative NXDOMAIN.
+
+A node that boots before DHCP is serving names -- e.g. bare metal powering up faster than the UniFi UDM after a site power loss -- gets its reserved **IP** but no hostname, so it comes up as `talos-<rand>` and registers as a **separate** Kubernetes Node object. The original Node (e.g. `acebase`) stays `NotReady` sharing the same INTERNAL-IP, and any workload pinned to that name -- `nodeSelector: kubernetes.io/hostname=<name>`, or a hostname-pinned `local-path` PV -- has no schedulable node. Proxmox **VMs** boot after their hypervisor host, by which point DHCP is up, so they do not hit this.
+
+**Recovery.** Once DHCP is serving names again, reboot the node so it re-acquires its reserved hostname:
+
+```bash
+talosctl --talosconfig ~/.talos/tiles.yaml reboot --nodes <NODE_IP>
+```
+
+It rejoins under its real name and the `talos-<rand>` Node goes `NotReady`. Delete that stale Node object; cilium-operator garbage-collects the matching `CiliumNode` CR:
+
+```bash
+kubectl delete node talos-<rand>
+```
+
+A plain `terraform apply` does not reboot an unchanged metal node (see [Rebuilds](#rebuilds-metal-reapply--reboot)), so reboot via `talosctl` or `taint-vms` + apply.
 
 ## Related docs
 

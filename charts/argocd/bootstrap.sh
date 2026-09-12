@@ -29,6 +29,12 @@ kubectl config set-context --current --namespace=argocd
 
 # Mirror charts/argocd/application.yaml valueFiles (Argo cannot helm-template Application CRs here).
 # helm_template_args and set_flags come from helm-common.bash (sourced above).
+#
+# The --set flags below must mirror every host in the valuesObject of
+# charts/argocd/application.yaml. charts/argocd/values.yaml defaults these to
+# argocd.placeholder.symmatree.com so the chart renders offline; any host not overridden
+# here is applied to the live cluster with that literal placeholder, which publishes the
+# wrong ingress host and opens an unsolvable ACME order until Argo CD self-heals it.
 # shellcheck disable=SC2154
 helm template argocd charts/argocd --namespace argocd \
 	--skip-crds \
@@ -37,6 +43,9 @@ helm template argocd charts/argocd --namespace argocd \
 	-f charts/argocd-applications/values/argocd-values.yaml \
 	-f "${argocd_cluster_values}" \
 	--set "argo-cd.global.domain=argocd.${cluster_name:?}.symmatree.com" \
-	--set "argo-cd.server.ingressGrpc.hostname=grpc-argocd.${cluster_name:?}.symmatree.com" |
+	--set "argo-cd.server.ingressGrpc.hostname=grpc-argocd.${cluster_name:?}.symmatree.com" \
+	--set "oauth2-proxy.ingress.hosts[0]=argocd.${cluster_name:?}.symmatree.com" \
+	--set "oauth2-proxy.ingress.tls[0].secretName=argocd-proxy-tls" \
+	--set "oauth2-proxy.ingress.tls[0].hosts[0]=argocd.${cluster_name:?}.symmatree.com" |
 	kubectl apply --server-side -f-
 echo "::endgroup::"
