@@ -68,10 +68,14 @@ resource "helm_release" "cilium" {
     }),
   ]
 
-  # Cilium is the CNI, so on a cold cluster nothing can schedule until it is up;
-  # waiting here is what makes later releases meaningful rather than racing it.
-  wait    = true
-  timeout = 900
+  # Deliberately no wait: Helm's readiness gate covers the whole release, and
+  # hubble-relay cannot become ready on a cold cluster. hubble.tls.auto.method is
+  # certmanager, so it mounts a secret cert-manager issues -- and cert-manager
+  # arrives with the Argo CD tree, which cannot schedule until this release has
+  # given the cluster a CNI. Waiting turns that ordering into a deadlock that
+  # ends in a timeout. The agent and operator come up regardless; hubble
+  # converges once cert-manager exists.
+  wait = false
 
   # On tiles the objects were applied by bootstrap.sh with no Helm ownership
   # metadata, so this first apply adopts them rather than failing.
