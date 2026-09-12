@@ -183,21 +183,10 @@ resource "kubernetes_secret_v1" "op_credentials" {
   }
 }
 
-# One-time adoption of the objects make-secrets.sh created. Both clusters have
-# all three, so these are unconditional. An import block whose target is already
-# in state is a no-op, so they are harmless to leave; delete them once both
-# workspaces have applied.
-import {
-  to = kubernetes_namespace_v1.onepassword
-  id = "onepassword"
-}
-
-import {
-  to = kubernetes_secret_v1.onepassword_token
-  id = "onepassword/onepassword-token"
-}
-
-import {
-  to = kubernetes_secret_v1.op_credentials
-  id = "onepassword/op-credentials"
-}
+# Adoption of pre-existing objects is done out of band, with `terraform import`
+# against the workspace that needs it -- never with an import block. An import
+# block cannot satisfy a remote object that does not exist, so on a cold start,
+# or after a rebuild, it fails the plan for exactly the cluster that has nothing
+# to adopt. This configuration has to work on both, so it carries no import
+# blocks. The onepassword namespace and secrets, and the cilium namespace, were
+# adopted this way.
