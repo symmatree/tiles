@@ -1,0 +1,42 @@
+# The root of the app-of-apps tree, installed by Terraform
+# (tf/nodes/k8s-argocd.tf) with values from module.cluster.app_of_apps_values.
+#
+# Everything under valuesObject is propagated to the child Applications, which
+# is why the list here and in values.yaml is the full cross-chart value set.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-applications
+  namespace: argocd
+  labels:
+    name: argocd-applications
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: charts/argocd-applications
+    helm:
+      valuesObject:
+        # Propagate to other application.yaml files
+        targetRevision: '{{ .Values.targetRevision }}'
+        pod_cidr: '{{ .Values.pod_cidr }}'
+        cluster_name: '{{ .Values.cluster_name }}'
+        external_ip_cidr: '{{ .Values.external_ip_cidr }}'
+        ingress_lb_ip: '{{ .Values.ingress_lb_ip }}'
+        vault_name: '{{ .Values.vault_name }}'
+        project_id: '{{ .Values.project_id }}'
+        seed_project_id: '{{ .Values.seed_project_id }}'
+        cluster_nfs_path: '{{ .Values.cluster_nfs_path }}'
+        datasets_nfs_path: '{{ .Values.datasets_nfs_path }}'
+        nfs_server: '{{ .Values.nfs_server }}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - FailOnSharedResource=true

@@ -287,3 +287,20 @@ output "target_revision" {
   description = "Git ref Argo CD tracks for this cluster: prod for tiles, test otherwise."
   value       = local.target_revision
 }
+
+output "app_of_apps_values" {
+  description = "Values the root Argo CD Application propagates to every child Application. Mirrors the config section of onepassword_item.misc_config above; keeping the two lists in step is what issue #720 and #284 are about."
+  value = {
+    targetRevision    = local.target_revision
+    pod_cidr          = var.pod_cidr
+    cluster_name      = var.cluster_name
+    external_ip_cidr  = var.external_ip_cidr
+    ingress_lb_ip     = var.ingress_lb_ip
+    vault_name        = var.onepassword_vault_name
+    project_id        = var.main_project_id
+    seed_project_id   = var.seed_project_id
+    cluster_nfs_path  = var.cluster_nfs_path
+    datasets_nfs_path = var.datasets_nfs_path
+    nfs_server        = var.nfs_server
+  }
+}

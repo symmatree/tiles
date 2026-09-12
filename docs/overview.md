@@ -123,7 +123,7 @@ From a cold start, with a proxmox cluster,
 
 * Push to main, or run `nodes-plan-apply` on `tags/test` with a target of `test`,
   to trigger a deployment of the `tiles-test` cluster
-* Run **`bootstrap-cluster`** for **`tiles-test`** (inputs and script order: [Configuration propagation](config-propagation.md#bootstrap-process)).
+That is the whole of it: Terraform installs the CRDs, the 1Password operator secrets, Cilium, Argo CD and the app-of-apps root, so the cluster comes up from one apply. See [Configuration propagation](config-propagation.md#bootstrap-process).
 
 From there, Argo CD replaces itself, Cilium, and 1Password with managed versions (mostly just adding an annotation),
 as well as installing the rest of the helper and payload components.
