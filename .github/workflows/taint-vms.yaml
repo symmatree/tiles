@@ -1,13 +1,19 @@
 name: "taint-vms"
 run-name: "Taint VMs test=${{ inputs.taint_test }} prod=${{ inputs.taint_prod }} by @${{ github.actor }}"
-# Marks a cluster's resources for replacement ahead of a rebuild via
-# nodes-plan-apply (with metal_apply_mode=reboot).
+# Stages a cluster rebuild, applied by nodes-plan-apply (with
+# metal_apply_mode=reboot). Two verbs, by one rule:
 #
-# Beyond the VMs themselves, everything tainted below lives *in* the cluster but
-# has no lifetime binding to it in Terraform's graph. A rebuild blows the old
-# copy away with the cluster, yet Terraform still holds it in state and plans an
-# update or a no-op rather than a fresh create -- so the new cluster comes up
-# missing it and only a second apply notices. The taint is what forces a create.
+#   taint     -- something real that Terraform must delete and build again: the
+#                VMs, their ISOs and schematics, and the bare-metal config apply
+#                (the machine survives, so its config has to be actively redone).
+#   state rm  -- something whose container is destroyed underneath it, so it is
+#                already gone and Terraform is only holding a stale record: etcd
+#                on a replaced VM, and everything inside the cluster. Asking
+#                Terraform to delete these fails -- the providers that reach the
+#                cluster cannot even be configured until the new one exists,
+#                because their config comes from module.cluster.
+#
+# Either way the point is the same: the next apply must create, not update.
 #
 # Dynamic sets are derived from `terraform state list` so new instances are
 # picked up without editing this workflow.
@@ -88,7 +94,8 @@ jobs:
 
           terraform taint 'module.cluster.module.talos-vm["tiles-test-cp"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-test-wk"].proxmox_virtual_environment_vm.main'
-          terraform taint 'module.cluster.talos_machine_bootstrap.this'
+          # etcd lived on the VMs being replaced, so it is already gone.
+          terraform state rm 'module.cluster.talos_machine_bootstrap.this'
 
           # Metal nodes: config re-applies byte-identical, so the apply is a no-op
           # under apply_mode="auto" and the node never rejoins the new etcd.
@@ -99,10 +106,9 @@ jobs:
 
           # Everything Terraform puts inside the cluster: the CRD and Cilium
           # Helm releases, the onepassword namespace and operator secrets, the
-          # cilium namespace. Without these, charts/argocd/bootstrap.sh fails
-          # applying its OnePasswordItem CRs and the new cluster has no CNI.
+          # cilium namespace. All destroyed with the cluster.
           while IFS= read -r addr; do
-            [ -n "$addr" ] && terraform taint "$addr"
+            [ -n "$addr" ] && terraform state rm "$addr"
           done < <(terraform state list | grep -E '^(helm_release|kubernetes_)' || true)
 
       # Prod cluster VM tainting
@@ -125,7 +131,8 @@ jobs:
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-1"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-2"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-3"].proxmox_virtual_environment_vm.main'
-          terraform taint 'module.cluster.talos_machine_bootstrap.this'
+          # etcd lived on the VMs being replaced, so it is already gone.
+          terraform state rm 'module.cluster.talos_machine_bootstrap.this'
 
           # Metal nodes: config re-applies byte-identical, so the apply is a no-op
           # under apply_mode="auto" and the node never rejoins the new etcd.
@@ -136,10 +143,9 @@ jobs:
 
           # Everything Terraform puts inside the cluster: the CRD and Cilium
           # Helm releases, the onepassword namespace and operator secrets, the
-          # cilium namespace. Without these, charts/argocd/bootstrap.sh fails
-          # applying its OnePasswordItem CRs and the new cluster has no CNI.
+          # cilium namespace. All destroyed with the cluster.
           while IFS= read -r addr; do
-            [ -n "$addr" ] && terraform taint "$addr"
+            [ -n "$addr" ] && terraform state rm "$addr"
           done < <(terraform state list | grep -E '^(helm_release|kubernetes_)' || true)
 
       - name: De-wireguard
