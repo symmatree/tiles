@@ -36,7 +36,7 @@ The architecture uses 1Password as the interface between Terraform (infrastructu
 │    • Loads from 1Password           │
 │    • Exports as environment vars    │
 │  - Per-chart bootstrap scripts      │
-│    • See bootstrap-cluster workflow │
+│    • Terraform: k8s-*.tf          │
 │  - argocd-applications Chart        │
 │    • valuesObject (union of values) │
 │    • templates/ (symlinked)         │
@@ -74,40 +74,60 @@ Terraform collects cluster configuration values from its variables and outputs, 
 - **Easy review**: The current configuration can be easily reviewed in 1Password's UI
 - **Clear interface**: 1Password serves as the complete interface between Terraform (infrastructure) and Kubernetes (applications), providing better isolation and separation of concerns
 
-### 2. GitHub Actions Workflow (`bootstrap-cluster`)
+### 2. Terraform installs the cluster's own software
 
-The `bootstrap-cluster` workflow (`.github/workflows/bootstrap-cluster.yaml`) performs the following steps:
+There is no bootstrap workflow. `nodes-plan-apply` creates the cluster and then,
+in the same apply, installs everything the app-of-apps tree needs in order to
+exist (`tf/nodes/k8s-bootstrap.tf`, `k8s-cilium.tf`, `k8s-argocd.tf`):
 
-1. **Loads sensitive secrets from 1Password** - Retrieves kubeconfig, GCP service account credentials, and VPN config
-2. **Loads cluster config from 1Password** - Uses the `1password/load-secrets-action` with `export-env: true` to retrieve fields from the `{cluster_name}-misc-config` item's `config` section (written by Terraform) plus operator tokens, and export them as environment variables (for example `targetRevision`, `pod_cidr`, `cluster_name`, `external_ip_cidr`, `vault_name`, `project_id`, and NFS-related fields)
-3. **Runs optional bootstrap steps** - Each step is gated by a `workflow_dispatch` boolean (see the workflow file for the exact list). When enabled, the job runs, in order:
-   - **`argocd_applications`** - `./charts/argocd-applications/install-application.sh` waits for Argo CD prerequisites (namespace, `AppProject` `cluster_name`, redis, repo-server, application-controller), then `envsubst` on `application.yaml.tmpl` and `kubectl apply`s the root Application. The waits are to avoid a race where the AppProject can be
-   installed but not yet available, and the entire cluster fails to get off the ground.
+1. **CRDs** whose consumers live in more than one Argo CD application
+2. **The 1Password operator's own credentials** -- namespace and two Secrets,
+   which cannot come from an `OnePasswordItem` because the operator needs them
+   before it can serve one
+3. **Cilium**, the CNI, so anything can schedule
+4. **Argo CD**, and the `AppProject` that ships with its chart
+5. **The root app-of-apps Application** (`charts/app-of-apps`), whose
+   `valuesObject` carries the propagated value set to every child
+6. **Argo CD's initial admin password**, read from the Secret Argo CD generates
+   and written to the `argocd-{cluster_name}-admin` 1Password login item
 
-**Defaults:** **`argocd_applications`** defaults to **true**, and is now the only step. CRDs, the 1Password operator secrets, Cilium and Argo CD itself are installed by Terraform during `nodes-plan-apply`, which runs before this workflow -- see [`tf/nodes/README.md`](../tf/nodes/README.md#in-cluster-bootstrap-k8s-bootstraptf). The AppProject ships with the Argo CD chart, so it arrives with that release.
+Ordering is the Terraform graph, not a script. The old workflow waited for
+`argocd-redis`, `argocd-repo-server` and `argocd-application-controller` before
+applying the root Application; that is gone. The Application is a custom
+resource, so applying it before the controller runs is harmless -- Argo CD
+reconciles it on startup -- and the ordering that mattered, the `AppProject`
+existing first, is a dependency edge now.
 
-#### Argo CD readiness and install-application
+**Apply-then-reconcile still holds.** Nothing waits on root or child Application
+sync, cert-manager, external-dns, ingress TLS, or any workload the tree deploys.
+Both Helm releases use `wait = false` deliberately: Argo CD's own oauth2-proxy
+cannot become ready until the 1Password operator exists, which Argo CD itself
+deploys, so waiting would deadlock.
 
-**Where `AppProject` comes from:** It is not in `install-application.sh` or the app-of-apps chart. It is rendered from `charts/argocd/templates/tiles-appproject.yaml` and applied with the rest of `charts/argocd` in `charts/argocd/bootstrap.sh` (`helm template | kubectl apply`). After the tree is live, the same object is owned by the `argocd` child Application (GitOps loop).
+**Do not add waits on downstream apps** (cert-manager, external-dns, the
+onepassword operator): they are created by the app-of-apps sync, and anything
+that blocks on them blocks the thing that creates them.
 
-**Prerequisite waits live only in `install-application.sh`:** That script is the single gate before the root `Application` is applied. `charts/argocd/bootstrap.sh` does not wait for Deployments/StatefulSets to be Ready; duplicating waits there would add maintenance and latency on full bootstrap runs without changing when the root app is applied (the workflow always runs `install-application.sh` next when `argocd_applications` is enabled). The common case `argocd_applications=true` with `argocd=false` also requires waits in `install-application.sh` only.
+**Stuck root sync after a failed attempt:** re-applying does not repair an
+existing `SyncError` on `argocd-applications`; refresh/sync that Application
+manually. See `charts/argocd-applications/README.md` troubleshooting.
 
-**What `install-application.sh` waits for:** `argocd` namespace, `AppProject` named `cluster_name`, and Available/Ready `argocd-redis`, `argocd-repo-server`, `argocd-application-controller` (bounded retries; see script header for env overrides). It then applies the root Application and best-effort syncs the Argo CD initial admin password into the existing `argocd-{cluster_name}-admin` 1Password item (never aborts the bootstrap; skippable via `INSTALL_APPLICATION_SKIP_ARGOCD_ADMIN_PASSWORD_SYNC=true`; see `charts/argocd/README.md`).
+### 3. How values reach Helm
 
-**What it does not wait for (apply-then-reconcile):** Root or child Application sync, cert-manager, external-dns, ingress TLS, or any workload deployed by the app-of-apps tree. CRDs are decoupled into Terraform-installed Helm releases so controllers can start later.
+Terraform passes them directly. `module.cluster.app_of_apps_values` is the
+propagated set -- the same list the `misc_config` item carries -- and
+`tf/nodes/k8s-argocd.tf` `yamlencode`s it into the `app-of-apps` release. Cilium
+and Argo CD take the same value files their Applications use, plus the keys Argo
+CD would template into `valuesObject`, so Terraform and Argo CD render identical
+output from identical inputs.
 
-**Do not add bootstrap waits on downstream apps** (cert-manager, external-dns, onepassword operator, etc.): those are created by the app-of-apps sync; waiting on them in a bootstrap script would deadlock or hang.
+`scripts/helm-common.bash` still exists for `build.sh`, which renders every
+chart offline for review. It reads the propagated key names from
+`charts/app-of-apps/values.yaml` and passes a placeholder for each.
 
-**Stuck root sync after a failed first attempt:** Prerequisite waits do not repair an existing `SyncError` on `argocd-applications`; refresh/sync that Application manually (or re-apply after fixing Git/Argo). See `charts/argocd-applications/README.md` troubleshooting.
-
-### 3. How values reach Helm during bootstrap
-
-There is **no** single `charts/bootstrap.sh`. Scripts invoked by the workflow use environment variables exported from 1Password:
-
-- **`install-application.sh`** - Prerequisite waits (bounded retries), then substitutes the same variables into `charts/argocd-applications/application.yaml.tmpl` via `envsubst` and applies the manifest.
-- **`charts/cilium/bootstrap.sh`** and **`charts/argocd/bootstrap.sh`** - Source `scripts/helm-common.bash`, which builds `helm template` arguments (including `--set` for each variable name discovered from `application.yaml.tmpl`) from the current environment, then each script adds chart-specific `--set` flags.
-
-Individual scripts may validate critical variables (for example Cilium requires `pod_cidr` and `cluster_name`).
+1Password remains the interface for anything a human or another tool needs to
+read back -- the kubeconfig, the talosconfig, `misc-config` -- but it is no
+longer on the path between Terraform and the cluster's own software.
 
 ### 4. ArgoCD App-of-Apps Pattern
 
@@ -152,7 +172,7 @@ valuesObject:
   vault_name: "{{ .Values.vault_name }}"
 ```
 
-When ArgoCD renders these templates, the `{{ .Values.* }}` references resolve to values from the `argocd-applications` chart's `valuesObject`, which were originally passed from Terraform via 1Password and the **`bootstrap-cluster`** workflow environment.
+When ArgoCD renders these templates, the `{{ .Values.* }}` references resolve to values from the `argocd-applications` chart's `valuesObject`, which Terraform supplies directly from `module.cluster.app_of_apps_values`.
 
 #### Template Expansion Pattern
 
@@ -181,8 +201,8 @@ This works because ArgoCD renders the Application resource (including the `value
 
 1. **Terraform** → Collects configuration values from variables and outputs, then stores them in 1Password `{cluster_name}-misc-config` item (config section)
 2. **1Password** → Serves as the interface between Terraform and Kubernetes, storing the current configuration state
-3. **GitHub Actions Workflow** (`bootstrap-cluster`) → Retrieves misc-config fields from 1Password using `1password/load-secrets-action` with `export-env: true`, which automatically exports them as environment variables
-4. **Bootstrap scripts** (when their workflow inputs are enabled) → `install-application.sh` substitutes those variables into `application.yaml.tmpl`; Cilium and Argo CD bootstrap scripts build Helm `--set` flags from the environment via `scripts/helm-common.bash`
+3. **Terraform** → holds the same values as `module.cluster.app_of_apps_values`, so nothing has to read them back out of 1Password to install the tree
+4. **Terraform** → passes `module.cluster.app_of_apps_values` straight into the `app-of-apps` release, and the same values into the Cilium and Argo CD releases
 5. **argocd-applications/values.yaml** → Contains placeholder values used for:
    - **Helm requirement**: Helm 4.0.0+ requires at least an empty `values.yaml` file
    - **Documentation**: Documents the expected value structure
@@ -198,8 +218,8 @@ This works because ArgoCD renders the Application resource (including the `value
 2. **Automatic Propagation** - Values automatically flow to individual charts through templated `valuesObject` blocks
 3. **Type Safety** - Helm validates that all referenced values exist
 4. **Maintainability** - Adding a new value requires:
-   - Exporting it from the **`bootstrap-cluster`** workflow's "Load cluster config from 1Password" step (and ensuring Terraform writes it to misc-config if it comes from infrastructure)
-   - Adding it to `charts/argocd-applications/application.yaml.tmpl` if it should be substituted into the root Application (so `envsubst` and `helm-common` see it)
+   - Adding it to `module.cluster.app_of_apps_values` (and to the `misc_config` item if a human or another tool needs to read it back)
+   - Adding it to `charts/app-of-apps` (`values.yaml` and the template's `valuesObject`) and to `module.cluster.app_of_apps_values`
    - Adding it to `argocd-applications/values.yaml` (with placeholder)
    - Adding it to `argocd-applications/application.yaml` `valuesObject` as needed for chart propagation
    - Using it in individual chart templates as needed
@@ -226,7 +246,7 @@ To add a new configuration value that needs to propagate to charts:
        new_value: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/new_value"
    ```
    The `export-env: true` flag automatically exports all values in the `env` block as environment variables.
-3. **Update `charts/argocd-applications/application.yaml.tmpl`** - Add `${varName}` (or the pattern you use) if the value must appear in the envsubst-templated root Application; ensure the workflow exports `varName` in the load-secrets step
+3. **Update `charts/app-of-apps`** - add the key to `values.yaml` (with a placeholder) and to the template's `valuesObject`, and add it to `module.cluster.app_of_apps_values` so Terraform supplies the real value
 4. **Update `argocd-applications/values.yaml`** - Add placeholder value (used for `rendered.yaml` generation and documentation)
 5. **Update `argocd-applications/application.yaml`** - Add to `valuesObject` block: `varName: "{{ .Values.varName }}"`
 6. **Update individual chart templates** - Reference the value in their `valuesObject` blocks as needed
@@ -251,19 +271,17 @@ Suppose we want to add a `region` value that needs to be passed to the `cert-man
    }
    ```
 
-2. **GitHub Actions Workflow** (`.github/workflows/bootstrap-cluster.yaml`):
-   ```yaml
-   - name: Load cluster config from 1Password
-     uses: 1password/load-secrets-action@v3
-     with:
-       export-env: true
-     env:
+2. **Terraform** (`tf/modules/talos-cluster/main.tf`, `app_of_apps_values`):
+   ```hcl
+   output "app_of_apps_values" {
+     value = {
        # ... existing values ...
-       region: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/region"
+       region = var.region
+     }
+   }
    ```
-   The `export-env: true` flag automatically exports all values in the `env` block as environment variables, so no separate export step is needed.
 
-3. **`charts/argocd-applications/application.yaml.tmpl`** (if `region` must flow through envsubst) and the workflow `env` block above so `region` is exported
+3. **`charts/app-of-apps`** - `values.yaml` placeholder plus the `valuesObject` line, and `module.cluster.app_of_apps_values` for the real value
 
 4. **argocd-applications/values.yaml**:
    ```yaml
@@ -327,7 +345,7 @@ The configuration mechanism handles three types of values differently:
 
 **Source**: Terraform variables and outputs
 **Storage**: 1Password `{cluster_name}-misc-config` item (config section)
-**Propagation**: Via `bootstrap-cluster` workflow (environment variables) → argocd-applications → individual charts
+**Propagation**: Terraform → app-of-apps `valuesObject` → argocd-applications → individual charts
 **Examples**: `cluster_name`, `pod_cidr`, `external_ip_cidr`, `targetRevision`
 
 These values flow through the standard propagation mechanism described above.
@@ -360,7 +378,7 @@ This approach:
 
 **Source**: Environment configuration (not from Terraform)
 **Storage**: GitHub secrets or other external sources
-**Propagation**: Via `bootstrap-cluster` workflow (environment variables) → argocd-applications
+**Propagation**: Terraform → app-of-apps `valuesObject` → argocd-applications
 **Examples**: `project_id` (GitHub secret - required for Terraform to run, so cannot be in misc-config)
 
 Note: `vault_name` is now stored in misc-config and managed by Terraform, so it flows through the standard propagation mechanism. Values that are required to run Terraform (like `project_id` for GCP authentication) must remain external to avoid circular dependencies.
