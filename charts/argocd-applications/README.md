@@ -4,13 +4,13 @@
 
 The `argocd-applications` chart implements the [ArgoCD app-of-apps pattern](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern), serving as the root application that manages all other Application resources in the cluster. It propagates configuration values from Terraform outputs (via bootstrap) to all downstream applications, providing a single point of configuration for environment-specific values.
 
-**Bootstrap:** [Configuration propagation](../../docs/config-propagation.md#bootstrap-process) (workflow inputs, 1Password env wiring, `install-application.sh`, Cilium/Argo CD scripts).
+**Bootstrap:** [Configuration propagation](../../docs/config-propagation.md#bootstrap-process). The root Application that owns this chart lives in [`charts/app-of-apps`](../app-of-apps) and is installed by Terraform.
 
 ## Architecture
 
 The chart uses a Helm-based approach where:
 
-- **Main Application** (`application.yaml.tmpl`): Defines the `argocd-applications` Application resource itself, which references this Helm chart
+- **Root Application** ([`charts/app-of-apps`](../app-of-apps)): Defines the `argocd-applications` Application resource itself, which references this Helm chart
 - **Templates Directory** (`templates/`): Contains Application resource templates for all components, either:
   - Symlinked from individual chart directories (e.g., `argocd-application.yaml` from `charts/argocd/application.yaml`)
   - Defined directly in templates (e.g., `alloy-application.yaml`, `grafana-application.yaml`)
@@ -43,7 +43,7 @@ All values are cluster-specific and set during bootstrap. The chart itself uses 
 
 ### Dependencies
 
-- **[ArgoCD](../argocd/README.md)**: Must be installed and running before this chart can manage applications (order relative to Cilium and **`bootstrap-cluster`** inputs: see **Bootstrap** above)
+- **[ArgoCD](../argocd/README.md)**: Must be installed before this chart can manage applications. Terraform orders that: Cilium, then Argo CD, then the root Application (see **Bootstrap** above)
 
 ## Terraform Integration
 
@@ -51,7 +51,7 @@ N/A - This chart receives values from Terraform outputs via the bootstrap proces
 
 ## Application Manifest
 
-- **Application Template**: [`application.yaml.tmpl`](application.yaml.tmpl) - Rendered with `envsubst` and applied by `install-application.sh` (see **Bootstrap** above)
+- **Root Application**: [`charts/app-of-apps`](../app-of-apps) - installed by Terraform (`tf/nodes/k8s-argocd.tf`), values from `module.cluster.app_of_apps_values`
 - **Helm Chart**: Uses the `charts/argocd-applications` directory as a Helm chart
 - **Values**: [`values.yaml`](values.yaml) - Contains placeholder values for documentation and rendering
 - **Templates**: [`templates/`](templates/) - Contains Application resource templates for all components
@@ -86,12 +86,12 @@ kubectl get application -n argocd
 kubectl describe application argocd-applications -n argocd
 ```
 
-## install-application.sh
+## Root Application
 
-The argocd-applications Application (the root of the app-of-apps tree) is applied by [`install-application.sh`](install-application.sh).
-This in turn renders the child applications in charts/argocd-applications. See [Argo CD readiness and install-application](../../docs/config-propagation.md#argo-cd-readiness-and-install-application) in **config-propagation.md**.
-
-After the prerequisite waits, the script applies the root Application and then **best-effort syncs the Argo CD initial admin password** into the existing 1Password login item `argocd-{cluster_name}-admin` (field `password`) in the cluster's vault. The sync never aborts the bootstrap: if `op` is unavailable/unsigned-in, the item is missing, or the secret has already rotated away, it logs and skips. Overridable via `ARGOCD_ADMIN_OP_ITEM` / `ARGOCD_ADMIN_OP_VAULT` / `ARGOCD_ADMIN_OP_FIELD`, and skippable with `INSTALL_APPLICATION_SKIP_ARGOCD_ADMIN_PASSWORD_SYNC=true`. Manual retrieval remains the documented fallback (see [argocd/README.md](../argocd/README.md)).
+The `argocd-applications` Application -- the root of the app-of-apps tree -- is
+rendered by [`charts/app-of-apps`](../app-of-apps) and installed by Terraform in
+`tf/nodes/k8s-argocd.tf`, after the Argo CD release itself. It in turn renders
+the child Applications in this chart.
 
 ## Troubleshooting
 
@@ -106,7 +106,7 @@ After the prerequisite waits, the script applies the root Application and then *
 
 **Template values not resolving:**
 
-- Verify values are passed correctly in `application.yaml.tmpl` `valuesObject`
+- Verify values are passed correctly in the app-of-apps `valuesObject`
 - Check that template files use `{{ .Values.* }}` syntax correctly
 - Review rendered output: `helm template argocd-applications charts/argocd-applications --set cluster_name=test ...`
 
@@ -128,7 +128,7 @@ After the prerequisite waits, the script applies the root Application and then *
 To add a new component:
 
 1. Create or symlink the component's `application.yaml` in `templates/`
-2. Add any required values to `application.yaml.tmpl` `valuesObject` if not already present
+2. Add any required values to `charts/app-of-apps` (`values.yaml` and the template's `valuesObject`) if not already present
 3. Add placeholder values to `values.yaml` for documentation
 4. Update bootstrap workflow if new values need to be passed from Terraform
 5. Commit and let ArgoCD sync the changes
@@ -146,7 +146,7 @@ All configuration is defined as code in Git. The Application resources can be re
 
 - Template files must use Helm template syntax (`{{ .Values.* }}`) to reference parent chart values
 - Values cannot be constructed in `values.yaml` (templates aren't expanded there) - use `valuesObject` in Application resources instead
-- Adding new values requires updates in multiple places: `bootstrap.sh`, `application.yaml.tmpl`, `values.yaml`, and potentially component templates
+- Adding new values requires updates in multiple places: `module.cluster.app_of_apps_values`, `charts/app-of-apps`, and potentially component templates
 
 ## Template Structure
 

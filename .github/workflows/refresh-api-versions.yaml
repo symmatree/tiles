@@ -1,5 +1,5 @@
-name: "bootstrap-cluster"
-run-name: "Bootstrap ${{ inputs.cluster }} by @${{ github.actor }} [apps=${{ inputs.argocd_applications }}]"
+name: "refresh-api-versions"
+run-name: "Refresh API versions for ${{ inputs.cluster }} by @${{ github.actor }}"
 on:
   workflow_dispatch:
     inputs:
@@ -10,12 +10,6 @@ on:
         options:
           - tiles-test
           - tiles
-      argocd_applications:
-        description: "Install ArgoCD App-of-apps"
-        required: false
-        type: boolean
-        # Common case is just adding a new variable to Terraform, not creating a new cluster.
-        default: true
 
 env:
   TF_IN_AUTOMATION: "true"
@@ -26,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  bootstrap-cluster:
+  refresh-api-versions:
     runs-on: "ubuntu-latest"
     permissions:
       contents: "read"
@@ -95,39 +89,11 @@ jobs:
 
           echo "KUBECONFIG=${kubeconfig_path}" >> "$GITHUB_ENV"
 
-      - name: Load cluster config from 1Password
-        uses: 1password/load-secrets-action@v4
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
-          targetRevision: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/targetRevision"
-          pod_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/pod_cidr"
-          cluster_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_name"
-          external_ip_cidr: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/external_ip_cidr"
-          # Front-door LB IP for the shared Cilium ingress. Written to misc-config
-          # by Terraform (tf/modules/talos-cluster/main.tf), consumed by
-          # install-application.sh via envsubst into the root Application's
-          # valuesObject -> cilium-config lb-static-pool. Empty on tiles-test.
-          # Was missing here -> root Application got ingress_lb_ip="" -> no
-          # lb-static-pool -> cilium-ingress <pending>. See issue #627.
-          ingress_lb_ip: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/ingress_lb_ip"
-          vault_name: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/vault_name"
-          project_id: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/project_id"
-          seed_project_id: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/seed_project_id"
-          cluster_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/cluster_nfs_path"
-          datasets_nfs_path: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/datasets_nfs_path"
-          nfs_server: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/nfs_server"
-      - uses: 1password/install-cli-action@v2
-      - name: Bootstrap cluster
-        id: bootstrap-cluster
+      - name: Refresh API versions
+        id: refresh-api-versions
         shell: bash
         run: |
           set -euxo pipefail
-          if [ "${{ github.event.inputs.argocd_applications }}" == "true" ]; then
-            ./charts/argocd-applications/install-application.sh
-          fi
-
           # TODO: Install yq properly with caching and versioning.
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq

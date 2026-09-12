@@ -91,7 +91,7 @@ render, and CRDs are the main one: Argo CD cannot diff resources whose types it
 has not seen yet, and the CRD blobs are large enough to be unpleasant for it to
 carry. `k8s-bootstrap.tf` installs them as `helm_release` resources that depend
 on `module.cluster`. This is the only place cluster CRDs are installed; the
-`bootstrap-cluster` workflow no longer has a CRD step.
+there is no bootstrap workflow left to have one.
 
 This works because **`helm_release` does not contact the API server during
 plan** -- the provider only dry-runs against the cluster when the `manifest`
@@ -108,7 +108,7 @@ instead.
 
 The `helm` provider is pointed at `module.cluster.bootstrap_ip`, not
 `control_plane_vip`, because the VIP does not answer until Cilium is running --
-the same substitution `bootstrap-cluster.yaml` makes on the kubeconfig.
+the same substitution the old bootstrap workflow made on the kubeconfig.
 
 Also here: the `onepassword` namespace and the 1Password operator's own two
 secrets. Those cannot come from an `OnePasswordItem` -- they are what the
@@ -170,9 +170,10 @@ syncing is manual. It owns no namespace metadata either -- Terraform creates the
 recomputed here, so the value Terraform passes is the one written to
 misc-config.
 
-`charts/argocd-applications/install-application.sh` still applies the root
-app-of-apps Application, and is still where the waits for Argo CD's controllers
-live.
+The root app-of-apps Application is installed here too, from
+`charts/app-of-apps`, and Argo CD's initial admin password is read from the
+Secret it generates and written into the `argocd-{cluster}-admin` 1Password item
+as a full login, so the browser extension still offers it.
 
 ## Which CRDs are *not* here
 

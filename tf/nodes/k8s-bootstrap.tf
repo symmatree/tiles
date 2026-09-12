@@ -21,8 +21,7 @@ provider "helm" {
     # answer until Cilium is up -- so during a cold bootstrap we would be
     # talking to an address that only exists once something we have not
     # installed yet is running. Target the first control plane node directly;
-    # the API server certificate covers it (the bootstrap-cluster workflow has
-    # rewritten the kubeconfig this way since before Terraform did any of this).
+    # the API server certificate covers it.
     host = "https://${module.cluster.bootstrap_ip}:6443"
     # base64decode is required: the talos provider hands these back exactly as a
     # kubeconfig stores them, base64-encoded (talos_cluster_kubeconfig_resource.go
