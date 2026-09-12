@@ -13,16 +13,16 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Extract variables from the template file using envsubst
-TEMPLATE_FILE="${REPO_ROOT}/charts/argocd-applications/application.yaml.tmpl"
-if [[ ! -f $TEMPLATE_FILE ]]; then
-	echo "Error: Template file $TEMPLATE_FILE not found" >&2
+# The propagated value set: the top-level keys of the app-of-apps chart's
+# values.yaml, which is what Terraform fills in for the root Application and
+# what that Application passes down to every child.
+VALUES_FILE="${REPO_ROOT}/charts/app-of-apps/values.yaml"
+if [[ ! -f $VALUES_FILE ]]; then
+	echo "Error: values file $VALUES_FILE not found" >&2
 	exit 1
 fi
 
-# Get list of variables from template (envsubst -v outputs variable names)
-# Sort and deduplicate to handle variables that appear multiple times
-VARIABLES=$(envsubst -v "$(cat "$TEMPLATE_FILE")" 2>/dev/null | sort -u || true)
+VARIABLES=$(grep -E '^[a-zA-Z_][a-zA-Z0-9_]*:' "$VALUES_FILE" | cut -d: -f1 | sort -u || true)
 
 # Build helm args array for API versions (used only for template, not lint)
 helm_template_args=()

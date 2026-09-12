@@ -70,11 +70,9 @@ resource "helm_release" "argocd" {
     }),
   ]
 
-  # No wait, matching the `kubectl apply` this replaces. The readiness gate
-  # covers the whole release, and Argo CD's ingress cannot become ready until
-  # cert-manager and external-dns exist -- which Argo CD itself deploys once the
-  # app-of-apps lands. charts/argocd-applications/install-application.sh is what
-  # waits for the controllers, immediately before applying the root Application.
+  # No wait: the readiness gate covers the whole release, and oauth2-proxy
+  # cannot become ready until the 1Password operator exists -- which Argo CD
+  # itself deploys once the app-of-apps tree lands. Waiting would deadlock.
   wait = false
 
   # On tiles these objects were applied by bootstrap.sh with no Helm ownership
@@ -82,4 +80,56 @@ resource "helm_release" "argocd" {
   take_ownership = true
 
   depends_on = [module.cluster]
+}
+
+# The root of the app-of-apps tree.
+#
+# Nothing waits for argocd-redis, argocd-repo-server or
+# argocd-application-controller before this is applied: the Application is a
+# custom resource, so applying it before the controller runs is fine -- Argo CD
+# reconciles it on startup. The ordering that matters, the AppProject existing
+# first, is the graph edge below, since the AppProject ships with the Argo CD
+# release.
+resource "helm_release" "app_of_apps" {
+  name      = "app-of-apps"
+  namespace = kubernetes_namespace_v1.argocd.metadata[0].name
+  chart     = "${path.module}/../../charts/app-of-apps"
+
+  values = [yamlencode(module.cluster.app_of_apps_values)]
+
+  # Same reason as the Argo CD release: this only applies a CR, and what it
+  # triggers cannot converge until the tree it installs is running.
+  wait = false
+
+  depends_on = [helm_release.argocd]
+}
+
+# Argo CD generates an initial admin password at install and stores it in
+# argocd-initial-admin-secret, which it removes once the password is changed.
+# depends_on pins the read to the apply that just installed Argo CD, when the
+# secret is guaranteed present.
+#
+# If the admin password is ever rotated, Argo CD deletes that secret and this
+# data source starts failing the apply -- the shell version this replaces
+# degraded to "nothing to sync" instead.
+data "kubernetes_secret_v1" "argocd_initial_admin" {
+  metadata {
+    name      = "argocd-initial-admin-secret"
+    namespace = kubernetes_namespace_v1.argocd.metadata[0].name
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
+# The full login item, not just the password: username and the primary URL are
+# what let the 1Password browser extension offer this on the Argo CD login page.
+resource "onepassword_item" "argocd_admin" {
+  vault    = data.onepassword_vault.tf_secrets.uuid
+  title    = "argocd-${var.cluster_name}-admin"
+  category = "login"
+  username = "admin"
+  # Trailing slash is what the existing items carry; without it this shows as a
+  # diff on every plan.
+  url      = "https://${local.argocd_host}/"
+  password = data.kubernetes_secret_v1.argocd_initial_admin.data["password"]
 }
