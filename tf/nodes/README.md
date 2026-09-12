@@ -157,6 +157,23 @@ syncing it is a manual action.
 The `cilium` subchart is not committed, so `nodes-plan-apply` runs
 `.github/actions/helm-setup` to vendor it before Terraform loads the chart.
 
+## Argo CD (`k8s-argocd.tf`)
+
+Terraform installs the local `charts/argocd` umbrella with the same value layers
+`charts/argocd/application.yaml` feeds Argo CD, so the two render identical
+output. Terraform is the only writer: that Application has no `automated` sync,
+so Argo CD renders, diffs and reports drift on itself without correcting it, and
+syncing is manual. It owns no namespace metadata either -- Terraform creates the
+`argocd` namespace, which must exist before the release goes into it.
+
+`targetRevision` comes from `module.cluster.target_revision` rather than being
+recomputed here, so the value Terraform passes is the one written to
+misc-config.
+
+`charts/argocd-applications/install-application.sh` still applies the root
+app-of-apps Application, and is still where the waits for Argo CD's controllers
+live.
+
 ## Which CRDs are *not* here
 
 A CRD whose only consumers are inside the Argo CD application that ships it is
