@@ -3,6 +3,9 @@ resource "talos_machine_secrets" "this" {}
 locals {
   control_ips  = [for _, vm in var.vms : vm.ip_address if vm.type == "control"]
   bootstrap_ip = local.control_ips[0]
+  # Git ref Argo CD tracks for this cluster. Written to misc-config below and
+  # exported so Terraform-installed charts pass the same value Argo CD would.
+  target_revision = var.cluster_name == "tiles" ? "prod" : "test"
 }
 
 data "talos_client_configuration" "talosconfig" {
@@ -103,7 +106,7 @@ resource "onepassword_item" "misc_config" {
     }
     field {
       label = "targetRevision"
-      value = var.cluster_name == "tiles" ? "prod" : "test"
+      value = local.target_revision
     }
     field {
       label = "cluster_name"
@@ -278,4 +281,9 @@ output "kubernetes_client_configuration" {
   description = "Kubernetes client credentials (CA, client cert/key) issued by Talos, for the helm and kubernetes providers. host is the VIP; callers targeting bootstrap_ip override it."
   value       = talos_cluster_kubeconfig.this.kubernetes_client_configuration
   sensitive   = true
+}
+
+output "target_revision" {
+  description = "Git ref Argo CD tracks for this cluster: prod for tiles, test otherwise."
+  value       = local.target_revision
 }

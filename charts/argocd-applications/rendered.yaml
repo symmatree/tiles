@@ -507,16 +507,14 @@ spec:
     server: https://kubernetes.default.svc
     namespace: argocd
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # No automated sync: Terraform installs this chart (tf/nodes/k8s-argocd.tf).
+    # Argo CD still renders, diffs and reports drift on itself -- it just does
+    # not correct it, so it cannot fight the installer. Syncing is manual.
+    # No CreateNamespace/managedNamespaceMetadata either: Terraform owns the
+    # namespace, which has to exist before the release goes into it.
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
       - FailOnSharedResource=true
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/warn: baseline
 
 ---
 # Source: argocd-applications/templates/argocd-mixin-application.yaml
