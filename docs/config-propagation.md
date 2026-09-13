@@ -74,60 +74,46 @@ Terraform collects cluster configuration values from its variables and outputs, 
 - **Easy review**: The current configuration can be easily reviewed in 1Password's UI
 - **Clear interface**: 1Password serves as the complete interface between Terraform (infrastructure) and Kubernetes (applications), providing better isolation and separation of concerns
 
-### 2. Terraform installs the cluster's own software
+### 2. Terraform installs what Argo CD needs before it can take over
 
-There is no bootstrap workflow. `nodes-plan-apply` creates the cluster and then,
-in the same apply, installs everything the app-of-apps tree needs in order to
-exist (`tf/nodes/k8s-bootstrap.tf`, `k8s-cilium.tf`, `k8s-argocd.tf`):
+Argo CD cannot install itself, its own CRDs, or the CNI its pods need in order
+to schedule. Terraform installs exactly that set and then hands over: the last
+thing it applies is the `argocd-applications` Application, and everything after
+that is Argo CD's. See [`tf/nodes/README.md`](../tf/nodes/README.md) for what is
+in that set and why each piece is there.
 
-1. **CRDs** whose consumers live in more than one Argo CD application
-2. **The 1Password operator's own credentials** -- namespace and two Secrets,
-   which cannot come from an `OnePasswordItem` because the operator needs them
-   before it can serve one
-3. **Cilium**, the CNI, so anything can schedule
-4. **Argo CD**, and the `AppProject` that ships with its chart
-5. **The root app-of-apps Application** (`charts/app-of-apps`), whose
-   `valuesObject` carries the propagated value set to every child
-6. **Argo CD's initial admin password**, read from the Secret Argo CD generates
-   and written to the `argocd-{cluster_name}-admin` 1Password login item
+Ordering is the Terraform dependency graph. Nothing waits on Argo CD's
+controllers before the Application is applied -- an Application is a custom
+resource, so Argo CD reconciles it whenever the controller starts.
 
-Ordering is the Terraform graph, not a script. The old workflow waited for
-`argocd-redis`, `argocd-repo-server` and `argocd-application-controller` before
-applying the root Application; that is gone. The Application is a custom
-resource, so applying it before the controller runs is harmless -- Argo CD
-reconciles it on startup -- and the ordering that mattered, the `AppProject`
-existing first, is a dependency edge now.
+Both Helm releases set `wait = false`, and have to: Argo CD's oauth2-proxy
+cannot become ready until the 1Password operator exists, and Argo CD is what
+deploys it. A readiness gate there deadlocks.
 
-**Apply-then-reconcile still holds.** Nothing waits on root or child Application
-sync, cert-manager, external-dns, ingress TLS, or any workload the tree deploys.
-Both Helm releases use `wait = false` deliberately: Argo CD's own oauth2-proxy
-cannot become ready until the 1Password operator exists, which Argo CD itself
-deploys, so waiting would deadlock.
+**Stuck root sync:** re-applying does not repair an existing `SyncError` on
+`argocd-applications`; refresh or sync that Application by hand. See
+[`charts/argocd-applications/README.md`](../charts/argocd-applications/README.md).
 
-**Do not add waits on downstream apps** (cert-manager, external-dns, the
-onepassword operator): they are created by the app-of-apps sync, and anything
-that blocks on them blocks the thing that creates them.
+### 3. How values reach the charts
 
-**Stuck root sync after a failed attempt:** re-applying does not repair an
-existing `SyncError` on `argocd-applications`; refresh/sync that Application
-manually. See `charts/argocd-applications/README.md` troubleshooting.
+`module.cluster.app_of_apps_values` holds the propagated set. Terraform
+`yamlencode`s it into the installer release, whose Application carries it in
+`valuesObject` to `charts/argocd-applications`, whose child Applications carry
+the subset each component needs into that component's chart.
 
-### 3. How values reach Helm
+Cilium and Argo CD are installed from their own charts with the same value files
+their Applications use, plus the keys Argo CD would template into `valuesObject`
+-- so Terraform and Argo CD render identical output from identical inputs, which
+is what lets Terraform adopt an install Argo CD was managing.
 
-Terraform passes them directly. `module.cluster.app_of_apps_values` is the
-propagated set -- the same list the `misc_config` item carries -- and
-`tf/nodes/k8s-argocd.tf` `yamlencode`s it into the `app-of-apps` release. Cilium
-and Argo CD take the same value files their Applications use, plus the keys Argo
-CD would template into `valuesObject`, so Terraform and Argo CD render identical
-output from identical inputs.
+`misc-config` is no longer on that path. It is still written by Terraform and
+still read, by `argocd-pr-diff` (which renders charts for a PR without running
+Terraform) and by `refresh-api-versions` (for `bootstrap_ip` and
+`control_plane_vip`).
 
-`scripts/helm-common.bash` still exists for `build.sh`, which renders every
-chart offline for review. It reads the propagated key names from
-`charts/app-of-apps/values.yaml` and passes a placeholder for each.
-
-1Password remains the interface for anything a human or another tool needs to
-read back -- the kubeconfig, the talosconfig, `misc-config` -- but it is no
-longer on the path between Terraform and the cluster's own software.
+`scripts/helm-common.bash` reads the propagated key names from
+`charts/argocd-applications-installer/values.yaml` so `build.sh` can render every
+chart offline with a placeholder for each.
 
 ### 4. ArgoCD App-of-Apps Pattern
 
@@ -217,12 +203,7 @@ This works because ArgoCD renders the Application resource (including the `value
 1. **Single Point of Configuration** - All environment-specific values are passed once to `argocd-applications`
 2. **Automatic Propagation** - Values automatically flow to individual charts through templated `valuesObject` blocks
 3. **Type Safety** - Helm validates that all referenced values exist
-4. **Maintainability** - Adding a new value requires:
-   - Adding it to `module.cluster.app_of_apps_values` (and to the `misc_config` item if a human or another tool needs to read it back)
-   - Adding it to `charts/app-of-apps` (`values.yaml` and the template's `valuesObject`) and to `module.cluster.app_of_apps_values`
-   - Adding it to `argocd-applications/values.yaml` (with placeholder)
-   - Adding it to `argocd-applications/application.yaml` `valuesObject` as needed for chart propagation
-   - Using it in individual chart templates as needed
+4. **Maintainability** - Adding a new value means three places: `module.cluster.app_of_apps_values`, the installer chart (`values.yaml` and its `valuesObject`), and the child Application that needs it. Add it to the `misc_config` item as well only if something outside Terraform reads it.
 5. **Separation of Concerns** - Terraform manages infrastructure values, Helm manages application deployment
 6. **Debugging & Review** - `values.yaml` files enable generation of `rendered.yaml` files via `helm template`, making it easier to:
    - Debug template rendering issues
@@ -387,17 +368,16 @@ These are typically hardcoded per-environment or stored separately from Terrafor
 
 ## Design Decisions
 
-### Why 1Password as the Interface?
+### What 1Password is still for
 
-The use of 1Password as the interface between Terraform and Kubernetes provides several key benefits:
+It is no longer the interface between Terraform and the cluster -- Terraform
+passes values straight into the Helm releases it installs. What it still holds:
 
-- **Separation of Concerns**: Complete isolation between infrastructure (Terraform) and application (Kubernetes) layers, with 1Password as the well-defined interface
-- **No Environment Variable Burden**: Humans can run `terraform plan` or `terraform apply` without needing to provide many environment variables - Terraform reads from its own variables and writes to 1Password
-- **Easy Review**: The current configuration can be easily reviewed in 1Password's UI, making it simple to see what values are currently stored
-- **Single Source of Truth**: Terraform manages infrastructure and writes config values to 1Password, ensuring consistency
-- **Security**: Sensitive values can be stored securely, non-sensitive values in misc-config
-- **Version Control**: Config values are managed by Terraform, not committed to git
-- **Workflow Integration**: GitHub Actions can easily load values using the 1Password action
+- **Secrets** the cluster pulls at runtime via `OnePasswordItem`, and the two
+  operator credentials Terraform writes so the operator can serve them
+- **Values read outside Terraform**: `misc-config` for `argocd-pr-diff`, which
+  renders charts for a PR without running Terraform, and `refresh-api-versions`
+- **Artifacts a human needs**: kubeconfig, talosconfig, the Argo CD admin login
 
 ### Why valuesObject for Template Expansion?
 
@@ -473,12 +453,6 @@ Values that are required to run Terraform (like `project_id` for GCP authenticat
 - Therefore, `project_id` cannot be in misc-config
 
 These values must remain in external sources (GitHub secrets, environment variables, etc.) that are available before Terraform runs. This is a design constraint, not a limitation to work around.
-
-### Why Environment Variables?
-
-- **Simplicity**: The workflow exports configuration from 1Password into the job environment; bootstrap scripts read those variables directly, with no separate config file checked into git
-- **Standard Practice**: Common pattern for passing config to CI jobs
-- **Validation**: Individual bootstrap scripts validate what they need (for example Cilium checks `pod_cidr`); missing workflow `env` entries surface as empty substitutions or script errors
 
 ### Why project_id Stays External
 

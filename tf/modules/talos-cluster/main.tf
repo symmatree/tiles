@@ -289,7 +289,7 @@ output "target_revision" {
 }
 
 output "app_of_apps_values" {
-  description = "Values the root Argo CD Application propagates to every child Application. Mirrors the config section of onepassword_item.misc_config above; keeping the two lists in step is what issue #720 and #284 are about."
+  description = "Values the root Argo CD Application propagates to every child Application. The same set appears in the config section of onepassword_item.misc_config above, for consumers that read it without running Terraform; #284 covers removing the duplication."
   value = {
     targetRevision    = local.target_revision
     pod_cidr          = var.pod_cidr
