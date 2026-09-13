@@ -159,21 +159,27 @@ The `cilium` subchart is not committed, so `nodes-plan-apply` runs
 
 ## Argo CD (`k8s-argocd.tf`)
 
-Terraform installs the local `charts/argocd` umbrella with the same value layers
-`charts/argocd/application.yaml` feeds Argo CD, so the two render identical
-output. Terraform is the only writer: that Application has no `automated` sync,
-so Argo CD renders, diffs and reports drift on itself without correcting it, and
-syncing is manual. It owns no namespace metadata either -- Terraform creates the
-`argocd` namespace, which must exist before the release goes into it.
+The handover point. Terraform installs Argo CD, then applies the
+`argocd-applications` Application, and from there Argo CD owns the cluster.
 
-`targetRevision` comes from `module.cluster.target_revision` rather than being
-recomputed here, so the value Terraform passes is the one written to
-misc-config.
+**Argo CD does not sync itself.** Its Application has no `automated` block, so it
+renders, diffs and reports drift on its own install without correcting it. Two
+writers on the thing that reconciles everything else is worse than drift you can
+see; syncing it is a manual action. Terraform also owns the `argocd` namespace
+outright, since the release has to go into it.
 
-The root app-of-apps Application is installed here too, from
-`charts/app-of-apps`, and Argo CD's initial admin password is read from the
-Secret it generates and written into the `argocd-{cluster}-admin` 1Password item
-as a full login, so the browser extension still offers it.
+Installed from the local `charts/argocd` umbrella with the same value layers the
+Application feeds Argo CD, so both render identical output -- which is what let
+this adopt the running install rather than replace it.
+
+The root Application comes from
+[`charts/argocd-applications-installer`](../../charts/argocd-applications-installer),
+a one-resource chart; its README covers the values path.
+
+Argo CD's initial admin password is read from the Secret Argo CD generates and
+written to the `argocd-{cluster}-admin` 1Password item as a full login. That
+account is how you reach Argo CD before SSO works, since Google login needs
+external-dns and cert-manager and Argo CD is what deploys them.
 
 ## Which CRDs are *not* here
 

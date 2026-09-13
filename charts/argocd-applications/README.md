@@ -2,15 +2,15 @@
 
 ## Overview
 
-The `argocd-applications` chart implements the [ArgoCD app-of-apps pattern](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern), serving as the root application that manages all other Application resources in the cluster. It propagates configuration values from Terraform outputs (via bootstrap) to all downstream applications, providing a single point of configuration for environment-specific values.
+The `argocd-applications` chart implements the [ArgoCD app-of-apps pattern](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern), serving as the root application that manages all other Application resources in the cluster. It propagates configuration values from Terraform to all downstream applications, providing a single point of configuration for environment-specific values.
 
-**Bootstrap:** [Configuration propagation](../../docs/config-propagation.md#bootstrap-process). The root Application that owns this chart lives in [`charts/app-of-apps`](../app-of-apps) and is installed by Terraform.
+**Installed by:** [`charts/argocd-applications-installer`](../argocd-applications-installer), a one-resource chart Terraform applies. It renders the `argocd-applications` Application, which points back at *this* chart. See [Configuration propagation](../../docs/config-propagation.md#how-values-reach-the-charts).
 
 ## Architecture
 
 The chart uses a Helm-based approach where:
 
-- **Root Application** ([`charts/app-of-apps`](../app-of-apps)): Defines the `argocd-applications` Application resource itself, which references this Helm chart
+- **Root Application** ([`charts/argocd-applications-installer`](../argocd-applications-installer)): Defines the `argocd-applications` Application resource itself, which references this Helm chart
 - **Templates Directory** (`templates/`): Contains Application resource templates for all components, either:
   - Symlinked from individual chart directories (e.g., `argocd-application.yaml` from `charts/argocd/application.yaml`)
   - Defined directly in templates (e.g., `alloy-application.yaml`, `grafana-application.yaml`)
@@ -51,7 +51,7 @@ N/A - This chart receives values from Terraform outputs via the bootstrap proces
 
 ## Application Manifest
 
-- **Root Application**: [`charts/app-of-apps`](../app-of-apps) - installed by Terraform (`tf/nodes/k8s-argocd.tf`), values from `module.cluster.app_of_apps_values`
+- **Root Application**: [`charts/argocd-applications-installer`](../argocd-applications-installer) - installed by Terraform (`tf/nodes/k8s-argocd.tf`), values from `module.cluster.app_of_apps_values`
 - **Helm Chart**: Uses the `charts/argocd-applications` directory as a Helm chart
 - **Values**: [`values.yaml`](values.yaml) - Contains placeholder values for documentation and rendering
 - **Templates**: [`templates/`](templates/) - Contains Application resource templates for all components
@@ -88,10 +88,10 @@ kubectl describe application argocd-applications -n argocd
 
 ## Root Application
 
-The `argocd-applications` Application -- the root of the app-of-apps tree -- is
-rendered by [`charts/app-of-apps`](../app-of-apps) and installed by Terraform in
-`tf/nodes/k8s-argocd.tf`, after the Argo CD release itself. It in turn renders
-the child Applications in this chart.
+The `argocd-applications` Application is rendered by
+[`charts/argocd-applications-installer`](../argocd-applications-installer) and
+applied by Terraform (`tf/nodes/k8s-argocd.tf`) after the Argo CD release. Argo
+CD then syncs it, which renders the child Applications in this chart.
 
 ## Troubleshooting
 
@@ -106,7 +106,7 @@ the child Applications in this chart.
 
 **Template values not resolving:**
 
-- Verify values are passed correctly in the app-of-apps `valuesObject`
+- Verify values are passed correctly in the installer's `valuesObject`
 - Check that template files use `{{ .Values.* }}` syntax correctly
 - Review rendered output: `helm template argocd-applications charts/argocd-applications --set cluster_name=test ...`
 
@@ -128,7 +128,7 @@ the child Applications in this chart.
 To add a new component:
 
 1. Create or symlink the component's `application.yaml` in `templates/`
-2. Add any required values to `charts/app-of-apps` (`values.yaml` and the template's `valuesObject`) if not already present
+2. Add any required values to `charts/argocd-applications-installer` (`values.yaml` and the template's `valuesObject`) if not already present
 3. Add placeholder values to `values.yaml` for documentation
 4. Update bootstrap workflow if new values need to be passed from Terraform
 5. Commit and let ArgoCD sync the changes
@@ -146,7 +146,7 @@ All configuration is defined as code in Git. The Application resources can be re
 
 - Template files must use Helm template syntax (`{{ .Values.* }}`) to reference parent chart values
 - Values cannot be constructed in `values.yaml` (templates aren't expanded there) - use `valuesObject` in Application resources instead
-- Adding new values requires updates in multiple places: `module.cluster.app_of_apps_values`, `charts/app-of-apps`, and potentially component templates
+- Adding new values requires updates in multiple places: `module.cluster.app_of_apps_values`, `charts/argocd-applications-installer`, and potentially component templates
 
 ## Template Structure
 

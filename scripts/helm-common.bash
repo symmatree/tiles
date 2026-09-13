@@ -13,10 +13,11 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# The propagated value set: the top-level keys of the app-of-apps chart's
-# values.yaml, which is what Terraform fills in for the root Application and
-# what that Application passes down to every child.
-VALUES_FILE="${REPO_ROOT}/charts/app-of-apps/values.yaml"
+# build.sh renders every chart offline, so charts that reference propagated
+# values need a placeholder for each or they fail to render (charts/argocd's
+# AppProject needs cluster_name, for example). The installer chart's values.yaml
+# declares that set -- see docs/config-propagation.md.
+VALUES_FILE="${REPO_ROOT}/charts/argocd-applications-installer/values.yaml"
 if [[ ! -f $VALUES_FILE ]]; then
 	echo "Error: values file $VALUES_FILE not found" >&2
 	exit 1
