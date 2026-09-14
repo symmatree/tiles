@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fleet-control
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: fleet-control
+      parameters:
+        - name: cluster_name
+          string: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        - name: vault_name
+          string: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        - name: project_id
+          string: '{{ required ".Values.project_id is required" .Values.project_id }}'
+        - name: app_settings
+          map:
+            image: 'ghcr.io/symmatree/coordinator-fleet-control:main'
+            hostname: 'fleet.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            cluster_issuer: "real-cert"
+            # 1Password item holding the fleet SSH private key; the field named below is
+            # mounted at /secrets/ssh/id.
+            ssh_key_secret: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-fleet-ssh-key'
+            ssh_key_field: 'private_key'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fleet-control
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline

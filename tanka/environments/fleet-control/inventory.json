@@ -1,0 +1,10 @@
+{
+  "user": "pi",
+  "nodes": [
+    { "name": "coordinator", "role": "coordinator" },
+    { "name": "campod-ne", "role": "campod" },
+    { "name": "campod-se", "role": "campod" },
+    { "name": "campod-sw", "role": "campod" },
+    { "name": "campod-nw", "role": "campod" }
+  ]
+}
