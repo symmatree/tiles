@@ -11,3 +11,5 @@ github_repository = "symmatree/tiles"
 onepassword_vault_name = "tiles-secrets"
 
 unifi_network_id = "643f0d49364f930b6077d96c"
+
+dns_zone_local = "local-symmatree-com"
