@@ -70,8 +70,8 @@ resource "helm_release" "argocd" {
 # Applies the argocd-applications Application, after which Argo CD owns the
 # rest of the cluster. See charts/argocd-applications-installer/README.md and
 # docs/config-propagation.md.
-resource "helm_release" "app_of_apps" {
-  name      = "app-of-apps"
+resource "helm_release" "argocd_applications_installer" {
+  name      = "argocd-applications-installer"
   namespace = kubernetes_namespace_v1.argocd.metadata[0].name
   chart     = "${path.module}/../../charts/argocd-applications-installer"
 
@@ -80,6 +80,10 @@ resource "helm_release" "app_of_apps" {
   # Applying a custom resource; Argo CD reconciles it when its controller is
   # ready, which may be after this returns.
   wait = false
+
+  # The argocd-applications Application already exists on both clusters, applied
+  # by kubectl and since owned by Argo CD, with no Helm ownership metadata.
+  take_ownership = true
 
   depends_on = [helm_release.argocd]
 }
