@@ -22,7 +22,8 @@ the item before syncing:
 | | |
 |---|---|
 | item | `fleet-ssh-key` in the `tiles-secrets` vault |
-| field | `private_key`, holding the PEM private key |
+| type | 1Password **SSH Key** item |
+| field | `private-key` -- hyphen, not underscore |
 
 Unprefixed, because there is one fleet and one key and both clusters read the same vault
 (`onepassword_vault_name` is set in `terraform.tfvars`, not per workspace). `ssh_key_secret`
@@ -31,6 +32,16 @@ copying a key into a new one.
 
 `OnePasswordItem` syncs it to a Secret of the same name, and the named field is mounted at
 `/secrets/ssh/id`.
+
+The operator lowercases field labels and replaces spaces with hyphens, so an SSH Key item's
+*private key* field becomes `private-key`. [`charts/jupyterhub/values.yaml`](../../../charts/jupyterhub/values.yaml)
+consumes `public-key` from its own SSH Key item the same way.
+
+**Unverified:** that precedent only reads the *public* half, so it does not prove the operator
+exposes the private half of an SSH Key item. If the synced Secret has no `private-key` key,
+the fix is either a different `ssh_key_field` or storing the key in a Secure Note instead --
+one parameter either way. Check with `kubectl -n fleet-control get secret fleet-ssh-key -o jsonpath='{.data}'`
+after the first sync.
 
 The matching **public** key must be the `SSH_PUBKEY` in `dotfiles-symm/pi-image/provision/fleet.env`,
 so a flashed card trusts it on first boot. Today that is the operator's own key; coordinator
