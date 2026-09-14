@@ -856,6 +856,57 @@ spec:
         pod-security.kubernetes.io/warn: baseline
 
 ---
+# Source: argocd-applications/templates/fleet-control-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fleet-control
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: fleet-control
+      parameters:
+        - name: cluster_name
+          string: 'placeholder'
+        - name: vault_name
+          string: 'placeholder'
+        - name: project_id
+          string: 'placeholder'
+        - name: app_settings
+          map:
+            image: 'ghcr.io/symmatree/coordinator-fleet-control:main'
+            hostname: 'fleet.placeholder.symmatree.com'
+            cluster_issuer: "real-cert"
+            # Shared across clusters (no prefix): there is one fleet and one key, and both
+            # clusters read the same vault. Point this at the existing 1Password item rather
+            # than copying the key into a new one; `ssh_key_field` names the field holding
+            # the PEM private key, which is mounted at /secrets/ssh/id.
+            ssh_key_secret: 'fleet-ssh-key'
+            # Hyphen, not underscore: the 1Password operator maps an ssh-key item's
+            # "private key" field to `private-key`. charts/jupyterhub consumes `public-key`
+            # from its own ssh-key item the same way.
+            ssh_key_field: 'private-key'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fleet-control
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+
+---
 # Source: argocd-applications/templates/flight-analysis-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
