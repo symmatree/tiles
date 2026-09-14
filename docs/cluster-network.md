@@ -22,6 +22,21 @@ Helm defaults and cluster overrides live in [`charts/cilium/values.yaml`](https:
 - **In-cluster resolution** is the normal Kubernetes path (kubelet-provided pod `resolv.conf` to the cluster DNS Service, CoreDNS). For behavior and Corefile details, use the live `kube-system` manifests or upstream CoreDNS docs rather than copying a snapshot here.
 - **Cilium** may observe or forward DNS for policy features (for example ToFQDNs); relevant Helm keys are in [`charts/cilium/values.yaml`](https://github.com/symmatree/tiles/blob/main/charts/cilium/values.yaml). Grafana mixins for CoreDNS live under the Argo-managed tanka env [`tanka/environments/coredns-mixin/main.jsonnet`](https://github.com/symmatree/tiles/blob/main/tanka/environments/coredns-mixin/main.jsonnet) (monitoring, not the CoreDNS server config).
 - **Node hostnames come from DHCP, not DNS.** A Talos node's name is delivered by the UniFi fixed-IP reservation over DHCP; reverse DNS (PTR) has no role in naming, and node PTRs in `10.0.128.0/18` come from UniFi, not raconteur. A bare-metal node that boots before DHCP is serving names comes up as `talos-<rand>` rather than `acebase`/`lancer` -- see [bare-metal-nodes.md: Node hostnames and DHCP-less boot](bare-metal-nodes.md#node-hostnames-and-dhcp-less-boot).
+- **A resolver change delivered by DHCP does not reach CoreDNS until its pods restart.** `forward . /etc/resolv.conf` resolves that file once, when the Corefile is parsed; the `reload` plugin watches the Corefile, not `resolv.conf`. Restart the `kube-system/coredns` deployment after changing the advertised resolver list -- see [#712](https://github.com/symmatree/tiles/issues/712).
+
+### The local.symmatree.com zone
+
+`local.symmatree.com` is the historical UniFi domain and is a **public** Cloud DNS zone in the seed project (`symm-custodes`, zone `local-symmatree-com`), delegated from Cloudflare. It is shared, and three things write to it:
+
+| writer | what | where declared |
+|---|---|---|
+| UniFi | forward names for anything with a DHCP lease (`morpheus`, `nuc-g3p-1`, the Talos nodes), served locally and never published to Cloud DNS | UniFi, not this repo |
+| cert-manager | `_acme-challenge` TXT, created and removed per DNS-01 solve | [`charts/cert-manager/templates/lets-encrypt-issuers.yaml`](https://github.com/symmatree/tiles/blob/main/charts/cert-manager/templates/lets-encrypt-issuers.yaml) |
+| Terraform | `cam` and `photos`, CNAMEs onto the Synology that UniFi cannot serve | [`tf/bootstrap/dns-local.tf`](https://github.com/symmatree/tiles/blob/main/tf/bootstrap/dns-local.tf) |
+
+Because cert-manager adds and removes records in this zone at will, **nothing may own the zone as a whole** -- Terraform declares individual record sets in it and no more.
+
+This cluster's own service names live under `tiles.symmatree.com`, published by external-dns (`--txt-owner-id=tiles`, `--domain-filter=tiles.symmatree.com`). external-dns does not write to `local.symmatree.com` and has no IAM on it.
 
 ## Proxmox VMs and the site LAN
 
