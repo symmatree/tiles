@@ -29,7 +29,10 @@ spec:
             # than copying the key into a new one; `ssh_key_field` names the field holding
             # the PEM private key, which is mounted at /secrets/ssh/id.
             ssh_key_secret: 'fleet-ssh-key'
-            ssh_key_field: 'private_key'
+            # Hyphen, not underscore: the 1Password operator maps an ssh-key item's
+            # "private key" field to `private-key`. charts/jupyterhub consumes `public-key`
+            # from its own ssh-key item the same way.
+            ssh_key_field: 'private-key'
   destination:
     server: https://kubernetes.default.svc
     namespace: fleet-control
