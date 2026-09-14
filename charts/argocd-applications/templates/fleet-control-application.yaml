@@ -24,9 +24,11 @@ spec:
             image: 'ghcr.io/symmatree/coordinator-fleet-control:main'
             hostname: 'fleet.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
             cluster_issuer: "real-cert"
-            # 1Password item holding the fleet SSH private key; the field named below is
-            # mounted at /secrets/ssh/id.
-            ssh_key_secret: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-fleet-ssh-key'
+            # Shared across clusters (no prefix): there is one fleet and one key, and both
+            # clusters read the same vault. Point this at the existing 1Password item rather
+            # than copying the key into a new one; `ssh_key_field` names the field holding
+            # the PEM private key, which is mounted at /secrets/ssh/id.
+            ssh_key_secret: 'fleet-ssh-key'
             ssh_key_field: 'private_key'
   destination:
     server: https://kubernetes.default.svc

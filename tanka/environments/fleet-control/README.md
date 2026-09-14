@@ -21,11 +21,16 @@ the item before syncing:
 
 | | |
 |---|---|
-| item | `{cluster}-fleet-ssh-key` in the `{vault}` vault |
+| item | `fleet-ssh-key` in the `tiles-secrets` vault |
 | field | `private_key`, holding the PEM private key |
 
-`OnePasswordItem` syncs it to a Secret of the same name, and the `private_key` field is
-mounted at `/secrets/ssh/id`.
+Unprefixed, because there is one fleet and one key and both clusters read the same vault
+(`onepassword_vault_name` is set in `terraform.tfvars`, not per workspace). `ssh_key_secret`
+and `ssh_key_field` are parameters -- point them at an item that already exists rather than
+copying a key into a new one.
+
+`OnePasswordItem` syncs it to a Secret of the same name, and the named field is mounted at
+`/secrets/ssh/id`.
 
 The matching **public** key must be the `SSH_PUBKEY` in `dotfiles-symm/pi-image/provision/fleet.env`,
 so a flashed card trusts it on first boot. Today that is the operator's own key; coordinator
