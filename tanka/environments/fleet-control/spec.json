@@ -1,0 +1,12 @@
+{
+  "apiVersion": "tanka.dev/v1alpha1",
+  "kind": "Environment",
+  "metadata": {
+    "name": "environments/fleet-control"
+  },
+  "spec": {
+    "namespace": "fleet-control",
+    "resourceDefaults": {},
+    "expectVersions": {}
+  }
+}
