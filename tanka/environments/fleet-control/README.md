@@ -64,10 +64,12 @@ the next sync -- no manual step.
 Each node takes a `name`, a `role`, and an optional `host` -- an address or a different
 hostname -- which defaults to `name`.
 
-```json
-{ "name": "coordinator", "role": "coordinator" }
-{ "name": "campod-se",   "role": "campod", "host": "10.0.5.237" }
-```
+The `host` values are current DHCP leases and will need updating when one moves.
+[#735](https://github.com/symmatree/tiles/issues/735) makes them reservations, after which the
+names resolve and `host` can come out.
+
+`campod-ne` and `campod-nw` are listed without a host because they have not been flashed; add
+one when they are.
 
 ## Storage and lifecycle
 
