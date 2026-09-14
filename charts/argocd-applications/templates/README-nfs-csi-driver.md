@@ -39,7 +39,7 @@ See [`docs/nfs-storage-architecture.md`](../../../docs/nfs-storage-architecture.
 
 ### Key Configuration Values
 
-Configuration is managed through the Application's `valuesObject`. These values are passed from Terraform via the bootstrap process and stored in the 1Password `{cluster_name}-misc-config` secret:
+Configuration is managed through the Application's `valuesObject`. Terraform passes these values in when it installs the root Application:
 
 - **NFS Server**: `nfs_server` - Hostname or IP of the NFS server (Synology NAS)
 - **Cluster NFS Path**: `cluster_nfs_path` - NFS share path for cluster-internal persistent data (e.g., `/volume2/tiles`)
@@ -47,12 +47,12 @@ Configuration is managed through the Application's `valuesObject`. These values 
 - **Enable Snapshotter**: `false` - Volume snapshots are not enabled. Note: The snapshotter is an external snapshotter that copies data (not a filesystem-level snapshot feature like ZFS or Btrfs snapshots).
 - **Storage Class Name**: `cluster-nfs`
 
-These values can be examined in the 1Password `{cluster_name}-misc-config` item's `config` section.
+These values are set in `tf/nodes/test.tfvars` and `tf/nodes/prod.tfvars`.
 
 ### Environment-Specific Settings
 
 - NFS server and paths are cluster-specific and set via Terraform/bootstrap process
-- Values are stored in 1Password `{cluster_name}-misc-config` secret and can be examined there
+- Values are set in `tf/nodes/test.tfvars` and `tf/nodes/prod.tfvars`
 - Production cluster typically uses `/volume2/tiles` for `cluster_nfs_path`
 - Test cluster typically uses `/volume2/tiles-test` for `cluster_nfs_path`
 - `datasets_nfs_path` is typically `/volume2/datasets` (shared across clusters)

@@ -1,6 +1,9 @@
 name: "argocd-pr-diff"
-# Broken test path: pull_request is commented out so it does not run in CI. Use
-# workflow_dispatch from the Actions tab to debug and fix it manually.
+# Disabled: pull_request is commented out so it does not run in CI. It diffs the
+# Application manifests rather than the effect of a change on the rendered
+# resources, which is the part worth reviewing. It also has no source for the
+# cluster config values it passes to helm; they need supplying from tf/nodes
+# variables. Use workflow_dispatch to debug.
 on:
   # pull_request:
   #   paths:
@@ -96,17 +99,6 @@ jobs:
           export-env: true
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
-          targetRevision: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/targetRevision"
-          pod_cidr: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/pod_cidr"
-          cluster_name: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/cluster_name"
-          external_ip_cidr: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/external_ip_cidr"
-          vault_name: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/vault_name"
-          loki_bucket_chunks: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/loki_bucket_chunks"
-          loki_bucket_ruler: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/loki_bucket_ruler"
-          loki_bucket_admin: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/loki_bucket_admin"
-          mimir_bucket_blocks: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/mimir_bucket_blocks"
-          mimir_bucket_ruler: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/mimir_bucket_ruler"
-          mimir_bucket_alertmanager: "op://tiles-secrets/${{ steps.cluster_config.outputs.cluster }}-misc-config/config/mimir_bucket_alertmanager"
 
       - name: Install yq
         run: |

@@ -3,8 +3,7 @@ resource "talos_machine_secrets" "this" {}
 locals {
   control_ips  = [for _, vm in var.vms : vm.ip_address if vm.type == "control"]
   bootstrap_ip = local.control_ips[0]
-  # Git ref Argo CD tracks for this cluster. Written to misc-config below and
-  # exported so Terraform-installed charts pass the same value Argo CD would.
+  # Git ref Argo CD tracks for this cluster.
   target_revision = var.cluster_name == "tiles" ? "prod" : "test"
 }
 
@@ -92,98 +91,6 @@ module "k8s" {
   seed_project_id   = var.seed_project_id
   dns_zone_ad_local = var.dns_zone_ad_local
   dns_zone_local    = var.dns_zone_local
-}
-
-resource "onepassword_item" "misc_config" {
-  vault    = var.onepassword_vault
-  title    = "${var.cluster_name}-misc-config"
-  category = "secure_note"
-  section {
-    label = "config"
-    field {
-      label = "pod_cidr"
-      value = var.pod_cidr
-    }
-    field {
-      label = "targetRevision"
-      value = local.target_revision
-    }
-    field {
-      label = "cluster_name"
-      value = var.cluster_name
-    }
-    field {
-      label = "external_ip_cidr"
-      value = var.external_ip_cidr
-    }
-    field {
-      label = "ingress_lb_ip"
-      value = var.ingress_lb_ip
-    }
-    field {
-      label = "vault_name"
-      value = var.onepassword_vault_name
-    }
-    field {
-      label = "project_id"
-      value = var.main_project_id
-    }
-    field {
-      label = "seed_project_id"
-      value = var.seed_project_id
-    }
-    field {
-      label = "cluster_nfs_path"
-      value = var.cluster_nfs_path
-    }
-    field {
-      label = "datasets_nfs_path"
-      value = var.datasets_nfs_path
-    }
-    field {
-      label = "nfs_server"
-      value = var.nfs_server
-    }
-    field {
-      label = "service_cidr"
-      value = var.service_cidr
-    }
-    field {
-      label = "control_plane_vip"
-      value = var.control_plane_vip
-    }
-    field {
-      label = "talos_vm_install_image"
-      value = local.vm_install_image
-    }
-    field {
-      label = "bootstrap_ip"
-      value = local.bootstrap_ip
-    }
-    field {
-      label = "worker_ips"
-      value = join(",", concat(
-        [for _, vm in var.vms : vm.ip_address if vm.type == "worker"],
-        [for _, node in var.metal_amd_nodes : node.ip_address if node.type == "worker"],
-        [for _, node in var.metal_intel_nodes : node.ip_address if node.type == "worker"]
-      ))
-    }
-  }
-  section {
-    label = "metadata"
-    field {
-      label = "source"
-      value = "managed by terraform"
-    }
-    field {
-      label = "root_module"
-      value = basename(abspath(path.root))
-    }
-    field {
-      label = "module"
-      value = basename(abspath(path.module))
-    }
-  }
 }
 
 data "talos_machine_configuration" "machineconfig_cp" {
@@ -289,7 +196,7 @@ output "target_revision" {
 }
 
 output "app_of_apps_values" {
-  description = "Values the root Argo CD Application propagates to every child Application. The same set appears in the config section of onepassword_item.misc_config above, for consumers that read it without running Terraform; #284 covers removing the duplication."
+  description = "Values the root Argo CD Application propagates to every child Application. Nearly all are tf/nodes variables; project_id comes from the bootstrap remote state."
   value = {
     targetRevision    = local.target_revision
     pod_cidr          = var.pod_cidr
