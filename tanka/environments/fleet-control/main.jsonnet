@@ -109,7 +109,15 @@ local fleetControl = {
       )
       + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state'),
 
-    service: k_util.serviceFor(self.deployment),
+    // serviceFor names the port after the deployment (`fleet-control-http`, 18 chars) and an
+    // Ingress backend port name is capped at 15. Name it `http` instead -- the length limit is
+    // the constraint, not the symbol.
+    local baseService = k_util.serviceFor(self.deployment),
+    service: baseService {
+      spec+: {
+        ports: [port { name: 'http' } for port in baseService.spec.ports],
+      },
+    },
 
     ingress:
       kIngress.new(config.name)
