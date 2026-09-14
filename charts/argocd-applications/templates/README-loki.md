@@ -63,7 +63,7 @@ Configuration is managed through the Application's `valuesObject`:
 ### Environment-Specific Settings
 
 - Cluster name, NFS server, and NFS path are cluster-specific and set via Terraform/bootstrap process
-- NFS path is stored in 1Password `{cluster_name}-misc-config` secret
+- NFS path comes from the `cluster_nfs_path` variable in `tf/nodes`
 
 ### Dependencies
 

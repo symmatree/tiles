@@ -1,6 +1,6 @@
 # Configuration Propagation Mechanism
 
-This document describes how configuration values flow from Terraform through 1Password to the bootstrap process and into individual Helm charts via the ArgoCD app-of-apps pattern.
+How configuration values flow from Terraform into individual Helm charts, via the Argo CD app-of-apps pattern.
 
 ## Underlying challenge
 
@@ -10,43 +10,29 @@ We have to somehow pass values created by terraform (service account secrets, fo
 
 The configuration propagation mechanism allows environment-specific and runtime values (originating from Terraform) to be injected into Kubernetes applications with a single operation. Instead of managing values separately for each application, all values are collected into a union set and passed once to the `argocd-applications` chart, which then propagates them to individual applications through templated `valuesObject` blocks.
 
-The key design decision is using 1Password as the interface between Terraform and Kubernetes: Terraform collects configuration values and stores them in a 1Password secure note (`misc-config`), and the bootstrap process retrieves them from there. This provides better isolation between infrastructure and application layers.
+Terraform passes the set directly into the Helm releases it installs. Nearly every value is a `tf/nodes` variable, so there is nothing to stage anywhere: the values live in `test.tfvars` and `prod.tfvars` and reach the cluster in the same apply that creates it.
 
 ## Architecture
 
-The architecture uses 1Password as the interface between Terraform (infrastructure) and Kubernetes (applications):
+Values go from Terraform into the installer chart, and from there down the Application tree:
 
 ```
-┌─────────────────────────────────────┐
-│ Infrastructure Layer (Terraform)    │
-│  - Collects values from variables   │
-│  - Writes to 1Password misc-config  │
-└──────────────┬──────────────────────┘
-               │
-               ↓ (writes config)
-        ┌──────────────┐
-        │  1Password   │ ← Interface between layers
-        │ misc-config  │   (human-readable, reviewable)
-        └──────┬───────┘
-               │
-               ↓ (retrieves config)
-┌─────────────────────────────────────┐
-│ Application Layer (Kubernetes)      │
-│  - GitHub Actions workflow          │
-│    • Loads from 1Password           │
-│    • Exports as environment vars    │
-│  - Per-chart bootstrap scripts      │
-│    • Terraform: k8s-*.tf          │
-│  - argocd-applications Chart        │
-│    • valuesObject (union of values) │
-│    • templates/ (symlinked)         │
-│      ├── argocd-application.yaml    │
-│      ├── cilium-application.yaml    │
-│      ├── cilium-config-application  │
-│      └── cert-manager-application   │
-│  - Individual Charts                │
-│    • Receive via valuesObject       │
-└─────────────────────────────────────┘
+tf/nodes variables (test.tfvars / prod.tfvars)
+        │
+        ↓  module.cluster.app_of_apps_values
+┌───────────────────────────────────────────┐
+│ Terraform (tf/nodes/k8s-argocd.tf)        │
+│   helm_release argocd-applications-installer│
+└───────────────────┬───────────────────────┘
+                    │  Application.spec.source.helm.valuesObject
+                    ↓
+┌───────────────────────────────────────────┐
+│ charts/argocd-applications                │
+│   one child Application per component,    │
+│   each with its own valuesObject          │
+└───────────────────┬───────────────────────┘
+                    ↓
+        each component's own chart
 ```
 
 **Key Design Points:**
@@ -57,22 +43,12 @@ The architecture uses 1Password as the interface between Terraform (infrastructu
 
 ## Bootstrap Process
 
-### 1. Terraform → 1Password Storage
+### 1. Where the values come from
 
-Terraform collects cluster configuration values from its variables and outputs, then stores them in a 1Password secure note item named `{cluster_name}-misc-config`. The item contains a `config` section with the following fields:
-
-- `targetRevision` - Git branch/tag to deploy (also selects Helm overlays such as `charts/static-certs/values-${targetRevision}.yaml` in the static-certs Application)
-- `cluster_name` - Name of the Kubernetes cluster
-- `pod_cidr` - CIDR range for pod IPs
-- `external_ip_cidr` - CIDR range for external IPs
-- `vault_name` - 1Password vault name (e.g., `tiles-secrets`)
-
-**Note:** `project_id` is stored as a GitHub secret because it's required to run Terraform (for GCP authentication and resource creation). Since Terraform needs it to create the misc-config item, it cannot be stored in misc-config itself - that would create a circular dependency.
-
-**Benefits of this approach:**
-- **No environment variables required**: Humans can run `terraform plan` or `terraform apply` without providing a large number of environment variables - Terraform reads from its own variables and writes to 1Password
-- **Easy review**: The current configuration can be easily reviewed in 1Password's UI
-- **Clear interface**: 1Password serves as the complete interface between Terraform (infrastructure) and Kubernetes (applications), providing better isolation and separation of concerns
+`module.cluster.app_of_apps_values` is the propagated set. Nearly all of it is
+`tf/nodes` variables, set per cluster in `test.tfvars` and `prod.tfvars`;
+`project_id` comes from the `tf/bootstrap` remote state, and `targetRevision` is
+derived from the cluster name.
 
 ### 2. Terraform installs what Argo CD needs before it can take over
 
@@ -105,11 +81,6 @@ Cilium and Argo CD are installed from their own charts with the same value files
 their Applications use, plus the keys Argo CD would template into `valuesObject`
 -- so Terraform and Argo CD render identical output from identical inputs, which
 is what lets Terraform adopt an install Argo CD was managing.
-
-`misc-config` is no longer on that path. It is still written by Terraform and
-still read, by `argocd-pr-diff` (which renders charts for a PR without running
-Terraform) and by `refresh-api-versions` (for `bootstrap_ip` and
-`control_plane_vip`).
 
 `scripts/helm-common.bash` reads the propagated key names from
 `charts/argocd-applications-installer/values.yaml` so `build.sh` can render every
@@ -185,25 +156,21 @@ This works because ArgoCD renders the Application resource (including the `value
 
 ## Value Propagation Flow
 
-1. **Terraform** → Collects configuration values from variables and outputs, then stores them in 1Password `{cluster_name}-misc-config` item (config section)
-2. **1Password** → Serves as the interface between Terraform and Kubernetes, storing the current configuration state
-3. **Terraform** → holds the same values as `module.cluster.app_of_apps_values`, so nothing has to read them back out of 1Password to install the tree
-4. **Terraform** → passes `module.cluster.app_of_apps_values` straight into the `app-of-apps` release, and the same values into the Cilium and Argo CD releases
-5. **argocd-applications/values.yaml** → Contains placeholder values used for:
-   - **Helm requirement**: Helm 4.0.0+ requires at least an empty `values.yaml` file
-   - **Documentation**: Documents the expected value structure
-   - **Rendered YAML generation**: Used by `build.sh` to generate `rendered.yaml` files via `helm template` for debugging and PR review
-   - **Template validation**: Helps confirm values are used properly in templates, especially for complex Helm logic
-6. **argocd-applications** Application manifest → `valuesObject` receives values substituted from the environment at apply time (root Application), then Argo CD propagates them when rendering child Applications
-7. **Template files** → Reference `{{ .Values.* }}` which resolve to parent chart's values
-8. **Individual charts** → Receive values via their Application's `valuesObject` blocks
+1. **Terraform** → collects the set as `module.cluster.app_of_apps_values`, nearly all of it `tf/nodes` variables
+2. **Terraform** → passes it into the installer release, and the same values into the Cilium and Argo CD releases
+3. **The installer's Application** → carries the set in `valuesObject` to `charts/argocd-applications`
+4. **Child Applications** → reference `{{ .Values.* }}`, resolved from that `valuesObject`, and pass the subset each component needs into its chart
+
+Chart `values.yaml` files hold placeholders for the same keys. Helm requires the
+file to exist, and `build.sh` uses the placeholders to render every chart
+offline for review.
 
 ## Benefits
 
 1. **Single Point of Configuration** - All environment-specific values are passed once to `argocd-applications`
 2. **Automatic Propagation** - Values automatically flow to individual charts through templated `valuesObject` blocks
 3. **Type Safety** - Helm validates that all referenced values exist
-4. **Maintainability** - Adding a new value means three places: `module.cluster.app_of_apps_values`, the installer chart (`values.yaml` and its `valuesObject`), and the child Application that needs it. Add it to the `misc_config` item as well only if something outside Terraform reads it.
+4. **Maintainability** - Adding a new value means three places: `module.cluster.app_of_apps_values`, the installer chart (`values.yaml` and its `valuesObject`), and the child Application that needs it.
 5. **Separation of Concerns** - Terraform manages infrastructure values, Helm manages application deployment
 6. **Debugging & Review** - `values.yaml` files enable generation of `rendered.yaml` files via `helm template`, making it easier to:
    - Debug template rendering issues
@@ -211,81 +178,17 @@ This works because ArgoCD renders the Application resource (including the `value
    - Validate complex Helm logic beyond simple interpolation
    - For third-party charts (ArgoCD, Cilium), review the complex resulting manifests even without final runtime values
 
-## Adding New Values
+## Adding a new propagated value
 
-To add a new configuration value that needs to propagate to charts:
+Three places, plus a regenerate:
 
-1. **Update Terraform** - Add the field to the `misc_config` item's `config` section in `tf/modules/talos-cluster/main.tf`. This ensures Terraform will collect the value and write it to 1Password when applied.
-2. **Update GitHub Actions Workflow** - Add the field to the "Load cluster config from 1Password" step's `env` block:
-   ```yaml
-   - name: Load cluster config from 1Password
-     uses: 1password/load-secrets-action@v3
-     with:
-       export-env: true
-     env:
-       # ... existing values ...
-       new_value: "op://tiles-secrets/${{ github.event.inputs.cluster }}-misc-config/config/new_value"
-   ```
-   The `export-env: true` flag automatically exports all values in the `env` block as environment variables.
-3. **Update `charts/app-of-apps`** - add the key to `values.yaml` (with a placeholder) and to the template's `valuesObject`, and add it to `module.cluster.app_of_apps_values` so Terraform supplies the real value
-4. **Update `argocd-applications/values.yaml`** - Add placeholder value (used for `rendered.yaml` generation and documentation)
-5. **Update `argocd-applications/application.yaml`** - Add to `valuesObject` block: `varName: "{{ .Values.varName }}"`
-6. **Update individual chart templates** - Reference the value in their `valuesObject` blocks as needed
-7. **Regenerate rendered.yaml** - Run `build.sh` to regenerate `rendered.yaml` files for review
+1. **`module.cluster.app_of_apps_values`** (`tf/modules/talos-cluster/main.tf`) -- the real value
+2. **`charts/argocd-applications-installer`** -- a placeholder in `values.yaml` and a line in the template's `valuesObject`
+3. **The child Application** in `charts/argocd-applications/templates/` that needs it, in its own `valuesObject`
 
-## Example: Adding a New Value
+Then `./build.sh` to regenerate the `rendered.yaml` files.
 
-Suppose we want to add a `region` value that needs to be passed to the `cert-manager` chart:
-
-1. **Terraform** (`tf/modules/talos-cluster/main.tf`):
-   ```hcl
-   resource "onepassword_item" "misc_config" {
-     # ... existing config ...
-     section {
-       label = "config"
-       field {
-         label = "region"
-         value = var.region  # or hardcoded value
-       }
-       # ... other fields ...
-     }
-   }
-   ```
-
-2. **Terraform** (`tf/modules/talos-cluster/main.tf`, `app_of_apps_values`):
-   ```hcl
-   output "app_of_apps_values" {
-     value = {
-       # ... existing values ...
-       region = var.region
-     }
-   }
-   ```
-
-3. **`charts/app-of-apps`** - `values.yaml` placeholder plus the `valuesObject` line, and `module.cluster.app_of_apps_values` for the real value
-
-4. **argocd-applications/values.yaml**:
-   ```yaml
-   # ... existing values ...
-   region: "placeholder-region"
-   ```
-   This placeholder value is used when generating `rendered.yaml` via `helm template` for debugging and PR review.
-
-5. **argocd-applications/application.yaml**:
-   ```yaml
-   valuesObject:
-       # ... existing values ...
-       region: "{{ .Values.region }}"
-   ```
-
-6. **templates/cert-manager-application.yaml**:
-   ```yaml
-   valuesObject:
-       # ... existing values ...
-       region: "{{ .Values.region }}"
-   ```
-
-The value will now flow from Terraform (collects and writes) → 1Password (stores) → GitHub Actions (retrieves) → bootstrap scripts / Argo CD → argocd-applications → cert-manager chart.
+Keeping (1) and (2) in step by hand is what issue #284 is about.
 
 ## Rendered YAML Generation
 
@@ -322,14 +225,13 @@ helm template "${name}" . --namespace "${name}" \
 
 The configuration mechanism handles three types of values differently:
 
-### 1. Non-Sensitive Configuration (misc-config)
+### 1. Non-sensitive configuration
 
-**Source**: Terraform variables and outputs
-**Storage**: 1Password `{cluster_name}-misc-config` item (config section)
-**Propagation**: Terraform → app-of-apps `valuesObject` → argocd-applications → individual charts
+**Source**: `tf/nodes` variables, per cluster in `test.tfvars` / `prod.tfvars`
+**Propagation**: Terraform → installer `valuesObject` → argocd-applications → individual charts
 **Examples**: `cluster_name`, `pod_cidr`, `external_ip_cidr`, `targetRevision`
 
-These values flow through the standard propagation mechanism described above.
+These flow through the standard mechanism described above.
 
 ### 2. Service Account Secrets
 
@@ -355,16 +257,11 @@ This approach:
 - Allows charts to manage their own secret lifecycle
 - Works with ArgoCD's sync process (OnePassword operator handles the sync)
 
-### 3. Environment-Specific Static Values
+### 3. Values from the bootstrap layer
 
-**Source**: Environment configuration (not from Terraform)
-**Storage**: GitHub secrets or other external sources
-**Propagation**: Terraform → app-of-apps `valuesObject` → argocd-applications
-**Examples**: `project_id` (GitHub secret - required for Terraform to run, so cannot be in misc-config)
-
-Note: `vault_name` is now stored in misc-config and managed by Terraform, so it flows through the standard propagation mechanism. Values that are required to run Terraform (like `project_id` for GCP authentication) must remain external to avoid circular dependencies.
-
-These are typically hardcoded per-environment or stored separately from Terraform-managed values.
+**Source**: `tf/bootstrap` remote state, read by `tf/nodes/remote.tf`
+**Propagation**: Terraform → installer `valuesObject` → argocd-applications
+**Examples**: `project_id`, which `tf/bootstrap` creates along with the GCP projects themselves
 
 ## Design Decisions
 
@@ -375,8 +272,6 @@ passes values straight into the Helm releases it installs. What it still holds:
 
 - **Secrets** the cluster pulls at runtime via `OnePasswordItem`, and the two
   operator credentials Terraform writes so the operator can serve them
-- **Values read outside Terraform**: `misc-config` for `argocd-pr-diff`, which
-  renders charts for a PR without running Terraform, and `refresh-api-versions`
 - **Artifacts a human needs**: kubeconfig, talosconfig, the Argo CD admin login
 
 ### Why valuesObject for Template Expansion?
@@ -407,7 +302,7 @@ While the current mechanism works well, here are some potential enhancements to 
 
 ### 1. Standardize 1Password Item Naming
 
-Currently, items follow patterns like `{cluster_name}-misc-config` and `{cluster_name}-cert-manager-dns01-sa-key`. Consider:
+Currently, items follow patterns like `{cluster_name}-kubeconfig` and `{cluster_name}-cert-manager-dns01-sa-key`. Consider:
 - Documenting a naming convention: `{cluster_name}-{category}-{purpose}`
 - Creating a helper script to validate item names match conventions
 - Adding Terraform validation to ensure items follow the pattern
@@ -443,17 +338,3 @@ Document common patterns:
 - **Pass-through**: `value: "{{ .Values.value }}"` - just pass the value through
 - **Template expansion**: `domain: "{{ .Values.service }}.{{ .Values.cluster }}.domain.com"` - construct from multiple values
 - **Nested structures**: How to pass nested Helm values (like `argo-cd.global.domain`)
-
-### 6. External Prerequisites Must Stay External
-
-Values that are required to run Terraform (like `project_id` for GCP authentication) cannot be stored in misc-config because Terraform needs them to create misc-config in the first place. This creates a circular dependency:
-
-- Terraform needs `project_id` to authenticate to GCP
-- Terraform needs to run to create misc-config
-- Therefore, `project_id` cannot be in misc-config
-
-These values must remain in external sources (GitHub secrets, environment variables, etc.) that are available before Terraform runs. This is a design constraint, not a limitation to work around.
-
-### Why project_id Stays External
-
-`project_id` must remain as a GitHub secret (or other external source) because it's required for Terraform to authenticate to GCP and create resources. Since Terraform needs `project_id` to run, and Terraform creates misc-config, storing `project_id` in misc-config would create a circular dependency. This is an intentional design constraint.
