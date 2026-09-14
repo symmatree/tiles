@@ -37,11 +37,15 @@ The operator lowercases field labels and replaces spaces with hyphens, so an SSH
 *private key* field becomes `private-key`. [`charts/jupyterhub/values.yaml`](../../../charts/jupyterhub/values.yaml)
 consumes `public-key` from its own SSH Key item the same way.
 
-**Unverified:** that precedent only reads the *public* half, so it does not prove the operator
-exposes the private half of an SSH Key item. If the synced Secret has no `private-key` key,
-the fix is either a different `ssh_key_field` or storing the key in a Secure Note instead --
-one parameter either way. Check with `kubectl -n fleet-control get secret fleet-ssh-key -o jsonpath='{.data}'`
-after the first sync.
+**Unverified, and it cannot be checked before the first sync** -- the `OnePasswordItem` is
+created by this environment, so there is no Secret to inspect until it exists. The jupyterhub
+precedent only reads the *public* half, so it establishes the hyphen convention but not that
+the operator exposes an SSH Key item's private half at all.
+
+So this is deploy-and-look. If the key does not arrive, the pod fails to start or fails to
+read `/secrets/ssh/id`, and the fix is one parameter: a different `ssh_key_field`, or the key
+in a Secure Note instead. Nothing reaches a vehicle either way -- the service contacts a node
+only when an action is requested.
 
 The matching **public** key must be the `SSH_PUBKEY` in `dotfiles-symm/pi-image/provision/fleet.env`,
 so a flashed card trusts it on first boot. Today that is the operator's own key; coordinator
