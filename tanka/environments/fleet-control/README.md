@@ -61,13 +61,12 @@ service, and a dedicated key would make it revocable rather than less powerful.
 Editing it changes the pod-template hash, so Argo rolls the Deployment and the change lands on
 the next sync -- no manual step.
 
-`host` is optional and defaults to `name`, so the file carries **names, not addresses**. That
-depends on the nodes resolving, which is what [#735](https://github.com/symmatree/tiles/issues/735)
-(Terraform-declared UniFi reservations) is for. Until then a node can be pinned by adding
-`"host": "10.0.x.y"`, but a DHCP address in git is a temporary measure, not the intent.
+Each node takes a `name`, a `role`, and an optional `host` -- an address or a different
+hostname -- which defaults to `name`.
 
 ```json
-{ "name": "campod-se", "role": "campod", "host": "10.0.5.237" }
+{ "name": "coordinator", "role": "coordinator" }
+{ "name": "campod-se",   "role": "campod", "host": "10.0.5.237" }
 ```
 
 ## Storage and lifecycle
