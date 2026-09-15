@@ -75,11 +75,13 @@ local fleetControl = {
         + kContainer.withEnvMap({
           FLEET_INVENTORY: '/config/inventory.json',
           FLEET_SSH_KEY: '/secrets/ssh/id',
-          FLEET_HOSTKEYS: '/state/hostkeys.json',
+          // The name the service actually reads, and the reason the PVC below exists:
+          // recorded host keys must land on /state to survive a pod restart.
+          FLEET_KNOWN_HOSTS: '/state/known_hosts',
         })
         + probe(kContainer.readinessProbe)
         + kContainer.readinessProbe.withInitialDelaySeconds(5)
-        // No liveness probe: a bootstrap run holds state in memory for ~20 minutes, and
+        // No liveness probe: a converge holds state in memory for 20 minutes or more, and
         // restarting the pod mid-run abandons the remaining steps (the work already on the
         // node survives, but nothing issues what comes next).
         + kContainer.resources.withRequests({ cpu: '50m', memory: '128Mi' })
