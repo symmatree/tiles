@@ -30,6 +30,15 @@ admin:
   userKey: username
   passwordKey: password
 
+# Grafana is the one LGTM component with no self-monitoring: it already serves
+# ~4200 grafana_* lines on /metrics, but nothing scraped them. This emits the
+# chart's ServiceMonitor, which Alloy already discovers via
+# prometheusOperatorObjects -- the same path the Mimir and Cilium
+# ServiceMonitors take. Unblocks the datasource-reachability check in #650,
+# which needs grafana_datasource_request_total.
+serviceMonitor:
+  enabled: true
+
 plugins:
   - grafana-github-datasource
   - grafana-lokiexplore-app
