@@ -884,13 +884,13 @@ spec:
             hostname: 'fleet.placeholder.symmatree.com'
             cluster_issuer: "real-cert"
             # Shared across clusters (no prefix): there is one fleet and one key, and both
-            # clusters read the same vault. Point this at the existing 1Password item rather
-            # than copying the key into a new one; `ssh_key_field` names the field holding
-            # the PEM private key, which is mounted at /secrets/ssh/id.
-            ssh_key_secret: 'fleet-ssh-key'
-            # Hyphen, not underscore: the 1Password operator maps an ssh-key item's
-            # "private key" field to `private-key`. charts/jupyterhub consumes `public-key`
-            # from its own ssh-key item the same way.
+            # clusters read the same vault. Created by terraform, tf/nodes/fleet-ssh-key.tf
+            # -- the item it replaced was hand-made and held the key in PKCS8, which ssh
+            # cannot read for ed25519 (`Load key: invalid format`, coordinator#261).
+            ssh_key_secret: 'fleet-ssh-key-managed'
+            # The operator passes a field label straight through when it is already a valid
+            # ConfigMap key, so terraform's `private-key` field arrives under that name.
+            # charts/jupyterhub consumes `public-key` from its own ssh-key item the same way.
             ssh_key_field: 'private-key'
   destination:
     server: https://kubernetes.default.svc

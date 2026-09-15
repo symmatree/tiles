@@ -21,7 +21,7 @@ the item before syncing:
 
 | | |
 |---|---|
-| item | `fleet-ssh-key` in the `tiles-secrets` vault |
+| item | `fleet-ssh-key-managed` in the `tiles-secrets` vault, created by `tf/nodes/fleet-ssh-key.tf` |
 | type | 1Password **SSH Key** item |
 | field | `private-key` -- hyphen, not underscore |
 
