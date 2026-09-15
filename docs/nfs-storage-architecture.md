@@ -16,18 +16,32 @@ Loki and Mimir require a shared filesystem that supports ReadWriteMany (RWX) acc
 
 ## Storage Strategy
 
-All services use **static PVs with fixed paths** to ensure persistence across ArgoCD Application deletion/recreation. This allows data to survive Application deletion since the PV persists independently.
+Storage is two-tier, and the distinction is the thing to understand before deleting anything.
 
-### Static PVs
+**Durable data lives on static PVs with fixed NFS paths and `reclaimPolicy: Retain`.** These survive deletion and recreation of the ArgoCD Application, because the PV persists independently of the PVC. Cascade-uninstall Mimir or Loki and reinstall it, and the long-term data is still there.
+
+**Working state lives on dynamically-provisioned PVs with `reclaimPolicy: Delete`** and is discarded with the PVC. That is intentional: it is caches, write-ahead logs and the ingest queue, all reconstructible from the durable tier or simply not worth keeping.
+
+### Durable tier (static PV, Retain)
 
 - **Static PV** with fixed path under cluster-specific NFS shares
 - **PVC bound to that PV** (not dynamically provisioned)
-- **Reclaim policy: Retain** - PVs persist even if PVCs are deleted
+- **Reclaim policy: Retain** -- PVs persist even if PVCs are deleted
 - Used by:
-  - **Loki**: `/volume2/{cluster_name}/loki-data` (e.g., `/volume2/tiles/loki-data` for prod, `/volume2/tiles-test/loki-data` for test)
-  - **Mimir**: `/volume2/{cluster_name}/mimir-data` (e.g., `/volume2/tiles/mimir-data` for prod, `/volume2/tiles-test/mimir-data` for test)
+  - **Loki**: `/volume2/{cluster_name}/loki-data` (e.g., `/volume2/tiles/loki-data` for prod, `/volume2/tiles-test/loki-data` for test), mounted at `/mnt/loki-nfs`; holds `chunks_directory` and `rules_directory`
+  - **Mimir**: `/volume2/{cluster_name}/mimir-data` (e.g., `/volume2/tiles/mimir-data` for prod, `/volume2/tiles-test/mimir-data` for test), mounted at `/mnt/mimir-nfs`; holds `blocks_storage`, `ruler_storage` and `alertmanager` storage
   - **ODM**: `/volume2/datasets/webodm-media-{cluster_name}` (with subpath mount for isolation)
   - **JupyterHub**: `/volume2/{cluster_name}/jupyterhub-home` (shared RWX home; each singleuser server mounts a per-user `subPath: {username}` under it)
+
+### Ephemeral tier (dynamic PV, Delete)
+
+Provisioned by the `cluster-nfs` and `local-path` StorageClasses, both of which are `reclaimPolicy: Delete`. Deleting the PVC deletes the data.
+
+- **Mimir**: `storage-mimir-ingester-N` (TSDB head and WAL at `/data`), `storage-mimir-compactor-0`, `storage-mimir-store-gateway-0`, `storage-mimir-alertmanager-0`, `kafka-data-mimir-kafka-0` (the ingest queue)
+- **Loki**: `storage-loki-0` (WAL at `/var/loki`)
+- **Others**: `grafana`, `odm-postgres`, `apprise-attach`, `fleet-control-state`, `rtkbase-persist`, `hub-db-dir`
+
+Losing this tier costs the **window of recent data that has not yet been flushed to the durable tier** -- samples still in the ingester head or the Kafka queue, log lines still in the WAL. Everything already written to blocks or chunks is unaffected. Note that `grafana` and `odm-postgres` are on this tier and are *not* reconstructible in the same way; they are dynamic today, which is a choice worth revisiting rather than a guarantee.
 
 ## NFS Configuration
 
