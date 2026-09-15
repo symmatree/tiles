@@ -35,7 +35,7 @@ Current notebooks: [`notebooks/`](../notebooks/) -- `mimir-health.ipynb`,
 `mimir-usage.ipynb`, `mimir-nolgtm.ipynb`, `loki-health.ipynb`,
 `loki-usage.ipynb`, `loki-nolgtm.ipynb`, `alloy-health.ipynb`,
 `alloy-nomon.ipynb`, `raconteur-health.ipynb`, `proxmox-health.ipynb`,
-`metal-health.ipynb`, `cilium-health.ipynb`, sharing
+`metal-health.ipynb`, `cilium-health.ipynb`, `thermal-crossclass.ipynb`, sharing
 [`nb_capture.py`](../notebooks/nb_capture.py). Roadmap for the rest of the stack:
 see **Component roadmap** below.
 
@@ -108,6 +108,20 @@ debugging, not the premise of the notebook.
 | Proxmox LXC (edge host) | host health: hwmon temps, NVMe, throttle, host disk I/O, root LV | built | [#653](https://github.com/symmatree/tiles/issues/653) |
 | Bare-metal Talos (lancer, acebase) | host health: CPU/iGPU/storage temps, throttle, resources, `/var`, talos-`<rand>` gate | built | [#653](https://github.com/symmatree/tiles/issues/653) |
 | Cilium / cluster-network | health: node reachability, agent/endpoint health, datapath pressure (BPF/CT/NAT maps, drops), IPAM, mixin-alert state | built | -- |
+
+**`thermal-crossclass.ipynb`** is the one notebook that is not per-software: it spans every
+device class that reports a temperature (bare-metal, Proxmox, raconteur) because its questions
+are cross-cutting and no per-class notebook can answer them -- *which sensor anywhere is closest
+to firing*, and *which sensors have nothing watching them at all*. The second is the reason it
+exists. `node_hwmon_temp_crit_celsius` is present on most chips but not all, and where a driver
+has no limit it emits a sentinel (127 C, or 65261.85 C in the sibling `_max`) rather than
+nothing -- so a sensor can look protected while nothing is watching it. The notebook audits that
+directly, and is the companion to the `Bond / Temperatures` Grafana board
+([#688](https://github.com/symmatree/tiles/issues/688)); both read their thresholds from
+`tanka/environments/bond-mixin/mixin/config.libsonnet`, so neither can drift from the alerts.
+Where a cross-cutting notebook is the right shape, it still follows the same skeleton and the
+same authoring rules -- the placement rule decides *which repo*, not whether the subject has to
+be a single component.
 
 The **Cilium** notebook is a plain health notebook (cilium self-metrics are scraped into
 Mimir, so it assumes the stack works, like the edge-host rows). Its node-reachability section
