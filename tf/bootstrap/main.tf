@@ -22,6 +22,10 @@ terraform {
       source  = "1Password/onepassword"
       version = ">= 2.1.2"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = ">= 4.0"
+    }
   }
   backend "gcs" {
     bucket = "custodes-tf-state"
