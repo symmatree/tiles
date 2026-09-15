@@ -15,6 +15,8 @@ local snmpHexLabel(str) =
     proxmoxCoreTempThresholdCelsius: 90,
     proxmoxCoreTempFor: '10m',
     proxmoxInstanceSelector: 'instance=~"nuc-g.*"',
+    // Dashboard-only (no alert). Only the g3p NUCs expose an NVMe hwmon; g2p report none.
+    proxmoxStorageChipNames: 'nvme',
 
     // Bare-metal Talos workers (cluster="tiles"): CPU temp via chip_name join, so both
     // Intel (coretemp) and AMD (k10temp) match without hardcoding node names or hashed chips.
@@ -28,6 +30,8 @@ local snmpHexLabel(str) =
     metalGpuChipNames: 'amdgpu',
     metalGpuTempThresholdCelsius: 95,
     metalGpuTempFor: '10m',
+    // Storage sensors, dashboard-only (no alert): lancer NVMe, acebase SATA SSD via drivetemp.
+    metalStorageChipNames: 'nvme|drivetemp',
 
     raconteurInstance: 'raconteur',
     raconteurSnmpJob: 'integrations/snmp/raconteur',
@@ -49,5 +53,28 @@ local snmpHexLabel(str) =
     // raidStatus values (7 syncing, 8 parity-check, 13 scrubbing), not 11/12.
     raconteurDiskHealthFor: '15m',
     raconteurVolumeBadFor: '5m',
+
+    // --- dashboard ----------------------------------------------------------
+    dashboardTags: ['bond', 'temperature'],
+    dashboardTitle: 'Bond / Temperatures',
+    dashboardUid: 'bond-temperature',
+    dashboardPeriod: 'now-24h',
+    dashboardTimezone: 'utc',
+    dashboardRefresh: '1m',
+    // Name of the datasource template variable; the deploy-time wrapper can set its default
+    // via `datasourceDefaults` so the dashboard opens on the right Mimir without a manual pick.
+    datasourceName: 'datasource',
+
+    // Some hardware reports its own shutdown limit in node_hwmon_temp_crit_celsius, which is a
+    // far better reference line than a fixed threshold -- but drivers also emit sentinels for
+    // "no limit set" (acebase's drivetemp and raconteur's i2c chip both report 127; the NVMe
+    // composite sensors report 65261.85 in the sibling _max metric). Anything outside this band
+    // is a sentinel, not a limit, and is dropped so the board shows crit only where it is real.
+    critSaneMinCelsius: 40,
+    critSaneMaxCelsius: 120,
+
+    // Passive-throttle cooling devices. Fan and PCIe_Port_Link_Speed entries are step devices
+    // on an unrelated scale, so they are excluded.
+    coolingDeviceTypes: 'Processor|intel_powerclamp',
   },
 }

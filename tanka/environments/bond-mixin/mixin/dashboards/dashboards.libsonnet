@@ -1,3 +1,1 @@
-{
-  grafanaDashboards+:: {},
-}
+(import 'bond-temperature.libsonnet')
