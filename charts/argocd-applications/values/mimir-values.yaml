@@ -51,6 +51,23 @@ mimir:
       filesystem:
         dir: /mnt/mimir-nfs/alertmanager
 
+# The chart emits a ServiceMonitor for every component including the gateway,
+# but the gateway is nginx and serves no /metrics -- so that target has been
+# permanently down, with "open() /etc/nginx/html/metrics failed" in its log once
+# a minute. The gateway is the single front door for writes, reads, rule sync
+# and alerts (and runs one replica), so the right fix is to make the target
+# real rather than drop it: serve a parseable exposition-format liveness gauge.
+# stub_status is deliberately NOT used -- its output is not exposition format,
+# so scraping it fails to parse and the target stays down.
+gateway:
+  nginx:
+    config:
+      serverSnippet: |
+        location = /metrics {
+          default_type text/plain;
+          return 200 "# HELP mimir_gateway_up Gateway nginx is serving.\n# TYPE mimir_gateway_up gauge\nmimir_gateway_up 1\n";
+        }
+
 # Self-monitoring: emit a ServiceMonitor per Mimir component so the cluster's
 # Alloy (k8s-monitoring) stack scrapes cortex_* into the k8s tenant. Without
 # this, Mimir's own metrics are exposed but scraped by nothing, so we can't see

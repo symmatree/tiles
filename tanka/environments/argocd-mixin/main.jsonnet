@@ -17,6 +17,11 @@ libMonResources.new(
     _config+:: {
       grafanaUrl: 'https://grafana.' + APP.cluster_name + '.symmatree.com',
       argocdUrl: 'https://argocd.' + APP.cluster_name + '.symmatree.com',
+      // argocd and cilium are installed by Terraform (helm_release), so they
+      // deliberately carry no syncPolicy.automated and Argo CD is not meant to
+      // sync them. Without this they trip ArgoCdAppAutoSyncDisabled forever.
+      // Keep in step with the set of releases tf/nodes installs directly.
+      argoCdAutoSyncDisabledIgnoredApps: 'argocd|cilium',
     }
   }
   ,
