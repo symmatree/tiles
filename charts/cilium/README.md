@@ -4,7 +4,7 @@
 
 [Cilium](https://github.com/cilium/cilium) is the cloud-native networking and security platform providing CNI (Container Network Interface) functionality for the cluster. It replaces kube-proxy and provides advanced networking features including network policies, service mesh capabilities, and observability through [Hubble](https://github.com/cilium/hubble).
 
-Cilium is bootstrapped via CI workflow before ArgoCD (as the CNI must be installed for the cluster to function), then managed by ArgoCD through its Application resource.
+Cilium is installed by Terraform ([`tf/nodes/k8s-cilium.tf`](../../tf/nodes/k8s-cilium.tf)) during `nodes-plan-apply`, because the CNI must exist before the cluster can run pods. Argo CD holds a matching Application for visibility, but does **not** sync it -- see [Ownership](#ownership).
 
 ## Architecture
 
@@ -63,7 +63,9 @@ Configuration is managed through `values.yaml` and overridden via the Applicatio
 
 ## Terraform Integration
 
-N/A - Cilium is bootstrapped via CI workflow and does not have Terraform-managed resources.
+Cilium **is** Terraform-managed. [`tf/nodes/k8s-cilium.tf`](../../tf/nodes/k8s-cilium.tf) creates the `cilium` namespace (with privileged pod-security labels) and a `helm_release.cilium` pointing at the local umbrella chart in this directory. It replaces the former `charts/cilium/bootstrap.sh`, which did `helm template | kubectl apply`.
+
+The release runs with `wait = false`: Helm's readiness gate would cover the whole release, and the CNI has to come up before the things it gates can become ready.
 
 ## Application Manifest
 
@@ -71,23 +73,16 @@ N/A - Cilium is bootstrapped via CI workflow and does not have Terraform-managed
 - **Helm Chart**: Uses the `charts/cilium` directory as a Helm chart
 - **Values**: [`values.yaml`](values.yaml)
 - **Namespace**: `cilium`
-- **Sync Policy**: Automated with prune and self-heal enabled
-- **Sync Options**:
-  - `CreateNamespace=true`
-  - `ServerSideApply=true`
+- **Sync Policy**: none -- the Application deliberately carries no `syncPolicy.automated`
+- **Sync Options**: `ServerSideApply=true`
 
-### Bootstrap Process
+### Ownership
 
-Cilium is installed by Terraform ([`tf/nodes/k8s-cilium.tf`](../../tf/nodes/k8s-cilium.tf)) during `nodes-plan-apply`:
+Terraform owns the release; Argo CD watches but does not act. The `argocd-applications` chart still renders a Cilium Application so the component appears in the Argo CD UI, but it has no `syncPolicy.automated` -- Terraform and Argo would otherwise both apply the same change, and Argo CD reports drift on this chart without correcting it.
 
-1. Creates the `cilium` namespace with privileged pod security labels
-2. Runs `helm template` with cluster-specific values (pod CIDR, cluster name, Hubble UI hostname, loaded from 1Password)
-3. Applies manifests via `kubectl apply --server-side`
-4. Skips CRD installation (CRDs are installed separately or by Cilium itself)
+A consequence worth knowing: the Application permanently satisfies `ArgoCdAppAutoSyncDisabled`. That alert excludes `cilium` (and `argocd`, which is managed the same way) via `argoCdAutoSyncDisabledIgnoredApps` in [`tanka/environments/argocd-mixin/main.jsonnet`](../../tanka/environments/argocd-mixin/main.jsonnet). If the set of Terraform-installed releases changes, that list has to change with it.
 
-After bootstrap, the `argocd-applications` chart installs the Cilium Application resource, which enables ArgoCD management. Cilium then syncs itself and becomes self-managed.
-
-**Note**: Cilium must be installed before ArgoCD, as the cluster needs a functioning CNI for pods to start.
+**Note**: Cilium must be installed before Argo CD, as the cluster needs a functioning CNI for pods to start.
 
 ## Access & Endpoints
 
@@ -109,7 +104,14 @@ After bootstrap, the `argocd-applications` chart installs the Cilium Application
 - **Cilium Agent**: Exposes Prometheus metrics on each node
 - **Cilium Operator**: Exposes Prometheus metrics
 - **Hubble**: Exposes metrics for network flows and observability
-- **ServiceMonitors**: TODO: Document ServiceMonitor configuration
+- **ServiceMonitors**: four, all in the `cilium` namespace on a 10s interval, discovered by Alloy via `prometheusOperatorObjects`:
+
+  | ServiceMonitor | port |
+  |---|---|
+  | `cilium-agent` | `metrics` |
+  | `cilium-operator` | `metrics` |
+  | `hubble` | `hubble-metrics` |
+  | `hubble-relay` | `metrics` |
 
 ### Dashboards
 
@@ -131,7 +133,12 @@ Grafana dashboards from the [Cilium mixin](../argocd-applications/templates/READ
 
 Prometheus alerts are defined by the [Cilium mixin](../argocd-applications/templates/README-cilium-mixin.md). Alerts are deployed as PrometheusRule resources in the `cilium` namespace, discovered by Alloy, and pushed to Mimir's Ruler for evaluation.
 
-- TODO: Alerts are missing - need to configure PrometheusRules for Cilium
+This is live: twelve PrometheusRules in the `cilium` namespace (`cilium-api`, `cilium-drops`, `cilium-conntrack`, `cilium-endpoints`, `cilium-identity`, `cilium-ipam`, `cilium-maps`, `cilium-nat`, `cilium-nodes`, `cilium-policy`, `cilium-clustermesh`, `cilium-kvstoremesh`), producing alert rules such as `CiliumAgentApiHighErrorRate`, `CiliumAgentConntrackTableFull` and `CiliumAgentHighDeniedRate`. To list what the ruler currently has loaded:
+
+```bash
+curl -s -H "X-Scope-OrgID: tiles" \
+  "http://mimir-gateway.mimir.svc/prometheus/api/v1/rules?type=alert"
+```
 
 ### Logs
 
@@ -183,14 +190,20 @@ kubectl logs -n cilium -l app.kubernetes.io/name=hubble-ui
 ### Health Checks
 
 - Verify all Cilium pods are running: `kubectl get pods -n cilium`
-- Check Cilium agent status on nodes: TODO: Document cilium status command or health check endpoint
+- Check an agent's own health: `kubectl -n cilium exec ds/cilium -c cilium-agent -- cilium-dbg status --brief` (prints `OK`); drop `--brief` for the full report, and `cilium-dbg service list` shows that node's load-balancer backends
 - Verify Hubble is running: `kubectl get pods -n cilium -l app.kubernetes.io/name=hubble-relay`
 
 ## Maintenance
 
 ### Update Procedures
 
-- TODO: Document update procedure (Helm chart version updates, Cilium version updates)
+The version is pinned as a chart dependency, not in Terraform. To update:
+
+1. Bump the `cilium` dependency `version` in [`Chart.yaml`](Chart.yaml) (currently `1.19.3`, from `https://helm.cilium.io/`).
+2. Re-vendor the subchart tarball -- `nodes-plan-apply` requires it present before Terraform runs, since `helm_release` points at the local umbrella chart rather than the upstream repo.
+3. Open a PR; deploy via `nodes-plan-apply`, not by syncing the Argo CD Application.
+
+The umbrella chart in this directory carries no templates of its own. It exists to pin the version and to nest values under the `cilium` subchart key.
 
 ### Backup Requirements
 
