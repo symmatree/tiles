@@ -4,6 +4,10 @@
 # through a OnePasswordItem CR (tanka/environments/fleet-control). Nothing about the key
 # is hand-made, so rotating it is `terraform apply` plus a converge -- not a reflash.
 #
+# In tf/nodes rather than tf/bootstrap because rotation is meant to be routine, and
+# bootstrap is the manual super-admin layer. This also puts the key next to the fleet's
+# other declared infrastructure (#735, UniFi reservations).
+#
 # WHY ED25519 AND WHY `private_key_openssh`, NOT `private_key_pem`:
 # for ed25519 the tls provider's `private_key_pem` is PKCS8, which OpenSSH cannot parse --
 # it fails with `Load key: invalid format`, which is exactly how the hand-made item broke
