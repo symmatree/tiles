@@ -22,6 +22,10 @@ terraform {
       source  = "1Password/onepassword"
       version = ">= 2.1.2"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = ">= 4.0"
+    }
     kubernetes = {
       source = "hashicorp/kubernetes"
       # tf/nodes/k8s-bootstrap.tf uses kubernetes_namespace_v1 / kubernetes_secret_v1.
