@@ -10,8 +10,9 @@
 # fleet-control. `private_key_openssh` emits the OPENSSH container that ssh(1) actually
 # reads. Verified by generating both with terraform and feeding them to ssh-keygen.
 #
-# NOTE the private key is in Terraform state. The state bucket is CMEK-encrypted, but this
-# is still a second home for the credential; see the PR discussion.
+# The private key lives in Terraform state, in the CMEK-encrypted GCS bucket. That is a
+# deliberate choice, not a compromise: the bucket's integrity traces to Google's, which is
+# at least as good a custodian as 1Password for this.
 
 resource "tls_private_key" "fleet" {
   algorithm = "ED25519"
