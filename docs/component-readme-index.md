@@ -1,6 +1,8 @@
 # Component README Index
 
-This document provides an index of all components in the tiles cluster with links to their README documentation.
+This document indexes the components in the tiles cluster that have README documentation, with links to it.
+
+Not everything here has a README yet -- the mixin environments under `tanka/environments/*-mixin` are mostly a `main.jsonnet` and a vendored upstream mixin, and are listed only where one exists.
 
 ## Infrastructure Components
 
@@ -13,7 +15,7 @@ This document provides an index of all components in the tiles cluster with link
 ### ArgoCD Applications
 
 - **README**: [`charts/argocd-applications/README.md`](../charts/argocd-applications/README.md)
-- **Application**: [`charts/argocd-applications/application.yaml`](../charts/argocd-applications/application.yaml)
+- **Application**: installed by [`charts/argocd-applications-installer/templates/application.yaml`](../charts/argocd-applications-installer/templates/application.yaml), which Terraform applies
 - **Description**: Meta-application that manages ArgoCD Application resources for all other components, propagating configuration values.
 
 ### Cilium
@@ -45,6 +47,10 @@ This document provides an index of all components in the tiles cluster with link
 - **Terraform**: [`tf/modules/k8s-cluster/dns.tf`](../tf/modules/k8s-cluster/dns.tf)
 - **Description**: Infrastructure-only resource. Google Cloud DNS managed zone for the cluster subdomain. No separate README needed.
 
+### ArgoCD Applications Installer
+
+- **README**: [`charts/argocd-applications-installer/README.md`](../charts/argocd-applications-installer/README.md)
+- **Description**: One chart, one resource: the `argocd-applications` Application, applied by Terraform to bootstrap the app-of-apps.
 ## Security & Secrets
 
 ### cert-manager
@@ -142,6 +148,68 @@ This document provides an index of all components in the tiles cluster with link
 - **Application**: [`tanka/environments/odm/application.yaml`](../tanka/environments/odm/application.yaml)
 - **Description**: Photogrammetry application for processing drone imagery into 3D models, point clouds, and orthomosaics.
 
+### JupyterHub
+
+- **README**: [`charts/jupyterhub/README.md`](../charts/jupyterhub/README.md)
+- **Application**: [`charts/jupyterhub/application.yaml`](../charts/jupyterhub/application.yaml)
+- **Description**: Always-on JupyterHub wrapping zero-to-jupyterhub-k8s, with direct SSH access to singleuser servers.
+### fleet-control
+
+- **README**: [`tanka/environments/fleet-control/README.md`](../tanka/environments/fleet-control/README.md)
+- **Application**: [`tanka/environments/fleet-control/application.yaml`](../tanka/environments/fleet-control/application.yaml)
+- **Description**: Ground-station control surface for the rekon10 fleet; sets up a freshly flashed card and manages the fleet inventory.
+### flight-analysis
+
+- **README**: [`tanka/environments/flight-analysis/README.md`](../tanka/environments/flight-analysis/README.md)
+- **Application**: [`tanka/environments/flight-analysis/application.yaml`](../tanka/environments/flight-analysis/application.yaml)
+- **Description**: Nightly CronJob running the rekon10 flight-analysis notebook over NAS flight captures.
+### vio-offline
+
+- **README**: [`tanka/environments/vio-offline/README.md`](../tanka/environments/vio-offline/README.md)
+- **Application**: [`tanka/environments/vio-offline/application.yaml`](../tanka/environments/vio-offline/application.yaml)
+- **Description**: Nightly VINS pose regeneration over the NAS flight captures; the estimator-half sibling of flight-analysis.
+### MAVProxy (ground proxy)
+
+- **README**: [`tanka/environments/mavproxy/README.md`](../tanka/environments/mavproxy/README.md)
+- **Description**: Always-on MAVLink hub on bare-metal node acebase: ELRS backpack UDP in, NTRIP RTCM to the drone, TCP out for Mission Planner.
+### NTRIP / RTKBase
+
+- **README**: [`tanka/environments/ntrip/README.md`](../tanka/environments/ntrip/README.md)
+- **Description**: GNSS base and local NTRIP caster on bare-metal node acebase. Prod only -- there is no acebase on test.
+### Apprise Mixin
+
+- **README**: [`tanka/environments/apprise-mixin/README.md`](../tanka/environments/apprise-mixin/README.md)
+- **Description**: Monitoring mixin for Apprise, the notification delivery backend.
+### Backpack Mixin
+
+- **README**: [`tanka/environments/backpack-mixin/README.md`](../tanka/environments/backpack-mixin/README.md)
+- **Description**: Grafana dashboard for the ELRS TX backpack's WiFi link.
+## Container Images
+
+Image sources built from this repo, deployed by the components above.
+
+### argo-tag-watcher
+
+- **README**: [`containers/argo-tag-watcher/README.md`](../containers/argo-tag-watcher/README.md)
+- **Description**: Tiny in-cluster controller that makes Argo CD notice git changes without a manual refresh.
+### mavproxy
+
+- **README**: [`containers/mavproxy/README.md`](../containers/mavproxy/README.md)
+- **Description**: amd64 image for the rekon10 always-on ground MAVLink proxy.
+### rtkbase
+
+- **README**: [`containers/rtkbase/README.md`](../containers/rtkbase/README.md)
+- **Description**: amd64 image running Stefal/rtkbase under systemd for the acebase GNSS base and NTRIP caster.
+## Terraform Roots
+
+### tf/bootstrap
+
+- **README**: [`tf/bootstrap/README.md`](../tf/bootstrap/README.md)
+- **Description**: Seed-project Terraform run interactively as yourself: GCP projects, workload identity, GitHub, 1Password, Proxmox and UniFi bootstrap.
+### tf/nodes
+
+- **README**: [`tf/nodes/README.md`](../tf/nodes/README.md)
+- **Description**: Cluster Terraform: Proxmox VMs, bare-metal Talos nodes, the Talos cluster itself, and the Kubernetes-facing releases (Cilium, Argo CD).
 ## Related Documentation
 
 - **NFS Storage Architecture**: [`nfs-storage-architecture.md`](nfs-storage-architecture.md) - Detailed documentation on NFS storage setup and usage
