@@ -61,5 +61,3 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 - **[api-versions-strategy.md](api-versions-strategy.md)**: Strategy for extracting and maintaining API versions used for Helm templating with higher fidelity, storing cluster API version information in version-controlled files for use during CI builds without requiring cluster connectivity.
 
 ## Planning
-
-- **[todo.md](todo.md)**: Future work items and planned improvements, including OIDC setup for ArgoCD, Grafana authentication, workload identity federation, and Synology management via Terraform.
