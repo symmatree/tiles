@@ -139,6 +139,33 @@ A config *apply* is not a *reset*. PKI is preserved across the recreate (both ap
 2. Run **`nodes-plan-apply`** with **apply** for that workspace (**`metal_apply_mode`** defaults to **`reboot`**, which the rebuild needs).
 3. Verify: `talosctl -n <NODE_IP> get members` and `kubectl get nodes` show the metal node; any pinned pods (e.g. `ntrip`, `mavproxy`) return to `Running`.
 
+## Physical siting and what it does to the temperature record
+
+**AceBase sits in the attic, outside the building insulation**, because that is where the GNSS
+antenna it serves has sky view ([tiles#547](https://github.com/symmatree/tiles/issues/547)).
+It is the only node in the fleet not in conditioned space, and that is plainly visible in its
+temperature series: a clean ~24-hour sine wave swinging about **20 C peak-to-trough** (roughly
+30-51 C observed 2026-09-14/15), peaking mid-afternoon and troughing pre-dawn, while its CPU
+load stays flat. Every other host moves 2.5-6.5 C over the same window. Its SATA SSD rides the
+same wave at damped amplitude (~6 C, r = 0.98 against the CPU sensor) -- more thermal mass,
+same driver.
+
+This matters when reading any thermal signal off AceBase: **its baseline is the room, not the
+workload.** A rise there is weather until proven otherwise, and a like-for-like comparison has
+to be against the same hour of a previous day rather than against another node. The
+`Bond / Temperatures` dashboard and
+[`notebooks/thermal-crossclass.ipynb`](../notebooks/thermal-crossclass.ipynb) both carry CPU
+load beside temperature for exactly this reason; the notebook labels the pattern
+`AMBIENT-DOMINATED` rather than treating it as an anomaly. Headroom is not a concern today --
+AceBase is an Alder Lake-N idling in the 30-50 C range against a 90 C alert -- but the
+threshold is doing much less work here than the same number does on a conditioned host.
+
+A second siting artifact shows up in the same data: `acpitz` (the ACPI thermal zone) is wired
+to a **constant** on AceBase and all four Proxmox NUCs -- a dead-flat 27.8 C with exactly zero
+variance, which is 3010 deciKelvin, the unit ACPI reports in. It is not a probe on those
+machines and cannot report heat. Only Lancer's `acpitz` actually varies. Do not read it as a
+case temperature, and do not treat its lack of an alert as a monitoring gap.
+
 ## Node hostnames and DHCP-less boot
 
 A node's hostname comes from **DHCP**: the UniFi fixed-IP reservation supplies the name. The provider-injected `HostnameConfig: {auto: stable}` (a siderolabs/talos default, not set in this repo) is only a fallback -- when no hostname is available at boot, the node self-assigns a deterministic `talos-<rand>` name. The shared config sets no static `machine.network.hostname`, so naming depends on DHCP being reachable at boot.
