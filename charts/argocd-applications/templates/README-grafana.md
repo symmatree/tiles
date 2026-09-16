@@ -109,10 +109,40 @@ N/A - Grafana does not have Terraform-managed resources.
 
 ### Metrics
 
-- Grafana exposes its own metrics (can be scraped by Alloy/Mimir)
-- TODO: Document if Grafana has a ServiceMonitor
+Grafana's self-metrics (`grafana_*`) **are** scraped into Mimir. `serviceMonitor.enabled: true`
+on the chart emits a ServiceMonitor in the `grafana` namespace, which Alloy discovers through
+its `prometheusOperatorObjects` config; the scrape is relabelled to `job="grafana"`. Query them
+via `mimir-gateway.mimir.svc` with `X-Scope-OrgID: tiles`, the same as any other component.
+
+Cardinality is untuned by choice: the k8s-monitoring chart ships default allow-lists for
+alloy/istio/loki/mimir/tempo but not for Grafana, so all ~4,200 series are kept. Most of the
+volume is histogram buckets (`grafana_http_response_size_bytes_bucket`,
+`grafana_http_request_duration_seconds_bucket`) plus ~600 series of `grafana_apiserver_*`.
+Revisit if it becomes a cost.
+
+**A label trap worth knowing:** `grafana_datasource_request_total` labels the HTTP status `code`,
+while `grafana_http_request_duration_seconds_count` labels it `status_code`. Same exporter, two
+names -- using the wrong one returns `success` with zero series rather than an error.
+
+### Analysis notebooks
+
+- [`notebooks/grafana-health.ipynb`](../../../notebooks/grafana-health.ipynb) -- datasource
+  reachability (the load-bearing check for a UI whose job is querying other components),
+  serving errors against the mixin threshold, provisioning drift, plugin and log state.
+- [`notebooks/grafana-nomon.ipynb`](../../../notebooks/grafana-nomon.ipynb) -- the no-LGTM
+  variant: kube API plus direct `/api/health` and `/metrics` probes only, for when Grafana is
+  the thing that is broken and its own dashboards cannot tell you. `/api/health` needs no auth
+  and reports `database: ok`, which for a single instance on a PVC is the check that matters.
+
+See [docs/notebooks.md](../../../docs/notebooks.md) for the pattern.
 
 ### Dashboards
+
+Grafana's own mixin is deployed as the **grafana-mixin** Tanka environment: one overview
+dashboard (`Grafana` folder), the `GrafanaRequestsFailing` alert, and the recording rule it
+reads. The mixin is **vendored** rather than pulled through `jb` -- it lives inside
+`grafana/grafana`, a 1.9 GB repository, and the Tanka CMP runs `jb install` in the repo-server
+on every lockfile change. See `tanka/environments/grafana-mixin/mixin/UPSTREAM.md`.
 
 Grafana automatically discovers dashboards from mixins:
 

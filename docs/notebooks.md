@@ -35,7 +35,8 @@ Current notebooks: [`notebooks/`](../notebooks/) -- `mimir-health.ipynb`,
 `mimir-usage.ipynb`, `mimir-nolgtm.ipynb`, `loki-health.ipynb`,
 `loki-usage.ipynb`, `loki-nolgtm.ipynb`, `alloy-health.ipynb`,
 `alloy-nomon.ipynb`, `raconteur-health.ipynb`, `proxmox-health.ipynb`,
-`metal-health.ipynb`, `cilium-health.ipynb`, `thermal-crossclass.ipynb`, sharing
+`metal-health.ipynb`, `cilium-health.ipynb`, `thermal-crossclass.ipynb`,
+`grafana-health.ipynb`, `grafana-nomon.ipynb`, sharing
 [`nb_capture.py`](../notebooks/nb_capture.py). Roadmap for the rest of the stack:
 see **Component roadmap** below.
 
@@ -102,7 +103,7 @@ debugging, not the premise of the notebook.
 | --- | --- | --- | --- |
 | Mimir | health, usage, no-LGTM | built | [#644](https://github.com/symmatree/tiles/issues/644) |
 | Loki | health, usage, no-LGTM | built | [#649](https://github.com/symmatree/tiles/issues/649) |
-| Grafana | health, no-monitoring | planned | [#650](https://github.com/symmatree/tiles/issues/650) |
+| Grafana | health, no-monitoring | built | [#650](https://github.com/symmatree/tiles/issues/650) |
 | Alloy (head-end collection) | health, no-monitoring | built | [#651](https://github.com/symmatree/tiles/issues/651) |
 | Synology / Raconteur (edge host) | host health: SMART/disk errors, temps, fans, resource pressure | built | [#652](https://github.com/symmatree/tiles/issues/652) |
 | Proxmox LXC (edge host) | host health: hwmon temps, NVMe, throttle, host disk I/O, root LV | built | [#653](https://github.com/symmatree/tiles/issues/653) |
