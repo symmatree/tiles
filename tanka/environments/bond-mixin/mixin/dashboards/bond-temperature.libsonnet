@@ -120,18 +120,60 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
         + g.query.prometheus.withFormat('table')
         + { refId: refId };
 
+      local o = g.panel.timeSeries.standardOptions.override.byRegexp;
+
       // Alert threshold as a dashed red line (what pages), hardware crit as a dimmed
       // series (what the silicon says). Both are shown: they are different claims, and
       // on this fleet they disagree by as much as 15 C.
-      local critOverride =
-        g.panel.timeSeries.standardOptions.withOverrides([
-          g.panel.timeSeries.standardOptions.override.byRegexp.new('/crit \\(hw\\)/')
-          + g.panel.timeSeries.standardOptions.override.byRegexp.withProperty('color', { mode: 'fixed', fixedColor: 'text' })
-          + g.panel.timeSeries.standardOptions.override.byRegexp.withProperty('custom.lineStyle', { fill: 'dash', dash: [10, 10] })
-          + g.panel.timeSeries.standardOptions.override.byRegexp.withProperty('custom.fillOpacity', 0),
-        ]);
+      local critSeries =
+        o.new('/crit \\(hw\\)/')
+        + o.withProperty('color', { mode: 'fixed', fixedColor: 'text' })
+        + o.withProperty('custom.lineStyle', { fill: 'dash', dash: [10, 10] })
+        + o.withProperty('custom.fillOpacity', 0);
 
-      local ts(title, unit, targets, desc, warnAt=null) =
+      // Load on the opposite axis. Temperature alone cannot distinguish "this box is
+      // working" from "this box is not cooling": heat that rises with load is the
+      // workload, heat that rises while load stays flat is an airflow, fan or paste
+      // problem. That comparison only works if both are on the same panel, so every
+      // temperature panel carries its own driver on the right-hand axis.
+      local loadSeries =
+        o.new('/ load$/')
+        + o.withProperty('custom.axisPlacement', 'right')
+        + o.withProperty('custom.axisLabel', 'CPU busy %')
+        + o.withProperty('unit', 'percent')
+        + o.withProperty('min', 0)
+        + o.withProperty('max', 100)
+        + o.withProperty('custom.fillOpacity', 0)
+        + o.withProperty('custom.lineWidth', 1)
+        + o.withProperty('custom.lineStyle', { fill: 'dot', dash: [1, 4] })
+        + o.withProperty('color', { mode: 'fixed', fixedColor: 'semi-dark-blue' });
+
+      local powerSeries =
+        o.new('/ power$/')
+        + o.withProperty('custom.axisPlacement', 'right')
+        + o.withProperty('custom.axisLabel', 'watts')
+        + o.withProperty('unit', 'watt')
+        + o.withProperty('min', 0)
+        + o.withProperty('custom.fillOpacity', 0)
+        + o.withProperty('custom.lineWidth', 1)
+        + o.withProperty('custom.lineStyle', { fill: 'dot', dash: [1, 4] })
+        + o.withProperty('color', { mode: 'fixed', fixedColor: 'semi-dark-orange' });
+
+      // Restricts a query to hosts that actually report a temperature. The temperature
+      // queries get this for free from the chip_name join, but CPU, cooling-device and
+      // frequency metrics do not: the six tiles VMs emit all three despite having no
+      // thermal story, and would otherwise outnumber the two metal nodes on their own
+      // panel. Physical-ness is not a label here, so "reports hwmon" is the handle.
+      local physical = 'and on (instance) (count by (instance) (node_hwmon_temp_celsius))';
+
+      // Host CPU busy, same expression the node-exporter mixin's NodeCPUHighUsage uses.
+      // On the Proxmox nodes node_exporter reads the host's /proc through the Alloy CT's
+      // bind mount, so this is whole-host CPU including every guest -- which is exactly
+      // the quantity the coretemp sensor is responding to.
+      local cpuLoad(sel) =
+        'sum by (instance) (avg without(cpu) (rate(node_cpu_seconds_total{%s, mode!~"idle|iowait"}[$__rate_interval]))) * 100 %s' % [sel, physical];
+
+      local ts(title, unit, targets, desc, warnAt=null, overrides=[]) =
         g.panel.timeSeries.new(title)
         + g.panel.timeSeries.panelOptions.withDescription(desc)
         + g.panel.timeSeries.standardOptions.withUnit(unit)
@@ -140,6 +182,7 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
         + g.panel.timeSeries.options.legend.withCalcs(['lastNotNull', 'max'])
         + g.panel.timeSeries.fieldConfig.defaults.custom.withFillOpacity(8)
         + g.panel.timeSeries.queryOptions.withTargets(targets)
+        + (if overrides == [] then {} else g.panel.timeSeries.standardOptions.withOverrides(overrides))
         + (
           if warnAt == null then {}
           else
@@ -215,12 +258,15 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
         [
           q('max by (instance) (%s)' % byChip('node_hwmon_temp_celsius', metalSel, cfg.metalCpuChipNames), '{{instance}}'),
           q('max by (instance) (%s)' % sane(byChip('node_hwmon_temp_crit_celsius', metalSel, cfg.metalCpuChipNames)), '{{instance}} crit (hw)'),
+          q(cpuLoad(metalSel), '{{instance}} load'),
         ],
         'Hottest CPU sensor per node -- lancer is AMD (k10temp), acebase Intel (coretemp). '
-        + 'Red line is BondMetalHighCpuTemperature (%gC for %s). Only acebase reports a hardware crit; lancer k10temp reports none.'
-          % [cfg.metalCpuTempThresholdCelsius, cfg.metalCpuTempFor],
-        cfg.metalCpuTempThresholdCelsius
-      ) + critOverride, 0, 13, 8, 8);
+        + 'Red line is BondMetalHighCpuTemperature (%gC for %s). Only acebase reports a hardware crit; lancer k10temp reports none. '
+          % [cfg.metalCpuTempThresholdCelsius, cfg.metalCpuTempFor]
+        + 'Dotted blue on the right axis is host CPU busy: temperature that climbs with it is the workload, temperature that climbs without it is a cooling problem.',
+        cfg.metalCpuTempThresholdCelsius,
+        [critSeries, loadSeries]
+      ), 0, 13, 8, 8);
 
       local pProxmoxCpu = pos(ts(
         'Proxmox host cores',
@@ -228,11 +274,14 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
         [
           q('avg by (instance) (node_hwmon_temp_celsius{%s, chip="%s"})' % [proxmoxSel, cfg.proxmoxHwmonCoreChip], '{{instance}}'),
           q('max by (instance) (%s)' % sane('node_hwmon_temp_crit_celsius{%s, chip="%s"}' % [proxmoxSel, cfg.proxmoxHwmonCoreChip]), '{{instance}} crit (hw)'),
+          q(cpuLoad(proxmoxSel), '{{instance}} load'),
         ],
-        'Average coretemp per host, matching BondProxmoxHighCoreTemperature (%gC for %s) -- which averages the package sensor with the per-core ones, so a single hot core is diluted here. All four NUCs report a 105C hardware crit.'
-        % [cfg.proxmoxCoreTempThresholdCelsius, cfg.proxmoxCoreTempFor],
-        cfg.proxmoxCoreTempThresholdCelsius
-      ) + critOverride, 8, 13, 8, 8);
+        'Average coretemp per host, matching BondProxmoxHighCoreTemperature (%gC for %s) -- which averages the package sensor with the per-core ones, so a single hot core is diluted here. All four NUCs report a 105C hardware crit. '
+        % [cfg.proxmoxCoreTempThresholdCelsius, cfg.proxmoxCoreTempFor]
+        + 'Dotted blue on the right axis is whole-host CPU busy, guests included -- these hosts idle warm (70-75C), so the question is never the absolute number but whether a rise has load under it.',
+        cfg.proxmoxCoreTempThresholdCelsius,
+        [critSeries, loadSeries]
+      ), 8, 13, 8, 8);
 
       local pRaconteurCpu = pos(ts(
         'Raconteur CPU',
@@ -240,20 +289,28 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
         [
           q('max by (sensor) (node_hwmon_temp_celsius{%s, chip="%s"})' % [raconteurSel, cfg.raconteurCpuChip], '{{sensor}}'),
           q('max (%s)' % sane('node_hwmon_temp_crit_celsius{%s, chip="%s"}' % [raconteurSel, cfg.raconteurCpuChip]), 'crit (hw)'),
+          q(cpuLoad(raconteurSel), 'load'),
         ],
-        'Per-sensor coretemp on the Synology. Red line is BondRaconteurCpuTemperatureHigh (%gC for %s) -- set well below the 104C the hardware reports as its own crit, because a NAS that is merely warm is already a fan or airflow problem.'
-        % [cfg.raconteurCpuTempCelsius, cfg.raconteurCpuTempFor],
-        cfg.raconteurCpuTempCelsius
-      ) + critOverride, 16, 13, 8, 8);
+        'Per-sensor coretemp on the Synology. Red line is BondRaconteurCpuTemperatureHigh (%gC for %s) -- set well below the 104C the hardware reports as its own crit, because a NAS that is merely warm is already a fan or airflow problem. '
+        % [cfg.raconteurCpuTempCelsius, cfg.raconteurCpuTempFor]
+        + 'That makes the right-hand load axis the load-bearing one here: warm-and-busy is a scrub or a backup, warm-and-idle is the fan, and the fan alerts are the other half of that answer.',
+        cfg.raconteurCpuTempCelsius,
+        [critSeries, loadSeries]
+      ), 16, 13, 8, 8);
 
       // --- iGPU and storage -------------------------------------------------
       local pGpu = pos(ts(
         'lancer iGPU (amdgpu)',
         'celsius',
-        [q('max by (instance) (%s)' % byChip('node_hwmon_temp_celsius', metalSel, cfg.metalGpuChipNames), '{{instance}}')],
-        'Integrated GPU temperature. Only AMD APUs expose a GPU hwmon, so this is lancer-only today and will pick up any future AMD-GPU node on its own. amdgpu reports no crit, so the %gC BondMetalHighGpuTemperature line is the only limit -- set above the CPU because an APU GPU legitimately runs hotter under ROCm/ODM load.'
-        % cfg.metalGpuTempThresholdCelsius,
-        cfg.metalGpuTempThresholdCelsius
+        [
+          q('max by (instance) (%s)' % byChip('node_hwmon_temp_celsius', metalSel, cfg.metalGpuChipNames), '{{instance}}'),
+          q('sum by (instance) (node_hwmon_power_watt{%s})' % metalSel, '{{instance}} power'),
+        ],
+        'Integrated GPU temperature. Only AMD APUs expose a GPU hwmon, so this is lancer-only today and will pick up any future AMD-GPU node on its own. amdgpu reports no crit, so the %gC BondMetalHighGpuTemperature line is the only limit -- set above the CPU because an APU GPU legitimately runs hotter under ROCm/ODM load. '
+        % cfg.metalGpuTempThresholdCelsius
+        + 'The right axis is package power rather than CPU busy, because that is what actually drives this sensor: watts up with temperature flat is healthy cooling, temperature up with watts flat is not.',
+        cfg.metalGpuTempThresholdCelsius,
+        [powerSeries]
       ), 0, 22, 8, 8);
 
       local pStorage = pos(ts(
@@ -265,8 +322,10 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
           q('max by (instance) (%s)' % sane(byChip('node_hwmon_temp_crit_celsius', metalSel, cfg.metalStorageChipNames)), '{{instance}} crit (hw)'),
           q('max by (instance) (%s)' % sane(byChip('node_hwmon_temp_crit_celsius', proxmoxSel, cfg.proxmoxStorageChipNames)), '{{instance}} crit (hw)'),
         ],
-        'Hottest storage sensor per host. No alert covers these -- the hardware crit (94.85C on every NVMe here) is the only limit, which is why it is drawn rather than a fixed line. Two absences are real, not gaps: the g2p NUCs expose no NVMe hwmon at all, and acebase reports the 127C drivetemp sentinel instead of a limit.'
-      ) + critOverride, 8, 22, 16, 8);
+        'Hottest storage sensor per host. No alert covers these -- the hardware crit (94.85C on every NVMe here) is the only limit, which is why it is drawn rather than a fixed line. Two absences are real, not gaps: the g2p NUCs expose no NVMe hwmon at all, and acebase reports the 127C drivetemp sentinel instead of a limit.',
+        null,
+        [critSeries]
+      ), 8, 22, 16, 8);
 
       // --- Raconteur disks --------------------------------------------------
       local pSata = pos(ts(
@@ -288,11 +347,6 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
       ), 12, 31, 12, 8);
 
       // --- Throttle response ------------------------------------------------
-      // `and on (instance) count(node_hwmon_temp_celsius)` restricts these to physical
-      // hosts: the tiles VMs also expose Processor cooling devices and scaling frequency,
-      // but have no thermal story, and would otherwise pad every series list.
-      local physical = 'and on (instance) (count by (instance) (node_hwmon_temp_celsius))';
-
       local pCooling = pos(ts(
         'Passive throttle state',
         'short',
