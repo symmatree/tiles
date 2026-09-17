@@ -35,8 +35,8 @@ clone through it to obtain 32 KB of jsonnet is a bad trade.
 ## Updating
 
 1. Re-fetch the five files from a newer commit and update the table above.
-2. Run `tk eval environments/grafana-mixin`. `main.jsonnet` asserts that exactly one panel
-   target still uses the legacy `grafana_alerting_result_total` metric; if upstream has fixed
-   that panel the build fails, which is the signal to delete the local patch.
+2. Run `tk eval environments/grafana-mixin`. The mixin is deployed unmodified, so there is no
+   local patch to reconcile -- see the note in `main.jsonnet` about the one panel that reads
+   "No data" here and why it is left that way.
 3. Re-run [`notebooks/grafana-health.ipynb`](../../../../notebooks/grafana-health.ipynb) --
    it reads the deployed alert's threshold, so a changed threshold shows up there.
