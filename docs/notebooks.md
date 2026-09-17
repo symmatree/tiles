@@ -184,6 +184,18 @@ with real variance), not a dump of everything the exporter emits.
   (`monitoring.rules.enabled: false`), so the loki notebooks source thresholds
   from the *upstream* loki-mixin and cite each one inline. Either way, a findings
   threshold that cannot name its source is invented -- fix that before shipping.
+- **If you are using a notebook to debug, improve it in the same session.** This is the
+  whole point of the form: a notebook moves knowledge out of one agent's transcript, so
+  the queries, thresholds and cross-checks that turned out to matter during an
+  investigation belong folded back into the cells before that session ends. One agent
+  finding the right query once, in a chat log, is exactly the failure this pattern
+  exists to prevent. The motivating case is
+  [#656](https://github.com/symmatree/tiles/issues/656) -- the alloy-singleton
+  crashloop was caught only because an earlier session had baked the component-health
+  check into `alloy-health.ipynb`, so the next reader inherited it rather than having to
+  rediscover it. Every notebook's header repeats this, because the reader who needs to
+  hear it arrives at a notebook, not at this document. (Requested by @symmatree in
+  [#650](https://github.com/symmatree/tiles/issues/650).)
 - Notebooks are code-first: brief markdown header with links out, short
   comments where the why is non-obvious. Substantial prose belongs in docs.
 
