@@ -19,6 +19,7 @@ local fleetControl = {
   local kPort = k.core.v1.containerPort,
   local kConfigMap = k.core.v1.configMap,
   local kVolumeMount = k.core.v1.volumeMount,
+  local kEnvVar = k.core.v1.envVar,
   local kPersistentVolumeClaim = k.core.v1.persistentVolumeClaim,
   local kIngress = k.networking.v1.ingress,
   local kIngressRule = k.networking.v1.ingressRule,
@@ -32,6 +33,8 @@ local fleetControl = {
     host: APP.app_settings.hostname,
     sshKeySecret: APP.app_settings.ssh_key_secret,
     sshKeyField: APP.app_settings.ssh_key_field,
+    githubTokenSecret: APP.app_settings.github_token_secret,
+    githubTokenField: APP.app_settings.github_token_field,
     ingressAnnotations: {
       'cert-manager.io/cluster-issuer': APP.app_settings.cluster_issuer,
     },
@@ -46,6 +49,19 @@ local fleetControl = {
     // root on the fleet -- see coordinator#261 on giving automation its own key.
     sshKey: op.item.new(config.sshKeySecret, 'vaults/' + APP.vault_name + '/items/' + config.sshKeySecret),
 
+    // Read-only access to Actions artifacts. Not root on anything, unlike the ssh key --
+    // it can fetch published build artifacts and nothing else.
+    //
+    // The 1Password title is FLEET_GITHUB_TOKEN, which is not a legal Kubernetes object name
+    // -- those are DNS-1123, so lowercase with no underscores. The item path keeps the title
+    // and the object gets a derived name; the Secret the operator creates takes that name,
+    // which is what the env var below references.
+    local k8sName(title) = std.strReplace(std.asciiLower(title), '_', '-'),
+    githubToken: op.item.new(
+      k8sName(config.githubTokenSecret),
+      'vaults/' + APP.vault_name + '/items/' + config.githubTokenSecret
+    ),
+
     // The roster. Git-authoritative like ntrip's settings.conf: edit here, merge, and the
     // hash annotation below rolls the Deployment.
     inventory:
@@ -59,6 +75,19 @@ local fleetControl = {
       + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
       + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '1Gi' })
       + kPersistentVolumeClaim.spec.withStorageClassName('local-path'),
+
+    // Disk images the service has pushed. Nothing evicts them; the point is that pushing one
+    // image to five machines is one fetch and five local reads (coordinator#312).
+    //
+    // cluster-nfs rather than local-path: local-path is node-local, so the cache would pin
+    // this pod to one node and die with it. Read speed is not a tiebreaker -- a device pulls
+    // at roughly 0.9 MB/s, far below anything the NAS does. 20 Gi is about 24 images at the
+    // current 813 MiB, with nothing evicting.
+    imagePvc:
+      kPersistentVolumeClaim.new(std.format('%s-images', config.name))
+      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
+      + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '20Gi' })
+      + kPersistentVolumeClaim.spec.withStorageClassName('cluster-nfs'),
 
     local inventoryName = fcObj.inventory.metadata.name,
     local inventoryHash = std.md5(importstr 'inventory.json'),
@@ -78,7 +107,16 @@ local fleetControl = {
           // The name the service actually reads, and the reason the PVC below exists:
           // recorded host keys must land on /state to survive a pod restart.
           FLEET_KNOWN_HOSTS: '/state/known_hosts',
+          FLEET_IMAGE_CACHE: '/images',
+          // Where a DEVICE reaches this service: it fetches its own image with get_url, so
+          // the in-cluster service name is no use to it.
+          FLEET_PUBLIC_URL: 'https://' + config.host,
         })
+        + kContainer.withEnvMixin([
+          kEnvVar.withName('FLEET_GITHUB_TOKEN')
+          + kEnvVar.valueFrom.secretKeyRef.withName(fcObj.githubToken.metadata.name)
+          + kEnvVar.valueFrom.secretKeyRef.withKey(config.githubTokenField),
+        ])
         + probe(kContainer.readinessProbe)
         + kContainer.readinessProbe.withInitialDelaySeconds(5)
         // No liveness probe: a converge holds state in memory for 20 minutes or more, and
@@ -109,7 +147,8 @@ local fleetControl = {
         288,  // 0440, readable via fsGroup below
         kVolumeMount.withSubPath(config.sshKeyField) + kVolumeMount.withReadOnly(true)
       )
-      + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state'),
+      + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state')
+      + k_util.pvcVolumeMount(fcObj.imagePvc.metadata.name, '/images'),
 
     // serviceFor names the port after the deployment (`fleet-control-http`, 18 chars) and an
     // Ingress backend port name is capped at 15. Name it `http` instead -- the length limit is

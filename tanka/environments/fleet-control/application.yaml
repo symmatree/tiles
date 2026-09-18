@@ -33,6 +33,11 @@ spec:
             # ConfigMap key, so terraform's `private-key` field arrives under that name.
             # charts/jupyterhub consumes `public-key` from its own ssh-key item the same way.
             ssh_key_field: 'private-key'
+            # Downloading a build artifact needs a credential; listing them does not, so the
+            # status screen works without this and only the image fetch uses it. A login item,
+            # so the operator maps its `password` field to the secret key of the same name.
+            github_token_secret: 'FLEET_GITHUB_TOKEN'
+            github_token_field: 'password'
   destination:
     server: https://kubernetes.default.svc
     namespace: fleet-control
