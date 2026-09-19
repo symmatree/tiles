@@ -191,7 +191,7 @@ Image sources built from this repo, deployed by the components above.
 ### argo-tag-watcher
 
 - **README**: [`containers/argo-tag-watcher/README.md`](../containers/argo-tag-watcher/README.md)
-- **Description**: Tiny in-cluster controller that makes Argo CD notice git changes without a manual refresh.
+- **Description**: Tiny in-cluster controller that pokes what has not caught up with a moved ref: refreshes Argo CD apps when the deploy tag moves, and restarts opted-in workloads when a floating image tag's digest moves.
 ### mavproxy
 
 - **README**: [`containers/mavproxy/README.md`](../containers/mavproxy/README.md)

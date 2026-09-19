@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -36,15 +38,43 @@ func main() {
 		os.Exit(1)
 	}
 
-	w := New(cfg, gitLsRemote{}, refresher, log)
+	roller, err := newK8sRoller()
+	if err != nil {
+		log.Error("failed to build kubernetes client", "err", err)
+		os.Exit(1)
+	}
+	imageInterval := getenvDuration("IMAGE_INTERVAL", 5*time.Minute)
+
+	gitWatcher := New(cfg, gitLsRemote{}, refresher, log)
+	imageWatcher := NewImageWatcher(imageInterval, roller, newRegistryClient(), log)
 	log.Info("starting argo-tag-watcher",
 		"repo", cfg.RepoURL, "ref", cfg.Ref, "namespace", ns,
-		"interval", cfg.Interval, "batchSize", cfg.BatchSize, "batchDelay", cfg.BatchDelay)
+		"interval", cfg.Interval, "batchSize", cfg.BatchSize, "batchDelay", cfg.BatchDelay,
+		"imageInterval", imageInterval, "rollAnnotation", RollAnnotation)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	if err := w.Run(ctx); err != nil && ctx.Err() == nil {
-		log.Error("watcher exited with error", "err", err)
+
+	// Two independent watchers in one process: both notice a ref has moved and poke
+	// the thing that has not caught up. They share nothing but the process.
+	var wg sync.WaitGroup
+	var failed atomic.Bool
+	for name, run := range map[string]func(context.Context) error{
+		"git":   gitWatcher.Run,
+		"image": imageWatcher.Run,
+	} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := run(ctx); err != nil && ctx.Err() == nil {
+				log.Error("watcher exited with error", "watcher", name, "err", err)
+				failed.Store(true)
+				stop() // one watcher dying takes the pod down, rather than half-working
+			}
+		}()
+	}
+	wg.Wait()
+	if failed.Load() {
 		os.Exit(1)
 	}
 }

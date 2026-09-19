@@ -8,5 +8,9 @@ repoURL: https://github.com/symmatree/tiles.git
 interval: 60s
 batchSize: 4
 batchDelay: 5s
+# How often to compare a watched image tag's registry digest against what the
+# opted-in workloads are running. Slower than the git poll: a restart is
+# disruptive where a refresh is a no-op, and it costs a registry round trip.
+imageInterval: 5m
 # Placeholder; overridden by --set / valuesObject at render time.
 targetRevision: placeholder

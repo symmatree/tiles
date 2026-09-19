@@ -5,6 +5,13 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
   labels:
     app.kubernetes.io/name: argo-tag-watcher
+  annotations:
+    # Watches itself. Its own image is a floating tag, so it has the problem it
+    # exists to solve: if the image build finishes after Argo has already rolled
+    # this Deployment, the pod sits on the previous digest and nothing else here
+    # would notice. Restarting itself mid-check is safe -- the comparison holds no
+    # state, so the next process start just redoes the pass.
+    tiles.symmatree.com/roll-on-digest-change: "true"
 spec:
   replicas: 1
   strategy:
@@ -26,6 +33,11 @@ spec:
       containers:
         - name: argo-tag-watcher
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          # The image tag floats, so the digest moves without the tag changing.
+          # Without this the kubelet reuses whatever :main it already cached and a
+          # rolled pod comes back on the old binary -- the precondition this
+          # watcher requires of anything it watches, which it has to meet itself.
+          imagePullPolicy: Always
           env:
             - name: REPO_URL
               value: "{{ .Values.repoURL }}"
@@ -40,6 +52,8 @@ spec:
               value: "{{ .Values.batchSize }}"
             - name: BATCH_DELAY
               value: "{{ .Values.batchDelay }}"
+            - name: IMAGE_INTERVAL
+              value: "{{ .Values.imageInterval }}"
             - name: HOME # git wants a writable HOME even for ls-remote
               value: /tmp
           resources:
