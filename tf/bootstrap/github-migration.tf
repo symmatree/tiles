@@ -56,12 +56,14 @@ moved {
   to   = module.secret_onepassword_sa_token["polisher"]
 }
 
+# One `for_each` block, not one static block per repository: Terraform honours
+# only the first of several static `import` blocks aimed at instances of the
+# same `for_each`-ed module, and drops the rest with no error -- the repository
+# silently turns up as a create instead. A single `for_each` import imports
+# every key.
 import {
-  to = module.repo["coordinator"].github_repository.this
-  id = "coordinator"
-}
+  for_each = toset(["coordinator", "dotfiles-symm"])
 
-import {
-  to = module.repo["dotfiles-symm"].github_repository.this
-  id = "dotfiles-symm"
+  to = module.repo[each.key].github_repository.this
+  id = each.key
 }
