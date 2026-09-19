@@ -12,7 +12,9 @@ Each PVC gets its own isolated directory, preventing conflicts but also preventi
 
 ## Why NFS (Shared Filesystem Required)
 
-Loki and Mimir require a shared filesystem that supports ReadWriteMany (RWX) access mode because multiple components (ingesters, compactors, queriers, store-gateways) must concurrently mount and access the same data directories. NFS is chosen over SMB because SMB has known issues with memory leaks and OOM conditions that can cause Kubernetes nodes to become unreachable when mounts consume excessive memory.
+Loki and Mimir require a shared filesystem that supports ReadWriteMany (RWX) access mode because multiple components (ingesters, compactors, queriers, store-gateways) must concurrently mount and access the same data directories.
+
+NFS is used rather than SMB. Write-heavy workloads against SMB mounts have a pattern of consuming memory that is not attributed to the container, which can eventually hang the whole node. That is the operator's professional experience rather than a citable source.
 
 ## Storage Strategy
 
@@ -47,9 +49,13 @@ Losing this tier costs the **window of recent data that has not yet been flushed
 
 ### Mount Options
 
-Storage classes use NFSv4.1 with built-in locking (no `rpc.statd` required):
+NFSv4.1 with built-in locking (no `rpc.statd` required):
 
-- `vers=4.1` - NFSv4.1 protocol
+- `vers=4.1` - NFSv4.1 protocol. The `cluster-nfs` StorageClass sets this in
+  `mountOptions`, so dynamically-provisioned volumes get it by declaration. The
+  static PVs declare no `mountOptions` and negotiate 4.1 with this server
+  anyway -- verified in `/proc/mounts` on the nodes. The result is correct but
+  not pinned.
 - Server uses `squash_all` - all users mapped to admin user on NAS
 - No UID mapping mount options needed since server handles user mapping
 
