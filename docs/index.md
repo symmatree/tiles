@@ -34,6 +34,8 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 ## Development and Operations
 
+- **[tiles-doctor.md](tiles-doctor.md)**: Role handoff for a cluster status and health session -- what the role covers, working patterns for measuring against the live system, traps, and the reading list for grounding.
+
 - **[dev-setup.md](dev-setup.md)**: Quick reference for developer setup, including commands to retrieve kubeconfig and talosconfig from 1Password and configure local kubectl and talosctl access to the test cluster.
 
 - **[ci-principles.md](ci-principles.md)**: CI/CD principles emphasizing assertive (not adaptive) behavior, where conditionals about environment state are errors and tools should either be installed or fail explicitly rather than checking for existence.
