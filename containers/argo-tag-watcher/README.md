@@ -61,9 +61,11 @@ after the restart the new pod re-pulls, the two match, and it stops.
 - **It ignores terminal pods.** A `Completed` or `Error` pod sticks around holding
   whatever digest it had when it died; the cluster has months-old ones. Comparing
   against those would be a permanent, meaningless mismatch.
-- **It sends no registry credentials.** The watched packages are public, so it
-  answers the registry's Bearer challenge anonymously. A registry that wants real
-  credentials fails the lookup and the workload is left alone.
+- **It carries no registry credentials of its own.** Digest lookups go through
+  go-containerregistry with the default keychain, so it authenticates the way any
+  container tool does -- from the ambient docker config if there is one,
+  anonymously if not. Today's watched packages are public; a private registry
+  needs a pull secret mounted and no code change.
 
 ### What moves a digest
 
@@ -103,7 +105,8 @@ to a manager Argo does not own and does not read as drift.
 
 `go test ./...` (also run by the repo's `test.sh`). All unit tests are offline --
 git resolution, the registry and the Kubernetes client are behind interfaces, and
-the registry client is exercised against an `httptest` server.
+the registry client is exercised against go-containerregistry's in-memory
+registry.
 
 ## Deployment
 
