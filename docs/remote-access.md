@@ -69,6 +69,30 @@ seam is a well-known source of attacks, so it would need care, and the payoff is
 one interstitial click. Double login is a natural resting state; there is no
 reason to go past it unless the click becomes annoying.
 
+### Why a per-service gate rather than a VPN
+
+The trust posture underneath all of this: a lot of services run here, they are
+not all hardened to the same standard, and that is fine on a private home
+network. **None of them is trusted on the public internet.** The only thing
+trusted there is oauth2-proxy, because being a protective layer is its entire
+job -- where Grafana has a great many things to think about, most of which are
+not security.
+
+In that sense this is a bastion: the back ends are not trusted, and something
+purpose-built stands in front. It differs from a VPN in three ways that matter
+here.
+
+- **Ergonomics.** The gate is in-band on each channel. There is no client to
+  install, no tunnel to bring up, no decision about what is "on the VPN" -- you
+  open the URL.
+- **Blast radius.** A compromised VPN session is network access to everything it
+  routes. A compromised channel here is one designated service, because only the
+  services deliberately published have a door at all.
+- **No split-horizon or routing exposure.** A VPN means continually deciding
+  which traffic goes through the tunnel and which does not, and some of it will
+  be riding a coffee-shop hotspot. A per-service gate has no such split to get
+  wrong.
+
 ## The pattern
 
 Each protected app gets its own `oauth2-proxy` (a subchart dependency of the
