@@ -65,14 +65,13 @@ after the restart the new pod re-pulls, the two match, and it stops.
   answers the registry's Bearer challenge anonymously. A registry that wants real
   credentials fails the lookup and the workload is left alone.
 
-### Before opting a workload in
+### What moves a digest
 
-A digest moving does not always mean the source changed. The image builds in
-**this** repo (`mavproxy`, `rtkbase`, `mimir-webhook`, this one) run on a nightly
-`schedule:` cron as well as on push, and a rebuild produces a new digest every
-night whether or not anything changed -- so opting one of those in buys a nightly
-restart. `coordinator-fleet-control`, the first consumer, builds only on pushes
-that touch its source, so its digest moves only when there is something new to run.
+A rebuild moves the digest whether or not the source changed. The image builds in
+this repo (`mavproxy`, `rtkbase`, `mimir-webhook`, this one) run on a nightly
+`schedule:` cron as well as on push, so their digests move nightly.
+`coordinator-fleet-control` is built by the coordinator repo on pushes that touch
+its source, with no cron.
 
 ## Config (env)
 
