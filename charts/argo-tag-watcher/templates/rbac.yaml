@@ -4,7 +4,7 @@ metadata:
   name: argo-tag-watcher
   namespace: "{{ .Release.Namespace }}"
 ---
-# Least privilege: only read Applications and set the refresh annotation.
+# The git side: only read Applications and set the refresh annotation.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -23,6 +23,35 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
+  name: argo-tag-watcher
+subjects:
+  - kind: ServiceAccount
+    name: argo-tag-watcher
+    namespace: "{{ .Release.Namespace }}"
+---
+# The image side reaches outside the argocd namespace: opted-in workloads live in
+# their own namespaces, so finding them means listing cluster-wide. It reads pods
+# to learn which digest each one actually pulled, and patches the workload's pod
+# template to roll it -- it cannot create, delete or scale anything.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-tag-watcher
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["list", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-tag-watcher
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
   name: argo-tag-watcher
 subjects:
   - kind: ServiceAccount
