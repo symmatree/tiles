@@ -91,8 +91,18 @@ func fakeRegistryServer(t *testing.T, manifest string) *httptest.Server {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			if !strings.Contains(r.Header.Get("Accept"), "application/vnd.oci.image.index.v1+json") {
-				t.Errorf("Accept header did not offer an index: %q", r.Header.Get("Accept"))
+			// The list must be complete: a registry answers a request that does
+			// not offer the tag's actual type with 404, which is what a missing
+			// tag looks like too.
+			for _, mt := range []string{
+				"application/vnd.oci.image.index.v1+json",
+				"application/vnd.docker.distribution.manifest.list.v2+json",
+				"application/vnd.oci.image.manifest.v1+json",
+				"application/vnd.docker.distribution.manifest.v2+json",
+			} {
+				if !strings.Contains(r.Header.Get("Accept"), mt) {
+					t.Errorf("Accept header did not offer %s: %q", mt, r.Header.Get("Accept"))
+				}
 			}
 			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 			fmt.Fprint(w, manifest)

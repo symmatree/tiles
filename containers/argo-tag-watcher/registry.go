@@ -17,6 +17,11 @@ import (
 // is what a runtime records: for a single-platform image the tag resolves to a
 // manifest, for a multi-arch build to an index, and containerd reports whichever
 // one the tag pointed at.
+//
+// All four, because the list has to be complete: GHCR answers a request whose
+// Accept omits the tag's actual type with 404, not 406, so a short list reads as
+// "no such tag" and is indistinguishable from one. Even within our own registry
+// the shapes differ -- docker manifest, OCI manifest and OCI index are all in use.
 const manifestAccept = "application/vnd.oci.image.index.v1+json," +
 	"application/vnd.docker.distribution.manifest.list.v2+json," +
 	"application/vnd.oci.image.manifest.v1+json," +
