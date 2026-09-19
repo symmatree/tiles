@@ -10,236 +10,63 @@ variable "github_token" {
 }
 
 provider "github" {
-  # token = data.onepassword_item.github_token.password
+  # Staged through TF_VAR_github_token; see README.md.
   token = var.github_token
   owner = var.github_owner
 }
 
-
-resource "github_repository" "tiles" {
-  name                   = "tiles"
-  description            = "Infrastructure as Code for Tiles"
-  visibility             = "public"
-  has_issues             = true
-  has_wiki               = false
-  has_projects           = false
-  allow_merge_commit     = false
-  allow_auto_merge       = true
-  allow_rebase_merge     = true
-  allow_squash_merge     = false
-  delete_branch_on_merge = true
-  vulnerability_alerts   = true
-  allow_update_branch    = true
-  security_and_analysis {
-    secret_scanning {
-      status = "enabled"
+# Repository policy -- merge mode, ruleset shape, security settings -- lives in
+# modules/github-repo and is the same everywhere. Only what genuinely differs
+# per repository is spelled out here.
+locals {
+  repos = {
+    tiles = {
+      description     = "Infrastructure as Code for Tiles"
+      required_checks = ["pre-commit", "nodes-plan-apply"]
+      deploy_tags     = true
     }
-    secret_scanning_push_protection {
-      status = "enabled"
+    polisher = {
+      description     = "Infrastructure as Code for Polisher"
+      required_checks = ["pre-commit", "nodes-plan-apply"]
+      deploy_tags     = true
     }
-  }
-}
-
-resource "github_repository_ruleset" "tiles-main" {
-  enforcement = "active"
-  name        = "tiles-main"
-  repository  = github_repository.tiles.name
-  target      = "branch"
-  bypass_actors {
-    actor_id    = 5
-    actor_type  = "RepositoryRole"
-    bypass_mode = "pull_request"
-  }
-  conditions {
-    ref_name {
-      exclude = []
-      include = ["~DEFAULT_BRANCH"]
+    coordinator = {
+      description = "on-vehicle companion device for Ardupilot / Ardurover providing OAK-D VIO, time sync, usb-gadget network bridging"
+      # The build-* workflows are path-filtered, so they cannot be required.
+      required_checks = ["pre-commit"]
+      deploy_tags     = false
     }
-  }
-  rules {
-    creation                = true
-    deletion                = true
-    non_fast_forward        = true
-    required_linear_history = true
-    pull_request {
-      required_approving_review_count = 0
+    dotfiles-symm = {
+      description     = "Dotfiles and environment setup"
+      required_checks = ["pre-commit"]
+      deploy_tags     = false
     }
-    required_status_checks {
-      required_check {
-        context        = "nodes-plan-apply"
-        integration_id = 15368
-      }
-      required_check {
-        context        = "pre-commit"
-        integration_id = 15368
-      }
+    fables = {
+      description = "Public technical notes: GNSS, mapping, robotics, hardware"
+      # No CI yet. Add "pre-commit" here once the workflow exists.
+      required_checks = []
+      deploy_tags     = false
     }
   }
 }
 
-resource "github_repository_ruleset" "tiles-tags" {
-  name        = "tiles-tags"
-  repository  = github_repository.tiles.name
-  target      = "tag"
-  enforcement = "active"
+module "repo" {
+  source   = "../modules/github-repo"
+  for_each = local.repos
 
-  bypass_actors {
-    actor_id    = 5
-    actor_type  = "RepositoryRole"
-    bypass_mode = "always"
-  }
-
-  conditions {
-    ref_name {
-      include = ["refs/tags/test", "refs/tags/prod"]
-      exclude = []
-    }
-  }
-
-  rules {
-    deletion = true
-  }
+  name            = each.key
+  description     = each.value.description
+  required_checks = each.value.required_checks
+  deploy_tags     = each.value.deploy_tags
 }
 
+# Only the repositories whose CI reads the shared tiles-secrets vault. The
+# 1Password service account is shared, so both get the same token.
 module "secret_onepassword_sa_token" {
-  source          = "../modules/github-secret"
-  repository      = github_repository.tiles.name
+  source   = "../modules/github-secret"
+  for_each = toset(["tiles", "polisher"])
+
+  repository      = module.repo[each.key].name
   secret_name     = "ONEPASSWORD_SA_TOKEN"
   plaintext_value = var.onepassword_sa_token
-}
-
-resource "github_repository" "polisher" {
-  name                   = "polisher"
-  description            = "Infrastructure as Code for Polisher"
-  visibility             = "public"
-  has_issues             = true
-  has_wiki               = false
-  has_projects           = false
-  allow_merge_commit     = false
-  allow_auto_merge       = true
-  allow_rebase_merge     = true
-  allow_squash_merge     = false
-  delete_branch_on_merge = true
-  vulnerability_alerts   = true
-  allow_update_branch    = true
-  security_and_analysis {
-    secret_scanning {
-      status = "enabled"
-    }
-    secret_scanning_push_protection {
-      status = "enabled"
-    }
-  }
-}
-
-resource "github_repository_ruleset" "polisher-main" {
-  enforcement = "active"
-  name        = "polisher-main"
-  repository  = github_repository.polisher.name
-  target      = "branch"
-  bypass_actors {
-    actor_id    = 5
-    actor_type  = "RepositoryRole"
-    bypass_mode = "pull_request"
-  }
-  conditions {
-    ref_name {
-      exclude = []
-      include = ["~DEFAULT_BRANCH"]
-    }
-  }
-  rules {
-    creation                = true
-    deletion                = true
-    non_fast_forward        = true
-    required_linear_history = true
-    pull_request {
-      required_approving_review_count = 0
-    }
-    required_status_checks {
-      required_check {
-        context        = "nodes-plan-apply"
-        integration_id = 15368
-      }
-      required_check {
-        context        = "pre-commit"
-        integration_id = 15368
-      }
-    }
-  }
-}
-
-resource "github_repository_ruleset" "polisher-tags" {
-  name        = "polisher-tags"
-  repository  = github_repository.polisher.name
-  target      = "tag"
-  enforcement = "active"
-
-  bypass_actors {
-    actor_id    = 5
-    actor_type  = "RepositoryRole"
-    bypass_mode = "always"
-  }
-
-  conditions {
-    ref_name {
-      include = ["refs/tags/test", "refs/tags/prod"]
-      exclude = []
-    }
-  }
-
-  rules {
-    deletion = true
-  }
-}
-
-module "secret_onepassword_sa_token_polisher" {
-  source      = "../modules/github-secret"
-  repository  = github_repository.polisher.name
-  secret_name = "ONEPASSWORD_SA_TOKEN"
-  # We share the 1password vault and service account
-  plaintext_value = var.onepassword_sa_token
-}
-
-resource "github_repository" "fables" {
-  name                   = "fables"
-  description            = "Public technical notes: GNSS, mapping, robotics, hardware"
-  visibility             = "public"
-  has_issues             = true
-  has_wiki               = false
-  has_projects           = false
-  allow_merge_commit     = false
-  allow_auto_merge       = true
-  allow_rebase_merge     = true
-  allow_squash_merge     = false
-  delete_branch_on_merge = true
-  vulnerability_alerts   = true
-  allow_update_branch    = true
-  security_and_analysis {
-    secret_scanning {
-      status = "enabled"
-    }
-    secret_scanning_push_protection {
-      status = "enabled"
-    }
-  }
-}
-
-resource "github_repository_ruleset" "fables-main" {
-  enforcement = "active"
-  name        = "fables-main"
-  repository  = github_repository.fables.name
-  target      = "branch"
-  conditions {
-    ref_name {
-      exclude = []
-      include = ["~DEFAULT_BRANCH"]
-    }
-  }
-  rules {
-    creation                = true
-    deletion                = true
-    non_fast_forward        = true
-    required_linear_history = true
-  }
 }
