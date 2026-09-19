@@ -2,142 +2,72 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-func TestParseImageRef(t *testing.T) {
-	cases := []struct {
-		image           string
-		host, repo, tag string
-		wantErr         bool
-	}{
-		{image: "ghcr.io/symmatree/tiles/mavproxy:main",
-			host: "ghcr.io", repo: "symmatree/tiles/mavproxy", tag: "main"},
-		{image: "ghcr.io/symmatree/coordinator-fleet-control:main",
-			host: "ghcr.io", repo: "symmatree/coordinator-fleet-control", tag: "main"},
-		// No tag means latest.
-		{image: "ghcr.io/symmatree/tiles/rtkbase",
-			host: "ghcr.io", repo: "symmatree/tiles/rtkbase", tag: "latest"},
-		// A colon before the last slash is a registry port, not a tag.
-		{image: "registry.local:5000/team/app:v2",
-			host: "registry.local:5000", repo: "team/app", tag: "v2"},
-		{image: "localhost:5000/app:v2",
-			host: "localhost:5000", repo: "app", tag: "v2"},
-		// Docker Hub: bare names are official images, and the API host differs
-		// from the name in the reference.
-		{image: "nginx:1.27", host: "registry-1.docker.io", repo: "library/nginx", tag: "1.27"},
-		{image: "grafana/grafana:11.0.0", host: "registry-1.docker.io", repo: "grafana/grafana", tag: "11.0.0"},
-		{image: "docker.io/grafana/grafana:11.0.0", host: "registry-1.docker.io", repo: "grafana/grafana", tag: "11.0.0"},
-		// Already pinned: nothing to resolve.
-		{image: "ghcr.io/x/y@sha256:abc", wantErr: true},
-	}
-	for _, c := range cases {
-		host, repo, tag, err := parseImageRef(c.image)
-		if c.wantErr {
-			if err == nil {
-				t.Errorf("parseImageRef(%q): want error", c.image)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("parseImageRef(%q): %v", c.image, err)
-			continue
-		}
-		if host != c.host || repo != c.repo || tag != c.tag {
-			t.Errorf("parseImageRef(%q) = %q %q %q, want %q %q %q",
-				c.image, host, repo, tag, c.host, c.repo, c.tag)
-		}
-	}
-}
-
-func TestParseChallenge(t *testing.T) {
-	got := parseChallenge(`Bearer realm="https://ghcr.io/token",service="ghcr.io",scope="repository:symmatree/tiles/mavproxy:pull,push"`)
-	want := map[string]string{
-		"realm":   "https://ghcr.io/token",
-		"service": "ghcr.io",
-		// The comma inside the quoted scope must not split it.
-		"scope": "repository:symmatree/tiles/mavproxy:pull,push",
-	}
-	for k, v := range want {
-		if got[k] != v {
-			t.Errorf("challenge[%q] = %q, want %q", k, got[k], v)
-		}
-	}
-}
-
-// fakeRegistryServer serves one manifest for one tag behind a Bearer challenge,
-// the way GHCR does.
-func fakeRegistryServer(t *testing.T, manifest string) *httptest.Server {
+// testRegistry serves an in-memory registry and returns its host. httptest binds
+// 127.0.0.1; addressing it as localhost is what makes the client talk plain HTTP
+// to it, so the test needs no insecure option in the client itself.
+func testRegistry(t *testing.T) string {
 	t.Helper()
-	const token = "a-token"
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/token":
-			if r.URL.Query().Get("scope") != "repository:team/app:pull" {
-				t.Errorf("token scope = %q", r.URL.Query().Get("scope"))
-			}
-			fmt.Fprintf(w, `{"token":%q}`, token)
-		case r.URL.Path == "/v2/team/app/manifests/main":
-			if r.Header.Get("Authorization") != "Bearer "+token {
-				w.Header().Set("WWW-Authenticate",
-					fmt.Sprintf(`Bearer realm="%s/token",service="registry",scope="repository:team/app:pull"`, srv.URL))
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			// The list must be complete: a registry answers a request that does
-			// not offer the tag's actual type with 404, which is what a missing
-			// tag looks like too.
-			for _, mt := range []string{
-				"application/vnd.oci.image.index.v1+json",
-				"application/vnd.docker.distribution.manifest.list.v2+json",
-				"application/vnd.oci.image.manifest.v1+json",
-				"application/vnd.docker.distribution.manifest.v2+json",
-			} {
-				if !strings.Contains(r.Header.Get("Accept"), mt) {
-					t.Errorf("Accept header did not offer %s: %q", mt, r.Header.Get("Accept"))
-				}
-			}
-			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
-			fmt.Fprint(w, manifest)
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
+	srv := httptest.NewServer(registry.New())
 	t.Cleanup(srv.Close)
-	return srv
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatalf("parsing server url: %v", err)
+	}
+	return strings.Replace(u.Host, "127.0.0.1", "localhost", 1)
 }
 
-// The digest of a manifest is the sha256 of its bytes, which is what containerd
-// records as the pod's imageID -- so we compute it rather than trusting a header.
-func TestDigestAnswersBearerChallengeAndHashesTheBody(t *testing.T) {
-	const manifest = `{"schemaVersion":2,"mediaType":"application/vnd.docker.distribution.manifest.v2+json"}`
-	srv := fakeRegistryServer(t, manifest)
+// The digest we report has to be the one the registry stores for the tag, since
+// that is what a runtime records as the pod's imageID.
+func TestDigestMatchesWhatThePushedImageHas(t *testing.T) {
+	host := testRegistry(t)
+	image := fmt.Sprintf("%s/team/app:main", host)
 
-	c := &registryClient{http: srv.Client(), scheme: "http"}
-	host := strings.TrimPrefix(srv.URL, "http://")
-	got, err := c.Digest(context.Background(), host+"/team/app:main")
+	img, err := random.Image(1024, 2)
+	if err != nil {
+		t.Fatalf("building test image: %v", err)
+	}
+	ref, err := name.NewTag(image)
+	if err != nil {
+		t.Fatalf("parsing tag: %v", err)
+	}
+	if err := remote.Write(ref, img); err != nil {
+		t.Fatalf("pushing test image: %v", err)
+	}
+	want, err := img.Digest()
+	if err != nil {
+		t.Fatalf("digesting test image: %v", err)
+	}
+
+	got, err := newRegistryClient().Digest(context.Background(), image)
 	if err != nil {
 		t.Fatalf("Digest: %v", err)
 	}
-	sum := sha256.Sum256([]byte(manifest))
-	want := "sha256:" + hex.EncodeToString(sum[:])
-	if got != want {
-		t.Fatalf("Digest = %q, want %q", got, want)
+	if got != want.String() {
+		t.Fatalf("Digest = %q, want %q", got, want.String())
 	}
 }
 
-func TestDigestReportsMissingTag(t *testing.T) {
-	srv := fakeRegistryServer(t, "{}")
-	c := &registryClient{http: srv.Client(), scheme: "http"}
-	host := strings.TrimPrefix(srv.URL, "http://")
-	if _, err := c.Digest(context.Background(), host+"/team/app:nope"); err == nil {
+func TestDigestReportsAMissingTag(t *testing.T) {
+	host := testRegistry(t)
+	if _, err := newRegistryClient().Digest(context.Background(), host+"/team/app:nope"); err == nil {
 		t.Fatal("want an error for a tag the registry does not have")
+	}
+}
+
+func TestDigestReportsAnUnparseableReference(t *testing.T) {
+	if _, err := newRegistryClient().Digest(context.Background(), "NOT A REF"); err == nil {
+		t.Fatal("want an error for a reference that does not parse")
 	}
 }
