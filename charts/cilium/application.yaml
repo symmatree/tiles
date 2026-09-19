@@ -37,19 +37,9 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: cilium
-  # Terraform installs this chart, so every live resource carries Helm's
-  # ownership stamps and none carries Argo's. Argo injects its tracking-id into
-  # the target and Helm writes its three onto the live object; neither renderer
-  # emits the other's, so all 56 resources read OutOfSync forever on a freshly
-  # Terraform-built cluster. Read off the Argo API (managed-resources) on
-  # tiles-test: the entire diff is these four metadata keys -- no spec
-  # difference at all, and a rendered-vs-live comparison of cilium-config
-  # matched 202/202 keys.
-  #
-  # Ignoring them keeps drift detection armed for everything that matters: a
-  # changed image, ConfigMap datum or Service port still trips OutOfSync. The
-  # tracking-id entry is deliberate -- Terraform owns these releases, so
-  # whether Argo's ownership mark is present is not a fact worth alerting on.
+  # Terraform installs this release (tf/nodes/k8s-cilium.tf) and Argo renders the
+  # same chart. Each stamps its own ownership metadata and neither emits the
+  # other's, so these four keys differ on every resource.
   ignoreDifferences:
     - group: "*"
       kind: "*"
