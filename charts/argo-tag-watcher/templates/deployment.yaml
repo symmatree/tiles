@@ -40,6 +40,8 @@ spec:
               value: "{{ .Values.batchSize }}"
             - name: BATCH_DELAY
               value: "{{ .Values.batchDelay }}"
+            - name: IMAGE_INTERVAL
+              value: "{{ .Values.imageInterval }}"
             - name: HOME # git wants a writable HOME even for ls-remote
               value: /tmp
           resources:

@@ -7,7 +7,39 @@ metadata:
   namespace: "argo-tag-watcher"
 ---
 # Source: argo-tag-watcher/templates/rbac.yaml
-# Least privilege: only read Applications and set the refresh annotation.
+# The image side reaches outside the argocd namespace: opted-in workloads live in
+# their own namespaces, so finding them means listing cluster-wide. It reads pods
+# to learn which digest each one actually pulled, and patches the workload's pod
+# template to roll it -- it cannot create, delete or scale anything.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-tag-watcher
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["list", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+# Source: argo-tag-watcher/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-tag-watcher
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-tag-watcher
+subjects:
+  - kind: ServiceAccount
+    name: argo-tag-watcher
+    namespace: "argo-tag-watcher"
+
+---
+# Source: argo-tag-watcher/templates/rbac.yaml
+# The git side: only read Applications and set the refresh annotation.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -32,7 +64,6 @@ subjects:
   - kind: ServiceAccount
     name: argo-tag-watcher
     namespace: "argo-tag-watcher"
-
 ---
 # Source: argo-tag-watcher/templates/deployment.yaml
 apiVersion: apps/v1
@@ -77,6 +108,8 @@ spec:
               value: "4"
             - name: BATCH_DELAY
               value: "5s"
+            - name: IMAGE_INTERVAL
+              value: "5m"
             - name: HOME # git wants a writable HOME even for ls-remote
               value: /tmp
           resources:

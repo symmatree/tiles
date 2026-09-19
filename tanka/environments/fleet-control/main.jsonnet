@@ -128,6 +128,15 @@ local fleetControl = {
       // Recreate, not RollingUpdate: two replicas could drive the same node at once, and
       // the one-action-per-node guard is per process.
       + kDeployment.spec.strategy.withType('Recreate')
+      // Opts this Deployment in to argo-tag-watcher's image side: the image is a
+      // floating :main tag, so a rebuild moves the digest without changing the
+      // string here and nothing would otherwise roll the pod. The playbook is baked
+      // into the image, so a stale pod runs a playbook that is not the one in main.
+      // See containers/argo-tag-watcher/README.md. Restarting abandons a converge
+      // that happens to be running; a converge is re-runnable by design.
+      + kDeployment.metadata.withAnnotationsMixin({
+        'tiles.symmatree.com/roll-on-digest-change': 'true',
+      })
       + kDeployment.mixin.spec.template.metadata.withAnnotationsMixin({
         [std.format('%s-hash', inventoryName)]: inventoryHash,
       })
