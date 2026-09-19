@@ -12,6 +12,63 @@ challenges for Google identity and admits only an explicit email allowlist. A
 request that is unauthenticated, or authenticated as the wrong identity, never
 reaches the upstream.
 
+## Two layers, and which one is not optional
+
+Every protected app has **two** independent authentication layers, and they are
+not redundant:
+
+1. **The perimeter** (oauth2-proxy) decides which *packets* reach the app at all.
+2. **The app's own login** (Argo CD's, Grafana's, the Hub's) decides what you can
+   do once you are there.
+
+Layer 1 is the one that is not negotiable. Its job is not only identity -- it is
+that the large, feature-rich application behind it is **not internet-reachable
+surface area**. A zero-day in Grafana, or a misconfiguration of Grafana, is not
+an internet-facing problem if no unauthenticated packet can reach Grafana. The
+gate is small and single-purpose precisely so that it, rather than the app, is
+what faces the internet.
+
+That makes one thing an outright error: **exposing an app's own login screen
+directly to the internet, on the grounds that the app has Google login too.**
+An app's own auth is never a substitute for the perimeter. It is a second layer
+behind it. This repository is public on purpose -- the configuration of every
+service here is readable by anyone -- so a misconfiguration is discoverable, not
+obscure, which raises rather than lowers the value of the gate.
+
+### What the two layers look like in use
+
+Hitting `argocd.{cluster}.symmatree.com` from outside:
+
+1. oauth2-proxy challenges for Google, checks the email allowlist, admits you.
+2. Argo CD's *own* login screen appears. "Log in via Google" does not re-challenge
+   -- Google has already validated you this session -- so it is one click.
+
+The second step is a real, independent login, not a trusted assertion passed in
+from the proxy. Nothing depends on getting a bridge between the two right.
+
+### Direct access, when the front door is broken
+
+The app's own login must stay usable on a path that does not go through the
+perimeter -- a `kubectl port-forward`, for instance. Google OAuth cannot work
+over a port-forward anyway (the callback URL does not resolve there), so the
+requirement is narrow and specific:
+
+- the app's login screen is reachable, and
+- it can be satisfied **without** a Google token -- a fixed credential.
+
+That is the recovery path when the OAuth callback, external-dns, or the WAN
+forward is misbehaving. Removing the app's local credential in favour of
+"Google only" would remove it.
+
+### On collapsing the double login
+
+Having the perimeter pass identity to the app (oauth2-proxy's
+`X-Auth-Request-Email` behind a NetworkPolicy) so the app does not ask again is a
+**possible** future, not a goal. There is no objection in principle -- but that
+seam is a well-known source of attacks, so it would need care, and the payoff is
+one interstitial click. Double login is a natural resting state; there is no
+reason to go past it unless the click becomes annoying.
+
 ## The pattern
 
 Each protected app gets its own `oauth2-proxy` (a subchart dependency of the
@@ -160,10 +217,10 @@ gate failing closed against real traffic.
   external-dns WAN target) and is intended to stay that way; the only WAN path to
   a shell is indirectly through the Jupyter UI terminal, which *is* behind the
   gate. See [charts/jupyterhub/README.md](../charts/jupyterhub/README.md).
-- **Double login (JupyterHub).** The perimeter and the hub each still do their
-  own Google round-trip; sharing the client makes the inner one a near-silent
-  redirect. Collapsing it to one login (hub trusting the proxy's
-  `X-Auth-Request-Email` header behind a NetworkPolicy) is a tracked follow-up.
+- **Double login is the model, not a gap.** The perimeter and the app each do
+  their own Google round-trip; sharing the OAuth client makes the inner one a
+  near-silent redirect. See [Two layers](#two-layers-and-which-one-is-not-optional)
+  -- this is two independent layers working, and collapsing it is optional.
 
 ## See also
 
