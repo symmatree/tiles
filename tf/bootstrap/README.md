@@ -35,3 +35,15 @@ export UNIFI_USERNAME=$(op read op://tiles-secrets/morpheus-terraform/username)
 export UNIFI_PASSWORD=$(op read op://tiles-secrets/morpheus-terraform/password)
 terraform plan
  ```
+
+## GitHub repositories
+
+`github.tf` manages five repositories -- `tiles`, `polisher`, `coordinator`,
+`dotfiles-symm` and `fables` -- through [`modules/github-repo`](../modules/github-repo).
+Merge mode, security settings and the default-branch ruleset are fixed by the
+module; the per-repository map in `github.tf` carries only the description, the
+required status checks, and whether the repository has `test`/`prod` deploy tags
+to protect.
+
+The fine-grained PAT in `github-tiles-tf-bootstrap` needs administration access
+to every repository in that map, not just `tiles`.
