@@ -38,6 +38,11 @@ spec:
             # so the operator maps its `password` field to the secret key of the same name.
             github_token_secret: 'FLEET_GITHUB_TOKEN'
             github_token_field: 'password'
+            # The datasets share, for post-flight (coordinator#31). A different NFS export
+            # from the one cluster-nfs provisions into, so it needs a static PV -- same
+            # pattern as flight-analysis and vio-offline, which mount the same subpath.
+            nfs_server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+            datasets_nfs_path: '{{ required ".Values.datasets_nfs_path is required" .Values.datasets_nfs_path }}'
   destination:
     server: https://kubernetes.default.svc
     namespace: fleet-control

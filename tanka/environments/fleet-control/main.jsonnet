@@ -21,6 +21,7 @@ local fleetControl = {
   local kVolumeMount = k.core.v1.volumeMount,
   local kEnvVar = k.core.v1.envVar,
   local kPersistentVolumeClaim = k.core.v1.persistentVolumeClaim,
+  local kPersistentVolume = k.core.v1.persistentVolume,
   local kIngress = k.networking.v1.ingress,
   local kIngressRule = k.networking.v1.ingressRule,
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
@@ -76,6 +77,28 @@ local fleetControl = {
       + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '1Gi' })
       + kPersistentVolumeClaim.spec.withStorageClassName('local-path'),
 
+    // Where recovered flights land. A static PV because `datasets` is a different NFS
+    // export from the one cluster-nfs provisions into -- same server, /volume2/datasets
+    // rather than /volume2/tiles -- so a dynamic claim cannot reach it. Same pattern and
+    // the same subpath as flight-analysis and vio-offline; a separate PV/PVC of our own so
+    // the three mount it independently (RWX).
+    //
+    // Retain, not Delete: this holds the only copy of a flight once the device is wiped.
+    flightsPv:
+      kPersistentVolume.new(std.format('%s-flights', config.name))
+      + kPersistentVolume.spec.withCapacity({ storage: '2Ti' })
+      + kPersistentVolume.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
+      + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
+      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/flights'),
+
+    flightsPvc:
+      kPersistentVolumeClaim.new(std.format('%s-flights', config.name))
+      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '2Ti' })
+      + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-flights', config.name))
+      + kPersistentVolumeClaim.spec.withStorageClassName(''),
+
     // Disk images the service has pushed. Nothing evicts them; the point is that pushing one
     // image to five machines is one fetch and five local reads (coordinator#312).
     //
@@ -108,6 +131,7 @@ local fleetControl = {
           // recorded host keys must land on /state to survive a pod restart.
           FLEET_KNOWN_HOSTS: '/state/known_hosts',
           FLEET_IMAGE_CACHE: '/images',
+          FLEET_FLIGHTS_DIR: '/mnt/flights',
           // Where a DEVICE reaches this service: it fetches its own image with get_url, so
           // the in-cluster service name is no use to it.
           FLEET_PUBLIC_URL: 'https://' + config.host,
@@ -148,7 +172,8 @@ local fleetControl = {
         kVolumeMount.withSubPath(config.sshKeyField) + kVolumeMount.withReadOnly(true)
       )
       + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state')
-      + k_util.pvcVolumeMount(fcObj.imagePvc.metadata.name, '/images'),
+      + k_util.pvcVolumeMount(fcObj.imagePvc.metadata.name, '/images')
+      + k_util.pvcVolumeMount(fcObj.flightsPvc.metadata.name, '/mnt/flights'),
 
     // serviceFor names the port after the deployment (`fleet-control-http`, 18 chars) and an
     // Ingress backend port name is capped at 15. Name it `http` instead -- the length limit is
