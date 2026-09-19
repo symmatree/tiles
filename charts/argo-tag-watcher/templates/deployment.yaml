@@ -5,6 +5,13 @@ metadata:
   namespace: "{{ .Release.Namespace }}"
   labels:
     app.kubernetes.io/name: argo-tag-watcher
+  annotations:
+    # Watches itself. Its own image is a floating tag, so it has the problem it
+    # exists to solve: if the image build finishes after Argo has already rolled
+    # this Deployment, the pod sits on the previous digest and nothing else here
+    # would notice. Restarting itself mid-check is safe -- the comparison holds no
+    # state, so the next process start just redoes the pass.
+    tiles.symmatree.com/roll-on-digest-change: "true"
 spec:
   replicas: 1
   strategy:

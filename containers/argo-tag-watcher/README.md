@@ -45,6 +45,13 @@ actually moved.
 There is no stored last-seen state: the comparison is registry-versus-reality, so
 after the restart the new pod re-pulls, the two match, and it stops.
 
+It watches itself, for the same reason: its own image is a floating tag, so if a
+build lands after Argo has already rolled its Deployment, the pod stays on the
+previous digest and nothing else here would notice. One consequence worth knowing
+is that a rebuild of this image restarts this watcher -- nightly, given the cron
+below. That costs nothing: the comparison holds no state, so a fresh process just
+redoes the pass.
+
 ### What a watched workload needs
 
 - **`imagePullPolicy: Always`.** Without it the replacement pod reuses the cached
