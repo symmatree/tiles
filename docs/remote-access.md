@@ -6,106 +6,82 @@ application without first being tied to a validated, allowlisted identity**, and
 the thing doing the gating is a small, single-purpose proxy rather than the large
 attack surface of the app behind it (Grafana, JupyterHub, Argo CD).
 
-The routine path is not a VPN (see [Why the routine path is not the
-VPN](#why-the-routine-path-is-not-the-vpn) -- two exist, for other jobs). Every
-protected host is published to the public internet and
+Every protected host is published to the public internet and
 fronted by [oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/), which
 challenges for Google identity and admits only an explicit email allowlist. A
 request that is unauthenticated, or authenticated as the wrong identity, never
 reaches the upstream.
 
-## Two layers, and which one is not optional
+## Two layers
 
-Every protected app has **two** independent authentication layers, and they are
-not redundant:
+Every protected app has two authentication layers:
 
-1. **The perimeter** (oauth2-proxy) decides which *packets* reach the app at all.
+1. **The perimeter** (oauth2-proxy) decides which packets reach the app.
 2. **The app's own login** (Argo CD's, Grafana's, the Hub's) decides what you can
-   do once you are there.
+   do once there.
 
-Layer 1 is the one that is not negotiable. Its job is not only identity -- it is
-that the large, feature-rich application behind it is **not internet-reachable
-surface area**. A zero-day in Grafana, or a misconfiguration of Grafana, is not
-an internet-facing problem if no unauthenticated packet can reach Grafana. The
-gate is small and single-purpose precisely so that it, rather than the app, is
-what faces the internet.
+The perimeter is required. The app behind it is not internet-reachable surface
+area, so a zero-day or a misconfiguration in Grafana is not an internet-facing
+problem. An app's own login -- including its own Google login -- is the second
+layer, not a substitute for the first. The `external-dns` WAN target belongs on
+the oauth2-proxy Ingress; an app's own Ingress is never published.
 
-That makes one thing an outright error: **exposing an app's own login screen
-directly to the internet, on the grounds that the app has Google login too.**
-An app's own auth is never a substitute for the perimeter. It is a second layer
-behind it. This repository is public on purpose -- the configuration of every
-service here is readable by anyone -- so a misconfiguration is discoverable, not
-obscure, which raises rather than lowers the value of the gate.
+This repository is public, so service configuration here is readable by anyone.
 
-### What the two layers look like in use
+### The two layers in use
 
 Hitting `argocd.{cluster}.symmatree.com` from outside:
 
-1. oauth2-proxy challenges for Google, checks the email allowlist, admits you.
-2. Argo CD's *own* login screen appears. "Log in via Google" does not re-challenge
-   -- Google has already validated you this session -- so it is one click.
+1. oauth2-proxy challenges for Google and checks the email allowlist.
+2. Argo CD's own login screen appears. "Log in via Google" is one click -- Google
+   validated the session at step 1, so it does not re-challenge.
 
-The second step is a real, independent login, not a trusted assertion passed in
-from the proxy. Nothing depends on getting a bridge between the two right.
+Step 2 is an independent login. No identity is passed from the proxy to the app.
 
-### Direct access, when the front door is broken
+### Direct access
 
-The app's own login must stay usable on a path that does not go through the
-perimeter -- a `kubectl port-forward`, for instance. Google OAuth cannot work
-over a port-forward anyway (the callback URL does not resolve there), so the
-requirement is narrow and specific:
+The app's own login stays usable on a path that bypasses the perimeter, such as
+a `kubectl port-forward`:
 
-- the app's login screen is reachable, and
-- it can be satisfied **without** a Google token -- a fixed credential.
+- the login screen is reachable, and
+- a fixed credential satisfies it, without a Google token.
 
-That is the recovery path when the OAuth callback, external-dns, or the WAN
-forward is misbehaving. Removing the app's local credential in favour of
-"Google only" would remove it.
+Google OAuth does not work over a port-forward -- the callback URL does not
+resolve there. This is the path in when the OAuth callback, external-dns or the
+WAN forward is broken, so apps keep a local credential rather than going
+Google-only.
 
-### On collapsing the double login
+### Collapsing the double login
 
-Having the perimeter pass identity to the app (oauth2-proxy's
-`X-Auth-Request-Email` behind a NetworkPolicy) so the app does not ask again is a
-**possible** future, not a goal. There is no objection in principle -- but that
-seam is a well-known source of attacks, so it would need care, and the payoff is
-one interstitial click. Double login is a natural resting state; there is no
-reason to go past it unless the click becomes annoying.
+Both layers do their own Google round-trip. Having the perimeter pass identity
+to the app instead (oauth2-proxy's `X-Auth-Request-Email` behind a NetworkPolicy)
+is possible; that seam attracts attacks and would need care, and the payoff is
+one interstitial click.
 
-### Why the routine path is not the VPN
+### VPNs
 
-The trust posture underneath all of this: a lot of services run here, they are
-not all hardened to the same standard, and that is fine on a private home
-network. **None of them is trusted on the public internet.** The only thing
-trusted there is oauth2-proxy, because being a protective layer is its entire
-job -- where Grafana has a great many things to think about, most of which are
-not security.
-
-In that sense this is a bastion: the back ends are not trusted, and something
-purpose-built stands in front.
-
-**Two VPNs do exist**, on the UniFi, for jobs the gate does not do:
+Two run on the UniFi, for jobs the gate does not cover:
 
 | VPN | Purpose |
 |-----|---------|
-| WireGuard | lets GitHub Actions reach the cluster -- `github-vpn-client` in 1Password, used by `nodes-plan-apply`, `taint-vms`, `argocd-pr-diff` and `refresh-api-versions` via [`.github/actions/wg-quick`](../.github/actions/wg-quick/action.yaml) |
-| UniFi Teleport | general remote access for things the gate does not front, e.g. RDP |
+| WireGuard | GitHub Actions reaching the cluster -- `github-vpn-client` in 1Password, used by `nodes-plan-apply`, `taint-vms`, `argocd-pr-diff` and `refresh-api-versions` via [`.github/actions/wg-quick`](../.github/actions/wg-quick/action.yaml). Set up by hand in UniFi; see [tf/bootstrap/README.md](../tf/bootstrap/README.md). |
+| UniFi Teleport | general remote access, e.g. RDP |
 
-Both are toggled from the UniFi console, so Teleport can stay off unless it is
-wanted. The point of the identity-aware perimeter is not that VPNs are
-unavailable -- it is that reaching these web services does not **routinely**
-require one. That matters in three ways.
+Both toggle from the UniFi console, so Teleport can stay off when unused.
 
-- **Ergonomics.** The gate is in-band on each channel. There is no client to
-  install, no tunnel to bring up, no decision about what is "on the VPN" -- you
-  open the URL.
-- **Blast radius.** A VPN session is network access to everything it routes, so
-  it is worth keeping to deliberate, occasional use. A compromised channel here
-  is one designated service, because only the services deliberately published
-  have a door at all.
-- **No split-horizon or routing exposure.** Routine VPN use means continually
-  deciding which traffic goes through the tunnel and which does not, and some of
-  it will be riding a coffee-shop hotspot. A per-service gate has no such split
-  to get wrong.
+The web services above go through the gate instead, which differs from routine
+VPN use in three ways:
+
+- **Ergonomics.** The gate is in-band on each channel: no client, no tunnel.
+- **Blast radius.** A VPN session reaches everything it routes. A channel here
+  reaches one service, since only published services have a door.
+- **No split-horizon or routing split.** Routine VPN use means deciding which
+  traffic goes through the tunnel, some of it from untrusted networks such as a
+  cafe hotspot.
+
+Services here vary in how hardened they are, which is fine on a private network.
+On the public internet the gate is what is exposed: protection is oauth2-proxy's
+only job, where Grafana's concerns are mostly not security.
 
 ## The pattern
 
@@ -255,10 +231,9 @@ gate failing closed against real traffic.
   external-dns WAN target) and is intended to stay that way; the only WAN path to
   a shell is indirectly through the Jupyter UI terminal, which *is* behind the
   gate. See [charts/jupyterhub/README.md](../charts/jupyterhub/README.md).
-- **Double login is the model, not a gap.** The perimeter and the app each do
-  their own Google round-trip; sharing the OAuth client makes the inner one a
-  near-silent redirect. See [Two layers](#two-layers-and-which-one-is-not-optional)
-  -- this is two independent layers working, and collapsing it is optional.
+- **Double login.** The perimeter and the app each do their own Google
+  round-trip; sharing the OAuth client makes the inner one a near-silent
+  redirect. See [Two layers](#two-layers).
 
 ## See also
 
