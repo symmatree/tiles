@@ -121,6 +121,36 @@ For a first cut without the API, break series down by metric name:
 topk(20, count by (__name__) ({cluster="bond"}))
 ```
 
+## Ingest path (Kafka)
+
+Writes do not go straight from distributor to ingester. `ingest_storage` is
+enabled, so the distributor appends to Kafka and ingesters consume from it:
+
+```yaml
+ingest_storage:
+  enabled: true
+  kafka:
+    address: mimir-kafka.mimir.svc.cluster.local.:9092
+    topic: mimir-ingest
+    auto_create_topic_enabled: true
+    auto_create_topic_default_partitions: 100
+```
+
+This comes from the `mimir-distributed` chart, which uses Kafka as the ingest
+buffer at this version. `mimir-kafka` is a single-replica StatefulSet in the
+`mimir` namespace.
+
+Operationally:
+
+- Its PVC, `kafka-data-mimir-kafka-0`, is on the **ephemeral** storage tier
+  (`local-path`, `reclaimPolicy: Delete`) -- see
+  [nfs-storage-architecture.md](nfs-storage-architecture.md). Losing it costs
+  the window of samples not yet flushed to blocks, not the blocks themselves.
+- Being single-replica and node-pinned by that PVC, the node holding it is a
+  single point of failure for ingest.
+- `KAFKA_OPTS=-Dkafka.logs.dir=/tmp/kafka-logs/` redirects Kafka's own logs to a
+  writable path.
+
 ## Storage
 
 Blocks, ruler, and alertmanager state live on the shared **NFS** volume mounted at

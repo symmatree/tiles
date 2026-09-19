@@ -28,7 +28,6 @@ and custom container builds.
 | docs/index.md | Navigational index of all docs/ files with one-paragraph summaries per document | [docs/index.md](https://github.com/symmatree/tiles/blob/main/docs/index.md) |
 | docs/overview.md | Motivation, architecture philosophy, primary purposes of the cluster, and cold-start initialization procedure | [docs/overview.md](https://github.com/symmatree/tiles/blob/main/docs/overview.md) |
 | docs/components.md | Index of all deployed cluster components with links to Terraform, ArgoCD Application manifests, and per-component READMEs | [docs/components.md](https://github.com/symmatree/tiles/blob/main/docs/components.md) |
-| docs/component-readme-index.md | Alternate component index organized by category with links to component README files | [docs/component-readme-index.md](https://github.com/symmatree/tiles/blob/main/docs/component-readme-index.md) |
 | docs/todo.md | Backlog of planned features and improvements (OIDC, LGTM stack, Grafana auth, workload identity, etc.) | [docs/todo.md](https://github.com/symmatree/tiles/blob/main/docs/todo.md) |
 
 ### Infrastructure management

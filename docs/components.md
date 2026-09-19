@@ -20,6 +20,17 @@ Unless noted, **Application** below is always that template path (even when the 
 - **README**: [`charts/argocd-applications/README.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/README.md)
 - **Description**: Meta-chart whose templates render the per-component Argo `Application` resources and propagate values.
 
+### JupyterHub
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/jupyterhub-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/jupyterhub-application.yaml)
+- **README**: [`charts/jupyterhub/README.md`](https://github.com/symmatree/tiles/blob/main/charts/jupyterhub/README.md)
+- **Description**: Always-on JupyterHub (zero-to-jupyterhub-k8s) with direct SSH access to singleuser servers.
+### Argo CD Applications installer
+
+- **Terraform**: Applied by Terraform ([`tf/nodes`](https://github.com/symmatree/tiles/tree/main/tf/nodes))
+- **README**: [`charts/argocd-applications-installer/README.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications-installer/README.md)
+- **Description**: One chart, one resource: the `argocd-applications` Application that bootstraps the app-of-apps.
 ## Cluster platform
 
 ### cert-manager
@@ -147,6 +158,18 @@ Thin Argo apps that render Jsonnet mixins (dashboards/rules), not the primary wo
 - **README**: [`charts/argocd-applications/templates/README-node-exporter-mixin.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-node-exporter-mixin.md)
 - **Description**: Node-exporter monitoring mixin.
 
+### Apprise mixin
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/apprise-mixin-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/apprise-mixin-application.yaml)
+- **README**: [`tanka/environments/apprise-mixin/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/apprise-mixin/README.md)
+- **Description**: Dashboards and alerts for Apprise, the notification delivery backend.
+### Backpack mixin
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/backpack-mixin-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/backpack-mixin-application.yaml)
+- **README**: [`tanka/environments/backpack-mixin/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/backpack-mixin/README.md)
+- **Description**: Grafana dashboard for the ELRS TX backpack WiFi link.
 ## Data and application workloads
 
 ### Postgres operator
@@ -177,6 +200,36 @@ Thin Argo apps that render Jsonnet mixins (dashboards/rules), not the primary wo
 - **README**: [`tanka/environments/apprise/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/apprise/README.md)
 - **Description**: Notification proxy (tanka env `apprise`).
 
+### fleet-control
+
+- **Terraform**: N/A
+- **Application**: [`tanka/environments/fleet-control/application.yaml`](https://github.com/symmatree/tiles/blob/main/tanka/environments/fleet-control/application.yaml)
+- **README**: [`tanka/environments/fleet-control/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/fleet-control/README.md)
+- **Description**: Ground-station control surface for the rekon10 fleet; sets up a freshly flashed card and holds the fleet inventory.
+### flight-analysis
+
+- **Terraform**: N/A
+- **Application**: [`tanka/environments/flight-analysis/application.yaml`](https://github.com/symmatree/tiles/blob/main/tanka/environments/flight-analysis/application.yaml)
+- **README**: [`tanka/environments/flight-analysis/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/flight-analysis/README.md)
+- **Description**: Nightly CronJob running the rekon10 flight-analysis notebook over NAS flight captures.
+### vio-offline
+
+- **Terraform**: N/A
+- **Application**: [`tanka/environments/vio-offline/application.yaml`](https://github.com/symmatree/tiles/blob/main/tanka/environments/vio-offline/application.yaml)
+- **README**: [`tanka/environments/vio-offline/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/vio-offline/README.md)
+- **Description**: Nightly VINS pose regeneration over the NAS flight captures.
+### MAVProxy
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/mavproxy-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/mavproxy-application.yaml)
+- **README**: [`tanka/environments/mavproxy/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/mavproxy/README.md)
+- **Description**: Always-on MAVLink hub on acebase: ELRS backpack UDP in, NTRIP RTCM out, TCP for Mission Planner.
+### NTRIP / RTKBase
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/ntrip-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/ntrip-application.yaml)
+- **README**: [`tanka/environments/ntrip/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/ntrip/README.md)
+- **Description**: GNSS base and local NTRIP caster on acebase. Prod only.
 ## DNS (Google Cloud)
 
 ### DNS zone
@@ -184,6 +237,19 @@ Thin Argo apps that render Jsonnet mixins (dashboards/rules), not the primary wo
 - **Terraform**: [`tf/modules/k8s-cluster/dns.tf`](https://github.com/symmatree/tiles/blob/main/tf/modules/k8s-cluster/dns.tf)
 - **Application**: N/A (GCP managed zone, not an Argo Application)
 - **Description**: Delegated DNS for the cluster zone (paired with external-dns above).
+
+## Container images
+
+Image sources built from this repo and deployed by the components above.
+
+- [`containers/argo-tag-watcher/README.md`](https://github.com/symmatree/tiles/blob/main/containers/argo-tag-watcher/README.md) -- in-cluster controller that makes Argo CD notice git changes without a manual refresh.
+- [`containers/mavproxy/README.md`](https://github.com/symmatree/tiles/blob/main/containers/mavproxy/README.md) -- amd64 image for the ground MAVLink proxy.
+- [`containers/rtkbase/README.md`](https://github.com/symmatree/tiles/blob/main/containers/rtkbase/README.md) -- amd64 image running Stefal/rtkbase under systemd.
+
+## Terraform roots
+
+- [`tf/bootstrap/README.md`](https://github.com/symmatree/tiles/blob/main/tf/bootstrap/README.md) -- seed-project Terraform, run interactively: GCP projects, workload identity, GitHub, 1Password, Proxmox and UniFi.
+- [`tf/nodes/README.md`](https://github.com/symmatree/tiles/blob/main/tf/nodes/README.md) -- cluster Terraform: Proxmox VMs, bare-metal Talos nodes, the Talos cluster, and the Kubernetes-facing releases (Cilium, Argo CD).
 
 ## How READMEs are laid out
 
