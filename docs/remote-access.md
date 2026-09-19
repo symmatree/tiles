@@ -6,7 +6,9 @@ application without first being tied to a validated, allowlisted identity**, and
 the thing doing the gating is a small, single-purpose proxy rather than the large
 attack surface of the app behind it (Grafana, JupyterHub, Argo CD).
 
-There is no VPN. Every protected host is published to the public internet and
+The routine path is not a VPN (see [Why the routine path is not the
+VPN](#why-the-routine-path-is-not-the-vpn) -- two exist, for other jobs). Every
+protected host is published to the public internet and
 fronted by [oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/), which
 challenges for Google identity and admits only an explicit email allowlist. A
 request that is unauthenticated, or authenticated as the wrong identity, never
@@ -69,7 +71,7 @@ seam is a well-known source of attacks, so it would need care, and the payoff is
 one interstitial click. Double login is a natural resting state; there is no
 reason to go past it unless the click becomes annoying.
 
-### Why a per-service gate rather than a VPN
+### Why the routine path is not the VPN
 
 The trust posture underneath all of this: a lot of services run here, they are
 not all hardened to the same standard, and that is fine on a private home
@@ -79,19 +81,31 @@ job -- where Grafana has a great many things to think about, most of which are
 not security.
 
 In that sense this is a bastion: the back ends are not trusted, and something
-purpose-built stands in front. It differs from a VPN in three ways that matter
-here.
+purpose-built stands in front.
+
+**Two VPNs do exist**, on the UniFi, for jobs the gate does not do:
+
+| VPN | Purpose |
+|-----|---------|
+| WireGuard | lets GitHub Actions reach the cluster -- `github-vpn-client` in 1Password, used by `nodes-plan-apply`, `taint-vms`, `argocd-pr-diff` and `refresh-api-versions` via [`.github/actions/wg-quick`](../.github/actions/wg-quick/action.yaml) |
+| UniFi Teleport | general remote access for things the gate does not front, e.g. RDP |
+
+Both are toggled from the UniFi console, so Teleport can stay off unless it is
+wanted. The point of the identity-aware perimeter is not that VPNs are
+unavailable -- it is that reaching these web services does not **routinely**
+require one. That matters in three ways.
 
 - **Ergonomics.** The gate is in-band on each channel. There is no client to
   install, no tunnel to bring up, no decision about what is "on the VPN" -- you
   open the URL.
-- **Blast radius.** A compromised VPN session is network access to everything it
-  routes. A compromised channel here is one designated service, because only the
-  services deliberately published have a door at all.
-- **No split-horizon or routing exposure.** A VPN means continually deciding
-  which traffic goes through the tunnel and which does not, and some of it will
-  be riding a coffee-shop hotspot. A per-service gate has no such split to get
-  wrong.
+- **Blast radius.** A VPN session is network access to everything it routes, so
+  it is worth keeping to deliberate, occasional use. A compromised channel here
+  is one designated service, because only the services deliberately published
+  have a door at all.
+- **No split-horizon or routing exposure.** Routine VPN use means continually
+  deciding which traffic goes through the tunnel and which does not, and some of
+  it will be riding a coffee-shop hotspot. A per-service gate has no such split
+  to get wrong.
 
 ## The pattern
 
