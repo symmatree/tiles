@@ -26,11 +26,8 @@ locals {
       deploy_tags     = true
     }
     polisher = {
-      description = "Infrastructure as Code for Polisher"
-      # nodes-plan-apply was required here without ever existing: the repository
-      # has no such workflow, so the context never reported and nothing could
-      # merge. symmatree/polisher#3 adds pre-commit, which is what it has.
-      required_checks = ["pre-commit"]
+      description     = "Infrastructure as Code for Polisher"
+      required_checks = ["pre-commit", "nodes-plan-apply"]
       deploy_tags     = true
     }
     coordinator = {
