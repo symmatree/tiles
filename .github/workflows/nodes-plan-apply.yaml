@@ -67,38 +67,63 @@ jobs:
     steps:
       - uses: "actions/checkout@v7"
         with:
-          fetch-depth: 0 # Need full history for git diff
-      - uses: ./.github/actions/changed-files
-        id: changed_files
+          # configure-deployment force-pushes the test/prod deploy tags, which a
+          # shallow clone cannot do.
+          fetch-depth: 0
+      # A pull-request preview plan costs about 28 1Password service account
+      # reads (#561), so it is skipped when nothing in the diff can change the
+      # plan. Two questions, because `predicate-quantifier` is set per action
+      # invocation and these need opposite quantifiers.
+      #
+      # 1. Did anything outside the exempt areas change? `every` means a file
+      #    counts only when it matches all the rules, so a file under any
+      #    excluded prefix drops out.
+      #      charts/, tanka/  Argo CD owns them; argocd-pr-diff previews them
+      #      docs/            prose
+      #      tf/bootstrap/    a separate root this workflow never runs
+      - uses: dorny/paths-filter@v4
+        id: outside
         if: github.event_name == 'pull_request'
         with:
-          base_sha: ${{ github.event.pull_request.base.sha }}
-          head_sha: ${{ github.event.pull_request.head.sha }}
-      - name: Check if only charts changed
-        id: charts_only
+          predicate-quantifier: every
+          filters: |
+            outside:
+              - '**'
+              - '!charts/**'
+              - '!tanka/**'
+              - '!docs/**'
+              - '!tf/bootstrap/**'
+      # 2. ...except that tf/nodes installs four of those charts itself, so a
+      #    change to one of them does change this plan. Default `some`
+      #    quantifier: any rule matching is enough.
+      - uses: dorny/paths-filter@v4
+        id: tf_charts
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            tf_charts:
+              - 'charts/argocd/**'
+              - 'charts/argocd-applications-installer/**'
+              - 'charts/cilium/**'
+              - 'charts/argocd-applications/values/**'
+      - name: Decide whether Terraform runs
+        id: scope
+        env:
+          OUTSIDE: ${{ steps.outside.outputs.outside }}
+          TF_CHARTS: ${{ steps.tf_charts.outputs.tf_charts }}
         run: |
           set -euo pipefail
           mkdir -p "${{ runner.temp }}/txt-outputs/"
+          # Everything that is not a pull-request preview reconciles for real.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "Not a pull request, running Terraform"
-            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
+            echo "run_terraform=true" | tee -a "$GITHUB_OUTPUT"
             exit 0
           fi
-          CHANGED="${{ steps.changed_files.outputs.changed }}"
-          CHANGED="$(printf '%s' "$CHANGED")"
-          if [ -z "${CHANGED}" ]; then
-            echo "No changed files detected, running Terraform to be safe"
-            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          NON_CHARTS_FILES=$(echo "${CHANGED}" | grep -v "(^charts/)|(^tanka/)" || true)
-          if [ -n "${NON_CHARTS_FILES}" ]; then
-            echo "Found changes outside charts/ directory:"
-            echo "${NON_CHARTS_FILES}"
-            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
+          echo "outside exempt areas: ${OUTSIDE}; Terraform-installed charts: ${TF_CHARTS}"
+          if [ "${OUTSIDE}" = "true" ] || [ "${TF_CHARTS}" = "true" ]; then
+            echo "run_terraform=true" | tee -a "$GITHUB_OUTPUT"
           else
-            echo "All changes are in charts/ directory, skipping Terraform"
-            echo "run_terraform=false" >> "$GITHUB_OUTPUT"
+            echo "run_terraform=false" | tee -a "$GITHUB_OUTPUT"
           fi
       - uses: ./.github/actions/configure-deployment
         id: config
@@ -119,13 +144,13 @@ jobs:
       # exhausted), so snapshotting start/end is free. Delta = this run's SA
       # cost. Steps are non-fatal so metering never breaks a deploy.
       - name: Install 1Password CLI (quota metering)
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         continue-on-error: true
         uses: 1password/install-cli-action@v1
 
       - name: 1Password quota — snapshot at start
         id: quota_start
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         continue-on-error: true
         shell: bash
         env:
@@ -139,13 +164,11 @@ jobs:
 
       - name: Load secrets
         id: load_secrets
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         uses: 1password/load-secrets-action@v4
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           TILES_VPN_CONFIG: "op://tiles-secrets/github-vpn-client/notesPlain"
-          WORKLOAD_IDENTITY_PROVIDER: "op://tiles-secrets/gh_oidc_workload_identity/workload_identity_provider"
-          SERVICE_ACCOUNT_EMAIL: "op://tiles-secrets/gh_oidc_workload_identity/service_account_email"
           SYNOLOGY_USER: "op://tiles-secrets/raconteur-login/username"
           SYNOLOGY_PASSWORD: "op://tiles-secrets/raconteur-login/password"
           UNIFI_USERNAME: "op://tiles-secrets/morpheus-terraform/username"
@@ -153,11 +176,11 @@ jobs:
           PROXMOX_ROOT_PASSWORD: "op://tiles-secrets/proxmox-root/password"
 
       - name: Authenticate to Google Cloud
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ steps.load_secrets.outputs.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ steps.load_secrets.outputs.SERVICE_ACCOUNT_EMAIL }}
+          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.SERVICE_ACCOUNT_EMAIL }}
 
       # Only tf/nodes: this workflow never bootstraps /tf/bootstrap, but caching **/.terraform
       # and hashing **/.terraform.lock.hcl mixes bootstrap + nodes artifacts and restores
@@ -166,7 +189,7 @@ jobs:
       # does not match the full key (hits should only be dirs produced solely by terraform
       # init below). Key prefix `nodes-tf-v2` burns any older wide-cache payloads once.
       - name: Terraform cache
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         id: tf-cache
         uses: actions/cache@v6
         with:
@@ -188,13 +211,13 @@ jobs:
       # Deliberate provider upgrades: run `terraform init -upgrade` locally and commit the
       # new lockfile; the changed hash busts this cache automatically.
       - name: Terraform init (cache miss)
-        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit != 'true'
+        if: steps.scope.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit != 'true'
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
           terraform init
       - name: Terraform get (warm cache)
-        if: steps.charts_only.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit == 'true'
+        if: steps.scope.outputs.run_terraform == 'true' && steps.tf-cache.outputs.cache-hit == 'true'
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
@@ -204,18 +227,18 @@ jobs:
       # releases in tf/nodes can load charts/cilium, whose cilium subchart is
       # not committed. Cached; see docs/caching-strategy.md.
       - uses: ./.github/actions/helm-setup
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
 
       - uses: ./.github/actions/wg-quick
         id: wireguard
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         with:
           wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
           conf_dir: "$HOME"
 
       - name: Terraform plan and apply - test
         id: tf-test
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         env:
           SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
@@ -238,7 +261,7 @@ jobs:
 
       - name: Terraform plan and apply - prod
         id: tf-prod
-        if: steps.charts_only.outputs.run_terraform == 'true'
+        if: steps.scope.outputs.run_terraform == 'true'
         env:
           SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
@@ -260,7 +283,7 @@ jobs:
           txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-prod.txt"
 
       - name: 1Password quota — snapshot at end + delta
-        if: always() && steps.charts_only.outputs.run_terraform == 'true'
+        if: always() && steps.scope.outputs.run_terraform == 'true'
         continue-on-error: true
         shell: bash
         env:
@@ -307,7 +330,7 @@ jobs:
         id: outcome_msg
         if: always() && github.event_name == 'pull_request'
         run: |
-          if [ "${{ steps.charts_only.outputs.run_terraform }}" == "false" ]; then
+          if [ "${{ steps.scope.outputs.run_terraform }}" == "false" ]; then
             echo "message=Skipped (charts-only changes)" >> "$GITHUB_OUTPUT"
           else
             echo "message=test: ${{ steps.tf-test.outcome }}, prod: ${{ steps.tf-prod.outcome }}" >> "$GITHUB_OUTPUT"
