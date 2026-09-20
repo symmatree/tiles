@@ -1,0 +1,35 @@
+name: "tf-validate"
+# No `paths:` filter: a workflow skipped by path filtering never reports a
+# check, so it could not be required. This is cheap enough to always run.
+#
+# tf/bootstrap is excluded from nodes-plan-apply -- that workflow only ever
+# runs tf/nodes -- so without this a bootstrap change would have no CI at all.
+# `terraform init -backend=false` needs no GCS state and no provider
+# credentials; it only installs the providers so their schemas can be checked.
+# tf/nodes is not validated here because nodes-plan-apply already plans it.
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
+
+jobs:
+  tf-validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: "actions/checkout@v7"
+      - uses: "hashicorp/setup-terraform@v4"
+        with:
+          terraform_version: "1.14.8"
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive tf/
+
+      - name: Terraform validate - bootstrap
+        working-directory: "tf/bootstrap"
+        run: |
+          set -euo pipefail
+          terraform init -backend=false -input=false
+          terraform validate

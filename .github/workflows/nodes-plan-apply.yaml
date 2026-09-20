@@ -70,24 +70,47 @@ jobs:
           # configure-deployment force-pushes the test/prod deploy tags, which a
           # shallow clone cannot do.
           fetch-depth: 0
-      # A pull-request preview plan is skipped when the diff is chart or Tanka
-      # content only, because Argo CD owns those and argocd-pr-diff previews
-      # them; the point is 1Password SA quota (#561), which a plan spends about
-      # 28 reads of. `predicate-quantifier: every` means a file counts only if
-      # it matches all three rules, so anything under charts/ or tanka/ is
-      # excluded and the filter is true when something else changed.
+      # A pull-request preview plan costs about 28 1Password service account
+      # reads (#561), so it is skipped when nothing in the diff can change the
+      # plan. Two questions, because `predicate-quantifier` is set per action
+      # invocation and these need opposite quantifiers.
+      #
+      # 1. Did anything outside the exempt areas change? `every` means a file
+      #    counts only when it matches all the rules, so a file under any
+      #    excluded prefix drops out.
+      #      charts/, tanka/  Argo CD owns them; argocd-pr-diff previews them
+      #      docs/            prose
+      #      tf/bootstrap/    a separate root this workflow never runs
       - uses: dorny/paths-filter@v4
-        id: changed
+        id: outside
         if: github.event_name == 'pull_request'
         with:
           predicate-quantifier: every
           filters: |
-            terraform:
+            outside:
               - '**'
               - '!charts/**'
               - '!tanka/**'
+              - '!docs/**'
+              - '!tf/bootstrap/**'
+      # 2. ...except that tf/nodes installs four of those charts itself, so a
+      #    change to one of them does change this plan. Default `some`
+      #    quantifier: any rule matching is enough.
+      - uses: dorny/paths-filter@v4
+        id: tf_charts
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            tf_charts:
+              - 'charts/argocd/**'
+              - 'charts/argocd-applications-installer/**'
+              - 'charts/cilium/**'
+              - 'charts/argocd-applications/values/**'
       - name: Decide whether Terraform runs
         id: scope
+        env:
+          OUTSIDE: ${{ steps.outside.outputs.outside }}
+          TF_CHARTS: ${{ steps.tf_charts.outputs.tf_charts }}
         run: |
           set -euo pipefail
           mkdir -p "${{ runner.temp }}/txt-outputs/"
@@ -96,7 +119,12 @@ jobs:
             echo "run_terraform=true" | tee -a "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "run_terraform=${{ steps.changed.outputs.terraform }}" | tee -a "$GITHUB_OUTPUT"
+          echo "outside exempt areas: ${OUTSIDE}; Terraform-installed charts: ${TF_CHARTS}"
+          if [ "${OUTSIDE}" = "true" ] || [ "${TF_CHARTS}" = "true" ]; then
+            echo "run_terraform=true" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "run_terraform=false" | tee -a "$GITHUB_OUTPUT"
+          fi
       - uses: ./.github/actions/configure-deployment
         id: config
       - name: DateAndTimeStamps
