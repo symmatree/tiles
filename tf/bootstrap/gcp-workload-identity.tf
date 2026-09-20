@@ -96,7 +96,26 @@ resource "google_project_iam_member" "tiles_terraform_oidc" {
   member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
 }
 
-# Store workload identity credentials in 1Password
+# The workflows authenticate to GCP by workload identity federation, which needs
+# the provider's resource name and the service account's email. Neither is a
+# secret: what stops anyone else using this pool is the attribute_condition on
+# it, not the obscurity of these two strings. As repository variables the
+# workflows read them for free, instead of spending two 1Password service
+# account reads each, every run, in four workflows (#561).
+resource "github_actions_variable" "workload_identity_provider" {
+  repository    = module.repo["tiles"].name
+  variable_name = "WORKLOAD_IDENTITY_PROVIDER"
+  value         = module.gh_oidc.provider_name
+}
+
+resource "github_actions_variable" "service_account_email" {
+  repository    = module.repo["tiles"].name
+  variable_name = "SERVICE_ACCOUNT_EMAIL"
+  value         = google_service_account.tiles_terraform_oidc.email
+}
+
+# Also kept in 1Password, for reading by hand. The workflows use the repository
+# variables above.
 resource "onepassword_item" "gh_oidc_provider" {
   vault    = data.onepassword_vault.tf_secrets.uuid
   title    = "gh_oidc_workload_identity"
