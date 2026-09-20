@@ -32,8 +32,11 @@ locals {
     }
     coordinator = {
       description = "on-vehicle companion device for Ardupilot / Ardurover providing OAK-D VIO, time sync, usb-gadget network bridging"
-      # The build-* workflows are path-filtered, so they cannot be required.
-      required_checks = ["pre-commit"]
+      # containers-ok and firmware-ok are the gate jobs of build-containers and
+      # build-firmware: they always run and report the result of the matrix
+      # behind them, which a path-filtered build job cannot do. `tests` runs the
+      # workstation suite. See the repository's docs/ci.md.
+      required_checks = ["pre-commit", "containers-ok", "firmware-ok", "tests"]
       deploy_tags     = false
     }
     dotfiles-symm = {
