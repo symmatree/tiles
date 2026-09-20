@@ -55,6 +55,29 @@ Tanka -- gets rendered before and after and the whole diff accounted for. See
 reasons are theirs to state; inventing a plausible one and recording it as
 theirs produces documents that argue against their author.
 
+**Report what you measured, not how much it matters.** Importance, priority and
+risk tolerance belong to the operator. A filed issue that opens "not urgent",
+closes "rather than work still worth doing", or calls a defect "cosmetic" has
+turned a report into a ruling. The same sentence in conversation costs one turn
+-- he pushes back and it is gone. In an artifact it persists, and it reaches
+every later reader, including the agent he dispatches to work the bug. He
+largely does not re-read issues he asked you to file, which is exactly why this
+is the wrong place to put a verdict. The tells are grading adjectives (*small*,
+*minor*, *trivial*, *cosmetic*), priority stamps (*not urgent*, *low priority*),
+worth-judgments (*worth doing*, *worth a fresh look*), and directives aimed at a
+future implementer (*should not be carried forward*). Give the number and what
+it is a number of. If importance needs settling, settle it in conversation,
+where he can answer.
+
+**A bug is an intention, not a diff.** Dispatch here means handing an agent the
+issue and asking it to review the real state and form its own conclusions. Detail
+written from a shallow pass is not neutral in that flow -- it is a conclusion the
+next reader anchors on, reached with less context than they will have, and it
+does the analysis twice. Capture the requirement and the facts that are *wrong*
+elsewhere; leave the design, the file list and the implementation order to
+whoever picks it up. Related: a bug is not a living document. Two of three parts
+done is a comment saying so, not a retitle around the survivor.
+
 ## Traps
 
 | Trap | Check |
