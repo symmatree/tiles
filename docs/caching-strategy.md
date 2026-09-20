@@ -54,14 +54,14 @@ When `cache-hit != 'true'`, the following operations run:
 
 ### Cache Configuration
 
-**Location**: `.github/workflows/nodes-plan-apply.yaml`. Path-based skip (e.g. only fables submodule ref or only charts/tanka) uses the shared action `.github/actions/changed-files`, which other workflows (e.g. pre-commit, build-test) also use for consistent change detection.
+**Location**: `.github/workflows/nodes-plan-apply.yaml`. A pull-request preview plan is skipped when the diff is `charts/` or `tanka/` content only; `dorny/paths-filter` decides, from the filter declared in the workflow.
 
-**Cached paths**: `**/.terraform` (Terraform provider binaries and modules)
+**Cached paths**: `tf/nodes/.terraform` (Terraform provider binaries and modules)
 
 **Cache key pattern**:
 
 ```yaml
-${{ runner.os }}-tf-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('**/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
+${{ runner.os }}-nodes-tf-v2-${{ steps.stamps.outputs.DATESTAMP }}-${{ hashFiles('tf/nodes/.terraform.lock.hcl', 'tf-cache-poison.txt') }}
 ```
 
 **Note**: The cache key includes:
