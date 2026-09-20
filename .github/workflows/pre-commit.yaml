@@ -21,12 +21,6 @@ jobs:
       - uses: "actions/checkout@v7"
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/changed-files
-        id: changed_files
-        if: github.event_name == 'pull_request' || github.event_name == 'push'
-        with:
-          base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.after }}
       - shell: bash
         name: "Make output directory"
         run: |
