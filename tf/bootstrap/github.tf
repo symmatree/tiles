@@ -45,9 +45,8 @@ locals {
       deploy_tags     = false
     }
     fables = {
-      description = "Public technical notes: GNSS, mapping, robotics, hardware"
-      # No CI yet. Add "pre-commit" here once the workflow exists.
-      required_checks = []
+      description     = "Public technical notes: GNSS, mapping, robotics, hardware"
+      required_checks = ["pre-commit"]
       deploy_tags     = false
     }
   }
