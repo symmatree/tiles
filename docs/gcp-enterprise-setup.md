@@ -32,7 +32,7 @@ terraform plan
 terraform apply
 ```
 
-This creates the projects, sets up workload identity, and stores OIDC credentials in 1Password as `gh_oidc_workload_identity`.
+This creates the projects, sets up workload identity, and publishes the OIDC provider name and service account email as the `WORKLOAD_IDENTITY_PROVIDER` and `SERVICE_ACCOUNT_EMAIL` repository variables, which is what the workflows read. Neither is a secret; the pool's `attribute_condition` is what restricts it.
 
 ## Workload Identity
 

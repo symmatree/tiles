@@ -66,6 +66,23 @@ ASCII only (straight quotes, `--` for em-dash).
   needs the caveat now.
 - **A finished task is completed, not wrong.** When an issue is stale because the work
   got done, add a status comment and close it as-is; do not retitle or rewrite it.
+- **Report what you measured, not how much it matters.** Importance, priority and risk
+  tolerance are the operator's. An issue that opens "not urgent", closes "rather than
+  work still worth doing", or calls a defect "cosmetic" has turned a report into a
+  ruling. The same sentence in conversation costs one turn and gets corrected; in a
+  filed artifact it persists and reaches every later reader -- including an agent
+  dispatched to work that bug -- and the operator does not re-read issues they asked you
+  to file, so an artifact is the one place the habit goes uncaught. The tells are grading
+  adjectives (*small*, *minor*, *trivial*, *cosmetic*), priority stamps (*not urgent*,
+  *low priority*), worth-judgments (*worth doing*, *worth a fresh look*) and directives
+  at a future implementer (*should not be carried forward*). Give the number and what it
+  is a number of; settle importance in conversation, where it can be answered.
+- **A bug is an intention, not a diff.** File the requirement, plus any facts that are
+  *wrong* elsewhere; leave the design, the file list and the implementation order to
+  whoever picks it up. An issue is typically handed to an agent that reviews the real
+  state and forms its own conclusions, so detail written from a shallow pass is not
+  neutral -- it is a conclusion the next reader anchors on, reached with less context
+  than they will have, and it does the analysis twice.
 
 ## 4. Scope of action
 

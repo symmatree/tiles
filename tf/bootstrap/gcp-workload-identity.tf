@@ -96,48 +96,20 @@ resource "google_project_iam_member" "tiles_terraform_oidc" {
   member  = "serviceAccount:${google_service_account.tiles_terraform_oidc.email}"
 }
 
-# Store workload identity credentials in 1Password
-resource "onepassword_item" "gh_oidc_provider" {
-  vault    = data.onepassword_vault.tf_secrets.uuid
-  title    = "gh_oidc_workload_identity"
-  category = "login"
+# The workflows authenticate to GCP by workload identity federation, which needs
+# the provider's resource name and the service account's email. Neither is a
+# secret: what stops anyone else using this pool is the attribute_condition on
+# it, not the obscurity of these two strings.
+resource "github_actions_variable" "workload_identity_provider" {
+  repository    = module.repo["tiles"].name
+  variable_name = "WORKLOAD_IDENTITY_PROVIDER"
+  value         = module.gh_oidc.provider_name
+}
 
-  username = google_service_account.tiles_terraform_oidc.email
-
-  section {
-    label = "fields"
-
-    field {
-      label = "workload_identity_provider"
-      type  = "STRING"
-      value = module.gh_oidc.provider_name
-    }
-
-    field {
-      label = "service_account_email"
-      type  = "STRING"
-      value = google_service_account.tiles_terraform_oidc.email
-    }
-  }
-
-  section {
-    label = "metadata"
-
-    field {
-      label = "source"
-      value = "managed by terraform"
-    }
-
-    field {
-      label = "root_module"
-      value = basename(abspath(path.root))
-    }
-
-    field {
-      label = "module"
-      value = basename(abspath(path.module))
-    }
-  }
+resource "github_actions_variable" "service_account_email" {
+  repository    = module.repo["tiles"].name
+  variable_name = "SERVICE_ACCOUNT_EMAIL"
+  value         = google_service_account.tiles_terraform_oidc.email
 }
 
 # Outputs
