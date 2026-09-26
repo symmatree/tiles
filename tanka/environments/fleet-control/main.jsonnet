@@ -26,6 +26,11 @@ local fleetControl = {
   local kIngressRule = k.networking.v1.ingressRule,
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
   local kIngressTLS = k.networking.v1.ingressTLS,
+  local kServiceAccount = k.core.v1.serviceAccount,
+  local kRole = k.rbac.v1.role,
+  local kRoleBinding = k.rbac.v1.roleBinding,
+  local kPolicyRule = k.rbac.v1.policyRule,
+  local kSubject = k.rbac.v1.subject,
 
   local defaults = {
     name: 'fleet-control',
@@ -40,11 +45,79 @@ local fleetControl = {
       'cert-manager.io/cluster-issuer': APP.app_settings.cluster_issuer,
     },
     ingressClassName: 'cilium',
+    // Namespaces holding a flight artifact this service has to read. mavproxy's console log and
+    // tlog; rtkbase's settings.conf and raw .ubx.
+    artifactNamespaces: ['mavproxy', 'ntrip'],
+    // This environment's own namespace, from spec.json. Needed explicitly because a
+    // RoleBinding in ANOTHER namespace has to name where its subject lives.
+    namespace: 'fleet-control',
   },
 
   new(overrides):: {
     local fcObj = self,
     local config = defaults + overrides,
+
+    // ---- reading the cluster's own record of a flight -------------------------------------
+    //
+    // Post-flight collection needs three things this service cannot reach as shipped: the
+    // mavproxy console log and its tlog, and rtkbase's settings.conf (it carries `position=`,
+    // without which PPK is not possible) plus the raw .ubx. All of them live on those pods'
+    // own filesystems. See coordinator#385.
+    //
+    // `kubectl logs` needs pods/log; `kubectl cp` is tar over exec, so it needs pods/exec and
+    // pods to name the target. That is the whole list -- no secrets, no configmaps, and nothing
+    // that writes to a workload.
+    //
+    // NOT COVERED HERE, deliberately: the backpack metrics. Those come from Mimir over HTTP at
+    // mimir-gateway.mimir.svc with an X-Scope-OrgID header, which is a network path and needs
+    // no Kubernetes identity at all.
+    //
+    // THE BLAST RADIUS IS DIFFERENT FROM WHAT THIS POD ALREADY HOLDS, which is the part worth
+    // weighing rather than the size. It already mounts an ssh key that is root on every fleet
+    // device; this is read access to two namespaces in the cluster. Smaller in degree, not the
+    // same kind of thing.
+    //
+    // The grants live here rather than in the mavproxy and ntrip environments so that "what
+    // fleet-control may do" is one file to read. That is the opposite of the usual
+    // namespace-owner-grants direction, and it is a deliberate trade for reviewability.
+
+    serviceAccount: kServiceAccount.new(config.name),
+
+    local readPods = [
+      kPolicyRule.withApiGroups([''])
+      + kPolicyRule.withResources(['pods'])
+      + kPolicyRule.withVerbs(['get', 'list']),
+      kPolicyRule.withApiGroups([''])
+      + kPolicyRule.withResources(['pods/log'])
+      + kPolicyRule.withVerbs(['get']),
+      kPolicyRule.withApiGroups([''])
+      + kPolicyRule.withResources(['pods/exec'])
+      + kPolicyRule.withVerbs(['create']),
+    ],
+
+    local grantIn(ns) = {
+      role:
+        kRole.new(std.format('%s-reader', config.name))
+        + kRole.metadata.withNamespace(ns)
+        + kRole.withRules(readPods),
+      binding:
+        kRoleBinding.new(std.format('%s-reader', config.name))
+        + kRoleBinding.metadata.withNamespace(ns)
+        + kRoleBinding.roleRef.withApiGroup('rbac.authorization.k8s.io')
+        + kRoleBinding.roleRef.withKind('Role')
+        + kRoleBinding.roleRef.withName(std.format('%s-reader', config.name))
+        + kRoleBinding.withSubjects([
+          kSubject.withKind('ServiceAccount')
+          + kSubject.withName(config.name)
+          + { namespace: config.namespace },
+        ]),
+    },
+
+    // One pair per namespace holding an artifact a flight needs.
+    artifactReaders: {
+      [ns]: grantIn(ns)
+      for ns in config.artifactNamespaces
+    },
 
     // The fleet SSH key. `pi` has passwordless sudo on every node, so this credential is
     // root on the fleet -- see coordinator#261 on giving automation its own key.
@@ -151,6 +224,7 @@ local fleetControl = {
       ])
       // Recreate, not RollingUpdate: two replicas could drive the same node at once, and
       // the one-action-per-node guard is per process.
+      + kDeployment.spec.template.spec.withServiceAccountName(fcObj.serviceAccount.metadata.name)
       + kDeployment.spec.strategy.withType('Recreate')
       // Opts this Deployment in to argo-tag-watcher's image side: the image is a
       // floating :main tag, so a rebuild moves the digest without changing the
