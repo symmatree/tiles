@@ -56,7 +56,7 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 - **[monitoring-mixins.md](monitoring-mixins.md)**: Approach to collecting, customizing, and installing Prometheus monitoring mixins using Tanka plugin in ArgoCD to generate Kubernetes resources (Prometheus Operator objects and Grafana ConfigMaps) from mixin definitions.
 
-- **[component-readme-plan.md](component-readme-plan.md)**: Plan for adding README.md files for each component in the tiles cluster, outlining the structure, location conventions, and linking strategy from the main component index.
+- **[components.md](components.md)**: Plan for adding README.md files for each component in the tiles cluster, outlining the structure, location conventions, and linking strategy from the main component index.
 
 ## Build and API Management
 

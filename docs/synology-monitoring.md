@@ -26,7 +26,7 @@ SNMP v3 is enabled on the Synology. Credentials live in 1Password at `op://tiles
 
 - `username`: SNMP v3 username
 - `password`: Auth password (SHA)
-- Privacy password: item field **`PRIVACY_PASSWORD`** (section `privacy`, AES) -- wired in Terraform via [`../modules/onepassword_field`](../modules/onepassword_field) as in `synology-alloy.tf`
+- Privacy password: item field **`PRIVACY_PASSWORD`** (section `privacy`, AES) -- wired in Terraform via [`tf/modules/onepassword_field`](../tf/modules/onepassword_field) as in `synology-alloy.tf`
 
 Synology Control Panel settings (reference):
 
