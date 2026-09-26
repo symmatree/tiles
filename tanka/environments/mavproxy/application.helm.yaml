@@ -23,6 +23,9 @@ spec:
         - name: app_settings
           map:
             image: ghcr.io/symmatree/tiles/mavproxy:main
+            tlog_split_image: ghcr.io/symmatree/tiles/tlog-split:main
+            nfs_server: '{{ required ".Values.nfs_server is required" .Values.nfs_server }}'
+            datasets_nfs_path: '{{ required ".Values.datasets_nfs_path is required" .Values.datasets_nfs_path }}'
             backpack_mavlink_url: http://10.0.6.120/mavlink
             tcp_hostname: mavproxy.tiles.symmatree.com
             ntrip_caster: ntrip.tiles.symmatree.com
