@@ -70,7 +70,7 @@ one because they have not been flashed.
 |---|---|---|
 | `/state` | 1Gi, `local-path` | recorded SSH host keys. Small and rebuildable -- losing it makes the next contact with each node a first contact. Node-bound, so a node rebuild empties it |
 | `/images` | 20Gi, `cluster-nfs` | disk images the service has pushed (coordinator [#312](https://github.com/symmatree/coordinator/issues/312)). **Not** `local-path`: that would pin the pod to one node and die with it. ~24 images at 813 MiB, nothing evicting |
-| `/mnt/flights` | 2Ti, static NFS PV, `Retain` | where recovered flights land. A static PV because the datasets share (`datasets_nfs_path`, per cluster) is a different export from the one `cluster-nfs` provisions into, so a dynamic claim cannot reach it -- same pattern and subpath as `flight-analysis` and `vio-offline`. `Retain`, because this holds the only copy of a flight once the device is wiped |
+| `/mnt/flights` | 2Ti, static NFS PV, `Retain` | where recovered flights land. `FLEET_FLIGHTS_DIR` points at `/mnt/flights/rekon10`, the platform level, because the service joins only the flight name it is given and `flight-data-layout.md` is `flights/<platform>/<flight>/`. A static PV because the datasets share (`datasets_nfs_path`, per cluster) is a different export from the one `cluster-nfs` provisions into, so a dynamic claim cannot reach it -- same pattern and subpath as `flight-analysis` and `vio-offline`. `Retain`, because this holds the only copy of a flight once the device is wiped |
 
 The image runs as `node` (uid/gid 1000) and Secret volumes are root-owned, so `fsGroup: 1000`
 is what makes the 0440 key readable by the process that needs it.
