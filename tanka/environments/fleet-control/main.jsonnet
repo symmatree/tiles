@@ -131,7 +131,17 @@ local fleetControl = {
           // recorded host keys must land on /state to survive a pod restart.
           FLEET_KNOWN_HOSTS: '/state/known_hosts',
           FLEET_IMAGE_CACHE: '/images',
-          FLEET_FLIGHTS_DIR: '/mnt/flights',
+          // The PLATFORM level, not the flights root. flight-data-layout.md is
+          // `flights/<platform>/<flight>/`, and the service joins only the flight name it
+          // is given -- so pointed at the root it writes a sibling of `rekon10/` rather
+          // than into it. The 2026-09-23 capture landed at `flights/260923-test-mission/`
+          // and had to be moved by hand.
+          //
+          // One platform is hardcoded because there is one fleet: every node in
+          // inventory.json is a rekon10. The share also holds `firefly16/`, so if a second
+          // platform ever has devices in the roster this becomes per-node rather than
+          // per-service.
+          FLEET_FLIGHTS_DIR: '/mnt/flights/rekon10',
           // Where a DEVICE reaches this service: it fetches its own image with get_url, so
           // the in-cluster service name is no use to it.
           FLEET_PUBLIC_URL: 'https://' + config.host,
