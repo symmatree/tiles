@@ -233,6 +233,15 @@ local fleetControl = {
           // platform ever has devices in the roster this becomes per-node rather than
           // per-service.
           FLEET_FLIGHTS_DIR: '/mnt/flights/rekon10',
+          // A campod converge is twenty minutes or more, so the run's ending has to reach the
+          // operator rather than waiting in a browser tab. The service also announces its own
+          // start, because a restart ENDS any run in flight -- the registry is in memory and the
+          // playbook is a child of the process.
+          //
+          // In-cluster, so no ingress and no TLS in the path. `apprise` is the config key; the
+          // tag is required, since an untagged notify matches zero targets.
+          FLEET_NOTIFY_URL: 'http://apprise.apprise.svc:8000/notify/apprise',
+          FLEET_NOTIFY_TAG: APP.cluster_name,
           FLEET_GROUND_TLOGS: '/mnt/ground-tlogs',
           // Where a DEVICE reaches this service: it fetches its own image with get_url, so
           // the in-cluster service name is no use to it.
