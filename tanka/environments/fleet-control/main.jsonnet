@@ -172,6 +172,24 @@ local fleetControl = {
       + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-flights', config.name))
       + kPersistentVolumeClaim.spec.withStorageClassName(''),
 
+    // The per-flight tlogs tlog-split writes (containers/tlog-split, in the mavproxy env).
+    // READ-ONLY: this service picks the one matching a flight's armed window and copies it into
+    // the flight directory. tlog-split owns writing them.
+    tlogsPv:
+      kPersistentVolume.new(std.format('%s-ground-tlogs', config.name))
+      + kPersistentVolume.spec.withCapacity({ storage: '200Gi' })
+      + kPersistentVolume.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
+      + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
+      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/ground-tlogs'),
+
+    tlogsPvc:
+      kPersistentVolumeClaim.new(std.format('%s-ground-tlogs', config.name))
+      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '200Gi' })
+      + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-ground-tlogs', config.name))
+      + kPersistentVolumeClaim.spec.withStorageClassName(''),
+
     // Disk images the service has pushed. Nothing evicts them; the point is that pushing one
     // image to five machines is one fetch and five local reads (coordinator#312).
     //
@@ -215,6 +233,7 @@ local fleetControl = {
           // platform ever has devices in the roster this becomes per-node rather than
           // per-service.
           FLEET_FLIGHTS_DIR: '/mnt/flights/rekon10',
+          FLEET_GROUND_TLOGS: '/mnt/ground-tlogs',
           // Where a DEVICE reaches this service: it fetches its own image with get_url, so
           // the in-cluster service name is no use to it.
           FLEET_PUBLIC_URL: 'https://' + config.host,
@@ -266,7 +285,8 @@ local fleetControl = {
       )
       + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state')
       + k_util.pvcVolumeMount(fcObj.imagePvc.metadata.name, '/images')
-      + k_util.pvcVolumeMount(fcObj.flightsPvc.metadata.name, '/mnt/flights'),
+      + k_util.pvcVolumeMount(fcObj.flightsPvc.metadata.name, '/mnt/flights')
+      + k_util.pvcVolumeMount(fcObj.tlogsPvc.metadata.name, '/mnt/ground-tlogs'),
 
     // serviceFor names the port after the deployment (`fleet-control-http`, 18 chars) and an
     // Ingress backend port name is capped at 15. Name it `http` instead -- the length limit is
