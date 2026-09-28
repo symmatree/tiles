@@ -21,6 +21,7 @@ local ntrip = {
   local kVolume = k.core.v1.volume,
   local kConfigMap = k.core.v1.configMap,
   local kPersistentVolumeClaim = k.core.v1.persistentVolumeClaim,
+  local kPersistentVolume = k.core.v1.persistentVolume,
   local kIngress = k.networking.v1.ingress,
   local kIngressRule = k.networking.v1.ingressRule,
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
@@ -59,6 +60,37 @@ local ntrip = {
                 + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '5Gi' })
                 + kPersistentVolumeClaim.spec.withStorageClassName('local-path'),
 
+    // ---- the raw observations, on the datasets share ---------------------------------------
+    //
+    // `str2str_file` writes PPP-usable raw UBX continuously (containers/rtkbase/README.md), and
+    // a flight's PPK inputs are the days it spans. Those had to be reachable from outside this
+    // pod; they were read with `kubectl exec ... cat`, which could never work -- a day's file is
+    // a few hundred MB against a 64 MB buffer (coordinator#416).
+    //
+    // MOUNTED AT THE DATADIR RATHER THAN MOVING IT. `[local_storage] datadir` stays
+    // `/persist/rtkbase/data` and `settings.conf` does not change, which matters because the
+    // `ReadWritePaths` drop-in that lets str2str write there is baked into the image
+    // (containers/rtkbase/Dockerfile) -- "if the datadir ever moves, that drop-in has to move
+    // with it", and this way it does not have to. Only what is mounted at that path changes.
+    //
+    // Static PV for the same reason ground-tlogs, flight-analysis and fleet-control use one:
+    // `datasets` is a different export from the one cluster-nfs provisions into. Retain, because
+    // this is the only copy of a day's observations once the local PVC rotates past it.
+    baseObsPv:
+      kPersistentVolume.new('base-observations')
+      + kPersistentVolume.spec.withCapacity({ storage: '500Gi' })
+      + kPersistentVolume.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
+      + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
+      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/base-observations'),
+
+    baseObsPvc:
+      kPersistentVolumeClaim.new('base-observations')
+      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '500Gi' })
+      + kPersistentVolumeClaim.spec.withVolumeName('base-observations')
+      + kPersistentVolumeClaim.spec.withStorageClassName(''),
+
     settingsConfigMap:
       kConfigMap.new(std.format('%s-settings', config.name))
       + kConfigMap.withData({
@@ -88,6 +120,10 @@ local ntrip = {
         [std.format('%s-hash', settingsConfigMapName)]: settingsConfigMapHash,
       })
       + k_util.pvcVolumeMount(persistPvcName, '/persist/rtkbase')
+      // Nested inside the mount above, and only in the main container -- `mapContainers` does
+      // not touch initContainers, so `seed-settings` keeps writing settings.conf to the local
+      // PVC and its `mkdir -p .../data` lands on a directory this mount then shadows.
+      + k_util.pvcVolumeMount('base-observations', '/persist/rtkbase/data')
       + kDeployment.mixin.spec.template.spec.withVolumesMixin([
         kVolume.fromConfigMap(settingsConfigMapName, settingsConfigMapName),
       ])
