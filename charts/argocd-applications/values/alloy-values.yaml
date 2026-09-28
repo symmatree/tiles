@@ -116,6 +116,11 @@ clusterMetrics:
     enabled: true
   apiServer:
     metricsTuning:
+      # includeMetrics is the whole allowlist here (no useDefaultAllowList), so
+      # nothing arrives that is not named below. Keep it to single-series gauges:
+      # the apiserver's own histograms (apiserver_request_duration_seconds,
+      # watch/storage latency) are per-resource-per-verb and are what would blow
+      # up the scrape.
       includeMetrics:
         - apiserver_request_total
         - apiserver_request_sli_duration_seconds.*
@@ -124,6 +129,13 @@ clusterMetrics:
         - aggregator_unavailable_apiservice.*
         - rest_client_requests_total
         - kubernetes_build_info
+        # Apiserver process memory. One series per control-plane node each.
+        # RSS is what the node pays for; heap_inuse is what is live, so the
+        # difference is memory the Go runtime is holding and has not returned --
+        # which on an unlimited static pod only comes back under node pressure.
+        # Sizing the control-plane VMs (#768) turns on that split.
+        - process_resident_memory_bytes
+        - go_memstats_heap_inuse_bytes
   kubeProxy:
     enabled: false
   kube-state-metrics:
