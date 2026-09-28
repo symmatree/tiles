@@ -27,10 +27,6 @@ local fleetControl = {
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
   local kIngressTLS = k.networking.v1.ingressTLS,
   local kServiceAccount = k.core.v1.serviceAccount,
-  local kRole = k.rbac.v1.role,
-  local kRoleBinding = k.rbac.v1.roleBinding,
-  local kPolicyRule = k.rbac.v1.policyRule,
-  local kSubject = k.rbac.v1.subject,
 
   local defaults = {
     name: 'fleet-control',
@@ -45,79 +41,28 @@ local fleetControl = {
       'cert-manager.io/cluster-issuer': APP.app_settings.cluster_issuer,
     },
     ingressClassName: 'cilium',
-    // Namespaces holding a flight artifact this service has to read. mavproxy's console log and
-    // tlog; rtkbase's settings.conf and raw .ubx.
-    artifactNamespaces: ['mavproxy', 'ntrip'],
-    // This environment's own namespace, from spec.json. Needed explicitly because a
-    // RoleBinding in ANOTHER namespace has to name where its subject lives.
-    namespace: 'fleet-control',
   },
 
   new(overrides):: {
     local fcObj = self,
     local config = defaults + overrides,
 
-    // ---- reading the cluster's own record of a flight -------------------------------------
+    // ---- what this service may do in the cluster -------------------------------------------
     //
-    // Post-flight collection needs three things this service cannot reach as shipped: the
-    // mavproxy console log and its tlog, and rtkbase's settings.conf (it carries `position=`,
-    // without which PPK is not possible) plus the raw .ubx. All of them live on those pods'
-    // own filesystems. See coordinator#385.
+    // NOTHING. It has a ServiceAccount because a pod has one, and no Role anywhere.
     //
-    // `kubectl logs` needs pods/log; `kubectl cp` is tar over exec, so it needs pods/exec and
-    // pods to name the target. That is the whole list -- no secrets, no configmaps, and nothing
-    // that writes to a workload.
+    // It used to hold pods get/list, pods/log and pods/exec in `mavproxy` and `ntrip`, to read
+    // mavproxy's console log and tlog and rtkbase's settings.conf and raw .ubx. Every one of
+    // those reads is gone: the console log is cluster debugging output rather than flight data,
+    // settings.conf is git-authoritative in this repo so it already has a history, the tlogs come
+    // off a share tlog-split writes to, and the raw observations now come off a share rtkbase
+    // writes to (coordinator#414, coordinator#416).
     //
-    // NOT COVERED HERE, deliberately: the backpack metrics. Those come from Mimir over HTTP at
-    // mimir-gateway.mimir.svc with an X-Scope-OrgID header, which is a network path and needs
-    // no Kubernetes identity at all.
-    //
-    // THE BLAST RADIUS IS DIFFERENT FROM WHAT THIS POD ALREADY HOLDS, which is the part worth
-    // weighing rather than the size. It already mounts an ssh key that is root on every fleet
-    // device; this is read access to two namespaces in the cluster. Smaller in degree, not the
-    // same kind of thing.
-    //
-    // The grants live here rather than in the mavproxy and ntrip environments so that "what
-    // fleet-control may do" is one file to read. That is the opposite of the usual
-    // namespace-owner-grants direction, and it is a deliberate trade for reviewability.
+    // Which is the better shape anyway. Reading a few hundred megabytes of GNSS observations
+    // through `kubectl exec ... cat` never worked -- it buffered into 64 MB -- and the fix for
+    // that was not a bigger buffer.
 
     serviceAccount: kServiceAccount.new(config.name),
-
-    local readPods = [
-      kPolicyRule.withApiGroups([''])
-      + kPolicyRule.withResources(['pods'])
-      + kPolicyRule.withVerbs(['get', 'list']),
-      kPolicyRule.withApiGroups([''])
-      + kPolicyRule.withResources(['pods/log'])
-      + kPolicyRule.withVerbs(['get']),
-      kPolicyRule.withApiGroups([''])
-      + kPolicyRule.withResources(['pods/exec'])
-      + kPolicyRule.withVerbs(['create']),
-    ],
-
-    local grantIn(ns) = {
-      role:
-        kRole.new(std.format('%s-reader', config.name))
-        + kRole.metadata.withNamespace(ns)
-        + kRole.withRules(readPods),
-      binding:
-        kRoleBinding.new(std.format('%s-reader', config.name))
-        + kRoleBinding.metadata.withNamespace(ns)
-        + kRoleBinding.roleRef.withApiGroup('rbac.authorization.k8s.io')
-        + kRoleBinding.roleRef.withKind('Role')
-        + kRoleBinding.roleRef.withName(std.format('%s-reader', config.name))
-        + kRoleBinding.withSubjects([
-          kSubject.withKind('ServiceAccount')
-          + kSubject.withName(config.name)
-          + { namespace: config.namespace },
-        ]),
-    },
-
-    // One pair per namespace holding an artifact a flight needs.
-    artifactReaders: {
-      [ns]: grantIn(ns)
-      for ns in config.artifactNamespaces
-    },
 
     // The fleet SSH key. `pi` has passwordless sudo on every node, so this credential is
     // root on the fleet -- see coordinator#261 on giving automation its own key.
@@ -190,6 +135,28 @@ local fleetControl = {
       + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-ground-tlogs', config.name))
       + kPersistentVolumeClaim.spec.withStorageClassName(''),
 
+    // The base station's raw observations, which rtkbase now writes straight to the share
+    // (the `ntrip` environment mounts the same export at its datadir). READ-ONLY: this service
+    // copies the days a flight spans into the flight directory; rtkbase owns writing them.
+    //
+    // Same claim in two environments, which is what ReadWriteMany is for -- and the reason this
+    // service no longer needs `pods/exec` in `ntrip` to read a file through a pipe
+    // (coordinator#416).
+    baseObsPv:
+      kPersistentVolume.new(std.format('%s-base-observations', config.name))
+      + kPersistentVolume.spec.withCapacity({ storage: '500Gi' })
+      + kPersistentVolume.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
+      + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
+      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/base-observations'),
+
+    baseObsPvc:
+      kPersistentVolumeClaim.new(std.format('%s-base-observations', config.name))
+      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteMany'])
+      + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '500Gi' })
+      + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-base-observations', config.name))
+      + kPersistentVolumeClaim.spec.withStorageClassName(''),
+
     // Disk images the service has pushed. Nothing evicts them; the point is that pushing one
     // image to five machines is one fetch and five local reads (coordinator#312).
     //
@@ -243,6 +210,7 @@ local fleetControl = {
           FLEET_NOTIFY_URL: 'http://apprise.apprise.svc:8000/notify/apprise',
           FLEET_NOTIFY_TAG: APP.cluster_name,
           FLEET_GROUND_TLOGS: '/mnt/ground-tlogs',
+          FLEET_BASE_OBS: '/mnt/base-observations',
           // Where a DEVICE reaches this service: it fetches its own image with get_url, so
           // the in-cluster service name is no use to it.
           FLEET_PUBLIC_URL: 'https://' + config.host,
@@ -295,7 +263,8 @@ local fleetControl = {
       + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state')
       + k_util.pvcVolumeMount(fcObj.imagePvc.metadata.name, '/images')
       + k_util.pvcVolumeMount(fcObj.flightsPvc.metadata.name, '/mnt/flights')
-      + k_util.pvcVolumeMount(fcObj.tlogsPvc.metadata.name, '/mnt/ground-tlogs'),
+      + k_util.pvcVolumeMount(fcObj.tlogsPvc.metadata.name, '/mnt/ground-tlogs')
+      + k_util.pvcVolumeMount(fcObj.baseObsPvc.metadata.name, '/mnt/base-observations', readOnly=true),
 
     // serviceFor names the port after the deployment (`fleet-control-http`, 18 chars) and an
     // Ingress backend port name is capped at 15. Name it `http` instead -- the length limit is

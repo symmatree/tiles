@@ -18,7 +18,7 @@ Both hostnames resolve to **private 10.x addresses** on the site LAN (Cilium Loa
 - **Tanka:** [`main.jsonnet`](main.jsonnet)
 - **Argo CD:** [`application.helm.yaml`](application.helm.yaml) (prod only: `cluster_name == tiles`)
 
-Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase` (RTK data + `settings.conf`, bind-mounted into `/root/rtkbase/settings.conf` on boot), and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager (TLS only).
+Pod runs privileged on acebase with hostPath `/dev/gnss`, PVC `/persist/rtkbase` (`settings.conf`, bind-mounted into `/root/rtkbase/settings.conf` on boot), the datasets share at `/persist/rtkbase/data` for the raw observations (see below), and systemd PID 1. NTRIP is exposed via LoadBalancer + external-dns; the web UI via Ingress + cert-manager (TLS only).
 
 ## Configuration: git is authoritative
 
@@ -44,6 +44,23 @@ If you want a setting to stick, put it in [`settings.conf`](settings.conf).
 
 The one exception is `flask_secret_key`, which RTKBase generates on boot and writes back. It
 is not in git and does not need to be; regenerating it only invalidates existing web sessions.
+
+### The raw observations are on the datasets share
+
+`[local_storage] datadir` is `/persist/rtkbase/data`, and the `base-observations` PV mounts
+`datasets/base-observations` there -- nested inside the PVC mount, so `settings.conf` stays on the
+PVC and only the data directory is the share. A flight's PPK inputs are then readable by anything
+else with that share: `fleet-control` copies the days a flight spans into the flight directory
+([coordinator#416](https://github.com/symmatree/coordinator/issues/416)), which it previously
+attempted by `kubectl exec ... cat` into a 64 MB buffer against a few hundred MB of file.
+
+**The setting did not move, only what is mounted at it.** `str2str_file.service` runs with
+`ProtectSystem=strict`, and the drop-in granting `ReadWritePaths=/persist/rtkbase` is baked into the
+image -- so changing `datadir` would mean changing the image too
+([`containers/rtkbase/README.md`](../../../containers/rtkbase/README.md)).
+
+Data written before this stays on the PVC at the same path, shadowed by the mount. Nothing migrates
+it, and a `cp` out of the PVC is the way to get it if it is ever wanted.
 
 ### Restarting interrupts data capture
 
