@@ -89,7 +89,9 @@ Each protected app gets its own `oauth2-proxy` (a subchart dependency of the
 app's chart) sitting in front of it on the shared Cilium ingress:
 
 - oauth2-proxy is the **only** thing with an Ingress; the app's own Service is
-  flipped to `ClusterIP` so it is reachable *only* through the gate.
+  flipped to `ClusterIP` so it is reachable *only* through the gate. Home
+  Assistant is the exception -- it is not a workload here at all; see
+  [Upstreams outside the cluster](#upstreams-outside-the-cluster).
 - Google OAuth + an **email allowlist** (`--authenticated-emails-file`) is the
   real gate. There is no domain rule -- the allowlist is the sole restriction.
 - TLS terminates once, at the shared Cilium ingress (cert-manager `real-cert`).
@@ -100,10 +102,28 @@ Currently protected this way:
 |-----|------|-------------|-------|
 | Argo CD | `argocd.{cluster}.symmatree.com` | `charts/argocd/values.yaml` (`oauth2-proxy:` block) | `charts/argocd` |
 | JupyterHub | `notebook.{cluster}.symmatree.com` | `charts/jupyterhub/values.yaml` (`oauth2-proxy:` block) | `charts/jupyterhub` ([README](../charts/jupyterhub/README.md)) |
+| Home Assistant | `ha.{cluster}.symmatree.com` (prod only) | `charts/homeassistant/values.yaml` (`oauth2-proxy:` block) | `charts/homeassistant` ([README](../charts/homeassistant/README.md)) |
 
 Each has its own oauth2-proxy Deployment and its own 1Password item (see
 [Secrets](#secrets)). The two configs are intentionally near-identical -- the
 hardening lessons below were paid for once on Argo CD and copied to JupyterHub.
+
+### Upstreams outside the cluster
+
+Home Assistant is a HA Yellow appliance at `10.0.99.9` serving HTTPS on `:8123`,
+not a workload here, so there is no Service to flip to `ClusterIP`. No
+`ExternalName` Service or hand-written EndpointSlice is involved either:
+oauth2-proxy's `--upstream` takes a URL, so the upstream is just
+`https://homeassistant.local.symmatree.com:8123`. Addressing it by the name on
+the certificate `charts/static-certs` pushes to it means the upstream handshake
+verifies against the real chain.
+
+For an in-cluster app the `ClusterIP` flip makes through-mode structural. For
+this one it is not: **the only thing preventing a direct path to `10.0.99.9` is
+that no UniFi forward reaches it.** Adding one would silently undo the gate.
+On the LAN the appliance stays directly reachable, as it must for ESPHome, the
+Alloy scrape of its `/api/prometheus`, and the `static-certs` push -- the gate
+is the internet perimeter, not a LAN perimeter.
 
 ## The access path, end to end
 
@@ -234,6 +254,11 @@ gate failing closed against real traffic.
 - **Double login.** The perimeter and the app each do their own Google
   round-trip; sharing the OAuth client makes the inner one a near-silent
   redirect. See [Two layers](#two-layers).
+- **The Home Assistant companion app.** The Android app can carry the proxy's
+  session cookie (one `OkHttpClient` with the WebView cookie jar, shared by REST
+  and the websocket) but cannot obtain one: it renders its login in an Android
+  `WebView`, and Google refuses OAuth in embedded webviews. The web UI works and
+  installs to a phone home screen; the app still needs the LAN.
 
 ## See also
 
