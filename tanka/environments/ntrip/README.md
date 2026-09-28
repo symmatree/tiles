@@ -47,12 +47,21 @@ is not in git and does not need to be; regenerating it only invalidates existing
 
 ### The raw observations are on the datasets share
 
-`[local_storage] datadir` is `/persist/rtkbase/data`, and the `base-observations` PV mounts
-`datasets/base-observations` there -- nested inside the PVC mount, so `settings.conf` stays on the
-PVC and only the data directory is the share. A flight's PPK inputs are then readable by anything
-else with that share: `fleet-control` copies the days a flight spans into the flight directory
-([coordinator#416](https://github.com/symmatree/coordinator/issues/416)), which it previously
-attempted by `kubectl exec ... cat` into a 64 MB buffer against a few hundred MB of file.
+`[local_storage] datadir` is `/persist/rtkbase/data`, and the `attic-rtk-base` PV mounts
+`datasets/gps-logs/attic-rtk-base/raw/` there -- nested inside the PVC mount, so `settings.conf`
+stays on the PVC and only the data directory is the share. A flight's PPK inputs are then readable
+by anything else with that share: `fleet-control` copies the days a flight spans into the flight
+directory ([coordinator#416](https://github.com/symmatree/coordinator/issues/416)), which it
+previously attempted by `kubectl exec ... cat` into a 64 MB buffer against a few hundred MB of file.
+
+**That directory already existed**, holding the hand-copied 2026-08-13 session and a README whose
+consumer is re-solving the base position by PPP (#698, [facts#15](https://github.com/symmatree/facts/pull/15)),
+under these exact filenames. So this writes into it rather than inventing a second home -- and into
+`raw/` beneath it, so the curated session chosen for a solve stays distinguishable from continuous
+capture.
+
+`raw` is a volumeMount `subPath` rather than part of the PV path: kubelet creates a missing subPath
+directory, while an NFS PV pointed at a path that does not exist simply fails to mount.
 
 **The setting did not move, only what is mounted at it.** `str2str_file.service` runs with
 `ProtectSystem=strict`, and the drop-in granting `ReadWritePaths=/persist/rtkbase` is baked into the
