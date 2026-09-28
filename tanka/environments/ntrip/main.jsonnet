@@ -67,6 +67,15 @@ local ntrip = {
     // pod; they were read with `kubectl exec ... cat`, which could never work -- a day's file is
     // a few hundred MB against a 64 MB buffer (coordinator#416).
     //
+    // `datasets/gps-logs/attic-rtk-base/` IS ALREADY THE HOME FOR THIS. It holds the hand-copied
+    // 2026-08-13 session and a README whose consumer is re-solving the base position by PPP
+    // (tiles#698, facts#15), with these exact filenames. So this writes there rather than to a
+    // second directory of its own -- and into `raw/` under it, so the curated session chosen for
+    // a solve stays distinguishable from continuous capture.
+    //
+    // `raw` is a volumeMount subPath rather than part of the PV path, because kubelet creates a
+    // missing subPath directory and an NFS PV pointed at a missing path just fails to mount.
+    //
     // MOUNTED AT THE DATADIR RATHER THAN MOVING IT. `[local_storage] datadir` stays
     // `/persist/rtkbase/data` and `settings.conf` does not change, which matters because the
     // `ReadWritePaths` drop-in that lets str2str write there is baked into the image
@@ -77,18 +86,18 @@ local ntrip = {
     // `datasets` is a different export from the one cluster-nfs provisions into. Retain, because
     // this is the only copy of a day's observations once the local PVC rotates past it.
     baseObsPv:
-      kPersistentVolume.new('base-observations')
+      kPersistentVolume.new('attic-rtk-base')
       + kPersistentVolume.spec.withCapacity({ storage: '500Gi' })
       + kPersistentVolume.spec.withAccessModes(['ReadWriteMany'])
       + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
       + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
-      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/base-observations'),
+      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/gps-logs/attic-rtk-base'),
 
     baseObsPvc:
-      kPersistentVolumeClaim.new('base-observations')
+      kPersistentVolumeClaim.new('attic-rtk-base')
       + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteMany'])
       + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '500Gi' })
-      + kPersistentVolumeClaim.spec.withVolumeName('base-observations')
+      + kPersistentVolumeClaim.spec.withVolumeName('attic-rtk-base')
       + kPersistentVolumeClaim.spec.withStorageClassName(''),
 
     settingsConfigMap:
@@ -123,7 +132,8 @@ local ntrip = {
       // Nested inside the mount above, and only in the main container -- `mapContainers` does
       // not touch initContainers, so `seed-settings` keeps writing settings.conf to the local
       // PVC and its `mkdir -p .../data` lands on a directory this mount then shadows.
-      + k_util.pvcVolumeMount('base-observations', '/persist/rtkbase/data')
+      + k_util.pvcVolumeMount('attic-rtk-base', '/persist/rtkbase/data',
+                              volumeMountMixin=kVolumeMount.withSubPath('raw'))
       + kDeployment.mixin.spec.template.spec.withVolumesMixin([
         kVolume.fromConfigMap(settingsConfigMapName, settingsConfigMapName),
       ])

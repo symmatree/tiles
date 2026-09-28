@@ -44,11 +44,13 @@ So `str2str_file` (`run_cast.sh in_tcp out_file`) is **additive** -- enabling ra
 Raw UBX lands in `/persist/rtkbase/data` (`[local_storage]` in `settings.conf`), rotating every 24 h; `rtkbase_archive.timer` zips daily at 04:00 and keeps `archive_rotate=60` archives. Measured stream rate is ~4.7 KiB/s, so roughly **420 MB/day** uncompressed.
 
 **That path is the datasets share, not the PVC.** The `ntrip` environment mounts
-`datasets/base-observations` at `/persist/rtkbase/data`, nested inside the PVC mount, so a flight's
-PPK inputs are readable by anything else with that share rather than only through this pod
-([coordinator#416](https://github.com/symmatree/coordinator/issues/416)). The datadir *setting* did
-not move, which is deliberate -- see the `ReadWritePaths` note below. Anything written before that
-change is still on the PVC at the same path, shadowed by the mount; nothing migrated it.
+`datasets/gps-logs/attic-rtk-base/raw/` at `/persist/rtkbase/data`, nested inside the PVC mount, so
+a flight's PPK inputs are readable by anything else with that share rather than only through this
+pod ([coordinator#416](https://github.com/symmatree/coordinator/issues/416)). That directory is
+where the base's logs already live, with the curated session for a PPP solve at its top level and
+continuous capture under `raw/`. The datadir *setting* did not move, which is deliberate -- see the
+`ReadWritePaths` note below. Anything written before that change is still on the PVC at the same
+path, shadowed by the mount; nothing migrated it.
 
 Upstream's `str2str_file.service` ships `ProtectSystem=strict` with `ReadWritePaths=/root/rtkbase`, which assumes the datadir sits inside the RTKBase install. Ours is on the PVC, so systemd mounts it read-only and str2str exits 1 with `stream server start error`, crash-looping on its 30 s `RestartSec`. [`str2str_file-persist-datadir.conf`](str2str_file-persist-datadir.conf) is a drop-in granting `ReadWritePaths=/persist/rtkbase` and nothing else. **If the datadir ever moves, that drop-in has to move with it** -- which is exactly why putting the
 raw observations on the share mounts a volume *at* `/persist/rtkbase/data` instead of pointing
