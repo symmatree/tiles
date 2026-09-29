@@ -26,18 +26,3 @@ collectors:
           memory: 128Mi
         limits:
           memory: 256Mi
-
-# Both had no request and are on wk-2. Sized from the 30-day max working set on
-# tiles-test for the same reason as argocd-tiles-values.yaml: prod's cgroup
-# peaks on that node are reset by each OOM kill.
-alloy-operator:
-  # 121Mi
-  resources:
-    requests:
-      memory: 160Mi
-telemetryServices:
-  kube-state-metrics:
-    # 78Mi
-    resources:
-      requests:
-        memory: 128Mi
