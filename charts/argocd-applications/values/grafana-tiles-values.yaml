@@ -1,12 +1,24 @@
 # Per-cluster overrides for tiles.
-# grafana 534Mi current / 542Mi peak (talosctl cgroups, wk-3).
+#
+# Requests are the 14-day p85 of container_memory_working_set_bytes, rounded up
+# to the next multiple of 8Mi and no further.
+#
+# A request is a scheduling floor and the eviction baseline, not a ceiling: the
+# container bursts above it freely, so padding buys nothing and only makes fewer
+# pods fit. p85 rather than max or p99 because this cluster flushes backlogs
+# often enough that the upper tail is recovery behaviour rather than demand --
+# loki peaks at 1626Mi against a p85 of 620Mi. p85 also proved stable to within
+# 3Mi whether or not the 2026-09-29 incident window is included, which the max
+# is not.
+
+# grafana  p85 448  p99 451
 resources:
   requests:
-    memory: 768Mi
-# The two sidecars had no request at all and together outweigh grafana itself:
-# grafana-sc-dashboard 325Mi peak, grafana-sc-datasources 295Mi peak. One key
-# covers both.
+    memory: 448Mi
+# One key covers both sidecars; take the larger p85.
+# grafana-sc-dashboard    p85 300  p99 300
+# grafana-sc-datasources  p85 282  p99 282
 sidecar:
   resources:
     requests:
-      memory: 384Mi
+      memory: 304Mi

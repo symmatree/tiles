@@ -1,13 +1,14 @@
 # Per-cluster overrides for tiles.
-# loki runs at 1.4 GiB / 1.5 GiB peak (talosctl cgroups, wk-3) against the 256Mi
-# this used to request. loki-0 is pinned to its node by a local-path PVC (#766),
-# so the reservation is honest either way -- the node is occupied.
+# Sizing rule: see grafana-tiles-values.yaml.
+
+# loki  p85 620  p99 994  (max 1626 is backlog-flush behaviour, not demand)
+# loki-0 is pinned to its node by a local-path PVC (#766).
 singleBinary:
   resources:
     requests:
-      memory: 1536Mi
-# loki-sc-rules 134Mi peak, previously unrequested.
+      memory: 624Mi
+# loki-sc-rules  p85 109  p99 109
 sidecar:
   resources:
     requests:
-      memory: 192Mi
+      memory: 112Mi

@@ -12,25 +12,29 @@ cilium:
       annotations:
         lbipam.cilium.io/ips: "10.0.130.1"
 
-# Measured on prod (talosctl cgroups): cilium-operator 66Mi peak on cp-1,
-# hubble-relay 55Mi peak and the hubble-ui pod 83Mi peak on cp-2. All three
-# carry a control-plane nodeSelector (#768) and had no request, so cp-2 has
-# accumulated every one of them.
+  # These three had no memory request. All carry a control-plane nodeSelector
+  # (#768), so with no cost attached the scheduler stacked every one of them on
+  # cp-2. Sizing rule: see grafana-tiles-values.yaml.
+  #
+  # cilium-operator  p85 102  p99 133
   operator:
     resources:
       requests:
-        memory: 128Mi
+        memory: 104Mi
   hubble:
     relay:
+      # p85 77  p99 77
       resources:
         requests:
-          memory: 128Mi
+          memory: 80Mi
     ui:
       backend:
+        # p85 46  p99 49
         resources:
           requests:
-            memory: 128Mi
+            memory: 48Mi
       frontend:
+        # p85 5  p99 5
         resources:
           requests:
-            memory: 32Mi
+            memory: 8Mi

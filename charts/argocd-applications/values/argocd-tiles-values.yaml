@@ -1,32 +1,31 @@
 # Per-cluster overrides for tiles.
+# Sizing rule: see grafana-tiles-values.yaml.
 #
-# These five had no memory request, so the scheduler saw no cost in placing them
-# and all five ended up on wk-2. Sized from the prod 30-day max working set
-# (Mimir); the 7-day figure agrees for four of the five, so these are steady
-# values rather than artifacts of the 2026-09-29 wk-2 OOM window.
+# These five had no memory request, so the scheduler saw no cost in them and all
+# five ended up on wk-2.
 argo-cd:
   dex:
-    # 200Mi
+    # p85 196  p99 199
     resources:
       requests:
-        memory: 256Mi
+        memory: 200Mi
   server:
-    # 118Mi
+    # p85 71  p99 104
     resources:
       requests:
-        memory: 192Mi
+        memory: 72Mi
   applicationSet:
-    # 68Mi
+    # p85 38  p99 47
     resources:
       requests:
-        memory: 128Mi
+        memory: 40Mi
   redis:
-    # 16Mi
+    # p85 8  p99 13
     resources:
       requests:
-        memory: 64Mi
+        memory: 8Mi
 oauth2-proxy:
-  # 34Mi
+  # p85 12  p99 28
   resources:
     requests:
-      memory: 64Mi
+      memory: 16Mi
