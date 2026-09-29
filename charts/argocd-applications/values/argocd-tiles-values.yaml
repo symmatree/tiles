@@ -1,33 +1,8 @@
-# Per-cluster overrides for tiles.
-#
-# These five had no memory request, so the scheduler saw no cost in them and
-# they are all currently on wk-2. Sized from the 30-day max working set on
-# tiles-test (its Mimir), not from prod: every one of these pods lives on the
-# node that is OOM-thrashing, where each kill resets the cgroup peak, so prod's
-# own numbers there are not usable.
-argo-cd:
-  dex:
-    # 176Mi
-    resources:
-      requests:
-        memory: 256Mi
-  server:
-    # 116Mi
-    resources:
-      requests:
-        memory: 192Mi
-  applicationSet:
-    # 104Mi
-    resources:
-      requests:
-        memory: 160Mi
-  redis:
-    # 46Mi
-    resources:
-      requests:
-        memory: 96Mi
-oauth2-proxy:
-  # 34Mi
-  resources:
-    requests:
-      memory: 64Mi
+# # Per-cluster overrides for tiles.
+# argo-cd:
+#   repoServer:
+#     resources:
+#       limits:
+#         memory: 384Mi
+#       requests:
+#         memory: 128Mi
