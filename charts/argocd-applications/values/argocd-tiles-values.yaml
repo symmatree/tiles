@@ -1,8 +1,32 @@
-# # Per-cluster overrides for tiles.
-# argo-cd:
-#   repoServer:
-#     resources:
-#       limits:
-#         memory: 384Mi
-#       requests:
-#         memory: 128Mi
+# Per-cluster overrides for tiles.
+#
+# These five had no memory request, so the scheduler saw no cost in placing them
+# and all five ended up on wk-2. Sized from the prod 30-day max working set
+# (Mimir); the 7-day figure agrees for four of the five, so these are steady
+# values rather than artifacts of the 2026-09-29 wk-2 OOM window.
+argo-cd:
+  dex:
+    # 200Mi
+    resources:
+      requests:
+        memory: 256Mi
+  server:
+    # 118Mi
+    resources:
+      requests:
+        memory: 192Mi
+  applicationSet:
+    # 68Mi
+    resources:
+      requests:
+        memory: 128Mi
+  redis:
+    # 16Mi
+    resources:
+      requests:
+        memory: 64Mi
+oauth2-proxy:
+  # 34Mi
+  resources:
+    requests:
+      memory: 64Mi

@@ -26,3 +26,17 @@ collectors:
           memory: 128Mi
         limits:
           memory: 256Mi
+
+# Neither had a memory request, and both are on wk-2. Sized from the prod 30-day
+# max working set (Mimir), which agrees with the 7-day figure for both.
+alloy-operator:
+  # 118Mi
+  resources:
+    requests:
+      memory: 160Mi
+telemetryServices:
+  kube-state-metrics:
+    # 82Mi
+    resources:
+      requests:
+        memory: 128Mi
