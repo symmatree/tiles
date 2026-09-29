@@ -1,1 +1,27 @@
 # Per-cluster overrides for tiles-test.
+
+# Nominal memory requests -- see grafana-tiles-test-values.yaml for the rationale.
+# Measured (30d max working set): cilium-operator 155Mi, hubble-relay 81Mi,
+# hubble-ui backend 71Mi, hubble-ui frontend 12Mi.
+# cilium-agent and cilium-envoy are deliberately untouched: they are
+# must-run-everywhere DaemonSets, the same class as node-exporter in
+# alloy-values.yaml, where a request can leave a committed node with no agent.
+cilium:
+  operator:
+    resources:
+      requests:
+        memory: 1k
+  hubble:
+    relay:
+      resources:
+        requests:
+          memory: 1k
+    ui:
+      backend:
+        resources:
+          requests:
+            memory: 1k
+      frontend:
+        resources:
+          requests:
+            memory: 1k

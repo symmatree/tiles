@@ -1,1 +1,14 @@
 # Per-cluster overrides for tiles-test.
+
+# Nominal memory requests -- see grafana-tiles-test-values.yaml for the rationale.
+# Measured (30d max working set): alloy-operator 121Mi, kube-state-metrics 78Mi.
+# node-exporter is deliberately left BestEffort; alloy-values.yaml records why.
+alloy-operator:
+  resources:
+    requests:
+      memory: 1k
+telemetryServices:
+  kube-state-metrics:
+    resources:
+      requests:
+        memory: 1k

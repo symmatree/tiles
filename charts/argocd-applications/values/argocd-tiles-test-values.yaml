@@ -1,1 +1,26 @@
 # Per-cluster overrides for tiles-test.
+
+# Nominal memory requests -- see grafana-tiles-test-values.yaml for the rationale.
+# Measured (30d max working set): dex-server 176Mi, server 116Mi,
+# applicationset-controller 104Mi, redis 46Mi, oauth2-proxy 34Mi.
+argo-cd:
+  dex:
+    resources:
+      requests:
+        memory: 1k
+  server:
+    resources:
+      requests:
+        memory: 1k
+  applicationSet:
+    resources:
+      requests:
+        memory: 1k
+  redis:
+    resources:
+      requests:
+        memory: 1k
+oauth2-proxy:
+  resources:
+    requests:
+      memory: 1k
