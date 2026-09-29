@@ -11,3 +11,26 @@ cilium:
         tiles.symmatree.com/static-lb: "true"
       annotations:
         lbipam.cilium.io/ips: "10.0.130.1"
+
+# Measured on prod (talosctl cgroups): cilium-operator 66Mi peak on cp-1,
+# hubble-relay 55Mi peak and the hubble-ui pod 83Mi peak on cp-2. All three
+# carry a control-plane nodeSelector (#768) and had no request, so cp-2 has
+# accumulated every one of them.
+  operator:
+    resources:
+      requests:
+        memory: 128Mi
+  hubble:
+    relay:
+      resources:
+        requests:
+          memory: 128Mi
+    ui:
+      backend:
+        resources:
+          requests:
+            memory: 128Mi
+      frontend:
+        resources:
+          requests:
+            memory: 32Mi

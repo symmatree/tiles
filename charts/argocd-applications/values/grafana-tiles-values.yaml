@@ -1,4 +1,12 @@
 # Per-cluster overrides for tiles.
+# grafana 534Mi current / 542Mi peak (talosctl cgroups, wk-3).
 resources:
   requests:
     memory: 768Mi
+# The two sidecars had no request at all and together outweigh grafana itself:
+# grafana-sc-dashboard 325Mi peak, grafana-sc-datasources 295Mi peak. One key
+# covers both.
+sidecar:
+  resources:
+    requests:
+      memory: 384Mi

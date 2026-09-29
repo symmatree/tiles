@@ -1,5 +1,13 @@
 # Per-cluster overrides for tiles.
+# loki runs at 1.4 GiB / 1.5 GiB peak (talosctl cgroups, wk-3) against the 256Mi
+# this used to request. loki-0 is pinned to its node by a local-path PVC (#766),
+# so the reservation is honest either way -- the node is occupied.
 singleBinary:
   resources:
     requests:
-      memory: 256Mi
+      memory: 1536Mi
+# loki-sc-rules 134Mi peak, previously unrequested.
+sidecar:
+  resources:
+    requests:
+      memory: 192Mi
