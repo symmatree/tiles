@@ -37,6 +37,26 @@ local odm = {
   new()::
 {
 local nodeOdmMemory = if APP.cluster_name == "tiles" then "6Gi" else "1Gi",
+
+// ODM is special-task work: the whole stack belongs on lancer (128GB metal),
+// the reserved heavy-workload node, rather than on the packed g2/g3 workers.
+// Match lancer's taint (dedicated=heavy:PreferNoSchedule) so a pod can land
+// there -- the same pin the jupyterhub singleuser uses. The old
+// dedicated=nodeodm toleration was a no-op (no such taint exists).
+// Prod-only: test has no lancer, so no nodeSelector there.
+local heavyToleration = {
+  key: 'dedicated',
+  operator: 'Equal',
+  value: 'heavy',
+  effect: 'PreferNoSchedule',
+},
+// Both halves are prod-only. On test there is no lancer and no dedicated=heavy
+// taint, so the toleration alone would be a no-op that only adds noise.
+local pinToLancer(dep) = dep
+  + (if APP.cluster_name == "tiles"
+     then kDeployment.spec.template.spec.withTolerationsMixin([heavyToleration])
+          + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': 'lancer' })
+     else {}),
 local postgresPvc = kPersistentVolumeClaim.new(name="odm-postgres")
 + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
 + kPersistentVolumeClaim.spec.resources.withRequests({ storage: "10Gi" })
@@ -105,16 +125,7 @@ datasetsPvc: datasetsPvc,
 local nodeOdmLabels = {
   app: 'nodeodm',
 },
-// Match lancer's taint (dedicated=heavy:PreferNoSchedule) so nodeodm can land on
-// it via the prod-only nodeSelector below -- same pin the jupyterhub singleuser
-// uses. The old dedicated=nodeodm toleration was a no-op (no such taint exists).
-local nodeOdmToleration = {
-  key: 'dedicated',
-  operator: 'Equal',
-  value: 'heavy',
-  effect: 'PreferNoSchedule',
-},
-local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
+local nodeOdmDeployment = pinToLancer(kDeployment.new("nodeodm", containers=[
   kContainer.new('nodeodm', image='opendronemap/nodeodm')
   + kContainer.withPortsMixin([kPort.newNamed(3000, 'tcp')])
   + kContainer.resources.withRequests({ memory: nodeOdmMemory })
@@ -122,14 +133,7 @@ local nodeOdmDeployment = kDeployment.new("nodeodm", containers=[
 ], podLabels=nodeOdmLabels)
 + kDeployment.spec.selector.withMatchLabels(nodeOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(nodeOdmLabels)
-+ kDeployment.spec.template.spec.withTolerationsMixin([nodeOdmToleration])
-// Prod-only: pin the big nodeodm (6Gi + image unpack) to lancer (128GB metal),
-// the reserved heavy-workload node -- keeps it off the packed g2/g3 workers.
-// Test has no lancer, so no nodeSelector there.
-+ (if APP.cluster_name == "tiles"
-   then kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': 'lancer' })
-   else {})
-+ kDeployment.emptyVolumeMount("working-dir", '/cm/local'),
++ kDeployment.emptyVolumeMount("working-dir", '/cm/local')),
 nodeOdmDeployment: nodeOdmDeployment,
 local nodeOdmService = k_util.serviceFor(nodeOdmDeployment),
 nodeOdmService: nodeOdmService,
@@ -146,6 +150,8 @@ local odmEnv = kContainer.withEnvMixin([
   ]),
 local webOdmContainers = [
   kContainer.new('webodm', image='opendronemap/webodm_webapp')
+  // p85 480, p99 498, max 503 (prod Mimir, 14d).
+  + kContainer.resources.withRequests({ memory: '480Mi' })
   + kContainer.withPortsMixin([kPort.newNamed(webOdmPort, 'tcp')])
   + odmEnv
   + kContainer.withCommand([
@@ -161,6 +167,8 @@ local webOdmContainers = [
         '/webodm/wait-for-it.sh -t 60 ' + nodeOdmEndpoint + ' && python manage.py addnode nodeodm 3000 || echo "Warning: Failed to register nodeodm"'
       ]),
 kContainer.new('webodm-worker', image='opendronemap/webodm_webapp')
+  // p85 329, p99 449, max 452 (prod Mimir, 14d).
+  + kContainer.resources.withRequests({ memory: '336Mi' })
   + odmEnv
   + kContainer.withCommand([
     '/bin/bash',
@@ -172,10 +180,10 @@ kContainer.new('webodm-worker', image='opendronemap/webodm_webapp')
     "chmod +x /webodm/*.sh && /bin/bash -c \"" + innerCommand + "\""]),
 ],
 local webOdmLabels = { app: 'webodm' },
-local webOdmDeployment = kDeployment.new("webodm", containers=webOdmContainers, podLabels=webOdmLabels)
+local webOdmDeployment = pinToLancer(kDeployment.new("webodm", containers=webOdmContainers, podLabels=webOdmLabels)
 + kDeployment.spec.selector.withMatchLabels(webOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(webOdmLabels)
-+ k_util.pvcVolumeMount(datasetsPvc.metadata.name, '/webodm/app/media', volumeMountMixin=kVolumeMount.withSubPath('webodm-media')),
++ k_util.pvcVolumeMount(datasetsPvc.metadata.name, '/webodm/app/media', volumeMountMixin=kVolumeMount.withSubPath('webodm-media'))),
 webOdmDeployment: webOdmDeployment,
 local webOdmService = k_util.serviceFor(webOdmDeployment),
 webOdmService: webOdmService,
