@@ -1280,7 +1280,7 @@ spec:
             limits:
               memory: 128Mi
             requests:
-              memory: 64Mi
+              memory: 128Mi
       nodeSelector:
         kubernetes.io/os: "linux"
         node-role.kubernetes.io/control-plane: ""
@@ -1490,7 +1490,7 @@ spec:
             limits:
               memory: 64Mi
             requests:
-              memory: 48Mi
+              memory: 64Mi
       nodeSelector:
         kubernetes.io/os: "linux"
         node-role.kubernetes.io/control-plane: ""

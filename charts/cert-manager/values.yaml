@@ -48,11 +48,15 @@ cert-manager:
             sourceLabels:
               - __name__
   webhook:
-    # p85 47, p99 57, max 60 over 14 days (Mimir). The limit keeps headroom over
-    # the max; the request only has to cover the steady state.
+    # p85 47, p99 57, max 60 over 14 days (Mimir). Request is held equal to the
+    # limit deliberately, against the p85 rule used elsewhere in this repo:
+    # within Burstable, eviction ranks by usage above request, and this pod runs
+    # over a 48Mi request a good fraction of the time. Its admission webhook
+    # gates every Certificate and Issuer operation in the cluster, so ranking it
+    # earlier for eviction to reclaim 16Mi is the wrong trade.
     resources:
       requests:
-        memory: 48Mi
+        memory: 64Mi
       limits:
         memory: 64Mi
     tolerations:
@@ -63,11 +67,11 @@ cert-manager:
       kubernetes.io/os: linux
       node-role.kubernetes.io/control-plane: ""
   cainjector:
-    # p85 59, p99 79, max 83 over 14 days (Mimir). The limit stays 128Mi -- 64
-    # would OOMKill it -- but the request does not need to match the limit.
+    # p85 59, p99 79, max 83 over 14 days (Mimir); 64 would OOMKill it, so 128.
+    # Request held equal to the limit for the same reason as the webhook above.
     resources:
       requests:
-        memory: 64Mi
+        memory: 128Mi
       limits:
         memory: 128Mi
     tolerations:
