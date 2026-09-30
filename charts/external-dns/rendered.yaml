@@ -177,6 +177,9 @@ spec:
           volumeMounts:
             - mountPath: /etc/secrets/service-account/
               name: google-service-account
+          resources:
+            requests:
+              memory: 160Mi
       volumes:
         - name: google-service-account
           secret:

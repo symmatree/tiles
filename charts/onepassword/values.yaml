@@ -5,9 +5,19 @@ connect:
   # This section of values is for 1Password Connect API and Sync Configuration
   connect:
     # The 1Password Connect API Specific Values
+    # Sizing rule: charts/cert-manager/values.yaml. 14-day p85 (Mimir).
     api:
+      # p85 36  p99 37  max 41; the chart's 128Mi limit is left alone.
+      resources:
+        requests:
+          memory: 40Mi
       serviceMonitor:
         enabled: true
+    sync:
+      # p85 18  p99 24  max 29
+      resources:
+        requests:
+          memory: 24Mi
     tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/control-plane
@@ -21,6 +31,10 @@ connect:
   operator:
     # Denotes whether the 1Password Operator will be deployed
     create: true
+    # p85 85  p99 85
+    resources:
+      requests:
+        memory: 88Mi
     # Useful to have it run even when the workers are shut down.
     tolerations:
       - effect: NoSchedule

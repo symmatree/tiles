@@ -1280,7 +1280,7 @@ spec:
             limits:
               memory: 128Mi
             requests:
-              memory: 128Mi
+              memory: 64Mi
       nodeSelector:
         kubernetes.io/os: "linux"
         node-role.kubernetes.io/control-plane: ""
@@ -1369,6 +1369,9 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          resources:
+            requests:
+              memory: 112Mi
           # LivenessProbe settings are based on those used for the Kubernetes
           # controller-manager. See:
           # https://github.com/kubernetes/kubernetes/blob/806b30170c61a38fedd54cc9ede4cd6275a1ad3b/cmd/kubeadm/app/util/staticpod/utils.go#L241-L245
@@ -1487,7 +1490,7 @@ spec:
             limits:
               memory: 64Mi
             requests:
-              memory: 64Mi
+              memory: 48Mi
       nodeSelector:
         kubernetes.io/os: "linux"
         node-role.kubernetes.io/control-plane: ""
@@ -1588,7 +1591,8 @@ spec:
           name: packages
           readOnly: true
         resources:
-            {}
+            requests:
+              memory: 56Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

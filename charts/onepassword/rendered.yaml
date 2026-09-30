@@ -213,6 +213,7 @@ spec:
               memory: 128Mi
             requests:
               cpu: 0.2
+              memory: 40Mi
           env:
             - name: OP_SESSION
               value: /home/opuser/.op/1password-credentials.json
@@ -256,7 +257,8 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           resources:
-            {}
+            requests:
+              memory: 24Mi
           env:
             - name: OP_HTTP_PORT
               value: "8081"
@@ -366,7 +368,8 @@ spec:
                   name: onepassword-token
                   key: token
           resources:
-            {}
+            requests:
+              memory: 88Mi
           readinessProbe:
             httpGet:
               path: /readyz
