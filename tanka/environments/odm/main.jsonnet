@@ -50,10 +50,12 @@ local heavyToleration = {
   value: 'heavy',
   effect: 'PreferNoSchedule',
 },
+// Both halves are prod-only. On test there is no lancer and no dedicated=heavy
+// taint, so the toleration alone would be a no-op that only adds noise.
 local pinToLancer(dep) = dep
-  + kDeployment.spec.template.spec.withTolerationsMixin([heavyToleration])
   + (if APP.cluster_name == "tiles"
-     then kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': 'lancer' })
+     then kDeployment.spec.template.spec.withTolerationsMixin([heavyToleration])
+          + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': 'lancer' })
      else {}),
 local postgresPvc = kPersistentVolumeClaim.new(name="odm-postgres")
 + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
