@@ -40,15 +40,17 @@ local nodeOdmMemory = if APP.cluster_name == "tiles" then "6Gi" else "1Gi",
 
 // ODM is special-task work: the whole stack belongs on lancer (128GB metal),
 // the reserved heavy-workload node, rather than on the packed g2/g3 workers.
-// Match lancer's taint (dedicated=heavy:PreferNoSchedule) so a pod can land
+// Match lancer's taint (dedicated=heavy:NoSchedule) so a pod can land
 // there -- the same pin the jupyterhub singleuser uses. The old
 // dedicated=nodeodm toleration was a no-op (no such taint exists).
 // Prod-only: test has no lancer, so no nodeSelector there.
+// No effect field on purpose: an effect-less toleration matches the key and
+// value under any effect, so it survives a change to the taint's effect and
+// there is no deploy-ordering race when one happens.
 local heavyToleration = {
   key: 'dedicated',
   operator: 'Equal',
   value: 'heavy',
-  effect: 'PreferNoSchedule',
 },
 // Both halves are prod-only. On test there is no lancer and no dedicated=heavy
 // taint, so the toleration alone would be a no-op that only adds noise.
