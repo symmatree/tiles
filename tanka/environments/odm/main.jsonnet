@@ -75,14 +75,8 @@ local postgresInitScripts = kConfigMap.new('postgres-init-scripts')
 |||}),
 postgresInitScripts: postgresInitScripts,
 
-// postgres deliberately does NOT get the lancer pin. Its odm-postgres PVC is
-// local-path, so the PV carries a hostname nodeAffinity to the node that first
-// bound it; a lancer nodeSelector would contradict that and leave the pod
-// permanently unschedulable. Moving it is the local-path work in #766.
 local postgresDeployment = kDeployment.new("postgres", containers=[
   kContainer.new('postgres', image='postgis/postgis:17-3.6-alpine')
-  // p85 207, p99 207, max 208 (prod Mimir, 14d).
-  + kContainer.resources.withRequests({ memory: '208Mi' })
   + kContainer.withPortsMixin([kPort.newNamed(5432, 'tcp')])
   + kContainer.withEnvMixin([
     kEnvVar.new('POSTGRES_HOST_AUTH_METHOD', 'trust'),
@@ -100,16 +94,14 @@ local brokerLabels = {
   app: 'odm',
   name: 'redis-broker',
 },
-local brokerDeployment = pinToLancer(kDeployment.new("redis-broker", containers=[
+local brokerDeployment = kDeployment.new("redis-broker", containers=[
   kContainer.new('broker', image='bitnami/redis:latest')
-  // p85 12, p99 21, max 24 (prod Mimir, 14d).
-  + kContainer.resources.withRequests({ memory: '16Mi' })
   + kContainer.withPortsMixin([kPort.newNamed(6379, 'tcp')])
   + kContainer.withEnvMixin([
     kEnvVar.new('ALLOW_EMPTY_PASSWORD', 'yes'),
   ]),
 ], podLabels=brokerLabels)
-+ kDeployment.spec.template.metadata.withLabels(brokerLabels)),
++ kDeployment.spec.template.metadata.withLabels(brokerLabels),
 brokerDeployment: brokerDeployment,
 local brokerService = k_util.serviceFor(brokerDeployment),
 brokerService: brokerService,
@@ -191,13 +183,7 @@ local webOdmLabels = { app: 'webodm' },
 local webOdmDeployment = pinToLancer(kDeployment.new("webodm", containers=webOdmContainers, podLabels=webOdmLabels)
 + kDeployment.spec.selector.withMatchLabels(webOdmLabels)
 + kDeployment.spec.template.metadata.withLabels(webOdmLabels)
-+ k_util.pvcVolumeMount(datasetsPvc.metadata.name, '/webodm/app/media', volumeMountMixin=kVolumeMount.withSubPath('webodm-media'))
-// odm-datasets is ReadWriteOnce, so a rolling update cannot move this pod to a
-// different node: the replacement cannot attach the volume until the old pod
-// releases it, and RollingUpdate will not release it until the replacement is
-// Ready. Recreate terminates first, which is what lets the lancer pin above
-// actually take effect. One replica, so there is nothing to roll anyway.
-+ kDeployment.spec.strategy.withType('Recreate')),
++ k_util.pvcVolumeMount(datasetsPvc.metadata.name, '/webodm/app/media', volumeMountMixin=kVolumeMount.withSubPath('webodm-media'))),
 webOdmDeployment: webOdmDeployment,
 local webOdmService = k_util.serviceFor(webOdmDeployment),
 webOdmService: webOdmService,
