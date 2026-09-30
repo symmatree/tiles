@@ -7,10 +7,12 @@ connect:
     # The 1Password Connect API Specific Values
     # Sizing rule: charts/cert-manager/values.yaml. 14-day p85 (Mimir).
     api:
-      # p85 36  p99 37  max 41; the chart's 128Mi limit is left alone.
-      resources:
-        requests:
-          memory: 40Mi
+      # No memory request declared here on purpose. The chart sets
+      # limits.memory 128Mi and no memory request, so Kubernetes defaults the
+      # request to the limit -- the live pod requests 128Mi. Declaring the p85
+      # (36Mi) would therefore *lower* the effective request and rank this
+      # container earlier for eviction, which is the same trade rejected for the
+      # cert-manager webhook. Left alone.
       serviceMonitor:
         enabled: true
     sync:
