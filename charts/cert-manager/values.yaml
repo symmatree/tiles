@@ -7,6 +7,13 @@ seed_project_id: placeholder-seed-project-id
 # https://raw.githubusercontent.com/cert-manager/cert-manager/refs/tags/v1.17.1/deploy/charts/cert-manager/values.yaml
 # keeping only values we override (or want to).
 cert-manager:
+  # Requests are the 14-day p85 of container_memory_working_set_bytes, rounded up
+  # to the next multiple of 8Mi. A request is a scheduling floor, not a ceiling,
+  # so it carries no margin; limits keep theirs.
+  # cert-manager-controller  p85 108  p99 108
+  resources:
+    requests:
+      memory: 112Mi
   global:
     # The number of old ReplicaSets to retain to allow rollback (if not set, the default Kubernetes value is set to 10).
     # +docs:property
@@ -41,10 +48,11 @@ cert-manager:
             sourceLabels:
               - __name__
   webhook:
-    # 3-day peak working-set ~41Mi (Mimir).
+    # p85 47, p99 57, max 60 over 14 days (Mimir). The limit keeps headroom over
+    # the max; the request only has to cover the steady state.
     resources:
       requests:
-        memory: 64Mi
+        memory: 48Mi
       limits:
         memory: 64Mi
     tolerations:
@@ -55,10 +63,11 @@ cert-manager:
       kubernetes.io/os: linux
       node-role.kubernetes.io/control-plane: ""
   cainjector:
-    # 3-day peak working-set ~71Mi (Mimir); 64 would OOMKill it, so 128.
+    # p85 59, p99 79, max 83 over 14 days (Mimir). The limit stays 128Mi -- 64
+    # would OOMKill it -- but the request does not need to match the limit.
     resources:
       requests:
-        memory: 128Mi
+        memory: 64Mi
       limits:
         memory: 128Mi
     tolerations:
@@ -77,6 +86,10 @@ cert-manager:
       kubernetes.io/os: linux
       node-role.kubernetes.io/control-plane: ""
 trust-manager:
+  # p85 55  p99 55
+  resources:
+    requests:
+      memory: 56Mi
   crds:
     enabled: false
     keep: true

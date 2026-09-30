@@ -2,6 +2,10 @@
 # https://raw.githubusercontent.com/kubernetes-sigs/external-dns/refs/tags/external-dns-helm-chart-1.16.1/charts/external-dns/values.yaml
 
 external-dns:
+  # 14-day p85 157, p99 157 (Mimir). Sizing rule: charts/cert-manager/values.yaml.
+  resources:
+    requests:
+      memory: 160Mi
   serviceMonitor:
     enabled: true
   tolerations:
