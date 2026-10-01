@@ -102,7 +102,7 @@ Currently protected this way:
 |-----|------|-------------|-------|
 | Argo CD | `argocd.{cluster}.symmatree.com` | `charts/argocd/values.yaml` (`oauth2-proxy:` block) | `charts/argocd` |
 | JupyterHub | `notebook.{cluster}.symmatree.com` | `charts/jupyterhub/values.yaml` (`oauth2-proxy:` block) | `charts/jupyterhub` ([README](../charts/jupyterhub/README.md)) |
-| Home Assistant | `ha.{cluster}.symmatree.com` (prod only) | `charts/homeassistant/values.yaml` (`oauth2-proxy:` block) | `charts/homeassistant` ([README](../charts/homeassistant/README.md)) |
+| Home Assistant | `homeassistant.{cluster}.symmatree.com` (prod only) | `charts/homeassistant/values.yaml` (`oauth2-proxy:` block) | `charts/homeassistant` ([README](../charts/homeassistant/README.md)) |
 
 Each has its own oauth2-proxy Deployment and its own 1Password item (see
 [Secrets](#secrets)). The two configs are intentionally near-identical -- the
@@ -145,10 +145,22 @@ Internet client
   -> upstream app Service (ClusterIP: proxy-public / argocd-server)
 ```
 
-On the **LAN**, split-horizon DNS resolves the host to the internal ingress VIP
-directly, so it is reachable on-network even without the WAN plumbing. That is
-why an on-LAN test is only a partial test -- it exercises the gate but not the
-WAN port-forward / DNS path.
+There is **no split-horizon DNS and no on-LAN bypass.** A published host is a
+single CNAME to `lhitw` for every client, so a browser on the house LAN resolves
+the WAN address and hairpins back in through the UniFi forward, arriving at the
+same gate as a client on the internet. Network position confers nothing -- that
+is the BeyondCorp property, not an accident of the DNS setup. Verified from a
+pod: `argocd` and `notebook` both answer `CNAME lhitw.symmatree.com` and nothing
+else.
+
+Two consequences follow:
+
+- **An on-LAN test is a near-complete test.** It exercises the published record,
+  the UniFi forward, the ingress and the gate. Only the off-net client path
+  itself goes untested.
+- **A host is unreachable on the LAN whenever the WAN plumbing is broken** --
+  including while the WAN address has changed and `lhitw` has not caught up.
+  [Direct access](#direct-access) is the way in when that happens.
 
 ### The WAN exposure switch
 

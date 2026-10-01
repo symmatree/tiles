@@ -26,11 +26,11 @@ spec:
         oauth2-proxy:
           ingress:
             hosts:
-              - 'ha.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+              - 'homeassistant.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
             tls:
               - secretName: homeassistant-oauth2-proxy-tls
                 hosts:
-                  - 'ha.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+                  - 'homeassistant.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
   destination:
     server: https://kubernetes.default.svc
     namespace: homeassistant

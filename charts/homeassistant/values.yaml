@@ -24,7 +24,7 @@ oauth2-proxy:
   # be exactly client-id / client-secret / cookie-secret (the chart's
   # existingSecret keys). client-id/secret: REUSE Home Assistant's existing
   # Google client -- the one behind auth_oidc in the ha-config repo -- and add
-  # the redirect URI https://ha.{cluster}.symmatree.com/oauth2/callback to it.
+  # the redirect URI https://homeassistant.{cluster}.symmatree.com/oauth2/callback to it.
   # cookie-secret: openssl rand -base64 32 | tr -- '+/' '-_' (URL-safe;
   # oauth2-proxy decodes it with base64.RawURLEncoding and a standard-base64
   # value fails to decode into a valid AES key length -> pod will not start).
@@ -84,8 +84,8 @@ oauth2-proxy:
       # port-forward (tf/nodes/port-forwards.tf) -- this is the exposure switch.
       external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
     hosts:
-      - ha.placeholder.symmatree.com
+      - homeassistant.placeholder.symmatree.com
     tls:
       - secretName: homeassistant-oauth2-proxy-tls
         hosts:
-          - ha.placeholder.symmatree.com
+          - homeassistant.placeholder.symmatree.com
