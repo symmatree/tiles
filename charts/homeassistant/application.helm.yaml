@@ -1,0 +1,44 @@
+{{- if eq .Values.cluster_name "tiles" }}
+# Prod only. Home Assistant is a single physical appliance, so a second gate in
+# front of it from tiles-test would be another door to the same box rather than
+# an independent environment -- the same reason charts/static-certs pushes only
+# from prod. Chart rendering is covered by CI (build.sh), not by a test deploy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homeassistant
+  namespace: argocd
+  labels:
+    name: homeassistant
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: charts/homeassistant
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        # Perimeter gate host, per-cluster (chart default is the placeholder host).
+        oauth2-proxy:
+          ingress:
+            hosts:
+              - 'homeassistant.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            tls:
+              - secretName: homeassistant-oauth2-proxy-tls
+                hosts:
+                  - 'homeassistant.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: homeassistant
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+{{- end }}

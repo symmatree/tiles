@@ -89,6 +89,13 @@ Unless noted, **Application** below is always that template path (even when the 
 - **README**: [`charts/static-certs/README.md`](https://github.com/symmatree/tiles/blob/main/charts/static-certs/README.md)
 - **Description**: Long-lived or manually managed cert material used by the cluster.
 
+### homeassistant (perimeter gate)
+
+- **Terraform**: N/A
+- **Application**: [`charts/argocd-applications/templates/homeassistant-application.helm.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/homeassistant-application.helm.yaml) (symlink to [`charts/homeassistant/application.helm.yaml`](https://github.com/symmatree/tiles/blob/main/charts/homeassistant/application.helm.yaml); prod only)
+- **README**: [`charts/homeassistant/README.md`](https://github.com/symmatree/tiles/blob/main/charts/homeassistant/README.md)
+- **Description**: oauth2-proxy gate only. The upstream is the Home Assistant appliance on the LAN, not a workload here.
+
 ## Observability stack
 
 ### Alloy

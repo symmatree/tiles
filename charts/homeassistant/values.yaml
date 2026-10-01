@@ -1,0 +1,91 @@
+# Placeholder; the app-of-apps parent writes the real vault name. Used only by
+# templates/oauth2-proxy-secret.yaml.
+vault_name: placeholder
+
+# oauth2-proxy perimeter gate in front of Home Assistant. This chart deploys
+# ONLY the gate -- Home Assistant itself is a Yellow appliance at 10.0.99.9 on
+# the LAN, not a workload here, so there is no Service to flip to ClusterIP and
+# no ExternalName is needed: the upstream is a plain URL.
+#
+# The through-mode property therefore rests on the UniFi port-forward table, not
+# on a Kubernetes Service type -- see README.md, "Where through-mode comes from".
+#
+# The security boundary below (allowlist as sole gate, no email_domains,
+# trusted-proxy-ip) is copied unchanged from the WAN-live ArgoCD and JupyterHub
+# gates; the rules are the #593-#604 hardening set documented in
+# docs/remote-access.md. A broken proxy fails closed.
+oauth2-proxy:
+  # Chart 7.7.0 defaults to the older v7.6.0; pin the current patched release
+  # since this is internet-facing (same rationale as the other two gates).
+  image:
+    tag: v7.15.3
+  # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
+  # (OnePasswordItem 'homeassistant-oauth2-proxy'). Vault-item field labels must
+  # be exactly client-id / client-secret / cookie-secret (the chart's
+  # existingSecret keys). client-id/secret: REUSE Home Assistant's existing
+  # Google client -- the one behind auth_oidc in the ha-config repo -- and add
+  # the redirect URI https://homeassistant.{cluster}.symmatree.com/oauth2/callback to it.
+  # cookie-secret: openssl rand -base64 32 | tr -- '+/' '-_' (URL-safe;
+  # oauth2-proxy decodes it with base64.RawURLEncoding and a standard-base64
+  # value fails to decode into a valid AES key length -> pod will not start).
+  #
+  # existingSecret is required, or the chart renders its OWN Secret of the same
+  # name full of "XXXXXXX" placeholders, Argo self-heal wins the race, and
+  # client_id=XXXXXXX is sent to Google (ArgoCD #600).
+  config:
+    existingSecret: homeassistant-oauth2-proxy
+    # Drop the chart's default email_domains = [ "*" ] (allowAll) -- with it, the
+    # allowlist below is never consulted (ArgoCD #603). Only the dummy upstream
+    # remains here; the real upstream is --upstream in extraArgs.
+    configFile: |-
+      upstreams = [ "file:///dev/null" ]
+  extraArgs:
+    - --provider=google
+    # No --email-domain: validation is OR, and --email-domain=* is allowAll
+    # (ArgoCD #602). The authenticated-emails-file is the sole gate.
+    #
+    # The upstream is Home Assistant on the LAN, over its own HTTPS listener.
+    # Addressed by the name on its certificate (the cert-manager cert that
+    # charts/static-certs pushes to the appliance daily), so the upstream
+    # handshake verifies normally -- Go takes the TLS ServerName from this URL,
+    # independent of --pass-host-header below. Verified from a pod in the pod
+    # CIDR: the name resolves to 10.0.99.9 via UniFi, the leaf is the expected
+    # Let's Encrypt cert, "/" is 200 and "/api/" is 401.
+    - --upstream=https://homeassistant.local.symmatree.com:8123
+    # Home Assistant sees the public host, so its own OIDC redirect URIs and any
+    # absolute links it generates match what the browser asked for.
+    - --pass-host-header=true
+    - --set-xauthrequest=true
+    - --silence-ping-logging=true
+    - --skip-provider-button=true
+    - --reverse-proxy=true
+    # Trust X-Forwarded-* only from the in-cluster pod CIDR (the Cilium ingress
+    # Envoy SNATs into it), not 0.0.0.0/0 (ArgoCD #604).
+    - --trusted-proxy-ip=10.0.144.0/20
+  # The ONLY emails allowed through the perimeter.
+  authenticatedEmailsFile:
+    enabled: true
+    restricted_access: |
+      seth.porter@gmail.com
+  ingress:
+    enabled: true
+    className: cilium
+    # Prefix, not the chart default ImplementationSpecific, which under Cilium
+    # matches only the exact "/" and 404s /oauth2/callback plus the whole app
+    # (ArgoCD #601).
+    path: /
+    pathType: Prefix
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+      # Ride the shared cilium-ingress front door (pinned LB IP)...
+      ingress.cilium.io/loadbalancer-mode: shared
+      # ...and publish as a CNAME to the UniFi dynamic-DNS record (WAN IP)
+      # instead of the internal ingress IP. Paired with the UniFi 443
+      # port-forward (tf/nodes/port-forwards.tf) -- this is the exposure switch.
+      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    hosts:
+      - homeassistant.placeholder.symmatree.com
+    tls:
+      - secretName: homeassistant-oauth2-proxy-tls
+        hosts:
+          - homeassistant.placeholder.symmatree.com
