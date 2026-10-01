@@ -8,7 +8,7 @@ workload in this cluster.
 
 | URL | Purpose |
 | --- | --- |
-| `https://ha.tiles.symmatree.com` | Home Assistant web UI, behind the gate (Google + email allowlist) |
+| `https://homeassistant.tiles.symmatree.com` | Home Assistant web UI, behind the gate (Google + email allowlist) |
 | `https://homeassistant.local.symmatree.com:8123` | the appliance itself, LAN-only, unchanged |
 
 The generic wiring, the WAN exposure switch and the `#593-#604` hardening rules are the shared
@@ -29,6 +29,11 @@ means the upstream handshake verifies against the real chain -- Go takes the TLS
 the upstream URL, so `--pass-host-header=true` does not disturb it, and
 `--ssl-upstream-insecure-skip-verify` is not needed.
 
+That couples two places to the appliance's internal name: `--upstream` here, and the
+`homeassistant` entry in [`charts/static-certs/values.yaml`](../static-certs/values.yaml) that
+issues and pushes the certificate for it. Renaming the appliance means changing both together, or
+the upstream handshake stops verifying.
+
 ## Where through-mode comes from
 
 The requirement is that no packet reaches Home Assistant from the internet without first passing
@@ -40,7 +45,7 @@ That holds, and it is worth being precise about what enforces it:
 - The only WAN ingress to this site is the single UniFi `443` forward to the shared Cilium ingress
   VIP `10.0.130.1` ([`tf/nodes/port-forwards.tf`](../../tf/nodes/port-forwards.tf)). There is no
   forward for `8123` and no other forward to `10.0.99.9`.
-- `ha.tiles.symmatree.com` resolves (via external-dns, CNAME to `lhitw`) to that WAN address, and
+- `homeassistant.tiles.symmatree.com` resolves (via external-dns, CNAME to `lhitw`) to that WAN address, and
   the Ingress it lands on belongs to oauth2-proxy. Home Assistant has no Ingress.
 - So an internet client reaches Envoy, then oauth2-proxy, then Home Assistant -- in that order,
   with no alternative route.
@@ -49,10 +54,16 @@ That holds, and it is worth being precise about what enforces it:
 Argo CD and JupyterHub the `ClusterIP` flip makes the property structural inside the cluster; here
 there is no equivalent, so adding a WAN forward that reaches `10.0.99.9` would silently undo it.
 
-On the **LAN**, Home Assistant remains directly reachable on `:8123` exactly as it is today. This
-chart does not change that, and does not attempt to: the appliance has to stay reachable on-network
-for ESPHome devices, the Alloy scrape of its unauthenticated `/api/prometheus`, and the
-`static-certs` push. The gate is the internet perimeter, not a LAN perimeter.
+`homeassistant.tiles.symmatree.com` behaves identically inside the house and outside it: it is a
+single CNAME to `lhitw` for every client, so a browser on the LAN hairpins back in through the
+UniFi forward and meets the same gate. One URL, one behaviour, regardless of which network a phone
+has decided to attach to.
+
+What stays on the LAN is the **machine** path. `homeassistant.local.symmatree.com` continues to
+resolve straight to `10.0.99.9`, because the clients that use it cannot pass a Google challenge:
+ESPHome and the device integrations, and the Alloy scrape of the unauthenticated `/api/prometheus`.
+(The `static-certs` push is unaffected either way -- it SSHes to the IP, not the name.) The gate is
+the human perimeter; it is not and cannot be a LAN perimeter for this host.
 
 ## Prerequisites
 
@@ -62,9 +73,9 @@ These are manual and are **not** created by this chart. Until they exist the gat
    exactly `client-id` / `client-secret` / `cookie-secret`. Reuse Home Assistant's existing Google
    client (the one behind `auth_oidc` in the `ha-config` repo) for the first two; generate the third
    with `openssl rand -base64 32 | tr -- '+/' '-_'`.
-2. **Redirect URI** `https://ha.tiles.symmatree.com/oauth2/callback` added to that Google client.
+2. **Redirect URI** `https://homeassistant.tiles.symmatree.com/oauth2/callback` added to that Google client.
    If you want Home Assistant's own OIDC login to keep working through the gate, its callback
-   (`https://ha.tiles.symmatree.com/auth/oidc/callback`) has to be registered too.
+   (`https://homeassistant.tiles.symmatree.com/auth/oidc/callback`) has to be registered too.
 3. **`ha-config`**: `http.use_x_forwarded_for: true` and `http.trusted_proxies: 10.0.144.0/20`.
    oauth2-proxy sets `X-Forwarded-For` on every upstream request, and Home Assistant raises
    `HTTPBadRequest` for an `X-Forwarded-For` it was not configured to expect -- so without this the
