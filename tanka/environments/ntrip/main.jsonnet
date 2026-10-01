@@ -85,6 +85,24 @@ local ntrip = {
     // Static PV for the same reason ground-tlogs, flight-analysis and fleet-control use one:
     // `datasets` is a different export from the one cluster-nfs provisions into. Retain, because
     // this is the only copy of a day's observations once the local PVC rotates past it.
+    // ---- NOT MOUNTED: acebase is outside the share's export rule -------------------------
+    //
+    // The claim and volume stay declared and unused, because the only thing wrong with them is a
+    // rule on the NAS. `datasets` allows 10.0.128.0/17; this pod is pinned to **acebase** by
+    // nodeSelector, because `/dev/gnss` is a hostPath and the receiver is physically on that box,
+    // and acebase is 10.0.99.14 on the servers/IoT VLAN -- outside it. So the mount was refused
+    // with `access denied by server` and, since it lands on `/persist/rtkbase/data`, took the
+    // whole pod down with it: no caster, no RTK, for 25 hours.
+    //
+    // It is the first NFS mount ever attempted from acebase, which is why nothing caught it --
+    // every other NFS PV here runs on a node inside the CIDR, and acebase's only other volume is
+    // local-path.
+    //
+    // Mounting the share root and moving the depth into a subPath does NOT help: the refusal is
+    // per client IP on the export, not per path.
+    //
+    // To finish this, add acebase to the `datasets` export rule on the NAS (10.0.99.14/32, or
+    // widen to 10.0.99.0/24) and restore the volumeMount above. tiles#799 has the original.
     baseObsPv:
       kPersistentVolume.new('attic-rtk-base')
       + kPersistentVolume.spec.withCapacity({ storage: '500Gi' })
@@ -129,11 +147,8 @@ local ntrip = {
         [std.format('%s-hash', settingsConfigMapName)]: settingsConfigMapHash,
       })
       + k_util.pvcVolumeMount(persistPvcName, '/persist/rtkbase')
-      // Nested inside the mount above, and only in the main container -- `mapContainers` does
-      // not touch initContainers, so `seed-settings` keeps writing settings.conf to the local
-      // PVC and its `mkdir -p .../data` lands on a directory this mount then shadows.
-      + k_util.pvcVolumeMount('attic-rtk-base', '/persist/rtkbase/data',
-                              volumeMountMixin=kVolumeMount.withSubPath('raw'))
+      // NOT MOUNTED YET -- see the PV below. The datadir is back on the PVC, which is where it
+      // was before coordinator#416 and is a working base station rather than a stuck one.
       + kDeployment.mixin.spec.template.spec.withVolumesMixin([
         kVolume.fromConfigMap(settingsConfigMapName, settingsConfigMapName),
       ])
