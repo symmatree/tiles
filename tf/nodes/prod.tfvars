@@ -107,12 +107,19 @@ metal_amd_nodes = {
 }
 
 # MAC/IP from facts fables/kb/Computers/AceBase.md
+# acebase sits in the cluster allocation (10.0.128.0/24) alongside lancer. It was
+# on 10.0.99.14 -- the range for standalone boxes reached directly -- from when it
+# was a separate Windows machine, before it was reflashed to Talos and joined the
+# cluster. That left it the only node outside 10.0.128.0/18, which meant it was
+# outside every Synology NFS export rule: the rules are written per cluster CIDR
+# (docs/nfs-storage-architecture.md), so any NFS mount from acebase was refused
+# with "access denied by server". See #805 for the rtkbase outage that surfaced it.
 metal_intel_nodes = {
   "acebase" = {
     name                   = "acebase"
     type                   = "worker"
     mac_address            = "00:e0:4c:5f:3d:71"
-    ip_address             = "10.0.99.14"
+    ip_address             = "10.0.128.52"
     taint                  = "gnss"
     machine_config_patches = ["patches/acebase-gnss.yaml"]
   }
