@@ -45,7 +45,31 @@ If you want a setting to stick, put it in [`settings.conf`](settings.conf).
 The one exception is `flask_secret_key`, which RTKBase generates on boot and writes back. It
 is not in git and does not need to be; regenerating it only invalidates existing web sessions.
 
-### The raw observations are on the datasets share
+### The raw observations are NOT on the datasets share yet
+
+**Blocked on an NFS export rule, and the attempt took the base station down for 25 hours.**
+
+`datasets` allows `10.0.128.0/17`. This pod is pinned to **acebase** by nodeSelector, because
+`/dev/gnss` is a hostPath and the receiver is physically on that box -- and acebase is
+`10.0.99.14`, on the servers/IoT VLAN, outside that CIDR. So the mount was refused with
+`access denied by server`, and because it lands on `/persist/rtkbase/data` the **whole pod**
+could not start: no caster, no RTK.
+
+It is the first NFS mount ever attempted from acebase, which is why nothing caught it sooner --
+every other NFS PV in this cluster runs on a node inside the CIDR, and acebase's only other
+volume is `local-path`. Note also that `/volume2/tiles` allows `10.0.128.0/18`, so acebase is
+outside that one too.
+
+Mounting the share root and moving the depth into a `subPath` does **not** help: the refusal is
+per client IP on the export, not per path.
+
+**To finish it:** add acebase to the `datasets` export rule on the NAS (`10.0.99.14/32`, or widen
+to `10.0.99.0/24`), then restore the `volumeMount` -- tiles#799 has it. The PV and PVC are left
+declared and unused so that is the only change needed. Until then `datadir` is `/persist/rtkbase/data`
+on the PVC, which is where it was before, and getting a day's observations off means `kubectl cp`
+again.
+
+### What it is for, once it works
 
 `[local_storage] datadir` is `/persist/rtkbase/data`, and the `attic-rtk-base` PV mounts
 `datasets/gps-logs/attic-rtk-base/raw/` there -- nested inside the PVC mount, so `settings.conf`
