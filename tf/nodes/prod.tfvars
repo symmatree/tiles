@@ -94,6 +94,16 @@ deploy_proxmox_alloy  = true
 # schematic; scheduling the iGPU to pods is follow-on work. Single NVMe
 # (nvme0n1, Lexar 2TB, shipped with Windows) -- the install patch pins that
 # disk + wipe so Talos actually installs (first apply left it in maintenance).
+# lancer's taint is hard (NoSchedule). It was PreferNoSchedule (90afc6a) so the
+# node would absorb overflow rather than idle, which assumed routine workload had
+# no requests -- the soft penalty was then the only thing keeping work off it.
+# Once load is visible, LeastAllocated sees ~52 GiB free here against 1-5 GiB on
+# the workers and outvotes a fixed penalty, so routine drifts onto lancer, the
+# opposite of the intent. Everything that belongs here (jupyterhub singleuser,
+# nodeodm, webodm) arrives by hard nodeSelector rather than by the taint being
+# soft, so NoSchedule does not idle the node.
+# NB register-with-taints applies only at kubelet registration: lancer has to
+# re-register (reboot) for a change here to take effect.
 metal_amd_nodes = {
   "lancer" = {
     name                   = "lancer"
@@ -101,7 +111,7 @@ metal_amd_nodes = {
     mac_address            = "84:47:09:75:89:a6"
     ip_address             = "10.0.128.51"
     taint                  = "heavy"
-    taint_effect           = "PreferNoSchedule"
+    taint_effect           = "NoSchedule"
     machine_config_patches = ["patches/lancer-install-disk.yaml"]
   }
 }
