@@ -36,7 +36,7 @@ if you scrape it some other way.
 - **`up` gaps are expected.** The backpack is only on WiFi when the radio is
   powered and Telem mode = WiFi; read "reachable share" against how long the radio
   was actually on, not as an SLO.
-- **`gcs`** should be acebase (`10.0.99.14`, mavproxy). A different address would
+- **`gcs`** should be acebase (mavproxy). A different address would
   mean some other GCS latched the backpack's MAVLink stream.
 - **`drops_down`** is a counting artifact of one global MAVLink sequence across
   interleaved sources, not measured loss; `overflows_down` is the real
