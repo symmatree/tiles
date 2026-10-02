@@ -123,7 +123,7 @@ local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonn
       // --- Identity ---------------------------------------------------------
       local tIdentity = pos(
         g.panel.table.new('Association and GCS')
-        + g.panel.table.panelOptions.withDescription('Who the backpack is associated with (ssid/bssid) and which GCS it has latched onto. gcs should be acebase (10.0.99.14, mavproxy); "IP UNSET" means it has not latched yet.')
+        + g.panel.table.panelOptions.withDescription('Who the backpack is associated with (ssid/bssid) and which GCS it has latched onto. The backpack discovers the GCS by latching whoever answers first, so this reports what it found rather than what it ought to be; "IP UNSET" means it has not latched yet.')
         + g.panel.table.queryOptions.withTargets([
           q('backpack_mavlink_enabled{%(backpackSelector)s}', 'enabled')
           + g.query.prometheus.withInstant(true)
