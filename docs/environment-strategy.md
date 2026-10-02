@@ -104,11 +104,20 @@ tf/
 - The get-or-create pattern (`terraform workspace select test || terraform workspace new test`) is idempotent and safe
 - GCS bucket and prefix are all that's needed - Terraform handles workspace subdirectories automatically
 
-**State paths are automatic:**
+<a id="state-paths"></a>
 
-- Backend prefix: `terraform/tiles/nodes` (configured once in `versions.tf`)
-- Test workspace state: `gs://custodes-tf-state/terraform/tiles/nodes/test/default.tfstate` (created automatically)
-- Prod workspace state: `gs://custodes-tf-state/terraform/tiles/nodes/prod/default.tfstate` (created automatically)
+**State paths are automatic.** The bucket and prefix are declared in
+[`tf/nodes/versions.tf`](../tf/nodes/versions.tf) (`backend "gcs"`), and the GCS
+backend appends `<workspace>.tfstate` to the prefix -- it does **not** create a
+per-workspace directory. Confirm what exists rather than trusting this prose:
+
+```bash
+gcloud storage ls 'gs://custodes-tf-state/terraform/tiles/**'
+```
+
+which at the time of writing lists `nodes/prod.tfstate`, `nodes/test.tfstate`,
+`nodes/default.tfstate` (the unused default workspace) and
+`bootstrap/default.tfstate`.
 
 ### How Workspaces Work
 
@@ -151,10 +160,7 @@ terraform {
 }
 ```
 
-**State File Locations (Automatic):**
-
-- Test workspace: `gs://custodes-tf-state/terraform/tiles/nodes/test/default.tfstate`
-- Prod workspace: `gs://custodes-tf-state/terraform/tiles/nodes/prod/default.tfstate`
+**State file locations:** see [State paths](#state-paths) above -- `<prefix>/<workspace>.tfstate`.
 
 **Important:** You do NOT need to pre-create workspaces or state files. Terraform automatically:
 
@@ -325,8 +331,8 @@ jobs:
 **State Path Details:**
 
 - After `terraform init`, Terraform knows about the backend
-- When you select/create a workspace, Terraform will use that workspace name in the state path
-- The state file path is: `gs://custodes-tf-state/terraform/tiles/nodes/{workspace}/default.tfstate`
+- When you select/create a workspace, Terraform uses that workspace name in the state path
+- The state file path is `<prefix>/<workspace>.tfstate` -- see [State paths](#state-paths)
 - No manual GCS operations needed - Terraform handles everything automatically
 
 ### Why Workspaces Were Chosen
@@ -401,16 +407,14 @@ The `terraform-plan-apply` composite action handles:
 
 ### Terraform State Management
 
-With workspaces, each environment automatically gets its own isolated state file:
-
-- **Test workspace**: `gs://custodes-tf-state/terraform/tiles/nodes/test/default.tfstate`
-- **Production workspace**: `gs://custodes-tf-state/terraform/tiles/nodes/prod/default.tfstate`
+With workspaces, each environment automatically gets its own isolated state file at
+`<prefix>/<workspace>.tfstate` -- see [State paths](#state-paths) for the source of
+the prefix and the command that lists what is actually there.
 
 **How it works:**
 
-- The backend prefix is `terraform/tiles/nodes` (configured in `versions.tf`)
-- Terraform automatically appends the workspace name: `terraform/tiles/nodes/{workspace}/`
-- Each workspace has its own `default.tfstate` file
+- The backend prefix is declared in [`tf/nodes/versions.tf`](../tf/nodes/versions.tf)
+- Terraform appends `<workspace>.tfstate` to it
 - State files are created automatically on first `terraform apply`
 - No manual GCS bucket setup needed beyond the base bucket and prefix
 
