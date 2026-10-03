@@ -63,6 +63,14 @@ base image shipping a CA set. Doing so also means a service that later moves fro
 Let's Encrypt certificate to a `{cluster_name}-ca-issuer` one keeps verifying with no
 change at the client, since both roots are already in the bundle.
 
+[`templates/device-ca-bundle.yaml`](templates/device-ca-bundle.yaml) publishes a second,
+deliberately separate `Bundle` named `device-identity-ca`: the device CA alone, with no
+default CA set merged in, as ConfigMap key `device-identity-ca.crt` in namespaces labelled
+`device-identity-ca: enabled`. The two bundles exist separately because they occupy
+opposite sides of a handshake -- `trust-bundle` is what a workload trusts to verify
+servers, `device-identity-ca` is what a workload trusts to authenticate clients. Mounting
+the wrong one in the wrong position is the mistake the split is designed to prevent.
+
 ## Configuration
 
 ### Key Configuration Values

@@ -1768,6 +1768,34 @@ spec:
         trust-bundle: enabled
 
 ---
+# Source: cert-manager/templates/device-ca-bundle.yaml
+# Distributes the device-identity CA certificate to namespaces that terminate
+# mutual TLS, so a verifier can mount it as a file.
+#
+# Note what is NOT here: `useDefaultCAs`. This bundle is a *ClientCAs* source
+# only -- the one and only thing it is for is checking certificates that devices
+# present to us. It is kept separate from `trust-bundle` (which is a RootCAs
+# source and does merge the public set) precisely so the device CA can never end
+# up vouching for a server. See the rationale in
+# templates/device-identity-issuer.yaml.
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: device-identity-ca
+  namespace: "cert-manager"
+spec:
+  sources:
+    - secret:
+        name: "placeholder-device-ca-tls"
+        key: ca.crt
+  target:
+    configMap:
+      key: device-identity-ca.crt
+    namespaceSelector:
+      matchLabels:
+        device-identity-ca: enabled
+
+---
 # Source: cert-manager/charts/trust-manager/templates/certificate.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
