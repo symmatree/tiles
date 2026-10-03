@@ -22,6 +22,12 @@ ingress_lb_ip = "10.0.130.1"
 service_cidr  = "10.0.136.0/21"
 pod_cidr      = "10.0.144.0/20"
 
+# Fixed IP for the mutual-TLS device gateway (charts/homeassistant ghostunnel),
+# from the same static-LB pool as ingress_lb_ip above. MUST equal the
+# lbipam.cilium.io/ips annotation in charts/homeassistant/values.yaml -- keep the
+# two in sync, same as ingress_lb_ip. Reserve it out of DHCP on the UniFi side.
+device_gateway_lb_ip = "10.0.130.2"
+
 virtual_machines = {
   "tiles-cp-1" = {
     type              = "control"
