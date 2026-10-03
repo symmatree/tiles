@@ -28,6 +28,14 @@ Gitlab has a pretty good [utility library](https://gitlab.com/gitlab-com/gl-infr
 have inappropriate assumptions for your system (and don't offer a config mechanism that would
 address it).
 
+`tanka/lib/monitoring-resources.libsonnet` carries the customizations in use here; its file
+header documents each one. `dashboardsToDrop`, `alertGroupsToDrop`, `alertsToDrop` and
+`ruleGroupsToDrop` remove things; `alertLabelOverrides` restamps an alert's labels (e.g.
+severity); `alertExtraSelectors` appends a label matcher inside one alert's copy of the mixin
+selector, which narrows that alert to a class of targets without weakening the rule for
+everyone (`alertsToDrop` can only remove it for all targets). It fails the build if the alert's
+expression no longer contains the selector, rather than rendering the unnarrowed rule.
+
 ## Rejected options
 
 ### mimirtool and grafana api
