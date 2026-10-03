@@ -99,7 +99,7 @@ metadata:
     # the dynamic pool -- a UniFi port-forward targets it, so it must not move.
     tiles.symmatree.com/static-lb: "true"
   annotations:
-    lbipam.cilium.io/ips: "10.0.130.2"
+    lbipam.cilium.io/ips: "placeholder"
     external-dns.alpha.kubernetes.io/hostname: "homeassistant-device.placeholder.symmatree.com"
     # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
     # app resolves the same name to the same place on any network.
@@ -111,7 +111,7 @@ spec:
   ports:
     - name: mtls
       protocol: TCP
-      port: 8443
+      port: placeholder
       targetPort: mtls
 ---
 # Source: homeassistant/charts/oauth2-proxy/templates/deployment.yaml
@@ -282,19 +282,20 @@ spec:
           image: "ghostunnel/ghostunnel:v1.11.3-distroless"
           args:
             - server
-            - --listen=0.0.0.0:8443
+            - --listen=0.0.0.0:placeholder
             - --target=127.0.0.1:9000
             - --cert=/etc/ghostunnel/server/tls.crt
             - --key=/etc/ghostunnel/server/tls.key
             - --cacert=/etc/ghostunnel/device-ca/device-identity-ca.crt
-            - --allow-cn=placeholder-device
+            - --allow-cn=seth-pixel
+            - --allow-cn=lisa-pixel
             # 0.0.0.0, not loopback: a kubelet httpGet probe connects to the
             # pod IP. /_metrics is served here too, but as a JSON array rather
             # than Prometheus text, so nothing scrapes it today.
             - --status=http://0.0.0.0:61000
           ports:
             - name: mtls
-              containerPort: 8443
+              containerPort: placeholder
           # Readiness only, deliberately. /_status returns 503 whenever the hop's
           # own target is unreachable (verified: backend_ok false plus the dial
           # error), which is right for gating the Service but wrong for liveness
@@ -416,6 +417,81 @@ spec:
       - homeassistant.placeholder.symmatree.com
       secretName: homeassistant-oauth2-proxy-tls
 ---
+# Source: homeassistant/templates/device-certs.helm.yaml
+# Client certificate for seth-pixel. The CN is what ghostunnel matches with
+# --allow-cn, so this name and the ghostunnel.allowedCNs entry are the same
+# string by construction.
+#
+# usages omits server auth deliberately: this credential can only ever
+# authenticate a client, so a leaked key cannot be used to stand up something
+# that impersonates a service.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: device-seth-pixel
+  namespace: "homeassistant"
+spec:
+  commonName: "seth-pixel"
+  secretName: device-seth-pixel-tls
+  duration: 17520h
+  renewBefore: 2160h
+  usages:
+    - digital signature
+    - key encipherment
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  keystores:
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: device-cert-password
+        key: password
+  issuerRef:
+    name: "placeholder-device-ca-issuer"
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Source: homeassistant/templates/device-certs.helm.yaml
+# Client certificate for lisa-pixel. The CN is what ghostunnel matches with
+# --allow-cn, so this name and the ghostunnel.allowedCNs entry are the same
+# string by construction.
+#
+# usages omits server auth deliberately: this credential can only ever
+# authenticate a client, so a leaked key cannot be used to stand up something
+# that impersonates a service.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: device-lisa-pixel
+  namespace: "homeassistant"
+spec:
+  commonName: "lisa-pixel"
+  secretName: device-lisa-pixel-tls
+  duration: 17520h
+  renewBefore: 2160h
+  usages:
+    - digital signature
+    - key encipherment
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  keystores:
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: device-cert-password
+        key: password
+  issuerRef:
+    name: "placeholder-device-ca-issuer"
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
 # Source: homeassistant/templates/ghostunnel.helm.yaml
 # Server certificate the phone verifies. An ordinary Let's Encrypt certificate,
 # so no custom root has to be installed on any device -- the device CA is used
@@ -437,6 +513,19 @@ spec:
     name: real-cert
     kind: ClusterIssuer
     group: cert-manager.io
+---
+# Source: homeassistant/templates/device-certs.helm.yaml
+# Keystore password for every device certificate below. It protects the PKCS#12
+# on its way to the device and nothing afterwards -- Android re-wraps the key
+# into its own credential storage on import -- so one item covers all of them.
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  name: device-cert-password
+  namespace: "homeassistant"
+type: Opaque
+spec:
+  itemPath: 'vaults/placeholder/items/device-cert-password'
 ---
 # Source: homeassistant/templates/oauth2-proxy-secret.yaml
 apiVersion: onepassword.com/v1
