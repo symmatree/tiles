@@ -22,6 +22,12 @@ spec:
       valuesObject:
         cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        # Mutual-TLS device-gateway host, per-cluster (chart default is the
+        # placeholder host). Separate name from the oauth2-proxy host below
+        # because they are different doors with different credentials, not two
+        # routes to one gate.
+        ghostunnel:
+          hostname: 'homeassistant-device.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
         # Perimeter gate host, per-cluster (chart default is the placeholder host).
         oauth2-proxy:
           ingress:
@@ -41,4 +47,12 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # trust-manager delivers its Bundles by namespace label. The gateway
+        # needs both, and they are deliberately different bundles: trust-bundle
+        # to verify the Home Assistant server, device-identity-ca to
+        # authenticate client certificates. See charts/cert-manager.
+        trust-bundle: enabled
+        device-identity-ca: enabled
 {{- end }}
