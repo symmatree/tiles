@@ -31,7 +31,7 @@ metadata:
     # the dynamic pool -- a UniFi port-forward targets it, so it must not move.
     tiles.symmatree.com/static-lb: "true"
   annotations:
-    lbipam.cilium.io/ips: {{ required "ghostunnel.loadBalancerIP is required" $gt.loadBalancerIP | quote }}
+    lbipam.cilium.io/ips: {{ required "device_gateway_lb_ip is required" .Values.device_gateway_lb_ip | quote }}
     external-dns.alpha.kubernetes.io/hostname: {{ $gt.hostname | quote }}
     # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
     # app resolves the same name to the same place on any network.
@@ -43,7 +43,7 @@ spec:
   ports:
     - name: mtls
       protocol: TCP
-      port: {{ $gt.port }}
+      port: {{ required "device_gateway_port is required" .Values.device_gateway_port }}
       targetPort: mtls
 ---
 apiVersion: apps/v1
@@ -79,7 +79,7 @@ spec:
           image: {{ required "ghostunnel.image is required" $gt.image | quote }}
           args:
             - server
-            - --listen=0.0.0.0:{{ $gt.port }}
+            - --listen=0.0.0.0:{{ .Values.device_gateway_port }}
             - --target=127.0.0.1:{{ $gt.internalPort }}
             - --cert=/etc/ghostunnel/server/tls.crt
             - --key=/etc/ghostunnel/server/tls.key
@@ -93,7 +93,7 @@ spec:
             - --status=http://0.0.0.0:{{ $gt.statusPort }}
           ports:
             - name: mtls
-              containerPort: {{ $gt.port }}
+              containerPort: {{ .Values.device_gateway_port }}
           # Readiness only, deliberately. /_status returns 503 whenever the hop's
           # own target is unreachable (verified: backend_ok false plus the dial
           # error), which is right for gating the Service but wrong for liveness

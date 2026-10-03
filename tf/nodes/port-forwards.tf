@@ -27,7 +27,7 @@ resource "unifi_port_forward" "device_gateway" {
   name                   = "device-gateway-mtls"
   port_forward_interface = "wan"
   protocol               = "tcp"
-  dst_port               = var.device_gateway_wan_port
+  dst_port               = var.device_gateway_port
   fwd_ip                 = var.device_gateway_lb_ip
-  fwd_port               = var.device_gateway_wan_port
+  fwd_port               = var.device_gateway_port
 }

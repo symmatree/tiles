@@ -22,6 +22,11 @@ spec:
       valuesObject:
         cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
         vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        # From tf/nodes (prod.tfvars / the variable default) via
+        # app_of_apps_values, so the gateway's address and port and the UniFi
+        # forward that targets them cannot drift apart.
+        device_gateway_lb_ip: '{{ required ".Values.device_gateway_lb_ip is required" .Values.device_gateway_lb_ip }}'
+        device_gateway_port: '{{ required ".Values.device_gateway_port is required" .Values.device_gateway_port }}'
         # Mutual-TLS device-gateway host, per-cluster (chart default is the
         # placeholder host). Separate name from the oauth2-proxy host below
         # because they are different doors with different credentials, not two

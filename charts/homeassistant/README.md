@@ -155,12 +155,32 @@ The phone verifies an ordinary Let's Encrypt certificate, so **no custom root is
 device.** This is not the "keep a private CA trusted on the phone" arrangement; the custom CA lives
 only on our side of the handshake.
 
-### Authorization
+### Authorization and device certificates
 
-`allowedCNs` in [`values.yaml`](values.yaml) is the entire model: one line per device, so revoking
-one device is deleting its line. ghostunnel has no CRL or OCSP support, and refuses to start when
-given no access-control flag at all. A certificate with a matching CN from any other issuer is
-rejected at the handshake as an unknown authority.
+`ghostunnel.allowedCNs` in [`values.yaml`](values.yaml) is the entire model: one line per device, so
+revoking one device is deleting its line and waiting for the sync. ghostunnel has no CRL or OCSP
+support, and refuses to start when given no access-control flag at all. A certificate with a
+matching CN from any other issuer is rejected at the handshake as an unknown authority.
+
+`deviceCerts.names` renders a cert-manager `Certificate` per device against
+`{cluster_name}-device-ca-issuer`, each with a PKCS#12 keystore (the
+[laserjet](../static-certs/templates/laserjet.yaml) pattern) whose password comes from one
+1Password item. `usages` deliberately omits server auth: a leaked device key cannot be used to
+impersonate a service, only to authenticate as that device.
+
+Issued for 2 years, matching the CA. Long-lived certificates are much cheaper here than usual
+because revocation does not go through expiry -- it goes through `allowedCNs` -- and because
+installing one means physically handling a phone.
+
+Extracting a keystore to install (the password is in the 1Password item; do not print it):
+
+```bash
+kubectl get secret -n homeassistant device-seth-pixel-tls \
+  -o jsonpath='{.data.keystore\.p12}' | base64 -d > seth-pixel.p12
+```
+
+The two names must agree between `ghostunnel.allowedCNs` and `deviceCerts.names`; the CN is what
+`--allow-cn` matches.
 
 ### Enrolling a device
 
@@ -182,13 +202,18 @@ Declining latches: `hasUserDeniedAccess` stays true, so a mis-tap means clearing
 than a re-prompt. An expired client certificate fails at the handshake with no in-app warning, which
 is why the CA is 2 years with `rotationPolicy: Never`.
 
-### Port
+### Address and port
 
 8443, not 443: the shared ingress has 443, and the two cannot be multiplexed on it. ghostunnel is a
 single-target TCP proxy, there is no `tlsroutes` CRD in this cluster, and the Cilium ingress
-terminates TLS so it could not hand on a raw handshake anyway. The address is pinned from
-`lb-static-pool` (label plus `lbipam.cilium.io/ips`) because a UniFi forward targets it; it must
-equal `device_gateway_lb_ip` in [`tf/nodes/prod.tfvars`](../../tf/nodes/prod.tfvars).
+terminates TLS so it could not hand on a raw handshake anyway.
+
+The address is pinned out of `lb-static-pool` (the `tiles.symmatree.com/static-lb` label plus
+`lbipam.cilium.io/ips`) because a UniFi forward targets it and it must not move. Both the address and
+the port come from `tf/nodes` -- `device_gateway_lb_ip` and `device_gateway_port` -- through
+`app_of_apps_values`, so the Service annotation, the listener and the UniFi forward all read one
+value and cannot drift apart. There is nothing to reserve on the UniFi side: DHCP serves
+`10.0.11.1-10.0.12.254` (see the repo [README](../../README.md)), nowhere near this `/18`.
 
 ## What this does not cover
 
