@@ -23,11 +23,18 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY rtk-base-user-on-bootup /usr/local/bin/
-# str2str_file logs to the PVC, which upstream's ProtectSystem=strict forbids.
-COPY str2str_file-persist-datadir.conf /etc/systemd/system/str2str_file.service.d/
+
+# The second sed points the relay at the bridge. The receiver is on a UART behind
+# `gnss-bridge`, not on a local serial device, so str2str_tcp reads `in_ext_tcp` -- a tcpcli to
+# [main] ext_tcp_source in settings.conf -- instead of `in_serial`. The grep is load-bearing:
+# if upstream renames that ExecStart, the build fails here rather than shipping an image that
+# opens a /dev/gnss which no longer exists.
 RUN chmod +x /usr/local/bin/rtk-base-user-on-bootup \
     && sed -i '/^ExecStart=.*/i ExecStartPre=/usr/local/bin/rtk-base-user-on-bootup' /etc/systemd/system/rtkbase_web.service \
+    && grep -q 'run_cast.sh in_serial out_tcp' /etc/systemd/system/str2str_tcp.service \
+    && sed -i 's|run_cast.sh in_serial out_tcp|run_cast.sh in_ext_tcp out_tcp|' \
+         /etc/systemd/system/str2str_tcp.service \
     && rm -f /usr/sbin/policy-rc.d
 
-# Populated on first boot; mount a PVC at /persist/rtkbase in Kubernetes.
+# Populated on first boot; mount an emptyDir at /persist/rtkbase in Kubernetes.
 VOLUME ["/persist/rtkbase"]
