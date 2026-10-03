@@ -17,7 +17,7 @@ cert-manager is deployed using the [cert-manager Helm chart](https://github.com/
 
 ### ClusterIssuers
 
-The installation creates three ClusterIssuers (cluster-wide certificate issuers):
+The installation creates four ClusterIssuers (cluster-wide certificate issuers):
 
 1. **`real-cert`**: Let's Encrypt production issuer for public certificates
    - Uses DNS01 challenges with Google Cloud DNS
@@ -32,9 +32,36 @@ The installation creates three ClusterIssuers (cluster-wide certificate issuers)
    - CA certificate is stored in `{cluster_name}-ca-tls` secret
    - Used for internal services that don't need public trust
 
+4. **`{cluster_name}-device-ca-issuer`**: Device-identity CA, for client certificates
+   - Issues certificates to machines that must prove their identity to us and cannot
+     run an OAuth/OIDC flow -- a phone presenting a client certificate to a TLS
+     terminator, and anything later with the same problem
+   - CA certificate is stored in `{cluster_name}-device-ca-tls` secret
+   - 2-year CA with `rotationPolicy: Never`, because its leaves are installed by hand
+     on hardware we may not be holding
+   - **Verifier-only.** Loaded only to authenticate *client* certificates, never as a
+     RootCAs entry, so it is not a source in the trust bundle below
+
 ### Certificate Trust Strategy
 
 The cluster uses a centralized approach with one ClusterIssuer of each type to minimize the number of root certificates that need to be trusted on client machines. All ClusterIssuers are in the `cert-manager` namespace so trust-manager can access their secrets without requiring global secret read permissions.
+
+`{cluster_name}-device-ca-issuer` does not add to that count: nothing ever has to trust
+it, because it sits on the other side of the handshake. It authenticates clients to us
+rather than vouching for servers to clients, so it is deliberately absent from
+[`templates/ca-bundle.yaml`](templates/ca-bundle.yaml) and must stay absent -- adding it
+there would promote it to a server-trust root everywhere the bundle lands.
+
+### The trust bundle
+
+[`templates/ca-bundle.yaml`](templates/ca-bundle.yaml) publishes a trust-manager `Bundle`
+named `trust-bundle`, merging the default CA set with `{cluster_name}-ca-tls`, into a
+ConfigMap key `ca-certificates.crt` in every namespace labelled `trust-bundle: enabled`.
+
+A workload that needs to verify a server reads that ConfigMap rather than relying on its
+base image shipping a CA set. Doing so also means a service that later moves from a
+Let's Encrypt certificate to a `{cluster_name}-ca-issuer` one keeps verifying with no
+change at the client, since both roots are already in the bundle.
 
 ## Configuration
 
