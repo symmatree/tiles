@@ -24,7 +24,7 @@ resource "unifi_port_forward" "shared_ingress_https" {
 resource "unifi_port_forward" "device_gateway" {
   count = var.device_gateway_lb_ip != "" ? 1 : 0
 
-  name                   = "device-gateway-mtls"
+  name                   = "homeassistant-tls"
   port_forward_interface = "wan"
   protocol               = "tcp"
   dst_port               = var.device_gateway_port
