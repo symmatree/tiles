@@ -94,7 +94,7 @@ Unless noted, **Application** below is always that template path (even when the 
 - **Terraform**: N/A
 - **Application**: [`charts/argocd-applications/templates/homeassistant-application.helm.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/homeassistant-application.helm.yaml) (symlink to [`charts/homeassistant/application.helm.yaml`](https://github.com/symmatree/tiles/blob/main/charts/homeassistant/application.helm.yaml); prod only)
 - **README**: [`charts/homeassistant/README.md`](https://github.com/symmatree/tiles/blob/main/charts/homeassistant/README.md)
-- **Description**: oauth2-proxy gate only. The upstream is the Home Assistant appliance on the LAN, not a workload here.
+- **Description**: Two doors to the Home Assistant appliance on the LAN (not a workload here): an oauth2-proxy gate for browsers and a ghostunnel mutual-TLS gateway for the companion app.
 
 ## Observability stack
 
