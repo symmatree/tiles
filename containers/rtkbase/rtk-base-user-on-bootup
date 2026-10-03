@@ -4,8 +4,8 @@
 
 PERSIST=/persist/rtkbase
 
-# PVC holds settings.conf; bind-mount it over the image copy at the path RTKBase reads.
-# (Kubernetes subPath file mounts fail here with "not a directory" on acebase/kubelet.)
+# An emptyDir holds settings.conf; bind-mount it over the image copy at the path RTKBase
+# reads. (Kubernetes subPath file mounts fail here with "not a directory" on this kubelet.)
 if [ ! -f "${PERSIST}/settings.conf" ]; then
 	echo "missing ${PERSIST}/settings.conf (init container should have seeded it)" >&2
 	exit 1
@@ -14,10 +14,3 @@ mount --bind "${PERSIST}/settings.conf" /root/rtkbase/settings.conf
 
 systemctl start str2str_tcp.service
 systemctl start str2str_local_ntrip_caster.service
-
-# Raw receiver log to the PVC (settings.conf [local_storage]: /persist/rtkbase/data,
-# 24 h rotation; rtkbase_archive.timer zips daily and keeps archive_rotate=60).
-# Reads in_tcp -- the 127.0.0.1:5015 relay str2str_tcp already publishes -- NOT the
-# serial device, so this is additive and does not contend with the NTRIP caster.
-# Enables re-solving the base position by PPP without taking RTK down (see #698).
-systemctl start str2str_file.service

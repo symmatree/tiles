@@ -20,19 +20,10 @@ local ntrip = {
   local kVolumeMount = k.core.v1.volumeMount,
   local kVolume = k.core.v1.volume,
   local kConfigMap = k.core.v1.configMap,
-  local kPersistentVolumeClaim = k.core.v1.persistentVolumeClaim,
-  local kPersistentVolume = k.core.v1.persistentVolume,
   local kIngress = k.networking.v1.ingress,
   local kIngressRule = k.networking.v1.ingressRule,
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
   local kIngressTLS = k.networking.v1.ingressTLS,
-
-  local gnssToleration = {
-    key: 'dedicated',
-    operator: 'Equal',
-    value: 'gnss',
-    effect: 'NoSchedule',
-  },
 
   local defaults = {
     name: 'rtkbase',
@@ -55,50 +46,21 @@ local ntrip = {
 
     casterSecret: op.item.new(config.casterSecret, 'vaults/' + APP.vault_name + '/items/' + config.casterSecret),
 
-    persistPvc: kPersistentVolumeClaim.new(std.format('%s-persist', config.name))
-                + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
-                + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '5Gi' })
-                + kPersistentVolumeClaim.spec.withStorageClassName('local-path'),
-
-    // ---- the raw observations, on the datasets share ---------------------------------------
+    // No PersistentVolume anywhere in this environment, deliberately.
     //
-    // `str2str_file` writes PPP-usable raw UBX continuously (containers/rtkbase/README.md), and
-    // a flight's PPK inputs are the days it spans. Those had to be reachable from outside this
-    // pod; they were read with `kubectl exec ... cat`, which could never work -- a day's file is
-    // a few hundred MB against a 64 MB buffer (coordinator#416).
+    // The only thing that ever needed to survive a restart was the raw-observation log, and
+    // this base does not write one any more -- RTK is the product, and the one capture that was
+    // ever used (a 24 h session for a PPP solve) is an on-demand `str2str -out file://...` run
+    // against the relay, not a standing service. So the datasets-share PV/PVC and the
+    // local-path PVC are both gone, along with the ProtectSystem drop-in the datadir needed.
     //
-    // `datasets/gps-logs/attic-rtk-base/` IS ALREADY THE HOME FOR THIS. It holds the hand-copied
-    // 2026-08-13 session and a README whose consumer is re-solving the base position by PPP
-    // (tiles#698, facts#15), with these exact filenames. So this writes there rather than to a
-    // second directory of its own -- and into `raw/` under it, so the curated session chosen for
-    // a solve stays distinguishable from continuous capture.
+    // What is left is settings.conf, which RTKBase insists on being able to write (it
+    // regenerates flask_secret_key on boot) while git owns its contents. An emptyDir is exactly
+    // that: writable, seeded from the ConfigMap on every start, and worth nothing when the pod
+    // dies. The cost is that web sessions do not survive a restart.
     //
-    // `raw` is a volumeMount subPath rather than part of the PV path, because kubelet creates a
-    // missing subPath directory and an NFS PV pointed at a missing path just fails to mount.
-    //
-    // MOUNTED AT THE DATADIR RATHER THAN MOVING IT. `[local_storage] datadir` stays
-    // `/persist/rtkbase/data` and `settings.conf` does not change, which matters because the
-    // `ReadWritePaths` drop-in that lets str2str write there is baked into the image
-    // (containers/rtkbase/Dockerfile) -- "if the datadir ever moves, that drop-in has to move
-    // with it", and this way it does not have to. Only what is mounted at that path changes.
-    //
-    // Static PV for the same reason ground-tlogs, flight-analysis and fleet-control use one:
-    // `datasets` is a different export from the one cluster-nfs provisions into. Retain, because
-    // this is the only copy of a day's observations once the local PVC rotates past it.
-    baseObsPv:
-      kPersistentVolume.new('attic-rtk-base')
-      + kPersistentVolume.spec.withCapacity({ storage: '500Gi' })
-      + kPersistentVolume.spec.withAccessModes(['ReadWriteMany'])
-      + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
-      + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
-      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/gps-logs/attic-rtk-base'),
-
-    baseObsPvc:
-      kPersistentVolumeClaim.new('attic-rtk-base')
-      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteMany'])
-      + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '500Gi' })
-      + kPersistentVolumeClaim.spec.withVolumeName('attic-rtk-base')
-      + kPersistentVolumeClaim.spec.withStorageClassName(''),
+    // Being storage-free is what lets this pod schedule anywhere -- a local-path PVC would pin
+    // it to one node and take the caster down with that node (#766).
 
     settingsConfigMap:
       kConfigMap.new(std.format('%s-settings', config.name))
@@ -107,7 +69,7 @@ local ntrip = {
       }),
 
     local podLabels = { app: config.name },
-    local persistPvcName = ntripObj.persistPvc.metadata.name,
+    local persistVolumeName = 'persist',
     local settingsConfigMapName = ntripObj.settingsConfigMap.metadata.name,
     local settingsConfigMapHash = std.md5(importstr 'settings.conf'),
 
@@ -119,22 +81,22 @@ local ntrip = {
           config.webPort,
           kPort.newNamed(config.ntripPortNumber, config.ntripPortName),
         ])
-        + kContainer.securityContext.withPrivileged(true),
+        + kContainer.securityContext.withPrivileged(true)
+        + kContainer.withVolumeMountsMixin([
+          kVolumeMount.new(persistVolumeName, '/persist/rtkbase'),
+        ]),
       ], podLabels=podLabels)
       + kDeployment.spec.selector.withMatchLabels(podLabels)
+      // Recreate, not RollingUpdate. Nothing pins this pod any more, so a rolling update would
+      // briefly run two of them -- and both would open a tcpcli to the bridge, which fans one
+      // UART through a single shared ring buffer. Two readers there is a path to dropped
+      // receiver bytes; one pod at a time is not.
       + kDeployment.spec.strategy.withType('Recreate')
-      + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': 'acebase' })
-      + kDeployment.spec.template.spec.withTolerationsMixin([gnssToleration])
       + kDeployment.mixin.spec.template.metadata.withAnnotationsMixin({
         [std.format('%s-hash', settingsConfigMapName)]: settingsConfigMapHash,
       })
-      + k_util.pvcVolumeMount(persistPvcName, '/persist/rtkbase')
-      // Nested inside the mount above, and only in the main container -- `mapContainers` does
-      // not touch initContainers, so `seed-settings` keeps writing settings.conf to the local
-      // PVC and its `mkdir -p .../data` lands on a directory this mount then shadows.
-      + k_util.pvcVolumeMount('attic-rtk-base', '/persist/rtkbase/data',
-                              volumeMountMixin=kVolumeMount.withSubPath('raw'))
       + kDeployment.mixin.spec.template.spec.withVolumesMixin([
+        kVolume.fromEmptyDir(persistVolumeName),
         kVolume.fromConfigMap(settingsConfigMapName, settingsConfigMapName),
       ])
       + kDeployment.spec.template.spec.withInitContainers([
@@ -142,10 +104,6 @@ local ntrip = {
         + kContainer.withCommand(['/bin/sh', '-ec'])
         + kContainer.withArgsMixin([
           |||
-            mkdir -p /persist/rtkbase/data
-            if [ -d /persist/rtkbase/settings.conf ]; then
-              rm -rf /persist/rtkbase/settings.conf
-            fi
             # Always overwrite: the ConfigMap is the source of truth for this file.
             # Previously this was "copy only if absent", which made the ConfigMap a
             # first-boot seed -- editing settings.conf in git changed the pod-template
@@ -158,13 +116,12 @@ local ntrip = {
           |||,
         ])
         + kContainer.withVolumeMountsMixin([
-          kVolumeMount.new(persistPvcName, '/persist/rtkbase'),
+          kVolumeMount.new(persistVolumeName, '/persist/rtkbase'),
           kVolumeMount.new(settingsConfigMapName, '/seed/settings.conf')
           + kVolumeMount.withSubPath('settings.conf')
           + kVolumeMount.withReadOnly(true),
         ]),
       ])
-      + k_util.hostVolumeMount('gnss', '/dev/gnss', '/dev/gnss')
       + k_util.hostVolumeMount('cgroup', '/sys/fs/cgroup', '/sys/fs/cgroup', readOnly=false),
 
     webService: k_util.serviceFor(self.deployment),

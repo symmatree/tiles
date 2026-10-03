@@ -1,6 +1,6 @@
 # RTKBase container (issue #488)
 
-amd64 image running [Stefal/rtkbase](https://github.com/Stefal/rtkbase) under systemd for the acebase GNSS base + NTRIP caster. Install flow adapted from [drakkar-lig/walt-images `featured/rpi32-rtk-base`](https://github.com/drakkar-lig/walt-images/tree/main/featured/rpi32-rtk-base).
+amd64 image running [Stefal/rtkbase](https://github.com/Stefal/rtkbase) under systemd for the attic GNSS base + NTRIP caster. Install flow adapted from [drakkar-lig/walt-images `featured/rpi32-rtk-base`](https://github.com/drakkar-lig/walt-images/tree/main/featured/rpi32-rtk-base).
 
 ## Image
 
@@ -14,50 +14,64 @@ RTKBase release pinned in [`Dockerfile`](Dockerfile) (`RTKBASE_VERSION`, current
 docker build -t rtkbase:local containers/rtkbase
 ```
 
-Run (needs `/dev/gnss`, cgroup, privileged -- see phase 3 tanka sketch in issue #488):
+Run (needs cgroup and privileged for systemd as PID 1; no serial device -- the receiver is
+reached over TCP):
 
 ```bash
 docker run --rm -it --privileged \
   -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-  --device /dev/gnss:/dev/gnss \
   -v rtkbase-persist:/persist/rtkbase \
   rtkbase:local
 ```
 
 ## Boot
 
-`rtk-base-user-on-bootup` runs as ExecStartPre on `rtkbase_web.service` and starts `str2str_tcp.service`, `str2str_local_ntrip_caster.service`, and `str2str_file.service`. Base coords, mountpoint, RTCM message set and caster auth live in [`tanka/environments/ntrip/settings.conf`](../../tanka/environments/ntrip/settings.conf), which is authoritative -- it is re-copied over the PVC on every pod start.
+`rtk-base-user-on-bootup` runs as ExecStartPre on `rtkbase_web.service` and starts
+`str2str_tcp.service` and `str2str_local_ntrip_caster.service`. Base coords, mountpoint, RTCM
+message set, caster auth and the bridge address live in
+[`tanka/environments/ntrip/settings.conf`](../../tanka/environments/ntrip/settings.conf),
+which is authoritative -- it is re-copied over the emptyDir on every pod start.
 
-### str2str topology (why raw logging is free)
+### str2str topology
 
-`str2str_tcp` is the only service that opens the serial device (`/dev/gnss`); it republishes the receiver stream on `127.0.0.1:5015`. Every other service consumes that TCP relay:
+The receiver is on a UART behind [`firmware/gnss-bridge/`](../../firmware/gnss-bridge/README.md),
+not on a local serial device, so the Dockerfile rewrites `str2str_tcp.service` to read
+`in_ext_tcp` -- a `tcpcli://` to `[main] ext_tcp_source` -- instead of `in_serial`. It
+republishes the stream on `127.0.0.1:5015`, and the caster consumes that relay:
 
 ```
-/dev/gnss --[str2str_tcp]--> 127.0.0.1:5015 --+--> str2str_local_ntrip_caster  (RTCM, port 2101)
-                                              +--> str2str_file               (raw log to PVC)
+bridge:6638 --[str2str_tcp]--> 127.0.0.1:5015 --> str2str_local_ntrip_caster (RTCM, port 2101)
 ```
 
-So `str2str_file` (`run_cast.sh in_tcp out_file`) is **additive** -- enabling raw logging does not contend for the receiver and does not interrupt RTK.
+`str2str_tcp` runs with `-b 1`, which relays bytes written to stream 1 (the `:5015` server)
+back up to the input stream -- so a client on `:5015` can reach the receiver's UART through
+the bridge. That is the path for `UBX-CFG-VALGET` polls and for `UBX-MON-COMMS` / `UBX-MON-RF`
+diagnostics, and it is why exactly one process should hold the connection to the bridge.
 
-### Raw logging
+**One client on the bridge, deliberately.** The stream server fans one UART through a single
+shared ring buffer; a second persistent reader is a path to dropped receiver bytes. Anything
+that wants the stream connects to the `:5015` relay, which is what a relay is for.
 
-Raw UBX lands in `/persist/rtkbase/data` (`[local_storage]` in `settings.conf`), rotating every 24 h; `rtkbase_archive.timer` zips daily at 04:00 and keeps `archive_rotate=60` archives. Measured stream rate is ~4.7 KiB/s, so roughly **420 MB/day** uncompressed.
+### No raw observation log
 
-**That path is the datasets share, not the PVC.** The `ntrip` environment mounts
-`datasets/gps-logs/attic-rtk-base/raw/` at `/persist/rtkbase/data`, nested inside the PVC mount, so
-a flight's PPK inputs are readable by anything else with that share rather than only through this
-pod ([coordinator#416](https://github.com/symmatree/coordinator/issues/416)). That directory is
-where the base's logs already live, with the curated session for a PPP solve at its top level and
-continuous capture under `raw/`. The datadir *setting* did not move, which is deliberate -- see the
-`ReadWritePaths` note below. Anything written before that change is still on the PVC at the same
-path, shadowed by the mount; nothing migrated it.
+This base does not write one. RTK is the product, and `str2str` builds the RTCM MSM messages
+(1074/1094) from `UBX-RXM-RAWX` and `UBX-RXM-SFRBX` as they arrive -- those messages being
+enabled is load-bearing for the caster, not just for logging.
 
-Upstream's `str2str_file.service` ships `ProtectSystem=strict` with `ReadWritePaths=/root/rtkbase`, which assumes the datadir sits inside the RTKBase install. Ours is on the PVC, so systemd mounts it read-only and str2str exits 1 with `stream server start error`, crash-looping on its 30 s `RestartSec`. [`str2str_file-persist-datadir.conf`](str2str_file-persist-datadir.conf) is a drop-in granting `ReadWritePaths=/persist/rtkbase` and nothing else. **If the datadir ever moves, that drop-in has to move with it** -- which is exactly why putting the
-raw observations on the share mounts a volume *at* `/persist/rtkbase/data` instead of pointing
-`datadir` somewhere else. `ReadWritePaths=/persist/rtkbase` still covers the path str2str writes to.
+The one capture ever used was a 24 h session for a PPP solve of the base position
+([#698](https://github.com/symmatree/tiles/issues/698),
+[facts#15](https://github.com/symmatree/facts/pull/15)). That is an on-demand
+`str2str -in tcpcli://... -out file://...` run against the relay, not a standing service, so
+there is no datadir, no PersistentVolume and no `ProtectSystem` drop-in to keep working.
 
-The receiver emits `UBX-RXM-RAWX` (1 Hz) and `UBX-RXM-SFRBX`, so these logs are **PPP-usable**: `convbin` them to RINEX and submit to a PPP service to re-solve the base position. That is the point of keeping them -- the current fixed position's derivation is not recorded (see [`facts` `geospatial/locations/base_station.md`](https://github.com/symmatree/facts/blob/main/geospatial/locations/base_station.md)).
+Existing observations stay where they are, under `datasets/gps-logs/attic-rtk-base/`; nothing
+writes there any more. `fleet-control` still mounts that share read-only.
 
-## Kubernetes (phase 3)
+## Kubernetes
 
-Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). The `seed-settings` init container **overwrites** `/persist/rtkbase/settings.conf` from the ConfigMap on **every** start, so git is authoritative and web-UI edits revert on the next restart -- see [that README](../../tanka/environments/ntrip/README.md#configuration-git-is-authoritative). Web UI uses the upstream default `admin` / `admin`.
+Deployed via [`tanka/environments/ntrip/`](../../tanka/environments/ntrip/). The
+`seed-settings` init container **overwrites** `/persist/rtkbase/settings.conf` from the
+ConfigMap on **every** start, so git is authoritative and web-UI edits revert on the next
+restart -- see [that README](../../tanka/environments/ntrip/README.md#configuration-git-is-authoritative).
+That path is an emptyDir, so the pod carries no state and is not pinned to a node. Web UI
+uses the upstream default `admin` / `admin`.
