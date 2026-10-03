@@ -146,6 +146,18 @@ variable "ingress_lb_ip" {
   default     = ""
 }
 
+variable "device_gateway_lb_ip" {
+  description = "Fixed LoadBalancer IP for the mutual-TLS device gateway. Empty = not deployed."
+  type        = string
+  default     = ""
+}
+
+variable "device_gateway_port" {
+  description = "Port for the mutual-TLS device gateway, on the WAN and on its Service."
+  type        = string
+  default     = "8443"
+}
+
 variable "onepassword_vault" {
   description = "1Password vault UUID."
   type        = string
