@@ -54,6 +54,11 @@ Host logs come from the **systemd journal** (`loki.source.journal` reading `/hos
 
 - **Metrics job:** **`integrations/node_exporter`** (via **`prometheus.relabel "unix_node_job"`** in the Alloy template).
 - **Mixin / dashboards:** filter **`cluster="bond"`** and **`instance`** = Proxmox node name (e.g. **`nuc-g2p-1`**). See **bond-mixin** and **node-exporter-mixin** in this repo.
+- **`host_role="proxmox"`:** machine-class label on the metrics path only (a constant-label `rule` in `prometheus.relabel "unix_node_job"`), so rules can key on "is a Proxmox host" rather than on a node-name list. `cluster="bond"` does not serve that purpose -- it also covers Raconteur. Its first consumer is the `node-exporter-mixin` exclusion below.
+
+### `NodeMemoryHighUtilization` is excluded on these hosts
+
+Guest RAM is pinned (`memory { dedicated, floating }` in `tf/modules/talos-vm/main.tf`), so host used% is a near-static allocation and sits a few hundred MB from the mixin's 90% threshold; on a g3p box one percentage point is 170 MB. `tanka/environments/node-exporter-mixin/main.jsonnet` narrows that one alert with `host_role!="proxmox"` via the `alertExtraSelectors` knob in `tanka/lib/monitoring-resources.libsonnet`. Every other node-exporter alert still applies to these hosts, including `NodeMemoryMajorPagesFaults` (500 faults/s), which is the memory signal that can actually fire here. See #787.
 
 ## Related docs
 

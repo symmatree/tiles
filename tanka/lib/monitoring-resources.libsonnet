@@ -21,6 +21,17 @@
 //       variable name (not type) because a dashboard could have multiple
 //       datasource variables of the same type pointing at different sources.
 //
+//   alertExtraSelectors  - Map from alert name to an extra label matcher, which is
+//       appended inside that one alert's copy of the mixin selector (set
+//       alertSelector to the same selector text the mixin was given). Use it to
+//       exempt a class of targets from a single alert while leaving the rest of
+//       the mixin, and the rest of the alerts on those targets, untouched --
+//       alertsToDrop can only remove an alert for everyone. Because the matcher
+//       goes inside the selector, a `!=` form also matches targets that lack the
+//       label entirely, so only the labelled class changes. Fails the build if
+//       the alert's expr does not contain alertSelector, rather than silently
+//       rendering the unnarrowed rule.
+//
 //   tags  - List of strings injected into every dashboard's top-level "tags"
 //       array. Merged (union) with any tags the upstream mixin already sets.
 //       Use the __CLUSTER__ sentinel for a cluster tag that Helm replaces at
@@ -52,6 +63,8 @@ local libutil = import 'util.libsonnet';
     alertGroupsToDrop: [],
     alertsToDrop: {},  // Map from group-name to list of alert names to remove.
     alertLabelOverrides: {},  // Map from alert-name to label map, e.g. { NodeDiskIOSaturation: { severity: 'info' } }
+    alertSelector: '',  // The mixin's own selector text, e.g. 'job="integrations/node_exporter"'. Required by alertExtraSelectors.
+    alertExtraSelectors: {},  // Map from alert-name to an extra matcher appended inside alertSelector. See file header.
     ruleGroupsToDrop: [],
     tags: [],
     dirAnnotation: 'k8s-sidecar-target-directory',
@@ -66,15 +79,24 @@ local libutil = import 'util.libsonnet';
       local config = defaults + overrides,
       assert libutil.checkFields(defaults, config),
 
-      local filterAlertGroup(group, alertsToDrop, alertLabelOverrides) =
-        local toDrop = std.get(alertsToDrop, toK8s(group.name), []);
+      // See file header for why this exists.
+      local narrowAlert(rule) =
+        local extra = std.get(config.alertExtraSelectors, rule.alert, '');
+        if extra == '' then rule
+        else
+          assert config.alertSelector != '' : 'alertExtraSelectors needs alertSelector set to the mixin selector text';
+          local narrowed = std.strReplace(rule.expr, config.alertSelector, config.alertSelector + ', ' + extra);
+          assert narrowed != rule.expr : 'alertExtraSelectors: expr of %s does not contain alertSelector %s' % [rule.alert, config.alertSelector];
+          rule { expr: narrowed },
+
+      local filterAlertGroup(group) =
+        local toDrop = std.get(config.alertsToDrop, toK8s(group.name), []);
         group {
           rules: std.filterMap(
             function(rule) !std.member(toDrop, rule.alert),
             function(rule)
-              local overrides = std.get(alertLabelOverrides, rule.alert, {});
-              if overrides == {} then rule
-              else rule { labels+: overrides },
+              local overrides = std.get(config.alertLabelOverrides, rule.alert, {});
+              narrowAlert(if overrides == {} then rule else rule { labels+: overrides }),
             group.rules
           ),
         },
@@ -165,7 +187,7 @@ local libutil = import 'util.libsonnet';
             },
             spec: {
               groups: [
-                filterAlertGroup(group, config.alertsToDrop, config.alertLabelOverrides),
+                filterAlertGroup(group),
               ],
             },
           },
