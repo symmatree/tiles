@@ -91,23 +91,23 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: homeassistant-device-gateway
+  name: homeassistant-tls
   namespace: "homeassistant"
   labels:
-    app: homeassistant-device-gateway
+    app: homeassistant-tls
     # Opt into lb-static-pool so the address is pinned rather than assigned from
     # the dynamic pool -- a UniFi port-forward targets it, so it must not move.
     tiles.symmatree.com/static-lb: "true"
   annotations:
     lbipam.cilium.io/ips: "placeholder"
-    external-dns.alpha.kubernetes.io/hostname: "homeassistant-device.placeholder.symmatree.com"
+    external-dns.alpha.kubernetes.io/hostname: "homeassistant-tls.placeholder.symmatree.com"
     # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
     # app resolves the same name to the same place on any network.
     external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
 spec:
   type: LoadBalancer
   selector:
-    app: homeassistant-device-gateway
+    app: homeassistant-tls
   ports:
     - name: mtls
       protocol: TCP
@@ -252,19 +252,19 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: homeassistant-device-gateway
+  name: homeassistant-tls
   namespace: "homeassistant"
   labels:
-    app: homeassistant-device-gateway
+    app: homeassistant-tls
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: homeassistant-device-gateway
+      app: homeassistant-tls
   template:
     metadata:
       labels:
-        app: homeassistant-device-gateway
+        app: homeassistant-tls
     spec:
       securityContext:
         runAsNonRoot: true
@@ -368,7 +368,7 @@ spec:
       volumes:
         - name: server-cert
           secret:
-            secretName: homeassistant-device-tls
+            secretName: homeassistant-tls
         # Published by the device-identity-ca trust-manager Bundle into every
         # namespace labelled device-identity-ca=enabled (set on this namespace by
         # the Application's managedNamespaceMetadata).
@@ -499,12 +499,12 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: homeassistant-device-tls
+  name: homeassistant-tls
   namespace: "homeassistant"
 spec:
   dnsNames:
-    - "homeassistant-device.placeholder.symmatree.com"
-  secretName: homeassistant-device-tls
+    - "homeassistant-tls.placeholder.symmatree.com"
+  secretName: homeassistant-tls
   privateKey:
     algorithm: ECDSA
     size: 256

@@ -115,7 +115,7 @@ companion app does not have one -- it renders its login in an Android `WebView`,
 Google has refused OAuth in embedded webviews since 2023-07-24. No oauth2-proxy
 configuration fixes that.
 
-So one host is gated by a client certificate instead: `homeassistant-device.{cluster}.symmatree.com`
+So one host is gated by a client certificate instead: `homeassistant-tls.{cluster}.symmatree.com`
 on port **8443**, terminated by [ghostunnel](https://github.com/ghostunnel/ghostunnel)
 rather than oauth2-proxy, admitting only certificates from the device-identity CA whose
 subject is listed in `allowedCNs`. It is still through-mode and still a small
