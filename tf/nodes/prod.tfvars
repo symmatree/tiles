@@ -23,10 +23,10 @@ ingress_lb_ip = "10.0.130.1"
 service_cidr  = "10.0.136.0/21"
 pod_cidr      = "10.0.144.0/20"
 
-# Fixed IP for the mutual-TLS device gateway (charts/homeassistant ghostunnel),
+# Fixed IP for the mutual-TLS door (charts/homeassistant ghostunnel),
 # from the same static-LB pool as ingress_lb_ip above. Propagated into the chart
 # through app_of_apps_values, so this is the only place it is written.
-device_gateway_lb_ip = "10.0.130.2"
+homeassistant_tls_lb_ip = "10.0.130.2"
 
 virtual_machines = {
   "tiles-cp-1" = {

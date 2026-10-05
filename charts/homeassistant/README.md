@@ -9,7 +9,7 @@ workload in this cluster.
 | URL | Purpose |
 | --- | --- |
 | `https://homeassistant.tiles.symmatree.com` | Home Assistant web UI, behind the gate (Google + email allowlist) |
-| `https://homeassistant-device.tiles.symmatree.com:8443` | the companion app, behind mutual TLS (client certificate) |
+| `https://homeassistant-tls.tiles.symmatree.com:8443` | the companion app, behind mutual TLS (client certificate) |
 | `https://homeassistant.local.symmatree.com:8123` | the appliance itself, LAN-only, unchanged |
 
 The generic wiring, the WAN exposure switch and the `#593-#604` hardening rules are the shared
@@ -190,7 +190,7 @@ app already implements it. Order matters, because of how that code works:
 
 1. Install the PKCS#12 on the phone (Settings, "VPN & app user certificate"). Android requires a
    screen lock to write to credential storage.
-2. Set the app's server URL to `https://homeassistant-device.{cluster}.symmatree.com:8443` and open
+2. Set the app's server URL to `https://homeassistant-tls.{cluster}.symmatree.com:8443` and open
    the frontend **in the foreground**. The chooser needs an Activity -- with none, the app calls
    `request.ignore()` and no prompt appears. There is no chooser on the native path, so a background
    websocket or sensor worker handshaking first just fails silently.
@@ -210,7 +210,7 @@ terminates TLS so it could not hand on a raw handshake anyway.
 
 The address is pinned out of `lb-static-pool` (the `tiles.symmatree.com/static-lb` label plus
 `lbipam.cilium.io/ips`) because a UniFi forward targets it and it must not move. Both the address and
-the port come from `tf/nodes` -- `device_gateway_lb_ip` and `device_gateway_port` -- through
+the port come from `tf/nodes` -- `homeassistant_tls_lb_ip` and `homeassistant_tls_port` -- through
 `app_of_apps_values`, so the Service annotation, the listener and the UniFi forward all read one
 value and cannot drift apart. There is nothing to reserve on the UniFi side: DHCP serves
 `10.0.11.1-10.0.12.254` (see the repo [README](../../README.md)), nowhere near this `/18`.

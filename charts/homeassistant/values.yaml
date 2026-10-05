@@ -1,13 +1,13 @@
 # Placeholders; the app-of-apps parent writes the real values (Terraform ->
 # app_of_apps_values -> this Application). vault_name is used by
-# templates/oauth2-proxy-secret.yaml; the other two by the device gateway, and
+# templates/oauth2-proxy-secret.yaml; the other two by the mutual-TLS door, and
 # they are propagated rather than written here so the gateway's address and port
 # have exactly one source of truth -- tf/nodes, which is also what creates the
 # UniFi forward that must agree with them.
 cluster_name: placeholder
 vault_name: placeholder
-device_gateway_lb_ip: placeholder
-device_gateway_port: placeholder
+homeassistant_tls_lb_ip: placeholder
+homeassistant_tls_port: placeholder
 
 # oauth2-proxy perimeter gate in front of Home Assistant. This chart deploys
 # ONLY the gate -- Home Assistant itself is a Yellow appliance at 10.0.99.9 on
@@ -106,7 +106,7 @@ oauth2-proxy:
         hosts:
           - homeassistant.placeholder.symmatree.com
 
-# Mutual-TLS device gateway -- the second door to Home Assistant, for clients
+# Mutual-TLS door -- the second door to Home Assistant, for clients
 # that cannot complete an interactive Google login. The Android companion app
 # renders its login in an Android WebView and Google refuses OAuth in embedded
 # webviews, so the oauth2-proxy door above is browser-only. Here the credential
@@ -126,7 +126,7 @@ ghostunnel:
   # relying on the image to ship a trust store. Pinned, like the oauth2-proxy
   # image, because this is internet-facing auth.
   image: ghostunnel/ghostunnel:v1.11.3-distroless
-  hostname: homeassistant-device.placeholder.symmatree.com
+  hostname: homeassistant-tls.placeholder.symmatree.com
   # The ONLY client-certificate subjects admitted, one line per device, so
   # revoking a single device is deleting its line. ghostunnel has no CRL or OCSP
   # support of any kind, and refuses to start when given no access-control flag,
