@@ -25,14 +25,15 @@ spec:
         # From tf/nodes (prod.tfvars / the variable default) via
         # app_of_apps_values, so the gateway's address and port and the UniFi
         # forward that targets them cannot drift apart.
-        device_gateway_lb_ip: '{{ required ".Values.device_gateway_lb_ip is required" .Values.device_gateway_lb_ip }}'
-        device_gateway_port: '{{ required ".Values.device_gateway_port is required" .Values.device_gateway_port }}'
-        # Mutual-TLS device-gateway host, per-cluster (chart default is the
-        # placeholder host). Separate name from the oauth2-proxy host below
-        # because they are different doors with different credentials, not two
-        # routes to one gate.
+        homeassistant_tls_lb_ip: '{{ required ".Values.homeassistant_tls_lb_ip is required" .Values.homeassistant_tls_lb_ip }}'
+        homeassistant_tls_port: '{{ required ".Values.homeassistant_tls_port is required" .Values.homeassistant_tls_port }}'
+        # Mutual-TLS host, per-cluster (chart default is the placeholder host).
+        # Named for the credential rather than the client: the door is defined by
+        # requiring a client certificate, not by what happens to be presenting
+        # one. Separate name from the oauth2-proxy host below because they are
+        # different doors with different credentials, not two routes to one gate.
         ghostunnel:
-          hostname: 'homeassistant-device.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+          hostname: 'homeassistant-tls.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
         # Perimeter gate host, per-cluster (chart default is the placeholder host).
         oauth2-proxy:
           ingress:

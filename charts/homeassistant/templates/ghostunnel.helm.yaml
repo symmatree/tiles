@@ -5,12 +5,12 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: homeassistant-device-tls
+  name: homeassistant-tls
   namespace: "{{ .Release.Namespace }}"
 spec:
   dnsNames:
     - {{ required "ghostunnel.hostname is required" $gt.hostname | quote }}
-  secretName: homeassistant-device-tls
+  secretName: homeassistant-tls
   privateKey:
     algorithm: ECDSA
     size: 256
@@ -23,15 +23,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: homeassistant-device-gateway
+  name: homeassistant-tls
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: homeassistant-device-gateway
+    app: homeassistant-tls
     # Opt into lb-static-pool so the address is pinned rather than assigned from
     # the dynamic pool -- a UniFi port-forward targets it, so it must not move.
     tiles.symmatree.com/static-lb: "true"
   annotations:
-    lbipam.cilium.io/ips: {{ required "device_gateway_lb_ip is required" .Values.device_gateway_lb_ip | quote }}
+    lbipam.cilium.io/ips: {{ required "homeassistant_tls_lb_ip is required" .Values.homeassistant_tls_lb_ip | quote }}
     external-dns.alpha.kubernetes.io/hostname: {{ $gt.hostname | quote }}
     # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
     # app resolves the same name to the same place on any network.
@@ -39,29 +39,29 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app: homeassistant-device-gateway
+    app: homeassistant-tls
   ports:
     - name: mtls
       protocol: TCP
-      port: {{ required "device_gateway_port is required" .Values.device_gateway_port }}
+      port: {{ required "homeassistant_tls_port is required" .Values.homeassistant_tls_port }}
       targetPort: mtls
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: homeassistant-device-gateway
+  name: homeassistant-tls
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: homeassistant-device-gateway
+    app: homeassistant-tls
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: homeassistant-device-gateway
+      app: homeassistant-tls
   template:
     metadata:
       labels:
-        app: homeassistant-device-gateway
+        app: homeassistant-tls
     spec:
       securityContext:
         runAsNonRoot: true
@@ -79,7 +79,7 @@ spec:
           image: {{ required "ghostunnel.image is required" $gt.image | quote }}
           args:
             - server
-            - --listen=0.0.0.0:{{ .Values.device_gateway_port }}
+            - --listen=0.0.0.0:{{ .Values.homeassistant_tls_port }}
             - --target=127.0.0.1:{{ $gt.internalPort }}
             - --cert=/etc/ghostunnel/server/tls.crt
             - --key=/etc/ghostunnel/server/tls.key
@@ -93,7 +93,7 @@ spec:
             - --status=http://0.0.0.0:{{ $gt.statusPort }}
           ports:
             - name: mtls
-              containerPort: {{ .Values.device_gateway_port }}
+              containerPort: {{ .Values.homeassistant_tls_port }}
           # Readiness only, deliberately. /_status returns 503 whenever the hop's
           # own target is unreachable (verified: backend_ok false plus the dial
           # error), which is right for gating the Service but wrong for liveness
@@ -166,7 +166,7 @@ spec:
       volumes:
         - name: server-cert
           secret:
-            secretName: homeassistant-device-tls
+            secretName: homeassistant-tls
         # Published by the device-identity-ca trust-manager Bundle into every
         # namespace labelled device-identity-ca=enabled (set on this namespace by
         # the Application's managedNamespaceMetadata).
