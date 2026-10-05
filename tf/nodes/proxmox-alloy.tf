@@ -201,3 +201,16 @@ resource "proxmox_virtual_environment_file" "alloy_journal_hook" {
     file_name = "alloy-journal-hook"
   }
 }
+
+# CT hostnames for the post-apply config reload in nodes-plan-apply.yaml. Alloy loads
+# /etc/alloy/config.alloy once at start and a config-content change does not touch the CT
+# resource, so an apply that uploads a new snippet leaves every CT running the old pipeline
+# until something reloads it. Emitted from local.alloy_nodes rather than listed in the
+# workflow so the two cannot disagree about which nodes have a CT -- and so it is empty in
+# the test workspace, where deploy_proxmox_alloy is false.
+#
+# The name is the CT's initialization.hostname above, which site DNS resolves.
+output "proxmox_alloy_ct_hostnames" {
+  description = "Hostnames of the per-node Alloy CTs, for the post-apply /-/reload kick"
+  value       = [for n in sort(tolist(local.alloy_nodes)) : "alloy-${n}"]
+}
