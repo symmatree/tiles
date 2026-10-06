@@ -36,8 +36,7 @@ through its GPIO matrix, so the pin choice is config ([`gnss-bridge.yaml`](gnss-
 not a constraint -- GPIO32/33 (EXT2 pins 6 and 5) are the fallback if these two misbehave with
 Ethernet up.
 
-**Power and ground run straight across; the serial pair crosses.** TX goes to RX. A
-straight-through 4-wire ribbon is wrong in exactly the way that looks right.
+Power and ground run straight across; the serial pair crosses.
 
 The breakout's **DSEL jumper must stay open** (its default). Closed selects SPI and disables
 UART1 entirely.
@@ -60,56 +59,46 @@ Olimex ships the board without headers. All three are 0.1 in / 2.54 mm.
 | ESP32-POE-ISO | EXT2 | 1x10 | only for the optional sensor |
 | GPS-RTK-SMA | J7 | 1x9 | 2, 3, 7 or 8, 9 |
 
-Fit full strips rather than the four pins in use -- the extra joints are the mechanical
-retention, and this lives somewhere that swings about 20 C a day.
-
 A 1x10 housing covers the whole ESP32 end with positions 1, 3, 9 and 10 populated; a 1x9
-covers the whole breakout end. 24-28 AWG stranded suits DuPont-style contacts. Keep the run
-under about 30 cm and bundle the ground conductor with the pair rather than routing it
-separately.
+covers the whole breakout end.
 
 ### The optional sensor
 
 Not required for the GNSS link, and it lands on the other header. `GPIO13` (EXT2-10) is SDA,
 `GPIO16` (EXT2-7) is SCL, with +3.3V and GND from EXT1 pins 2 and 3. **Both I2C lines already
-carry 2.2k pull-ups on the Olimex board** -- do not add your own. Put the part on a lead away
-from the board: the ESP32 and the PHY will warm a sensor sitting next to them by several
-degrees, which is the same confound that makes the current attic record a CPU-die proxy.
+carry 2.2k pull-ups on the Olimex board** -- do not add your own. On a lead away from the board, since the ESP32 and the PHY warm anything sitting next to them
+-- the same confound that makes the current attic record a CPU-die proxy.
 
 ## Power
 
 The breakout brings out **3.3V and 5V on adjacent pins** (J7-7, J7-8) and carries an AP2112
-good for 600 mA from a 5V input. So the only question is which Olimex rail feeds it, and it is
-one crimp either way.
+good for 600 mA from a 5V input. So the only question is which Olimex rail feeds it.
 
 **Feed 5V (EXT1-1 -> J7-8).** The breakout's own LDO regulates it down, so the receiver sees a
 linear supply -- what u-blox asks for, and what SparkFun means by wanting under 50 mV ripple on
-a direct 3.3V feed "for precision locating". No added part.
+a direct 3.3V feed "for precision locating". No added part, and more headroom than the
+alternative.
 
-**Fall back to 3.3V (EXT1-2 -> J7-7)** if the 5V path proves tight on power. That bypasses the
-AP2112 and feeds the receiver off the Olimex's SY8089 buck -- less draw, less heat, but a
-switching rail going into a receiver that wants a quiet one. `UBX-MON-RF` (`noisePerMS`,
-`agcCnt`, CN0) is how you tell whether it costs anything.
+Load is about **180 mA**: the ZED-F9P at 68-130 mA depending on acquisition, plus up to 48 mA
+for the SPK6618H's LNA through the SMA bias tee. Per the Rev L pinout sheet the +5V pin
+sources up to **0.4 A (2 W)**, and that total covers anything drawn through +3.3V as well;
++3.3V has its own **0.3 A (1 W)** sub-limit.
 
-Measured load is about **180 mA**: the ZED-F9P at 68-130 mA depending on acquisition, plus up
-to 48 mA for the SPK6618H's LNA through the SMA bias tee. The 3.3V rail is rated 0.3 A and the
-5V pin 0.4 A, so either path is inside its own pin rating.
-
-| Load | @3.3 V | off the isolated rail |
+| Supply route | Draw | Against its rating |
 |---|---|---|
-| ESP32 (WiFi off) + LAN8710A + LEDs + CH340T | ~110-125 mA | ~0.45 W |
-| ZED-F9P | 68-130 mA | 0.26-0.49 W |
-| SPK6618H LNA | <=48 mA | ~0.18 W |
+| **5V in** (EXT1-1 -> J7-8) | 180 mA, 0.9 W | 45% of 0.4 A; 45% of the 2 W total |
+| 3.3V in (EXT1-2 -> J7-7) | 180 mA, 0.59 W | 60% of 0.3 A; 59% of the 1 W sub-limit |
 
-**Olimex's own two documents disagree on the ceiling.** The Rev L pinout sheet says +5V and
-+3.3V combined must not exceed **2 W** (0.4 A at 5V, 0.3 A at 3.3V); the user manual says
-**1 W** for the ISO variant. The isolated converter is an `F0505S-2WR2`, a 2 W part, and the
-board already draws ~0.5 W through it. Under the 2 W reading both options are comfortable;
-under the 1 W reading the 5V path sits near 90% and the 3.3V path does not. Unresolved, which
-is why the fallback is one crimp rather than a rebuild.
+Feeding 3.3V bypasses the AP2112 and runs the receiver off the Olimex's SY8089 buck -- less
+total draw and less heat, but a switching rail into a receiver that wants a quiet one.
+`UBX-MON-RF` (`noisePerMS`, `agcCnt`, CN0) measures whether that costs anything.
 
-**The two power shells are not straight-through.** Olimex runs +5V, +3.3V, GND on EXT1 1-2-3;
-the breakout runs 3.3V, 5V, GND on J7 7-8-9. Ground lines up; the power pins are swapped.
+(The older ESP32-POE user manual gives 1 W rather than 2 W for the ISO variant. The Rev L
+pinout sheet is ISO-specific and matches the `F0505S-2WR2` fitted on the board, so these
+figures follow the sheet.)
+
+The two power shells are not pin-for-pin: Olimex runs +5V, +3.3V, GND on EXT1 1-2-3; the
+breakout runs 3.3V, 5V, GND on J7 7-8-9.
 
 ## Temperature
 
