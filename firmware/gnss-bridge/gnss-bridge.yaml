@@ -48,12 +48,22 @@ external_components:
     components: [stream_server]
 
 # UART1 to the receiver. TX -> breakout RX/MOSI, RX <- breakout TX/MISO.
-# GPIO36 is input-only, which is all an RX line needs, and it reaches the header on EXT2 pin 2
-# without the series Schottky that sits on the UEXT RX pin.
+#
+# GPIO4 and GPIO5 are EXT1 pins 9 and 10 -- adjacent, on the same header as +5V/+3.3V/GND, so
+# the whole harness is one connector. The ESP32 routes UART through its GPIO matrix, so this is
+# a config choice rather than a constraint; if these two ever misbehave, GPIO32/33 (EXT2 pins
+# 6 and 5) are the fallback and cost an edit here plus re-landing two wires.
+#
+# Not the UEXT connector, which would otherwise carry power, UART and I2C in one shell: its RX
+# pin reaches GPIO36 through D4, a series 1N5819, making that line pull-up dependent rather
+# than push-pull. Fine for a UEXT sensor module, not something to hand 460800 baud.
+#
+# GPIO5 is an ESP32 strapping pin (SDIO slave timing, which we do not use) and carries a 10k
+# pull-up on this board. UART idle is high, which is the state it wants at reset anyway.
 uart:
   id: gnss_uart
   tx_pin: GPIO4
-  rx_pin: GPIO36
+  rx_pin: GPIO5
   baud_rate: ${uart_baud}
   # ~5 KiB/s of RAWX/SFRBX with ephemeris bursts on top. The default 256 is not enough at
   # this rate; the receiver has no flow control and drops whole messages if its own TX buffer
@@ -66,6 +76,8 @@ stream_server:
   # Power of two, per the component. 128 is the default and is sized for a thermostat.
   buffer_size: 2048
 
+# OPTIONAL, and on the other header. Nothing about the GNSS link depends on this block --
+# delete it, and the two sensor entries below, to build the bridge alone.
 i2c:
   sda: GPIO13
   scl: GPIO16
@@ -76,6 +88,7 @@ sensor:
   # a static acpitz value, so the temperature record in docs/bare-metal-nodes.md is a proxy.
   # Mount this on a short lead away from the board: the ESP32 and PHY dissipate enough to bias
   # a board-mounted part by several degrees, which is the same confound.
+  # OPTIONAL -- see the i2c note above.
   - platform: sht4x
     temperature:
       name: Attic temperature

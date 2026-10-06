@@ -15,45 +15,101 @@ The receiver is on a UART rather than its USB port because the ESP32 has no USB 
 port keeps its own independent `CFG-MSGOUT` configuration, untouched, so a USB cable into any
 machine is a working fallback.
 
+**Status: nothing here has been built.** The ESP32 board is on hand; headers, crimp contacts
+and the optional sensor are not ordered. Pin assignments below are read off the two vendors'
+schematics, not off a working unit. This is a reference for whenever the parts show up, not a
+queued task -- the rest of PR #813 is inert until the prod tag moves anyway.
+
 ## Wiring
 
-Everything needed is on the two 0.1" headers. `EXT1` pin 1 is +5V, pin 2 is +3V3, pin 3 is GND.
+![Harness: four wires from ESP32-POE-ISO header EXT1 to GPS-RTK-SMA header J7](harness.svg)
 
-| Signal | Board pin | Breakout |
-|---|---|---|
-| +3V3 | EXT1 pin 2 | `3V3` (series ferrite + 10 uF \|\| 100 nF at the breakout) |
-| GND | EXT1 pin 3 | `GND` |
-| GPIO4 / U1TXD | EXT1 pin 9 | `RX/MOSI` |
-| GPIO36 / U1RXD | **EXT2 pin 2** | `TX/MISO` |
-| GPIO13 / I2C-SDA | EXT2 pin 10 | sensor SDA |
-| GPIO16 / I2C-SCL | EXT2 pin 7 | sensor SCL |
+| Wire | ESP32-POE-ISO | Pin | GPS-RTK-SMA | Pin |
+|---|---|---|---|---|
+| red | `+5V` | EXT1-1 | `5V` | J7-8 |
+| black | `GND` | EXT1-3 | `GND` | J7-9 |
+| yellow | `GPIO4` (UART1 TX) | EXT1-9 | `RXI/MOSI` | J7-3 |
+| green | `GPIO5` (UART1 RX) | EXT1-10 | `TXO/MISO` | J7-2 |
 
-**RX comes off EXT2 pin 2, not UEXT pin 4.** Both reach GPIO36, but the UEXT pin has `D4`, a
-1N5819, in series -- not something to put in a 460800 baud line. Olimex labels these pins
-`U1TXD`/`U1RXD` in the Rev L schematic, so UART1 here is the intended arrangement.
+**Everything is on EXT1**, so the harness is one connector at each end. The ESP32 routes UART
+through its GPIO matrix, so the pin choice is config ([`gnss-bridge.yaml`](gnss-bridge.yaml)),
+not a constraint -- GPIO32/33 (EXT2 pins 6 and 5) are the fallback if these two misbehave with
+Ethernet up.
+
+**Power and ground run straight across; the serial pair crosses.** TX goes to RX. A
+straight-through 4-wire ribbon is wrong in exactly the way that looks right.
 
 The breakout's **DSEL jumper must stay open** (its default). Closed selects SPI and disables
-UART1.
+UART1 entirely.
+
+### Not the UEXT connector
+
+UEXT would otherwise be ideal -- one 10-pin shell carrying +3.3V, GND, UART and I2C. But its
+RX pin reaches GPIO36 through **`D4`, a series 1N5819**, which makes that line pull-up
+dependent rather than push-pull. Fine for the UEXT sensor modules it exists for; not something
+to hand 460800 baud. Every other UEXT pin is a direct connection -- pin 4 is the only one with
+a part in the way.
+
+### Pins to solder
+
+Olimex ships the board without headers. All three are 0.1 in / 2.54 mm.
+
+| Board | Header | Strip | Used |
+|---|---|---|---|
+| ESP32-POE-ISO | EXT1 | 1x10 | 1 (or 2), 3, 9, 10 |
+| ESP32-POE-ISO | EXT2 | 1x10 | only for the optional sensor |
+| GPS-RTK-SMA | J7 | 1x9 | 2, 3, 7 or 8, 9 |
+
+Fit full strips rather than the four pins in use -- the extra joints are the mechanical
+retention, and this lives somewhere that swings about 20 C a day.
+
+A 1x10 housing covers the whole ESP32 end with positions 1, 3, 9 and 10 populated; a 1x9
+covers the whole breakout end. 24-28 AWG stranded suits DuPont-style contacts. Keep the run
+under about 30 cm and bundle the ground conductor with the pair rather than routing it
+separately.
+
+### The optional sensor
+
+Not required for the GNSS link, and it lands on the other header. `GPIO13` (EXT2-10) is SDA,
+`GPIO16` (EXT2-7) is SCL, with +3.3V and GND from EXT1 pins 2 and 3. **Both I2C lines already
+carry 2.2k pull-ups on the Olimex board** -- do not add your own. Put the part on a lead away
+from the board: the ESP32 and the PHY will warm a sensor sitting next to them by several
+degrees, which is the same confound that makes the current attic record a CPU-die proxy.
 
 ## Power
 
-The isolated supply is a `F0505S-2WR2` (2 W, 5 V, 400 mA), feeding an `SY8089AAAC` buck that
-produces the `+3V3` rail shared by the ESP32, the `LAN8710A` PHY and the header. Because that
-rail is a buck rather than an LDO, 3.3 V load current does not map 1:1 onto the isolated rail.
+The breakout brings out **3.3V and 5V on adjacent pins** (J7-7, J7-8) and carries an AP2112
+good for 600 mA from a 5V input. So the only question is which Olimex rail feeds it, and it is
+one crimp either way.
 
-| Load | @3.3 V | off the 2 W rail |
+**Feed 5V (EXT1-1 -> J7-8).** The breakout's own LDO regulates it down, so the receiver sees a
+linear supply -- what u-blox asks for, and what SparkFun means by wanting under 50 mV ripple on
+a direct 3.3V feed "for precision locating". No added part.
+
+**Fall back to 3.3V (EXT1-2 -> J7-7)** if the 5V path proves tight on power. That bypasses the
+AP2112 and feeds the receiver off the Olimex's SY8089 buck -- less draw, less heat, but a
+switching rail going into a receiver that wants a quiet one. `UBX-MON-RF` (`noisePerMS`,
+`agcCnt`, CN0) is how you tell whether it costs anything.
+
+Measured load is about **180 mA**: the ZED-F9P at 68-130 mA depending on acquisition, plus up
+to 48 mA for the SPK6618H's LNA through the SMA bias tee. The 3.3V rail is rated 0.3 A and the
+5V pin 0.4 A, so either path is inside its own pin rating.
+
+| Load | @3.3 V | off the isolated rail |
 |---|---|---|
 | ESP32 (WiFi off) + LAN8710A + LEDs + CH340T | ~110-125 mA | ~0.45 W |
-| ZED-F9P (68 tracking / 130 acquiring) | 68-130 mA | 0.26-0.49 W |
-| SPK6618H LNA through the SMA bias tee | <=48 mA | ~0.18 W |
-| **total** | **~180 mA of 330 mA** | **~0.9-1.1 W of 2 W** |
+| ZED-F9P | 68-130 mA | 0.26-0.49 W |
+| SPK6618H LNA | <=48 mA | ~0.18 W |
 
-Take 3.3 V from the header rather than putting an LDO in front of the breakout. An LDO has to
-be fed from `+5V`, where it passes current 1:1 -- 180 mA at 5 V is 0.89 W against Olimex's
-0.2 A / 1 W limit on that pin, and it dissipates 0.30 W in the attic. The reason to want one
-is that u-blox asks for a low-noise supply and this rail is a switcher; `UBX-MON-RF` measures
-whether that costs anything (`noisePerMS`, `agcCnt`, CN0), so it is a decision with a number
-behind it rather than a guess.
+**Olimex's own two documents disagree on the ceiling.** The Rev L pinout sheet says +5V and
++3.3V combined must not exceed **2 W** (0.4 A at 5V, 0.3 A at 3.3V); the user manual says
+**1 W** for the ISO variant. The isolated converter is an `F0505S-2WR2`, a 2 W part, and the
+board already draws ~0.5 W through it. Under the 2 W reading both options are comfortable;
+under the 1 W reading the 5V path sits near 90% and the 3.3V path does not. Unresolved, which
+is why the fallback is one crimp rather than a rebuild.
+
+**The two power shells are not straight-through.** Olimex runs +5V, +3.3V, GND on EXT1 1-2-3;
+the breakout runs 3.3V, 5V, GND on J7 7-8-9. Ground lines up; the power pins are swapped.
 
 ## Temperature
 
@@ -89,11 +145,14 @@ Reverting is the same list backwards, and step 3's export is what makes that pos
 
 ## Known unknowns
 
-- **GPIO4 UART with Ethernet up.** [esphome/issues#4166](https://github.com/esphome/issues/issues/4166)
-  reports UART on GPIO4/5 failing specifically when Ethernet is enabled on an ESP32+LAN8720,
-  working on other pins, unresolved. GPIO32/33 are free on EXT2 as a fallback.
-- **GPIO16.** The WROVER variants leave it unconnected and move the Ethernet clock to GPIO0.
-  The `-EA` order code is WROOM-32UE, so it should be populated, but I2C here depends on it.
+- **GPIO4/GPIO5 UART with Ethernet up.** [esphome/issues#4166](https://github.com/esphome/issues/issues/4166)
+  reports UART on exactly these pins failing when Ethernet is enabled on an ESP32+LAN8720,
+  working on other pins. One unresolved third-party report on a different board, and the only
+  evidence either way; GPIO32/33 on EXT2 are the fallback, which costs a line of YAML and
+  re-landing two wires.
+- **GPIO16**, only if the optional sensor is fitted. The WROVER variants leave it unconnected
+  and move the Ethernet clock to GPIO0; the `-EA` order code is WROOM-32UE, so it should be
+  populated.
 - **`UBX-MON-SYS`.** `CFG_MSGOUT_UBX_MON_SYS_UART1` is a valid key in pyubx2's database, but
   whether ZED-F9P HPG 1.32 implements it is unconfirmed. The step 3 export answers it: an
   unimplemented key does not come back.
