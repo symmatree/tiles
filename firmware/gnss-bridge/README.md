@@ -48,6 +48,14 @@ One UEXT fact worth recording in case it is ever revisited: pin 4 reaches `GPIO3
 `D4`, a series 1N5819, making that line pull-up dependent rather than push-pull. Every other
 UEXT pin is a direct connection.
 
+### Antenna
+
+The `-EA` carries a **WROOM-32UE**, which has no PCB antenna -- the U.FL is the only RF path.
+Nothing here needs it: the config declares `ethernet:` and no `wifi:`, so the radio never
+starts and an open RF port has no transmitter to reflect into. Fit the pigtail and bulkhead
+anyway while the board is on the bench, so enabling BLE later is a config change rather than
+an enclosure teardown.
+
 ### Pins to solder
 
 Olimex ships the board without headers. All three are 0.1 in / 2.54 mm.
@@ -80,7 +88,8 @@ a direct 3.3V feed "for precision locating". No added part, and more headroom th
 alternative.
 
 Load is about **180 mA**: the ZED-F9P at 68-130 mA depending on acquisition, plus up to 48 mA
-for the SPK6618H's LNA through the SMA bias tee. Per the Rev L pinout sheet the +5V pin
+for the SPK6618H's LNA through the SMA bias tee. A BLE radio added later averages tens of mA,
+well inside what is left; WiFi, which peaks near 250 mA, is the one that would need rechecking. Per the Rev L pinout sheet the +5V pin
 sources up to **0.4 A (2 W)**, and that total covers anything drawn through +3.3V as well;
 +3.3V has its own **0.3 A (1 W)** sub-limit.
 
