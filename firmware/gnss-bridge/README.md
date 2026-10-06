@@ -136,12 +136,23 @@ HPG 1.32, protocol 27.31.
 
 Reverting is the same list backwards, and step 3's export is what makes that possible.
 
-## Gaps are a property of this design
+## When the link is down, corrections stop
 
-The receiver has no hardware flow control and drops whole messages when its TX buffer fills;
-the bridge discards UART bytes whenever no client is connected. So a restart of the rtkbase
-pod, or a network blip, costs epochs rather than queueing them. For RTK that is a rover
-reacquiring. It is also why only one client should hold a persistent connection -- all clients
-share one ring buffer, and buffer pressure from a slow reader is a path to dropped receiver
-bytes. Diagnostics and config polls go through rtkbase's `127.0.0.1:5015` relay, which runs
-`str2str -b 1` and therefore relays writes back up to the receiver.
+Nothing buffers, and nothing should: RTCM is only useful time-aligned with the rover's own
+observations, so a correction held for later is worthless by the time it is delivered. The
+bridge discards UART bytes while no client is connected, which is the correct behaviour rather
+than a limitation.
+
+What a restart costs is therefore availability, not a record. While the pod is down -- a config
+change, an image update, an eviction -- the caster is not serving, and a rover ages out of RTK
+Fixed through Float to an uncorrected 3D fix. How the vehicle responds to that is a flight
+stack question, not one this repo answers.
+
+Two consequences worth keeping in view:
+
+- **Land config changes between flights.** `strategy: Recreate` means a full stop and start.
+- **One persistent client on the bridge.** The stream server fans one UART through a single
+  shared ring buffer and drops a slow client's pending bytes, so a second long-lived reader is
+  a way to lose receiver data. Anything else that wants the stream connects to rtkbase's
+  `127.0.0.1:5015` relay, which is what the relay is for -- and which runs `str2str -b 1`, so
+  writes there reach the receiver's UART through the bridge.
