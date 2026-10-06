@@ -129,6 +129,16 @@ clusterMetrics:
         - aggregator_unavailable_apiservice.*
         - rest_client_requests_total
         - kubernetes_build_info
+        # Which resource kinds are watched on which apiserver. Watch clients are
+        # not distributed evenly: KubePrism prefers the lowest-latency endpoint,
+        # which on a control-plane node is its own apiserver, so a node's watchers
+        # concentrate there and its apiserver's watch cache grows to match. This
+        # gauge is per group/version/kind, so it names the resource rather than the
+        # client, and the owning controller has to be inferred from the kind.
+        # Bounded by the number of API resource kinds -- 113 in this cluster, so at
+        # most ~113 series per control-plane node, and fewer in practice because
+        # only kinds with a live watcher emit. Bears on the sizing question in #768.
+        - apiserver_registered_watchers
         # Apiserver process memory. One series per control-plane node each.
         # RSS is what the node pays for; heap_inuse is what is live, so the
         # difference is memory the Go runtime is holding and has not returned --
