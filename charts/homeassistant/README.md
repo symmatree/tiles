@@ -163,21 +163,32 @@ support, and refuses to start when given no access-control flag at all. A certif
 matching CN from any other issuer is rejected at the handshake as an unknown authority.
 
 `deviceCerts.names` renders a cert-manager `Certificate` per device against
-`{cluster_name}-device-ca-issuer`, each with a PKCS#12 keystore (the
-[laserjet](../static-certs/templates/laserjet.yaml) pattern) whose password comes from one
-1Password item. `usages` deliberately omits server auth: a leaked device key cannot be used to
-impersonate a service, only to authenticate as that device.
+`{cluster_name}-device-ca-issuer`. `usages` deliberately omits server auth: a leaked device key
+cannot be used to impersonate a service, only to authenticate as that device.
 
 Issued for 2 years, matching the CA. Long-lived certificates are much cheaper here than usual
 because revocation does not go through expiry -- it goes through `allowedCNs` -- and because
 installing one means physically handling a phone.
 
-Extracting a keystore to install (the password is in the 1Password item; do not print it):
+There is deliberately **no stored PKCS#12 and no stored keystore password.** cert-manager writes
+`tls.key` into the Secret unencrypted regardless, so a password held in 1Password would protect
+nothing from anyone who can read the Secret -- cert-manager's own API documentation says exactly
+that about its keystore profiles. The password is worth something only for the hop from `kubectl`
+to the phone, so build the `.p12` at that moment and choose the password then:
 
 ```bash
-kubectl get secret -n homeassistant device-seth-pixel-tls \
-  -o jsonpath='{.data.keystore\.p12}' | base64 -d > seth-pixel.p12
+NAME=seth-pixel
+kubectl get secret -n homeassistant "device-$NAME-tls" \
+  -o go-template='{{index .data "tls.key" | base64decode}}' > "$NAME.key"
+kubectl get secret -n homeassistant "device-$NAME-tls" \
+  -o go-template='{{index .data "tls.crt" | base64decode}}' > "$NAME.crt"
+openssl pkcs12 -export -inkey "$NAME.key" -in "$NAME.crt" -name "$NAME" -out "$NAME.p12"
+shred -u "$NAME.key" "$NAME.crt"      # and the .p12 once it is on the phone
 ```
+
+OpenSSL 3 defaults to PBES2 / PBKDF2 / AES-256-CBC with a SHA-256 MAC here. That matters because
+cert-manager's keystore default is `profile: LegacyRC2`, which OpenSSL 3 and Java 20 refuse to
+open -- so a stored keystore would have needed `Modern2023` set explicitly anyway.
 
 The two names must agree between `ghostunnel.allowedCNs` and `deviceCerts.names`; the CN is what
 `--allow-cn` matches.

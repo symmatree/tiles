@@ -149,10 +149,10 @@ ghostunnel:
   upstreamTarget: homeassistant.local.symmatree.com:8123
 
 # Client certificates issued to devices, one per entry, from the
-# device-identity CA (charts/cert-manager). Each renders a cert-manager
-# Certificate whose Secret carries a PKCS#12 keystore for installing on the
-# device, following the laserjet pattern in charts/static-certs. The names are
-# the certificate CNs and must match ghostunnel.allowedCNs above.
+# device-identity CA (charts/cert-manager). The names are the certificate CNs
+# and must match ghostunnel.allowedCNs above. The PKCS#12 for installing on a
+# phone is built from the Secret at install time rather than stored -- see the
+# comment in templates/device-certs.helm.yaml for why.
 #
 # Long-lived on purpose: installing one is a manual trip to a physical phone, and
 # an expired client certificate fails at the TLS handshake with nothing shown in
@@ -165,11 +165,6 @@ deviceCerts:
   # or OCSP involved.
   duration: 17520h
   renewBefore: 2160h
-  # One shared keystore password for all device certificates. It protects the
-  # .p12 on its way to the phone and nothing after that -- Android re-wraps the
-  # key into its own credential store on import -- so a per-device item would add
-  # 1Password entries without protecting anything further.
-  onePasswordItem: device-cert-password
   names:
     - seth-pixel
     - lisa-pixel
