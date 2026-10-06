@@ -1,18 +1,8 @@
 {{- $dc := .Values.deviceCerts }}
-{{- if $dc.names }}
-# Keystore password for every device certificate below. It protects the PKCS#12
-# on its way to the device and nothing afterwards -- Android re-wraps the key
-# into its own credential storage on import -- so one item covers all of them.
-apiVersion: onepassword.com/v1
-kind: OnePasswordItem
-metadata:
-  name: {{ $dc.onePasswordItem }}
-  namespace: "{{ $.Release.Namespace }}"
-type: Opaque
-spec:
-  itemPath: 'vaults/{{ required ".Values.vault_name is required" $.Values.vault_name }}/items/{{ $dc.onePasswordItem }}'
 {{- range $dc.names }}
+{{- if not (eq . (first $dc.names)) }}
 ---
+{{- end }}
 # Client certificate for {{ . }}. The CN is what ghostunnel matches with
 # --allow-cn, so this name and the ghostunnel.allowedCNs entry are the same
 # string by construction.
@@ -20,6 +10,14 @@ spec:
 # usages omits server auth deliberately: this credential can only ever
 # authenticate a client, so a leaked key cannot be used to stand up something
 # that impersonates a service.
+#
+# No keystores.pkcs12 here, on purpose. cert-manager writes tls.key into this
+# Secret unencrypted whatever else it does, so a stored keystore password
+# protects nothing from anyone who can read the Secret -- cert-manager's own API
+# docs say as much. The password is only worth anything for the hop from kubectl
+# to the phone, so the .p12 is built at that moment instead; see README.md. That
+# also sidesteps the keystore default of profile LegacyRC2, which OpenSSL 3 and
+# Java 20 refuse to open.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -38,15 +36,8 @@ spec:
     algorithm: ECDSA
     size: 256
     rotationPolicy: Always
-  keystores:
-    pkcs12:
-      create: true
-      passwordSecretRef:
-        name: {{ $dc.onePasswordItem }}
-        key: password
   issuerRef:
     name: "{{ $.Values.cluster_name }}-device-ca-issuer"
     kind: ClusterIssuer
     group: cert-manager.io
-{{- end }}
 {{- end }}
