@@ -69,18 +69,35 @@ the human perimeter; it is not and cannot be a LAN perimeter for this host.
 
 These are manual and are **not** created by this chart. Until they exist the gate fails closed.
 
-1. **1Password item** `homeassistant-oauth2-proxy` in the `tiles-secrets` vault, with field labels
-   exactly `client-id` / `client-secret` / `cookie-secret`. Reuse Home Assistant's existing Google
-   client (the one behind `auth_oidc` in the `ha-config` repo) for the first two; generate the third
-   with `openssl rand -base64 32 | tr -- '+/' '-_'`.
-2. **Redirect URI** `https://homeassistant.tiles.symmatree.com/oauth2/callback` added to that Google client.
-   If you want Home Assistant's own OIDC login to keep working through the gate, its callback
-   (`https://homeassistant.tiles.symmatree.com/auth/oidc/callback`) has to be registered too.
+1. **A Google OAuth client of its own**, `homeassistant-tiles` in the `tiles-id-7a27` project
+   alongside `argocd-oauth-proxy` and `jupyterhub-tiles`, with the single redirect URI
+   `https://homeassistant.tiles.symmatree.com/oauth2/callback`. Prod-only chart, so there is no
+   `tiles-test` host to register.
+2. **1Password item** `homeassistant-oauth2-proxy` in the `tiles-secrets` vault, with field labels
+   exactly `client-id` / `client-secret` / `cookie-secret`: the first two from that client, the third
+   from `openssl rand -base64 32 | tr -- '+/' '-_'`.
 3. **`ha-config`**: `http.use_x_forwarded_for: true` and `http.trusted_proxies: 10.0.144.0/20`.
    oauth2-proxy sets `X-Forwarded-For` on every upstream request, and Home Assistant raises
    `HTTPBadRequest` for an `X-Forwarded-For` it was not configured to expect -- so without this the
    gate authenticates you and then every request returns 400. Landing this change early is harmless:
    nothing else sends Home Assistant an `X-Forwarded-For` today.
+
+## The second layer is a local Home Assistant account
+
+The shared pattern in [docs/remote-access.md](../../docs/remote-access.md) has each app reuse its
+own Google client so the inner login is a near-silent redirect. That works for Argo CD (Dex) and
+JupyterHub (the hub's `google` authenticator). **Home Assistant has no Google login at all**, so
+there is no client to share and the inner layer is HA's own username and password.
+
+Verified against the appliance rather than inferred from config: `/auth/providers` returns only
+`{"type": "homeassistant"}`, `/auth/oidc/redirect` and `/auth/oidc/welcome` both 404, and
+`/api/config` lists no OIDC component. The `auth_oidc:` block in `ha-config`'s
+`configuration.yaml` is inert -- that custom component is not installed on the appliance.
+
+The consequence is two prompts rather than one, with two different credential types. If a single
+Google login is wanted later, installing hass-oidc-auth would do it, at the cost of its device-code
+flow for the companion app -- which the app needs because its WebView cannot complete a Google
+challenge, the same constraint that produced the mutual-TLS door below.
 
 ## Verifying the gate
 
