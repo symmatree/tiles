@@ -31,23 +31,40 @@ queued task -- the rest of PR #813 is inert until the prod tag moves anyway.
 | yellow | `GPIO4` (UART1 TX) | EXT1-9 | `RXI/MOSI` | J7-3 |
 | green | `GPIO5` (UART1 RX) | EXT1-10 | `TXO/MISO` | J7-2 |
 
-**Everything is on EXT1**, so the harness is one connector at each end. The ESP32 routes UART
-through its GPIO matrix, so the pin choice is config ([`gnss-bridge.yaml`](gnss-bridge.yaml)),
-not a constraint -- GPIO32/33 (EXT2 pins 6 and 5) are the fallback if these two misbehave with
-Ethernet up.
+The table above lands on **EXT1**, where +5V is available. The same two GPIOs are also on
+**UEXT**, which takes the whole harness including the sensor in one IDC connector but offers
+only 3.3V -- see below. The ESP32 routes UART through its GPIO matrix, so the pin choice is
+config ([`gnss-bridge.yaml`](gnss-bridge.yaml)), not a constraint: GPIO32/33 (EXT2 pins 6 and
+5) are the fallback if these two misbehave with Ethernet up.
 
 Power and ground run straight across; the serial pair crosses.
 
 The breakout's **DSEL jumper must stay open** (its default). Closed selects SPI and disables
 UART1 entirely.
 
-### Not the UEXT connector
+### Two ways to land it: EXT1 or UEXT
 
-UEXT would otherwise be ideal -- one 10-pin shell carrying +3.3V, GND, UART and I2C. But its
-RX pin reaches GPIO36 through **`D4`, a series 1N5819**, which makes that line pull-up
-dependent rather than push-pull. Fine for the UEXT sensor modules it exists for; not something
-to hand 460800 baud. Every other UEXT pin is a direct connection -- pin 4 is the only one with
-a part in the way.
+GPIO4 and GPIO5 appear on **both** EXT1 (pins 9, 10) and UEXT (pins 3, 10), so the ESPHome
+config is the same either way and the connector is a bench decision.
+
+| | EXT1 | UEXT |
+|---|---|---|
+| Connector | 1x10 0.1in header, discrete contacts | 2x5 boxed IDC, one ribbon crimp |
+| Supply available | **+5V** and +3.3V | +3.3V only |
+| Sensor lines (`GPIO13`/`GPIO16`) | on the other header, EXT2 | pins 6 and 5, same connector |
+| Wires to land | 4, plus 4 more for the sensor | one ribbon for all of it |
+
+**UEXT if the supply route is 3.3V**, which is the whole harness including the sensor in a
+single connector. Its pin 1 is the same `+3V3` net as EXT1-2, so there is no electrical
+difference in the supply -- only in how many things you crimp.
+
+**EXT1 if the supply route is 5V**, since UEXT does not bring out +5V. See
+[Power](#power) for why 5V is the better default.
+
+`D4`, a series 1N5819 between UEXT pin 4 and GPIO36, is the one thing to keep clear of on this
+connector -- it makes that line pull-up dependent rather than push-pull, which is not something
+to hand 460800 baud. It only matters if RX is on GPIO36; on GPIO5 (UEXT pin 10) it is not in
+the path. Every other UEXT pin is a direct connection.
 
 ### Pins to solder
 
@@ -55,8 +72,9 @@ Olimex ships the board without headers. All three are 0.1 in / 2.54 mm.
 
 | Board | Header | Strip | Used |
 |---|---|---|---|
-| ESP32-POE-ISO | EXT1 | 1x10 | 1 (or 2), 3, 9, 10 |
-| ESP32-POE-ISO | EXT2 | 1x10 | only for the optional sensor |
+| ESP32-POE-ISO | EXT1 | 1x10 | 1 (or 2), 3, 9, 10 -- if landing on EXT1 |
+| ESP32-POE-ISO | EXT2 | 1x10 | only for the sensor, and only if landing on EXT1 |
+| ESP32-POE-ISO | UEXT | 2x5 boxed | 1, 2, 3, 10, plus 5 and 6 for the sensor |
 | GPS-RTK-SMA | J7 | 1x9 | 2, 3, 7 or 8, 9 |
 
 A 1x10 housing covers the whole ESP32 end with positions 1, 3, 9 and 10 populated; a 1x9
@@ -64,8 +82,8 @@ covers the whole breakout end.
 
 ### The optional sensor
 
-Not required for the GNSS link, and it lands on the other header. `GPIO13` (EXT2-10) is SDA,
-`GPIO16` (EXT2-7) is SCL, with +3.3V and GND from EXT1 pins 2 and 3. **Both I2C lines already
+Not required for the GNSS link. `GPIO13` is SDA and `GPIO16` is SCL -- EXT2 pins 10 and 7, or
+UEXT pins 6 and 5, where they share the connector with everything else. **Both I2C lines already
 carry 2.2k pull-ups on the Olimex board** -- do not add your own. On a lead away from the board, since the ESP32 and the PHY warm anything sitting next to them
 -- the same confound that makes the current attic record a CPU-die proxy.
 
