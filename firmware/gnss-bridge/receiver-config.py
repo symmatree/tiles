@@ -102,6 +102,9 @@ APPLY = [
     # switching 3V3 rail costs the receiver anything.
     ("CFG_MSGOUT_UBX_MON_COMMS_UART1", 1),
     ("CFG_MSGOUT_UBX_MON_RF_UART1", 1),
+    # No MON-SYS: it is absent from the ZED-F9P Interface Description (UBX protocol 27.10)
+    # and first appears in the F9 HPS line at protocol 33.40. This firmware is HPG 1.32,
+    # protocol 27.31, so there is no receiver-reported CPU load, memory or temperature.
     # The default UART1 output is the NMEA set at 1 Hz, which we do not consume. GSV is the
     # expensive one.
     ("CFG_MSGOUT_NMEA_ID_GGA_UART1", 0),

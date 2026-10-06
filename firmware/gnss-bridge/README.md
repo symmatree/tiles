@@ -129,25 +129,12 @@ since about May 2023.
 5. Move the prod tag. `str2str_tcp` dials the bridge; `MON-COMMS` `txPeakUsage` and
    `overrunErrs` say whether the UART has headroom.
 
+`MON-COMMS` and `MON-RF` are the diagnostics this receiver has. `MON-SYS` -- CPU load, memory,
+die temperature -- is not available: the ZED-F9P Interface Description (UBX protocol 27.10)
+never mentions it, and it first appears in the F9 HPS line at protocol 33.40. This firmware is
+HPG 1.32, protocol 27.31.
+
 Reverting is the same list backwards, and step 3's export is what makes that possible.
-
-## Known unknowns
-
-- **Whether `in_ext_tcp` works in RTKBase 2.7.0.** The design turns on `str2str_tcp` reading a
-  TCP client instead of a serial device, and upstream calls that input "mainly for development
-  purposes", so it is a lightly exercised path. Read in `run_cast.sh`, not run. If it is
-  broken, a sidecar running `str2str -in tcpcli://... -out tcpsvr://:5015` does the same job.
-- **Whether `-b 1` relays writes back to the receiver.** RTKLIB's help says
-  `-b str_no  relay back messages from output str to input str`, and it is in the deployed
-  ExecStart. Everything bidirectional depends on it -- config polls, `CFG-VALGET`, the
-  read-back [#704](https://github.com/symmatree/tiles/issues/704) wants. Verified in source,
-  never exercised.
-
-`UBX-MON-SYS` is **not available** on this receiver, so there is no receiver-reported CPU
-load, memory or temperature. The ZED-F9P Interface Description (UBX protocol 27.10) does not
-mention it anywhere while documenting `MON-COMMS`, `MON-RF`, `MON-HW` and `MON-VER`; it
-appears in the F9 HPS 1.40 description at protocol 33.40. This firmware is HPG 1.32, protocol
-27.31. `MON-COMMS` and `MON-RF` are both in 27.10 and are what the diagnostics use.
 
 ## Gaps are a property of this design
 
