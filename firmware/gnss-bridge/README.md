@@ -49,17 +49,22 @@ config is the same either way and the connector is a bench decision.
 
 | | EXT1 | UEXT |
 |---|---|---|
-| Connector | 1x10 0.1in header, discrete contacts | 2x5 boxed IDC, one ribbon crimp |
+| Connector | 1x10 0.1in header, discrete crimp contacts | 2x5 boxed IDC |
 | Supply available | **+5V** and +3.3V | +3.3V only |
 | Sensor lines (`GPIO13`/`GPIO16`) | on the other header, EXT2 | pins 6 and 5, same connector |
-| Wires to land | 4, plus 4 more for the sensor | one ribbon for all of it |
+| Keyed | no | yes -- shrouded, cannot go on reversed or offset |
 
-**UEXT if the supply route is 3.3V**, which is the whole harness including the sensor in a
-single connector. Its pin 1 is the same `+3V3` net as EXT1-2, so there is no electrical
-difference in the supply -- only in how many things you crimp.
+**EXT1 is the default**, because it is the only one that brings out +5V, and 5V is the better
+supply route ([Power](#power)).
 
-**EXT1 if the supply route is 5V**, since UEXT does not bring out +5V. See
-[Power](#power) for why 5V is the better default.
+**UEXT's advantage is not labour.** IDC saves stripping and crimping only when both ends of a
+ribbon are IDC, and this harness's other end is J7 -- a 1x9 single row with the needed pins
+non-contiguous. That end has to be split out, stripped and crimped whichever header is used,
+so UEXT buys a ribbon, a connector and a press tool to do the same work.
+
+What it does buy is **keying**: the UEXT header is shrouded, so the connector cannot be fitted
+reversed or off by a pin. On EXT1 it can, and reversed puts +5V on EXT1-10 (`GPIO5`). Use a
+housing spanning all ten positions, which rules out the offset case, and mark pin 1.
 
 `D4`, a series 1N5819 between UEXT pin 4 and GPIO36, is the one thing to keep clear of on this
 connector -- it makes that line pull-up dependent rather than push-pull, which is not something
