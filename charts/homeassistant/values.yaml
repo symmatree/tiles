@@ -22,9 +22,18 @@ oauth2-proxy:
   # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
   # (OnePasswordItem 'homeassistant-oauth2-proxy'). Vault-item field labels must
   # be exactly client-id / client-secret / cookie-secret (the chart's
-  # existingSecret keys). client-id/secret: REUSE Home Assistant's existing
-  # Google client -- the one behind auth_oidc in the ha-config repo -- and add
-  # the redirect URI https://homeassistant.{cluster}.symmatree.com/oauth2/callback to it.
+  # existingSecret keys). client-id/secret: a Google client of its own,
+  # homeassistant-tiles alongside argocd-oauth-proxy and jupyterhub-tiles, with
+  # the single redirect URI
+  # https://homeassistant.{cluster}.symmatree.com/oauth2/callback.
+  #
+  # Unlike the other two gates there is no client to share. Those each reuse the
+  # app's own Google client so the inner login is a near-silent redirect, which
+  # works because Argo CD has Dex and JupyterHub has the hub authenticator. Home
+  # Assistant has neither: /auth/providers reports only the local
+  # username/password provider, and the auth_oidc block in ha-config's
+  # configuration.yaml is inert because that custom component is not installed on
+  # the appliance. So the second layer here is an HA local account.
   # cookie-secret: openssl rand -base64 32 | tr -- '+/' '-_' (URL-safe;
   # oauth2-proxy decodes it with base64.RawURLEncoding and a standard-base64
   # value fails to decode into a valid AES key length -> pod will not start).
