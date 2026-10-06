@@ -51,10 +51,13 @@ UEXT pin is a direct connection.
 ### Antenna
 
 The `-EA` carries a **WROOM-32UE**, which has no PCB antenna -- the U.FL is the only RF path.
-Nothing here needs it: the config declares `ethernet:` and no `wifi:`, so the radio never
-starts and an open RF port has no transmitter to reflect into. Fit the pigtail and bulkhead
-anyway while the board is on the bench, so enabling BLE later is a config change rather than
-an enclosure teardown.
+**Fit the pigtail and bulkhead**, even though this config never transmits.
+
+That is a property of the current config, not of the box. Stock images for this class bring up
+a provisioning AP by default, and anything flashed here over the next several years -- a
+recovery image, a debug build, an agent that does not know the RF port is open -- would
+transmit into an unterminated connector. A connected antenna makes that a non-event forever,
+and it has to happen while the board is on the bench rather than mounted in the attic.
 
 ### Pins to solder
 
