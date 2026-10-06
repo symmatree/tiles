@@ -133,18 +133,21 @@ Reverting is the same list backwards, and step 3's export is what makes that pos
 
 ## Known unknowns
 
-- **GPIO4/GPIO5 UART with Ethernet up.**
-  [esphome/issues#4166](https://github.com/esphome/issues/issues/4166)
-  reports UART on exactly these pins failing when Ethernet is enabled on an ESP32+LAN8720,
-  working on other pins. One unresolved third-party report on a different board, and the only
-  evidence either way; GPIO32/33 on EXT2 are the fallback, which costs a line of YAML and
-  re-landing two wires.
-- **GPIO16**, only if the optional sensor is fitted. The WROVER variants leave it unconnected
-  and move the Ethernet clock to GPIO0; the `-EA` order code is WROOM-32UE, so it should be
-  populated.
-- **`UBX-MON-SYS`.** `CFG_MSGOUT_UBX_MON_SYS_UART1` is a valid key in pyubx2's database, but
-  whether ZED-F9P HPG 1.32 implements it is unconfirmed. The step 3 export answers it: an
-  unimplemented key does not come back.
+- **Whether `in_ext_tcp` works in RTKBase 2.7.0.** The design turns on `str2str_tcp` reading a
+  TCP client instead of a serial device, and upstream calls that input "mainly for development
+  purposes", so it is a lightly exercised path. Read in `run_cast.sh`, not run. If it is
+  broken, a sidecar running `str2str -in tcpcli://... -out tcpsvr://:5015` does the same job.
+- **Whether `-b 1` relays writes back to the receiver.** RTKLIB's help says
+  `-b str_no  relay back messages from output str to input str`, and it is in the deployed
+  ExecStart. Everything bidirectional depends on it -- config polls, `CFG-VALGET`, the
+  read-back [#704](https://github.com/symmatree/tiles/issues/704) wants. Verified in source,
+  never exercised.
+
+`UBX-MON-SYS` is **not available** on this receiver, so there is no receiver-reported CPU
+load, memory or temperature. The ZED-F9P Interface Description (UBX protocol 27.10) does not
+mention it anywhere while documenting `MON-COMMS`, `MON-RF`, `MON-HW` and `MON-VER`; it
+appears in the F9 HPS 1.40 description at protocol 33.40. This firmware is HPG 1.32, protocol
+27.31. `MON-COMMS` and `MON-RF` are both in 27.10 and are what the diagnostics use.
 
 ## Gaps are a property of this design
 
