@@ -52,6 +52,13 @@ on:
 env:
   TF_IN_AUTOMATION: "true"
   TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+  # Whether the test workspace is planned and applied at all. Off while
+  # nuc-g3p-2 is down (#816): both tiles-test VMs live on that host, so the test
+  # plan cannot refresh them and fails with HTTP 596 (connection timed out).
+  # Test plans before prod in this job, so that failure stopped prod from
+  # planning or applying -- run 37397450721 landed nothing in prod. Set to
+  # "true" to resume; nothing else needs changing.
+  DEPLOY_TEST: "false"
 concurrency:
   group: ${{ github.repository }}
   cancel-in-progress: false
@@ -238,7 +245,7 @@ jobs:
 
       - name: Terraform plan and apply - test
         id: tf-test
-        if: steps.scope.outputs.run_terraform == 'true'
+        if: env.DEPLOY_TEST == 'true' && steps.scope.outputs.run_terraform == 'true'
         env:
           SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
