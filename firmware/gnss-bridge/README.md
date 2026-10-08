@@ -117,36 +117,31 @@ fitted, if an I2C part is ever wanted.
 
 ## Flashing
 
-[`gnss-bridge.yaml`](gnss-bridge.yaml) is an ESPHome config, not an image. It has to be
-compiled before it can be written; `web.esphome.io` only flashes an already-built `.bin`.
+[`gnss-bridge.yaml`](gnss-bridge.yaml) is an ESPHome config, not an image -- it has to be
+compiled before it can be written, and `web.esphome.io` only flashes an already-built `.bin`.
 
-Compile and flash in one step over USB:
+**Via the Home Assistant ESPHome add-on**, which is where these are managed: copy the file into
+the add-on's config directory, and it appears in the dashboard. First flash is **Install ->
+Plug into this computer** with the board on USB; the board's USB-serial is a CH340, so it shows
+up as `/dev/ttyUSB0`. After that it is OTA from the same dashboard, and the `api:` block is
+what lets Home Assistant discover and adopt it.
+
+That config directory is the copy the add-on builds from, so this file is the source and the
+add-on's copy is a deployment of it. Changes made in the dashboard do not come back here.
+
+Without the add-on, the same thing from a checkout:
 
 ```bash
-pip install esphome
 esphome run firmware/gnss-bridge/gnss-bridge.yaml
+esphome logs firmware/gnss-bridge/gnss-bridge.yaml
 ```
 
-or without installing it:
+Either way the first build fetches the `stream_server` external component from GitHub, so it
+needs network. Serial logs come out over USB before the network is up; after that they are
+over the API.
 
-```bash
-docker run --rm -it -v "$PWD":/config --device=/dev/ttyUSB0 \
-  ghcr.io/esphome/esphome run firmware/gnss-bridge/gnss-bridge.yaml
-```
-
-The board's USB-serial is a CH340, so it appears as `/dev/ttyUSB0` on Linux. The first build
-fetches the `stream_server` external component from GitHub, so it needs network.
-
-Through the Home Assistant add-on instead: drop the file in the ESPHome config directory and
-use **Install -> Plug into this computer**, or **Manual download** to get a `.bin` for
-`web.esphome.io`.
-
-After the first flash it is OTA -- `esphome run` over the network, no cable. Logs are
-`esphome logs firmware/gnss-bridge/gnss-bridge.yaml`, over USB serial before the network is up
-and over the API after.
-
-USB and PoE at the same time are safe on the **ISO** variant; that is what the isolation is
-for. They are not on the non-isolated ESP32-POE.
+USB and PoE at the same time are safe on the **ISO** variant -- that is what the isolation is
+for -- so the board can stay on Ethernet while you flash it.
 
 ## Cutover
 
