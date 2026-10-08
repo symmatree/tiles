@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" width="880" height="400" role="img" aria-label="Harness: Olimex ESP32-POE-ISO EXT1 pin 1 (+5V) to GPS-RTK-SMA J7 pin 8 (5V); EXT1 pin 3 (GND) to J7 pin 9 (GND); EXT1 pin 9 (GPIO4, UART1 TX) to J7 pin 3 (RXI/MOSI); EXT1 pin 10 (GPIO5, UART1 RX) from J7 pin 2 (TXO/MISO). A dashed alternative feeds EXT1 pin 2 (+3.3V) to J7 pin 7 (3.3V) instead of the 5V pair. Every ESP32 pin is on header EXT1.">
+  <defs>
+    <marker id="ar-tx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#A8700F"/>
+    </marker>
+    <marker id="ar-rx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#237A4E"/>
+    </marker>
+  </defs>
+
+  <!-- own paper, so the figure reads the same in light and dark readers -->
+  <rect x="0" y="0" width="880" height="400" rx="10" fill="#F7F6F3"/>
+
+  <!-- ESP32 -->
+  <rect x="40" y="46" width="286" height="306" rx="8" fill="#ECEAE5" stroke="#B9B4AA"/>
+  <text x="58" y="74" font-family="DejaVu Sans, Verdana, sans-serif" font-size="14" font-weight="bold" fill="#1F2225">ESP32-POE-ISO-EA</text>
+  <text x="58" y="92" font-family="DejaVu Sans Mono, monospace" font-size="11" fill="#6F767C">Rev L &#183; header EXT1 only</text>
+
+  <!-- breakout -->
+  <rect x="554" y="46" width="286" height="306" rx="8" fill="#ECEAE5" stroke="#B9B4AA"/>
+  <text x="822" y="74" text-anchor="end" font-family="DejaVu Sans, Verdana, sans-serif" font-size="14" font-weight="bold" fill="#1F2225">GPS-RTK-SMA</text>
+  <text x="822" y="92" text-anchor="end" font-family="DejaVu Sans Mono, monospace" font-size="11" fill="#6F767C">ZED-F9P &#183; header J7</text>
+
+  <!-- row 1 : +5V -->
+  <rect x="318" y="127" width="10" height="10" fill="#C0392B"/>
+  <rect x="552" y="127" width="10" height="10" fill="#C0392B"/>
+  <text x="58" y="136" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">EXT1-1</text>
+  <text x="310" y="136" text-anchor="end" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">+5V</text>
+  <text x="570" y="136" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">5V</text>
+  <text x="822" y="136" text-anchor="end" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">J7-8</text>
+  <path d="M328 132 L552 132" stroke="#C0392B" stroke-width="2.5" fill="none"/>
+  <text x="440" y="123" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="11" fill="#C0392B">power &#8594; breakout's own LDO</text>
+
+  <!-- row 2 : +3V3 alternative -->
+  <rect x="318" y="172" width="10" height="10" fill="none" stroke="#C0392B" stroke-width="1.5"/>
+  <rect x="552" y="172" width="10" height="10" fill="none" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="58" y="181" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">EXT1-2</text>
+  <text x="310" y="181" text-anchor="end" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" fill="#6F767C">+3.3V</text>
+  <text x="570" y="181" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" fill="#6F767C">3.3V</text>
+  <text x="822" y="181" text-anchor="end" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">J7-7</text>
+  <path d="M328 177 L552 177" stroke="#C0392B" stroke-width="2" stroke-dasharray="7 5" opacity="0.7" fill="none"/>
+  <text x="440" y="168" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="11" fill="#6F767C">alternative &#8212; populate one, never both</text>
+
+  <!-- row 3 : GND -->
+  <rect x="318" y="217" width="10" height="10" fill="#5A6066"/>
+  <rect x="552" y="217" width="10" height="10" fill="#5A6066"/>
+  <text x="58" y="226" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">EXT1-3</text>
+  <text x="310" y="226" text-anchor="end" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">GND</text>
+  <text x="570" y="226" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">GND</text>
+  <text x="822" y="226" text-anchor="end" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">J7-9</text>
+  <path d="M328 222 L552 222" stroke="#5A6066" stroke-width="2.5" fill="none"/>
+  <text x="440" y="213" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="11" fill="#5A6066">common ground</text>
+
+  <!-- row 4 : TX -->
+  <rect x="318" y="272" width="10" height="10" fill="#A8700F"/>
+  <rect x="552" y="272" width="10" height="10" fill="#A8700F"/>
+  <text x="58" y="281" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">EXT1-9</text>
+  <text x="310" y="281" text-anchor="end" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">GPIO4</text>
+  <text x="570" y="281" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">RXI / MOSI</text>
+  <text x="822" y="281" text-anchor="end" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">J7-3</text>
+  <path d="M328 277 L546 277" stroke="#A8700F" stroke-width="2.5" fill="none" marker-end="url(#ar-tx)"/>
+  <text x="440" y="268" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="11" fill="#A8700F">UART1 TX &#8594; config / RTCM in</text>
+
+  <!-- row 5 : RX -->
+  <rect x="318" y="317" width="10" height="10" fill="#237A4E"/>
+  <rect x="552" y="317" width="10" height="10" fill="#237A4E"/>
+  <text x="58" y="326" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">EXT1-10</text>
+  <text x="310" y="326" text-anchor="end" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">GPIO5</text>
+  <text x="570" y="326" font-family="DejaVu Sans, Verdana, sans-serif" font-size="13" font-weight="bold" fill="#1F2225">TXO / MISO</text>
+  <text x="822" y="326" text-anchor="end" font-family="DejaVu Sans Mono, monospace" font-size="11.5" fill="#6F767C">J7-2</text>
+  <path d="M334 322 L552 322" stroke="#237A4E" stroke-width="2.5" fill="none" marker-start="url(#ar-rx)"/>
+  <text x="440" y="313" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="11" fill="#237A4E">UART1 RX &#8592; RAWX / SFRBX / MON out</text>
+
+  <text x="440" y="372" text-anchor="middle" font-family="DejaVu Sans, Verdana, sans-serif" font-size="12" font-style="italic" fill="#6F767C">Power and ground run straight across. The serial pair crosses: TX goes to RX.</text>
+</svg>
