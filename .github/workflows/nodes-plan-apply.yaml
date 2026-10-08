@@ -52,6 +52,13 @@ on:
 env:
   TF_IN_AUTOMATION: "true"
   TF_VAR_onepassword_sa_token: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+  # Whether the test workspace is planned and applied at all. Off while
+  # nuc-g3p-2 is down (#816): both tiles-test VMs live on that host, so the test
+  # plan cannot refresh them and fails with HTTP 596 (connection timed out).
+  # Test plans before prod in this job, so that failure stopped prod from
+  # planning or applying -- run 37397450721 landed nothing in prod. Set to
+  # "true" to resume; nothing else needs changing.
+  DEPLOY_TEST: "false"
 concurrency:
   group: ${{ github.repository }}
   cancel-in-progress: false
@@ -238,7 +245,7 @@ jobs:
 
       - name: Terraform plan and apply - test
         id: tf-test
-        if: steps.scope.outputs.run_terraform == 'true'
+        if: env.DEPLOY_TEST == 'true' && steps.scope.outputs.run_terraform == 'true'
         env:
           SYNOLOGY_USER: ${{ steps.load_secrets.outputs.SYNOLOGY_USER }}
           SYNOLOGY_PASSWORD: ${{ steps.load_secrets.outputs.SYNOLOGY_PASSWORD }}
@@ -281,6 +288,43 @@ jobs:
           refresh: ${{ github.event_name != 'pull_request' }}
           plan_file: "${{ runner.temp }}/tfplan-nodes-prod.bin"
           txt_output_file: "${{ runner.temp }}/txt-outputs/plan-nodes-prod.txt"
+
+      # Load the Alloy config the apply just uploaded. The CTs bind-mount the snippets dir
+      # over /etc/alloy, so a config-content change rewrites config.alloy without touching
+      # the CT resource: the plan is a no-op, the CT keeps the file it opened at start, and
+      # the new pipeline never runs until something reloads it. POST /-/reload makes Alloy
+      # re-read the file in place -- no CT stop/start (which would be drift against
+      # `started = true`) and no recreate (bpg#2789 / the #696 outage path).
+      #
+      # Unconditional on a prod apply, deliberately: keying it on a detected config diff
+      # would trust the same change detection that does not see this dependency in the first
+      # place. A reload with nothing to change costs well under a second (measured 0.04-0.25s
+      # across the four CTs) and leaves components whose arguments did not change running.
+      #
+      # Prod only, because deploy_proxmox_alloy is false in test.tfvars -- so the output is
+      # empty there and there is nothing to reload.
+      - name: Reload Alloy config on Proxmox CTs
+        if: steps.config.outputs.prod_apply == 'true' && steps.scope.outputs.run_terraform == 'true'
+        shell: bash
+        working-directory: "tf/nodes"
+        run: |
+          set -euo pipefail
+          terraform workspace select prod
+          # Names come from local.alloy_nodes, so this is the same source the CTs are created
+          # from; site DNS resolves the CT's initialization.hostname.
+          hosts=$(terraform output -json proxmox_alloy_ct_hostnames | jq -r '.[]')
+          echo "Reloading: ${hosts}"
+          for host in ${hosts}; do
+            echo "::group::reload ${host}"
+            # Assert on the body, not just the status: Alloy's HTTP server answers an
+            # unknown path with 200 and the UI's HTML, so `curl -f` alone would report
+            # success for a moved or mistyped endpoint without having reloaded anything.
+            # A changed response string fails here rather than passing silently.
+            body=$(curl -fsS --max-time 30 -X POST "http://${host}:12345/-/reload")
+            echo "${body}"
+            echo "${body}" | grep -qx "config reloaded"
+            echo "::endgroup::"
+          done
 
       - name: 1Password quota — snapshot at end + delta
         if: always() && steps.scope.outputs.run_terraform == 'true'
