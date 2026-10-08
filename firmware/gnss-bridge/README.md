@@ -16,7 +16,7 @@ port keeps its own independent `CFG-MSGOUT` configuration, untouched, so a USB c
 machine is a working fallback.
 
 **Status: nothing here has been built.** The ESP32 board is on hand; headers, crimp contacts
-and the optional sensor are not ordered. Pin assignments below are read off the two vendors'
+are not ordered. Pin assignments below are read off the two vendors.
 schematics, not off a working unit. This is a reference for whenever the parts show up, not a
 queued task -- the rest of PR #813 is inert until the prod tag moves anyway.
 
@@ -66,19 +66,10 @@ Olimex ships the board without headers. All three are 0.1 in / 2.54 mm.
 | Board | Header | Strip | Used |
 |---|---|---|---|
 | ESP32-POE-ISO | EXT1 | 1x10 | 1 (or 2), 3, 9, 10 |
-| ESP32-POE-ISO | EXT2 | 1x10 | only for the optional sensor |
 | GPS-RTK-SMA | J7 | 1x9 | 2, 3, 7 or 8, 9 |
 
 A 1x10 housing covers the ESP32 end with positions 1, 3, 9 and 10 populated; a 1x9 covers the
 breakout end.
-
-### The optional sensor
-
-Not required for the GNSS link. `GPIO13` is SDA and `GPIO16` is SCL, EXT2 pins 10 and 7, with
-+3.3V and GND from EXT1 pins 2 and 3. Both I2C lines carry 2.2k pull-ups on the Olimex board.
-
-On a lead away from the board, since the ESP32 and the PHY warm anything sitting next to them
--- the same confound that makes the current attic record a CPU-die proxy.
 
 ## Power
 
@@ -117,12 +108,45 @@ Pin order differs between the two: EXT1 1-2-3 is +5V, +3.3V, GND; J7 7-8-9 is 3.
 parts in the chain are wider or equal: the `F0505S-2WR2` is -40/+105 and holds full 2 W to
 +85 C, the ZED-F9P is -40/+85, and the SPK6618H antenna is -45/+70.
 
-**The attic's ambient range is not known.** acebase exposed only a CPU die sensor and a static
-`acpitz` value, so the temperature series in
-[`docs/bare-metal-nodes.md`](../../docs/bare-metal-nodes.md) is a proxy measured on a part with
-its own heat. The SHT4x on this board is the first ambient measurement the space will have.
-Nearest thing to evidence today: the antenna has the same +70 C ceiling and has been up there
-since about May 2023.
+**The attic's ambient range is not known**, and nothing here measures it. acebase exposed only
+a CPU die sensor and a static `acpitz` value, so the temperature series in
+[`docs/bare-metal-nodes.md`](../../docs/bare-metal-nodes.md) is a proxy taken on a part with
+its own heat. Nearest thing to evidence: the antenna carries the same +70 C ceiling and has
+been up there since about May 2023. GPIO13/GPIO16 are free on EXT2 with 2.2k pull-ups already
+fitted, if an I2C part is ever wanted.
+
+## Flashing
+
+[`gnss-bridge.yaml`](gnss-bridge.yaml) is an ESPHome config, not an image. It has to be
+compiled before it can be written; `web.esphome.io` only flashes an already-built `.bin`.
+
+Compile and flash in one step over USB:
+
+```bash
+pip install esphome
+esphome run firmware/gnss-bridge/gnss-bridge.yaml
+```
+
+or without installing it:
+
+```bash
+docker run --rm -it -v "$PWD":/config --device=/dev/ttyUSB0 \
+  ghcr.io/esphome/esphome run firmware/gnss-bridge/gnss-bridge.yaml
+```
+
+The board's USB-serial is a CH340, so it appears as `/dev/ttyUSB0` on Linux. The first build
+fetches the `stream_server` external component from GitHub, so it needs network.
+
+Through the Home Assistant add-on instead: drop the file in the ESPHome config directory and
+use **Install -> Plug into this computer**, or **Manual download** to get a `.bin` for
+`web.esphome.io`.
+
+After the first flash it is OTA -- `esphome run` over the network, no cable. Logs are
+`esphome logs firmware/gnss-bridge/gnss-bridge.yaml`, over USB serial before the network is up
+and over the API after.
+
+USB and PoE at the same time are safe on the **ISO** variant; that is what the isolation is
+for. They are not on the non-isolated ESP32-POE.
 
 ## Cutover
 
