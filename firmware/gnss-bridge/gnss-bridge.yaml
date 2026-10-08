@@ -34,9 +34,7 @@ ethernet:
   power_pin: GPIO12
 
 logger:
-  # The UART carries binary UBX; never log it, and keep the console off UART0 so a serial
-  # cable cannot interleave with it.
-  baud_rate: 0
+  # UART0 (GPIO1/3, the USB-serial side), which is independent of the GNSS UART on GPIO4/5.
   level: INFO
 
 api:
@@ -76,26 +74,7 @@ stream_server:
   # Power of two, per the component. 128 is the default and is sized for a thermostat.
   buffer_size: 2048
 
-# OPTIONAL, and on the other header. Nothing about the GNSS link depends on this block --
-# delete it, and the two sensor entries below, to build the bridge alone.
-i2c:
-  sda: GPIO13
-  scl: GPIO16
-  scan: true
-
 sensor:
-  # The attic has never had an ambient measurement -- acebase exposed only a CPU die sensor and
-  # a static acpitz value, so the temperature record in docs/bare-metal-nodes.md is a proxy.
-  # Mount this on a short lead away from the board: the ESP32 and PHY dissipate enough to bias
-  # a board-mounted part by several degrees, which is the same confound.
-  # OPTIONAL -- see the i2c note above.
-  - platform: sht4x
-    temperature:
-      name: Attic temperature
-    humidity:
-      name: Attic humidity
-    update_interval: 60s
-
   - platform: uptime
     name: Uptime
 
