@@ -1,0 +1,43 @@
+{{- $dc := .Values.deviceCerts }}
+{{- range $dc.names }}
+{{- if not (eq . (first $dc.names)) }}
+---
+{{- end }}
+# Client certificate for {{ . }}. The CN is what ghostunnel matches with
+# --allow-cn, so this name and the ghostunnel.allowedCNs entry are the same
+# string by construction.
+#
+# usages omits server auth deliberately: this credential can only ever
+# authenticate a client, so a leaked key cannot be used to stand up something
+# that impersonates a service.
+#
+# No keystores.pkcs12 here, on purpose. cert-manager writes tls.key into this
+# Secret unencrypted whatever else it does, so a stored keystore password
+# protects nothing from anyone who can read the Secret -- cert-manager's own API
+# docs say as much. The password is only worth anything for the hop from kubectl
+# to the phone, so the .p12 is built at that moment instead; see README.md. That
+# also sidesteps the keystore default of profile LegacyRC2, which OpenSSL 3 and
+# Java 20 refuse to open.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: device-{{ . }}
+  namespace: "{{ $.Release.Namespace }}"
+spec:
+  commonName: {{ . | quote }}
+  secretName: device-{{ . }}-tls
+  duration: {{ $dc.duration }}
+  renewBefore: {{ $dc.renewBefore }}
+  usages:
+    - digital signature
+    - key encipherment
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: "{{ $.Values.cluster_name }}-device-ca-issuer"
+    kind: ClusterIssuer
+    group: cert-manager.io
+{{- end }}

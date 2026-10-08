@@ -1,0 +1,178 @@
+{{- $gt := .Values.ghostunnel }}
+# Server certificate the phone verifies. An ordinary Let's Encrypt certificate,
+# so no custom root has to be installed on any device -- the device CA is used
+# only in the other direction, to authenticate the client.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homeassistant-tls
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  dnsNames:
+    - {{ required "ghostunnel.hostname is required" $gt.hostname | quote }}
+  secretName: homeassistant-tls
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: real-cert
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homeassistant-tls
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: homeassistant-tls
+    # Opt into lb-static-pool so the address is pinned rather than assigned from
+    # the dynamic pool -- a UniFi port-forward targets it, so it must not move.
+    tiles.symmatree.com/static-lb: "true"
+  annotations:
+    lbipam.cilium.io/ips: {{ required "homeassistant_tls_lb_ip is required" .Values.homeassistant_tls_lb_ip | quote }}
+    external-dns.alpha.kubernetes.io/hostname: {{ $gt.hostname | quote }}
+    # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
+    # app resolves the same name to the same place on any network.
+    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+spec:
+  type: LoadBalancer
+  selector:
+    app: homeassistant-tls
+  ports:
+    - name: mtls
+      protocol: TCP
+      port: {{ required "homeassistant_tls_port is required" .Values.homeassistant_tls_port }}
+      targetPort: mtls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homeassistant-tls
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app: homeassistant-tls
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homeassistant-tls
+  template:
+    metadata:
+      labels:
+        app: homeassistant-tls
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        # Matches the distroless :nonroot base.
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        # Hop 1, client-facing: terminates mutual TLS and hands plaintext to hop
+        # 2 over loopback. --cacert is the device CA ALONE, which is what makes
+        # --allow-cn meaningful: a certificate with a matching CN from any other
+        # issuer is rejected at the handshake as unknown authority.
+        - name: mtls
+          image: {{ required "ghostunnel.image is required" $gt.image | quote }}
+          args:
+            - server
+            - --listen=0.0.0.0:{{ .Values.homeassistant_tls_port }}
+            - --target=127.0.0.1:{{ $gt.internalPort }}
+            - --cert=/etc/ghostunnel/server/tls.crt
+            - --key=/etc/ghostunnel/server/tls.key
+            - --cacert=/etc/ghostunnel/device-ca/device-identity-ca.crt
+            {{- range $gt.allowedCNs }}
+            - --allow-cn={{ . }}
+            {{- end }}
+            # 0.0.0.0, not loopback: a kubelet httpGet probe connects to the
+            # pod IP. /_metrics is served here too, but as a JSON array rather
+            # than Prometheus text, so nothing scrapes it today.
+            - --status=http://0.0.0.0:{{ $gt.statusPort }}
+          ports:
+            - name: mtls
+              containerPort: {{ .Values.homeassistant_tls_port }}
+          # Readiness only, deliberately. /_status returns 503 whenever the hop's
+          # own target is unreachable (verified: backend_ok false plus the dial
+          # error), which is right for gating the Service but wrong for liveness
+          # -- Home Assistant restarts daily for ~6 minutes when static-certs
+          # pushes its certificate, and a liveness probe on a dependency would
+          # turn that into a restart loop. If ghostunnel dies the container
+          # exits and gets restarted anyway.
+          readinessProbe:
+            httpGet:
+              path: /_status
+              port: {{ $gt.statusPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: server-cert
+              mountPath: /etc/ghostunnel/server
+              readOnly: true
+            - name: device-ca
+              mountPath: /etc/ghostunnel/device-ca
+              readOnly: true
+        # Hop 2, upstream-facing: plaintext from hop 1, verified TLS to Home
+        # Assistant. No --cacert of our own CA here -- the trust store is
+        # trust-bundle (public roots plus the cluster CA), so this keeps working
+        # unchanged if the appliance ever moves from a Let's Encrypt certificate
+        # to a cluster-issued one. --disable-authentication means we present no
+        # client certificate upstream; Home Assistant does not ask for one.
+        - name: upstream
+          image: {{ $gt.image | quote }}
+          args:
+            - client
+            - --listen=127.0.0.1:{{ $gt.internalPort }}
+            - --target={{ required "ghostunnel.upstreamTarget is required" $gt.upstreamTarget }}
+            - --cacert=/etc/ghostunnel/trust/ca-certificates.crt
+            - --disable-authentication
+            - --status=http://0.0.0.0:{{ add $gt.statusPort 1 }}
+          # Same reasoning as above; this one reports Home Assistant itself,
+          # since its target is the appliance.
+          readinessProbe:
+            httpGet:
+              path: /_status
+              port: {{ add $gt.statusPort 1 }}
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: trust-bundle
+              mountPath: /etc/ghostunnel/trust
+              readOnly: true
+      volumes:
+        - name: server-cert
+          secret:
+            secretName: homeassistant-tls
+        # Published by the device-identity-ca trust-manager Bundle into every
+        # namespace labelled device-identity-ca=enabled (set on this namespace by
+        # the Application's managedNamespaceMetadata).
+        - name: device-ca
+          configMap:
+            name: device-identity-ca
+        - name: trust-bundle
+          configMap:
+            name: trust-bundle

@@ -9,6 +9,7 @@ workload in this cluster.
 | URL | Purpose |
 | --- | --- |
 | `https://homeassistant.tiles.symmatree.com` | Home Assistant web UI, behind the gate (Google + email allowlist) |
+| `https://homeassistant-tls.tiles.symmatree.com:8443` | the companion app, behind mutual TLS (client certificate) |
 | `https://homeassistant.local.symmatree.com:8123` | the appliance itself, LAN-only, unchanged |
 
 The generic wiring, the WAN exposure switch and the `#593-#604` hardening rules are the shared
@@ -115,11 +116,116 @@ The upstream leg is separately checkable from any pod in the pod CIDR:
 curl -s -o /dev/null -w '%{http_code}\n' https://homeassistant.local.symmatree.com:8123/   # 200
 ```
 
+## The second door: mutual TLS for the companion app
+
+The oauth2-proxy door is browser-only, and not by choice. The Android app renders its login in an
+Android `WebView`, and Google has refused OAuth in embedded webviews since 2023-07-24
+(`disallowed_useragent`), so the app can never complete the challenge. It *can* carry a session
+cookie once it has one -- `HomeAssistantApis` builds a single `OkHttpClient` with the WebView cookie
+jar and hands it to Retrofit and the websocket alike -- but it has no way to obtain one.
+
+So the app gets a credential that needs no interactive flow: a client certificate from the
+device-identity CA (see [charts/cert-manager](../cert-manager/README.md)), checked during the TLS
+handshake before any HTTP request exists.
+
+### Why two ghostunnel processes
+
+`ghostunnel server` is a TLS listener in front of a **plain** TCP target, and Home Assistant's only
+listener speaks TLS. So the pod runs two hops that meet on loopback:
+
+```
+phone --mTLS--> [mtls] --plaintext on 127.0.0.1--> [upstream] --TLS--> appliance:8123
+```
+
+That turns out to be the point rather than the cost. `--cacert` *replaces* the system trust pool
+rather than merging into it (`certloader.LoadTrustStore`), so one process can hold exactly one trust
+store, and each hop gets the right one:
+
+| hop | verifies | trust store |
+| --- | --- | --- |
+| `mtls` | the phone's **client** certificate | `device-identity-ca` bundle -- that CA alone |
+| `upstream` | the appliance's **server** certificate | `trust-bundle` -- public roots plus the cluster CA |
+
+The device CA is therefore never in a `RootCAs` position and cannot be used to vouch for a server.
+Mounting `trust-bundle` rather than relying on the image also means the distroless image works
+despite having no CA set of its own, and that moving the appliance to a cluster-issued certificate
+later needs no change here -- that root is already in the bundle.
+
+The phone verifies an ordinary Let's Encrypt certificate, so **no custom root is installed on any
+device.** This is not the "keep a private CA trusted on the phone" arrangement; the custom CA lives
+only on our side of the handshake.
+
+### Authorization and device certificates
+
+`ghostunnel.allowedCNs` in [`values.yaml`](values.yaml) is the entire model: one line per device, so
+revoking one device is deleting its line and waiting for the sync. ghostunnel has no CRL or OCSP
+support, and refuses to start when given no access-control flag at all. A certificate with a
+matching CN from any other issuer is rejected at the handshake as an unknown authority.
+
+`deviceCerts.names` renders a cert-manager `Certificate` per device against
+`{cluster_name}-device-ca-issuer`. `usages` deliberately omits server auth: a leaked device key
+cannot be used to impersonate a service, only to authenticate as that device.
+
+Issued for 2 years, matching the CA. Long-lived certificates are much cheaper here than usual
+because revocation does not go through expiry -- it goes through `allowedCNs` -- and because
+installing one means physically handling a phone.
+
+There is deliberately **no stored PKCS#12 and no stored keystore password.** cert-manager writes
+`tls.key` into the Secret unencrypted regardless, so a password held in 1Password would protect
+nothing from anyone who can read the Secret -- cert-manager's own API documentation says exactly
+that about its keystore profiles. The password is worth something only for the hop from `kubectl`
+to the phone, so build the `.p12` at that moment and choose the password then:
+
+```bash
+NAME=seth-pixel
+kubectl get secret -n homeassistant "device-$NAME-tls" \
+  -o go-template='{{index .data "tls.key" | base64decode}}' > "$NAME.key"
+kubectl get secret -n homeassistant "device-$NAME-tls" \
+  -o go-template='{{index .data "tls.crt" | base64decode}}' > "$NAME.crt"
+openssl pkcs12 -export -inkey "$NAME.key" -in "$NAME.crt" -name "$NAME" -out "$NAME.p12"
+shred -u "$NAME.key" "$NAME.crt"      # and the .p12 once it is on the phone
+```
+
+OpenSSL 3 defaults to PBES2 / PBKDF2 / AES-256-CBC with a SHA-256 MAC here. That matters because
+cert-manager's keystore default is `profile: LegacyRC2`, which OpenSSL 3 and Java 20 refuse to
+open -- so a stored keystore would have needed `Modern2023` set explicitly anyway.
+
+The two names must agree between `ghostunnel.allowedCNs` and `deviceCerts.names`; the CN is what
+`--allow-cn` matches.
+
+### Enrolling a device
+
+The app is never told to use mutual TLS -- the server asks. ghostunnel sends a TLS
+`CertificateRequest`, Android turns that into `WebViewClient.onReceivedClientCertRequest`, and the
+app already implements it. Order matters, because of how that code works:
+
+1. Install the PKCS#12 on the phone (Settings, "VPN & app user certificate"). Android requires a
+   screen lock to write to credential storage.
+2. Set the app's server URL to `https://homeassistant-tls.{cluster}.symmatree.com:8443` and open
+   the frontend **in the foreground**. The chooser needs an Activity -- with none, the app calls
+   `request.ignore()` and no prompt appears. There is no chooser on the native path, so a background
+   websocket or sensor worker handshaking first just fails silently.
+3. Pick the certificate once. The alias persists, and the same `ClientCertificateManager` feeds the
+   WebView and the shared `OkHttpClient`, so REST, websocket and media all present it afterwards
+   with no further prompting.
+
+Declining latches: `hasUserDeniedAccess` stays true, so a mis-tap means clearing and retrying rather
+than a re-prompt. An expired client certificate fails at the handshake with no in-app warning, which
+is why the CA is 2 years with `rotationPolicy: Never`.
+
+### Address and port
+
+8443, not 443: the shared ingress has 443, and the two cannot be multiplexed on it. ghostunnel is a
+single-target TCP proxy, there is no `tlsroutes` CRD in this cluster, and the Cilium ingress
+terminates TLS so it could not hand on a raw handshake anyway.
+
+The address is pinned out of `lb-static-pool` (the `tiles.symmatree.com/static-lb` label plus
+`lbipam.cilium.io/ips`) because a UniFi forward targets it and it must not move. Both the address and
+the port come from `tf/nodes` -- `homeassistant_tls_lb_ip` and `homeassistant_tls_port` -- through
+`app_of_apps_values`, so the Service annotation, the listener and the UniFi forward all read one
+value and cannot drift apart. There is nothing to reserve on the UniFi side: DHCP serves
+`10.0.11.1-10.0.12.254` (see the repo [README](../../README.md)), nowhere near this `/18`.
+
 ## What this does not cover
 
-- **The companion app.** The Android app can carry the proxy's session cookie -- `HomeAssistantApis`
-  builds one `OkHttpClient` with the WebView cookie jar and hands it to Retrofit and the websocket
-  alike -- but it cannot *obtain* one, because the app renders its login in an Android `WebView` and
-  Google refuses OAuth in embedded webviews. The web UI installs to a phone home screen and works;
-  the app still needs the LAN. A client-certificate door is the candidate follow-up.
 - **The LAN.** See above.

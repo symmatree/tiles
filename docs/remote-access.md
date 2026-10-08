@@ -108,6 +108,31 @@ Each has its own oauth2-proxy Deployment and its own 1Password item (see
 [Secrets](#secrets)). The two configs are intentionally near-identical -- the
 hardening lessons below were paid for once on Argo CD and copied to JupyterHub.
 
+### The one non-oauth2-proxy door: mutual TLS
+
+Every gate above challenges for Google, which requires a browser. The Home Assistant
+companion app does not have one -- it renders its login in an Android `WebView`, and
+Google has refused OAuth in embedded webviews since 2023-07-24. No oauth2-proxy
+configuration fixes that.
+
+So one host is gated by a client certificate instead: `homeassistant-tls.{cluster}.symmatree.com`
+on port **8443**, terminated by [ghostunnel](https://github.com/ghostunnel/ghostunnel)
+rather than oauth2-proxy, admitting only certificates from the device-identity CA whose
+subject is listed in `allowedCNs`. It is still through-mode and still a small
+single-purpose proxy; what differs is the credential and that it is checked during the
+TLS handshake rather than over HTTP.
+
+It is a separate WAN port because 443 belongs to the shared ingress and the two cannot
+be multiplexed: ghostunnel is a single-target TCP proxy, this cluster has no `tlsroutes`
+CRD, and the Cilium ingress terminates TLS so it cannot pass a raw handshake through.
+
+The CA is deliberately not a server-trust root anywhere -- see
+[charts/cert-manager](../charts/cert-manager/README.md). The phone verifies an ordinary
+Let's Encrypt certificate, so nothing custom is installed on any device.
+
+Details, including the enrolment order the app's code requires, are in
+[charts/homeassistant/README.md](../charts/homeassistant/README.md).
+
 ### Upstreams outside the cluster
 
 Home Assistant is a HA Yellow appliance at `10.0.99.9` serving HTTPS on `:8123`,
@@ -266,11 +291,9 @@ gate failing closed against real traffic.
 - **Double login.** The perimeter and the app each do their own Google
   round-trip; sharing the OAuth client makes the inner one a near-silent
   redirect. See [Two layers](#two-layers).
-- **The Home Assistant companion app.** The Android app can carry the proxy's
-  session cookie (one `OkHttpClient` with the WebView cookie jar, shared by REST
-  and the websocket) but cannot obtain one: it renders its login in an Android
-  `WebView`, and Google refuses OAuth in embedded webviews. The web UI works and
-  installs to a phone home screen; the app still needs the LAN.
+- **The Home Assistant companion app**, which cannot complete a Google challenge
+  in its `WebView` and so is gated by a client certificate on a separate host and
+  port instead. See [mutual TLS](#the-one-non-oauth2-proxy-door-mutual-tls).
 
 ## See also
 

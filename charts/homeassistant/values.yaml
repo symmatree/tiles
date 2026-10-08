@@ -1,6 +1,13 @@
-# Placeholder; the app-of-apps parent writes the real vault name. Used only by
-# templates/oauth2-proxy-secret.yaml.
+# Placeholders; the app-of-apps parent writes the real values (Terraform ->
+# app_of_apps_values -> this Application). vault_name is used by
+# templates/oauth2-proxy-secret.yaml; the other two by the mutual-TLS door, and
+# they are propagated rather than written here so the gateway's address and port
+# have exactly one source of truth -- tf/nodes, which is also what creates the
+# UniFi forward that must agree with them.
+cluster_name: placeholder
 vault_name: placeholder
+homeassistant_tls_lb_ip: placeholder
+homeassistant_tls_port: placeholder
 
 # oauth2-proxy perimeter gate in front of Home Assistant. This chart deploys
 # ONLY the gate -- Home Assistant itself is a Yellow appliance at 10.0.99.9 on
@@ -98,3 +105,66 @@ oauth2-proxy:
       - secretName: homeassistant-oauth2-proxy-tls
         hosts:
           - homeassistant.placeholder.symmatree.com
+
+# Mutual-TLS door -- the second door to Home Assistant, for clients
+# that cannot complete an interactive Google login. The Android companion app
+# renders its login in an Android WebView and Google refuses OAuth in embedded
+# webviews, so the oauth2-proxy door above is browser-only. Here the credential
+# is a client certificate issued by the device-identity CA, presented and checked
+# during the TLS handshake -- before there is an HTTP request to parse.
+#
+# Two ghostunnel processes, because server mode is "TLS listener -> plain TCP
+# target" and Home Assistant's only listener speaks TLS. They meet on the pod's
+# loopback. The split is what gives each hop exactly one trust store, which is a
+# feature rather than a cost: --cacert REPLACES the system pool rather than
+# merging into it (certloader.LoadTrustStore), so the client-facing hop trusts
+# ONLY the device CA for client auth, and the upstream hop trusts only the roots
+# in trust-bundle. Neither can be used in the other's position.
+ghostunnel:
+  # Distroless has no shell, no package manager -- and no CA roots, which is fine
+  # precisely because the upstream hop mounts trust-bundle explicitly instead of
+  # relying on the image to ship a trust store. Pinned, like the oauth2-proxy
+  # image, because this is internet-facing auth.
+  image: ghostunnel/ghostunnel:v1.11.3-distroless
+  hostname: homeassistant-tls.placeholder.symmatree.com
+  # The ONLY client-certificate subjects admitted, one line per device, so
+  # revoking a single device is deleting its line. ghostunnel has no CRL or OCSP
+  # support of any kind, and refuses to start when given no access-control flag,
+  # so this list is the entire authorization model. Each name here must have a
+  # matching entry in deviceCerts below, and a CN from any other issuer is
+  # rejected at the handshake regardless of what it claims to be.
+  allowedCNs:
+    - seth-pixel
+    - lisa-pixel
+  # Pod-local plaintext /_status and /_metrics, for the probes. Its default
+  # downstream check is a TCP probe of the hop's own target, so the upstream
+  # container reports Home Assistant's reachability rather than per-request
+  # failures.
+  statusPort: 61000
+  # Loopback hand-off between the two hops, inside the pod's network namespace.
+  internalPort: 9000
+  # Same appliance, same name-on-the-certificate reasoning as the oauth2-proxy
+  # --upstream above, and the same coupling to the homeassistant entry in
+  # charts/static-certs: renaming the appliance has to change both doors.
+  upstreamTarget: homeassistant.local.symmatree.com:8123
+
+# Client certificates issued to devices, one per entry, from the
+# device-identity CA (charts/cert-manager). The names are the certificate CNs
+# and must match ghostunnel.allowedCNs above. The PKCS#12 for installing on a
+# phone is built from the Secret at install time rather than stored -- see the
+# comment in templates/device-certs.helm.yaml for why.
+#
+# Long-lived on purpose: installing one is a manual trip to a physical phone, and
+# an expired client certificate fails at the TLS handshake with nothing shown in
+# the app. The CA is 2 years, so these cannot usefully outlast it.
+deviceCerts:
+  # Matched to the CA's own 2 years, so a device needs revisiting about that
+  # often, with a 90-day window to do it in. Long certificates are much cheaper
+  # here than usual because revocation does not depend on expiry: removing a name
+  # from ghostunnel.allowedCNs above takes effect on the next sync, with no CRL
+  # or OCSP involved.
+  duration: 17520h
+  renewBefore: 2160h
+  names:
+    - seth-pixel
+    - lisa-pixel
