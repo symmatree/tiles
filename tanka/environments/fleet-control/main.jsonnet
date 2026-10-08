@@ -41,6 +41,14 @@ local fleetControl = {
       'cert-manager.io/cluster-issuer': APP.app_settings.cluster_issuer,
     },
     ingressClassName: 'cilium',
+    // Where the pod bus is. The coordinator runs the broker, and the roster already says where
+    // the coordinator is, so this reads it from there. `host` is optional in the roster and
+    // defaults to the node name, which is also a usable address.
+    local roster = std.parseJson(importstr 'inventory.json'),
+    local coordinator = std.filter(function(n) n.role == 'coordinator', roster.nodes),
+    brokerHost: if std.length(coordinator) == 1
+    then std.get(coordinator[0], 'host', coordinator[0].name)
+    else error 'the roster must name exactly one coordinator, for the broker address',
   },
 
   new(overrides):: {
@@ -188,6 +196,11 @@ local fleetControl = {
           FLEET_NOTIFY_URL: 'http://apprise.apprise.svc:8000/notify/apprise',
           FLEET_NOTIFY_TAG: APP.cluster_name,
           FLEET_GROUND_TLOGS: '/mnt/ground-tlogs',
+          // The pod bus (coordinator#450). The broker is mochi-mqtt on the coordinator itself,
+          // not a cluster service, so this is the coordinator's own address -- taken from the
+          // roster below rather than written again here, because the same address in two places
+          // is one of them being wrong later.
+          FLEET_MQTT_URL: 'mqtt://' + config.brokerHost + ':1883',
           // Where a DEVICE reaches this service: it fetches its own image with get_url, so
           // the in-cluster service name is no use to it.
           FLEET_PUBLIC_URL: 'https://' + config.host,
