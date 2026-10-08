@@ -135,29 +135,6 @@ local fleetControl = {
       + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-ground-tlogs', config.name))
       + kPersistentVolumeClaim.spec.withStorageClassName(''),
 
-    // The base station's raw observations, which rtkbase now writes to
-    // `datasets/gps-logs/attic-rtk-base/raw/` -- the directory that already holds the base's logs
-    // and the README whose consumer is re-solving its position by PPP. READ-ONLY here: this
-    // service copies the days a flight spans into the flight directory; rtkbase owns writing them.
-    //
-    // Same claim in two environments, which is what ReadWriteMany is for -- and the reason this
-    // service no longer needs `pods/exec` in `ntrip` to read a file through a pipe
-    // (coordinator#416). `raw` is a subPath for the same reason it is in the `ntrip` environment.
-    baseObsPv:
-      kPersistentVolume.new(std.format('%s-attic-rtk-base', config.name))
-      + kPersistentVolume.spec.withCapacity({ storage: '500Gi' })
-      + kPersistentVolume.spec.withAccessModes(['ReadWriteMany'])
-      + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
-      + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
-      + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/gps-logs/attic-rtk-base'),
-
-    baseObsPvc:
-      kPersistentVolumeClaim.new(std.format('%s-attic-rtk-base', config.name))
-      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteMany'])
-      + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '500Gi' })
-      + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-attic-rtk-base', config.name))
-      + kPersistentVolumeClaim.spec.withStorageClassName(''),
-
     // Disk images the service has pushed. Nothing evicts them; the point is that pushing one
     // image to five machines is one fetch and five local reads (coordinator#312).
     //
@@ -211,7 +188,6 @@ local fleetControl = {
           FLEET_NOTIFY_URL: 'http://apprise.apprise.svc:8000/notify/apprise',
           FLEET_NOTIFY_TAG: APP.cluster_name,
           FLEET_GROUND_TLOGS: '/mnt/ground-tlogs',
-          FLEET_BASE_OBS: '/mnt/base-observations',
           // Where a DEVICE reaches this service: it fetches its own image with get_url, so
           // the in-cluster service name is no use to it.
           FLEET_PUBLIC_URL: 'https://' + config.host,
@@ -264,9 +240,7 @@ local fleetControl = {
       + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state')
       + k_util.pvcVolumeMount(fcObj.imagePvc.metadata.name, '/images')
       + k_util.pvcVolumeMount(fcObj.flightsPvc.metadata.name, '/mnt/flights')
-      + k_util.pvcVolumeMount(fcObj.tlogsPvc.metadata.name, '/mnt/ground-tlogs')
-      + k_util.pvcVolumeMount(fcObj.baseObsPvc.metadata.name, '/mnt/base-observations', readOnly=true,
-                              volumeMountMixin=kVolumeMount.withSubPath('raw')),
+      + k_util.pvcVolumeMount(fcObj.tlogsPvc.metadata.name, '/mnt/ground-tlogs'),
 
     // serviceFor names the port after the deployment (`fleet-control-http`, 18 chars) and an
     // Ingress backend port name is capped at 15. Name it `http` instead -- the length limit is
