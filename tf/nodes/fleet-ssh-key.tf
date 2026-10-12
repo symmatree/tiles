@@ -69,12 +69,12 @@ resource "onepassword_item" "fleet_ssh_key" {
 # converge: dotfiles-symm pi-image/provision/user-data.template puts this key in the
 # uid-1000 account's authorized_keys at flash time. It has to be this key and not an
 # operator's, because convergence is how everything else reaches a device and you
-# cannot converge without a key already present (coordinator#77).
+# cannot converge without a key already present (symmatree/dotfiles-symm#77).
 #
 # Rotation is still `terraform apply` plus a converge rather than a reflash, but that
 # rests on ansible managing authorized_keys -- pushing the new key over the old one,
 # which is still there from the seed. NOTHING IN host/ansible DOES THAT YET; it is the
-# remaining half of coordinator#77. Until it lands, rotating this key reaches a card
+# remaining half of symmatree/dotfiles-symm#77. Until it lands, rotating this key reaches a card
 # only by reflashing it or by hand.
 output "fleet_ssh_public_key" {
   description = "Public half of the fleet management key, for authorized_keys on every fleet node."
