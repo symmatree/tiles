@@ -309,37 +309,25 @@ jobs:
         working-directory: "tf/nodes"
         run: |
           set -euo pipefail
-          # Resolve against site DNS explicitly. The CT names are DHCP registrations in the
-          # local.symmatree.com zone Raconteur serves, and that zone is not public; wg-quick
-          # gives this runner L3 to the LAN but leaves its resolver alone, so the names do
-          # not resolve here on their own -- which failed the reload on the first host of
-          # every apply until this was fixed. Raconteur's OWN name is public
-          # (raconteur.ad.local.symmatree.com -> 10.0.99.1, the same way the synology
-          # provider reaches it), so the resolver is addressable without hardcoding an IP.
-          SITE_DNS=raconteur.ad.local.symmatree.com
-          SITE_ZONE=local.symmatree.com
-          sudo apt-get install -y -qq dnsutils
           terraform workspace select prod
           # Names come from local.alloy_nodes, so this is the same source the CTs are created
-          # from; the name is the CT's initialization.hostname.
+          # from; the short name is the CT's initialization.hostname.
           hosts=$(terraform output -json proxmox_alloy_ct_hostnames | jq -r '.[]')
           echo "Reloading: ${hosts}"
+          # Fully qualified, because the runner has a site nameserver but no search domain.
+          # wg-quick applies the tunnel's `DNS = 10.1.0.1` via `resolvconf -a wg0 -m 0 -x`,
+          # and that resolver does serve this zone -- but it sets no search suffix, so a bare
+          # `alloy-<node>` has nothing to complete and failed with curl exit 6 on the first
+          # host of every apply. These are DHCP registrations in a zone that is not public,
+          # so the qualified name only resolves while the tunnel is up, which it is here.
+          ZONE=local.symmatree.com
           for host in ${hosts}; do
-            echo "::group::reload ${host}"
-            # Keep only A records; dig also prints CNAME lines, and an empty value would
-            # otherwise build a confusing http://:12345 URL.
-            addr=$(dig +short +time=5 +tries=2 "@${SITE_DNS}" "${host}.${SITE_ZONE}" \
-              | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -1)
-            if [ -z "${addr}" ]; then
-              echo "::error title=Alloy reload::${host}.${SITE_ZONE} did not resolve at ${SITE_DNS}"
-              exit 1
-            fi
-            echo "${host}.${SITE_ZONE} -> ${addr}"
+            echo "::group::reload ${host}.${ZONE}"
             # Assert on the body, not just the status: Alloy's HTTP server answers an
             # unknown path with 200 and the UI's HTML, so `curl -f` alone would report
             # success for a moved or mistyped endpoint without having reloaded anything.
             # A changed response string fails here rather than passing silently.
-            body=$(curl -fsS --max-time 30 -X POST "http://${addr}:12345/-/reload")
+            body=$(curl -fsS --max-time 30 -X POST "http://${host}.${ZONE}:12345/-/reload")
             echo "${body}"
             echo "${body}" | grep -qx "config reloaded"
             echo "::endgroup::"
