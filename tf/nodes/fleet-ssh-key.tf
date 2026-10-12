@@ -2,7 +2,8 @@
 #
 # Terraform generates the keypair and writes it to 1Password; the cluster reads it back
 # through a OnePasswordItem CR (tanka/environments/fleet-control). Nothing about the key
-# is hand-made, so rotating it is `terraform apply` plus a converge -- not a reflash.
+# is hand-made, and rotating it is meant to be `terraform apply` plus a converge rather
+# than a reflash -- see the output at the bottom for what that still depends on.
 #
 # In tf/nodes rather than tf/bootstrap because rotation is meant to be routine, and
 # bootstrap is the manual super-admin layer. This also puts the key next to the fleet's
@@ -64,8 +65,17 @@ resource "onepassword_item" "fleet_ssh_key" {
   }
 }
 
-# The half that has to reach the devices. Ansible installs this in `pi`'s authorized_keys
-# during convergence, which is what makes rotation independent of the image.
+# The half that has to reach the devices, and the route is the SEED rather than a
+# converge: dotfiles-symm pi-image/provision/user-data.template puts this key in the
+# uid-1000 account's authorized_keys at flash time. It has to be this key and not an
+# operator's, because convergence is how everything else reaches a device and you
+# cannot converge without a key already present (coordinator#77).
+#
+# Rotation is still `terraform apply` plus a converge rather than a reflash, but that
+# rests on ansible managing authorized_keys -- pushing the new key over the old one,
+# which is still there from the seed. NOTHING IN host/ansible DOES THAT YET; it is the
+# remaining half of coordinator#77. Until it lands, rotating this key reaches a card
+# only by reflashing it or by hand.
 output "fleet_ssh_public_key" {
   description = "Public half of the fleet management key, for authorized_keys on every fleet node."
   value       = tls_private_key.fleet.public_key_openssh
