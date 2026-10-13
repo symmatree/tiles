@@ -19,7 +19,7 @@ without anyone noticing, which is exactly what happened: this README described `
 | Image | `ghcr.io/symmatree/coordinator-fleet-control:main` |
 | Source | [`coordinator/containers/fleet-control`](https://github.com/symmatree/coordinator/tree/main/containers/fleet-control) |
 | Tanka | [`main.jsonnet`](main.jsonnet), settings in [`application.yaml`](application.yaml) |
-| Argo CD | [`fleet-control-application.yaml`](../../../charts/argocd-applications/templates/fleet-control-application.yaml) |
+| Argo CD | [`fleet-control-application.helm.yaml`](../../../charts/argocd-applications/templates/fleet-control-application.helm.yaml) (prod only) |
 | Issues | coordinator [#236](https://github.com/symmatree/coordinator/issues/236), [#223](https://github.com/symmatree/coordinator/issues/223) |
 
 Runs on both clusters.

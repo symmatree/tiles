@@ -210,7 +210,7 @@ Thin Argo apps that render Jsonnet mixins (dashboards/rules), not the primary wo
 ### fleet-control
 
 - **Terraform**: N/A
-- **Application**: [`tanka/environments/fleet-control/application.yaml`](https://github.com/symmatree/tiles/blob/main/tanka/environments/fleet-control/application.yaml)
+- **Application**: [`tanka/environments/fleet-control/application.helm.yaml`](https://github.com/symmatree/tiles/blob/main/tanka/environments/fleet-control/application.helm.yaml)
 - **README**: [`tanka/environments/fleet-control/README.md`](https://github.com/symmatree/tiles/blob/main/tanka/environments/fleet-control/README.md)
 - **Description**: Ground-station control surface for the rekon10 fleet; sets up a freshly flashed card and holds the fleet inventory.
 ### flight-analysis
