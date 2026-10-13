@@ -1,3 +1,4 @@
+{{- if eq .Values.cluster_name "tiles" }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -24,8 +25,12 @@ spec:
             image: 'ghcr.io/symmatree/coordinator-fleet-control:main'
             hostname: 'fleet.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
             cluster_issuer: "real-cert"
-            # Shared across clusters (no prefix): there is one fleet and one key, and both
-            # clusters read the same vault. Created by terraform, tf/nodes/fleet-ssh-key.tf
+            # One fleet, one key, one writer. No cluster prefix because the key is not
+            # per-cluster -- it is the physical fleet's, and only prod converges the fleet,
+            # which is why this Application is gated to prod above and the terraform resource
+            # is gated the same way. Both workspaces used to write this title into the one
+            # vault, leaving two items of the same name holding different keypairs.
+            # Created by terraform, tf/nodes/fleet-ssh-key.tf
             # -- the item it replaced was hand-made and held the key in PKCS8, which ssh
             # cannot read for ed25519 (`Load key: invalid format`, coordinator#261).
             ssh_key_secret: 'fleet-ssh-key-managed'
@@ -56,3 +61,4 @@ spec:
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/warn: baseline
+{{- end }}
