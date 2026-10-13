@@ -65,17 +65,27 @@ resource "onepassword_item" "fleet_ssh_key" {
   }
 }
 
-# The half that has to reach the devices, and the route is the SEED rather than a
-# converge: dotfiles-symm pi-image/provision/user-data.template puts this key in the
-# uid-1000 account's authorized_keys at flash time. It has to be this key and not an
-# operator's, because convergence is how everything else reaches a device and you
-# cannot converge without a key already present (symmatree/dotfiles-symm#77).
+# The half that has to reach the devices, by two routes.
 #
-# Rotation is still `terraform apply` plus a converge rather than a reflash, but that
-# rests on ansible managing authorized_keys -- pushing the new key over the old one,
-# which is still there from the seed. NOTHING IN host/ansible DOES THAT YET; it is the
-# remaining half of symmatree/dotfiles-symm#77. Until it lands, rotating this key reaches a card
-# only by reflashing it or by hand.
+# The SEED: dotfiles-symm pi-image/provision/user-data.template puts this key in the
+# uid-1000 account's authorized_keys at flash time, as the single entry. It has to be
+# the fleet key rather than an operator's, because convergence is how everything else
+# arrives and convergence needs a key already present
+# (symmatree/dotfiles-symm#77).
+#
+# The CONVERGE: coordinator host/ansible/roles/ssh-access then writes that file whole.
+# It does NOT read the key from a repo literal -- `fleet_ssh_public_key` is supplied at
+# run time by whoever is converging, and fleet-control derives it from the private key
+# it is authenticating with (containers/fleet-control/src/ansible.ts). So a device
+# trusts the key the service is provably using, and no third copy can go stale.
+#
+# THIS OUTPUT IS NOT THAT KEY. Measured 2026-10-13: the value below and the
+# `public-key` field of the cluster secret `fleet-ssh-key-managed` are different
+# keypairs, and the secret is the one in use. Why they diverged is not established --
+# onepassword_item.fleet_ssh_key takes both its key fields from the same
+# tls_private_key.fleet that feeds this output, so one successful apply does not
+# produce it. Until that is resolved, do not use this output as a device-facing value;
+# it cost one card a reflash when it was used that way.
 output "fleet_ssh_public_key" {
   description = "Public half of the fleet management key, for authorized_keys on every fleet node."
   value       = tls_private_key.fleet.public_key_openssh
