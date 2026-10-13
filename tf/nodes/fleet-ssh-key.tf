@@ -2,8 +2,7 @@
 #
 # Terraform generates the keypair and writes it to 1Password; the cluster reads it back
 # through a OnePasswordItem CR (tanka/environments/fleet-control). Nothing about the key
-# is hand-made, and rotating it is meant to be `terraform apply` plus a converge rather
-# than a reflash -- see the output at the bottom for what that still depends on.
+# is hand-made, so rotating it is `terraform apply` plus a converge -- not a reflash.
 #
 # In tf/nodes rather than tf/bootstrap because rotation is meant to be routine, and
 # bootstrap is the manual super-admin layer. This also puts the key next to the fleet's
@@ -65,28 +64,11 @@ resource "onepassword_item" "fleet_ssh_key" {
   }
 }
 
-# The half that has to reach the devices, by two routes.
-#
-# The SEED: dotfiles-symm pi-image/provision/user-data.template puts this key in the
-# uid-1000 account's authorized_keys at flash time, as the single entry. It has to be
-# the fleet key rather than an operator's, because convergence is how everything else
-# arrives and convergence needs a key already present
-# (symmatree/dotfiles-symm#77).
-#
-# The CONVERGE: coordinator host/ansible/roles/ssh-access then writes that file whole.
-# It does NOT read the key from a repo literal -- `fleet_ssh_public_key` is supplied at
-# run time by whoever is converging, and fleet-control derives it from the private key
-# it is authenticating with (containers/fleet-control/src/ansible.ts). So a device
-# trusts the key the service is provably using, and no third copy can go stale.
-#
-# THIS OUTPUT IS NOT THAT KEY. Measured 2026-10-13: the value below and the
-# `public-key` field of the cluster secret `fleet-ssh-key-managed` are different
-# keypairs, and the secret is the one in use. Why they diverged is not established --
-# onepassword_item.fleet_ssh_key takes both its key fields from the same
-# tls_private_key.fleet that feeds this output, so one successful apply does not
-# produce it. Until that is resolved, do not use this output as a device-facing value;
-# it cost one card a reflash when it was used that way.
+# The public half, for reference. NOT the device-facing value: what a device trusts is
+# installed at converge time from the secret fleet-control authenticates with, and this
+# output is not guaranteed to match it. Use the cluster secret for anything that reaches
+# a device. The key path is symmatree/dotfiles-symm#77.
 output "fleet_ssh_public_key" {
-  description = "Public half of the fleet management key, for authorized_keys on every fleet node."
+  description = "Public half of the fleet management key. Reference only -- see the comment above."
   value       = tls_private_key.fleet.public_key_openssh
 }
