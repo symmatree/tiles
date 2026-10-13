@@ -76,11 +76,15 @@ These are manual and are **not** created by this chart. Until they exist the gat
 2. **1Password item** `homeassistant-oauth2-proxy` in the `tiles-secrets` vault, with field labels
    exactly `client-id` / `client-secret` / `cookie-secret`: the first two from that client, the third
    from `openssl rand -base64 32 | tr -- '+/' '-_'`.
-3. **`ha-config`**: `http.use_x_forwarded_for: true` and `http.trusted_proxies: 10.0.144.0/20`.
+3. **`ha-config`**: `http.use_x_forwarded_for: true` and `http.trusted_proxies: 10.0.128.0/24`.
    oauth2-proxy sets `X-Forwarded-For` on every upstream request, and Home Assistant raises
    `HTTPBadRequest` for an `X-Forwarded-For` it was not configured to expect -- so without this the
    gate authenticates you and then every request returns 400. Landing this change early is harmless:
-   nothing else sends Home Assistant an `X-Forwarded-For` today.
+   nothing else sends Home Assistant an `X-Forwarded-For` today. Needs `ha core restart`.
+
+   That is the **node** subnet, not the pod CIDR -- see
+   [docs/remote-access.md](../../docs/remote-access.md#upstreams-outside-the-cluster). Do not reach
+   for `--trusted-proxy-ip`'s value here; the two point in opposite directions.
 
 ## The second layer is a local Home Assistant account
 

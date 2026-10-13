@@ -118,6 +118,18 @@ oauth2-proxy's `--upstream` takes a URL, so the upstream is just
 the certificate `charts/static-certs` pushes to it means the upstream handshake
 verifies against the real chain.
 
+A second consequence of the upstream being off-cluster: Cilium masquerades pod
+traffic leaving the cluster to the **node's** address, so Home Assistant sees the
+node, never the pod. Its `trusted_proxies` is therefore the node subnet
+`10.0.128.0/24`, *not* the pod CIDR that oauth2-proxy's own
+`--trusted-proxy-ip` uses. Those two settings look interchangeable and are not:
+`--trusted-proxy-ip` governs the inbound hop, where the Cilium ingress Envoy
+SNATs into the pod CIDR, while the upstream hop is masqueraded to a node.
+Measured -- a login through the gate gave `AuthSuccess` and then `400`, with HA
+logging `a request from a reverse proxy was received from 10.0.128.23`
+(`tiles-wk-3`). An in-cluster upstream never shows this, because the traffic
+never leaves and never gets masqueraded.
+
 For an in-cluster app the `ClusterIP` flip makes through-mode structural. For
 this one it is not: **the only thing preventing a direct path to `10.0.99.9` is
 that no UniFi forward reaches it.** Adding one would silently undo the gate.
