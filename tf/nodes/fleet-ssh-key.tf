@@ -36,25 +36,6 @@ resource "tls_private_key" "fleet" {
   algorithm = "ED25519"
 }
 
-# ADDING `count` CHANGES THE ADDRESS, AND WITHOUT THESE THAT IS A ROTATION.
-#
-# `tls_private_key.fleet` becomes `tls_private_key.fleet[0]`, which terraform reads as one
-# resource destroyed and a different one created -- a NEW keypair. Every device's
-# authorized_keys would then hold a key nobody has, and fleet-control could not reach the
-# fleet at all. These keep prod's existing key exactly where it is.
-#
-# In a non-prod workspace `count` is 0, so the move resolves to nothing and the item is
-# planned for destruction, which is the intent -- that workspace should never have had one.
-moved {
-  from = tls_private_key.fleet
-  to   = tls_private_key.fleet[0]
-}
-
-moved {
-  from = onepassword_item.fleet_ssh_key
-  to   = onepassword_item.fleet_ssh_key[0]
-}
-
 # secure_note, not an SSH Key item: the provider's categories are login / password /
 # database / secure_note, so it cannot create 1Password's native SSH Key type. That only
 # affects how the item renders in the 1Password UI. What the cluster consumes is the field
