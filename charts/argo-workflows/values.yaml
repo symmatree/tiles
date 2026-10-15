@@ -1,0 +1,65 @@
+# Argo Workflows, for jobs that want their own pod rather than someone else's process.
+#
+# First consumer is coordinator#504: fleet-control runs `ansible-playbook` inside its own
+# pod today, so a merge that rolls that pod kills any converge in flight. It is not the
+# only intended one -- Seth wanted this for other jobs independently.
+
+argo-workflows:
+  # NOT ON LANCER. lancer is where Seth runs notebooks and mapping jobs, and its headroom
+  # exists so that his large allocations succeed. It is reserved behind a `dedicated=heavy`
+  # taint, and the way to stay off it is to not tolerate that taint -- so there is
+  # deliberately no `tolerations:` here, and adding one needs his express approval rather
+  # than being a convenience when something does not fit.
+  #
+  # Nothing is pinned to a particular worker either. `tiles-wk-1` is full (19 MiB
+  # unrequested) so the scheduler skips it on its own, and `tiles-wk-3` has the room
+  # (3.0 GiB unrequested, 36% used). Naming a node here would just go stale.
+
+  # SINGLE NAMESPACE, which is what keeps this off cluster-scoped RBAC.
+  #
+  # By default the chart binds the controller to a ClusterRole carrying `pods`
+  # create/delete/exec and `secrets` get across EVERY namespace -- read any secret in the
+  # cluster, run a pod anywhere. Setting `workflowNamespaces` does not change that; the
+  # binding is still cluster-wide.
+  #
+  # `singleNamespace: true` issues Roles and RoleBindings instead of the Cluster
+  # equivalents and starts the controller with `--namespaced`, so its reach is this
+  # namespace and nothing else. Workflows run here, which is all coordinator#504 needs --
+  # a converge is a pod running ansible, not something that has to touch other namespaces.
+  #
+  # Turning this off is a request for cluster-wide pod-create and secret-read. That needs
+  # Seth's express approval and a reason, not a values edit.
+  singleNamespace: true
+
+  # CRDs come from the bootstrap layer, not from this chart, like every other CRD-bearing
+  # component here: ci-tools/crd-charts/sources.yaml builds them and
+  # tf/nodes/k8s-bootstrap.tf installs them. The reason is in sources.yaml -- Helm never
+  # upgrades or deletes anything in a chart's crds/, so a CRD parked there can only ever be
+  # created once.
+  crds:
+    install: false
+
+  controller:
+    # Follows from singleNamespace: a ClusterWorkflowTemplate is a cluster-scoped object,
+    # so reading one needs a ClusterRole and a ClusterRoleBinding. Namespaced
+    # WorkflowTemplates do everything we need. Leaving this on under singleNamespace also
+    # emits a ClusterRoleBinding pointing at a ClusterRole the chart no longer renders.
+    clusterWorkflowTemplates:
+      enabled: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  # The UI/API server. Off: nothing needs it yet, and a server is an authn surface and a
+  # second resident process. `kubectl get workflows` and the pod logs answer the questions
+  # it would answer. Turn it on when there is a person who wants it, not in advance.
+  server:
+    enabled: false
+
+  # No artifact repository configured. A step that wants to keep something writes it
+  # somewhere real; workflow results here are the step's pod log, which Alloy already
+  # collects into Loki.
+  artifactRepository: {}

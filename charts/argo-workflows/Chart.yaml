@@ -1,0 +1,12 @@
+apiVersion: v2
+name: argo-workflows
+description: Argo Workflows -- a place to run a job in its own pod
+type: application
+# Our wrapper's version. Bump on any change here, including a dependency bump.
+version: 0.1.0
+# The upstream argo-workflows version this deploys.
+appVersion: "4.1.5"
+dependencies:
+  - name: argo-workflows
+    version: 2.0.13
+    repository: https://argoproj.github.io/argo-helm
