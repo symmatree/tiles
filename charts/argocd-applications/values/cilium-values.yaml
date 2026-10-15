@@ -1,5 +1,26 @@
 # Chart defaults live in charts/cilium/values.yaml. Templated keys in charts/cilium/application.yaml valuesObject.
 cilium:
+  # Set explicitly so every Helm version renders the same cilium-config, and do not remove
+  # them for looking redundant.
+  #
+  # The subchart gates both on `hasKey` in templates/cilium-configmap.yaml and defaults both
+  # to nil. Helm versions disagree about whether a nil from a chart's own values.yaml survives
+  # coalescing -- 3.19.4 prunes it, so hasKey is false and the key is omitted; 3.20.2 keeps it,
+  # so the key renders as "". The chart hashes that whole template into the
+  # cilium.io/cilium-configmap-checksum annotation on the agent and operator pod templates, so
+  # the one-key difference changes the checksum. Argo CD's repo-server and the Terraform
+  # provider that writes this release run different Helm versions, which is what put the
+  # DaemonSet and the operator Deployment permanently OutOfSync. An explicit non-nil value
+  # makes hasKey true for every version.
+  #
+  # Both are the no-op the chart already had: debug-verbose is a GetStringSlice of subsystems
+  # to log verbosely, so "" selects none; nodeport-addresses is only consulted when
+  # len(NodePortAddresses) > 0 (pkg/datapath/tables/node_address.go), so an empty list keeps
+  # the default of the first suitable private address per device.
+  debug:
+    verbose: ""
+  nodePort:
+    addresses: []
   resources:
     requests:
       memory: 160Mi
