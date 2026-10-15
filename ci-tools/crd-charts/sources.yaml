@@ -32,6 +32,19 @@ charts:
       - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/applicationset-crd.yaml
       - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/appproject-crd.yaml
 
+  - name: argo-workflows-crds
+    version: 0.1.0
+    ref: v4.1.5
+    description: Argo Workflows CRDs (Workflow, WorkflowTemplate, CronWorkflow, and friends)
+    urls:
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflows.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflowtemplates.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_clusterworkflowtemplates.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_cronworkflows.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflowtasksets.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflowartifactgctasks.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workfloweventbindings.yaml
+
   - name: cert-manager-crds
     version: 0.1.0
     ref: v1.19.2

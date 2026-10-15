@@ -466,6 +466,36 @@ spec:
       - ServerSideApply=true
 
 ---
+# Source: argocd-applications/templates/argo-workflows-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: charts/argo-workflows
+    helm:
+      # CRDs are installed by tf/nodes/k8s-bootstrap.tf, not by this sync.
+      skipCrds: true
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: 'placeholder'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-workflows
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
 # Source: argocd-applications/templates/argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application

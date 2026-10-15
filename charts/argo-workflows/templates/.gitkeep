@@ -1,0 +1,3 @@
+# `helm lint --strict` fails a chart with no templates/ directory, and this wrapper has
+# nothing of its own to add -- everything comes from the upstream dependency. Keeping the
+# directory present is cheaper than carrying a template nobody wanted.
