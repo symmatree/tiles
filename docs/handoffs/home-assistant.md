@@ -26,10 +26,12 @@ page should shrink when that happens:
   unmerged, waiting on a hands-on test with a device.
 - Five of six Zooz motion sensors are battery-dead and feed `entity_controller`.
   Tracked as `ha-config#4`; the surrounding maintenance plan is `#5`-`#10`.
-- A one-time exhaustive sweep for not-responding and misconfigured entities is
-  agreed but not started -- deliberately after the pending upgrades and Repairs
-  settle. The point is enumeration over sampling, since these signals do not
-  collect anywhere in the UI.
+- First pass of the entity sweep is done. Of 2709 registry entries: 1391
+  disabled (1387 of those by the integration itself, which is routine -- only 4
+  are deliberate), 0 orphaned with no state, 470 `restored`, 19 `unavailable`,
+  77 `unknown` and 10 unmanageable. Most of the `unknown` pile is
+  stateless-by-design (buttons, Hue scenes). The `restored` pile is where the
+  real findings were.
 - `konnected` and `songpal` not loaded; `roborock` fails on credentials; `xbox`
   fails against its account-link endpoint. All predate the current work.
 - Hubitat's own Z-Wave radio reports `isRadioUpdateNeeded: true`.
@@ -73,6 +75,20 @@ A shallow sparse clone of `home-assistant/core` is at
 runs. Re-pin after a core update. Reading the source beats guessing what a field
 means from its name.
 
+### Computing the buckets
+
+HA's entity filters correspond to set operations over the registry and states,
+and the distinctions matter because they have different causes:
+
+| bucket | how to compute | what it means |
+| --- | --- | --- |
+| disabled | registry `disabled_by` set | split by value: `integration` is routine, `user` is deliberate |
+| not provided | in registry, no state at all | orphaned registry entry |
+| restored | state carries `attributes.restored` | the id is remembered but nothing supplies it |
+| unavailable | state `unavailable`, not restored | the integration is present and says it cannot reach the thing |
+| unknown | state `unknown` | often by design -- buttons and scenes have no state until used |
+| unmanageable | has a state, no registry entry | YAML/template entities; cannot be edited from the UI |
+
 ## Things that have produced wrong answers here
 
 Kept on this page because they are about method rather than about the system.
@@ -97,6 +113,16 @@ Kept on this page because they are about method rather than about the system.
 - **Dump a set before filtering it.** `system_log/list` rows carry a `count` and
   a `message` *list*; slicing that list, or grepping for a word that also appears
   in routine lines, has produced wrong conclusions here more than once.
+- **A dead battery does not make a binary sensor unavailable -- it freezes it.**
+  Several motion sensors here have been reporting `on` continuously since their
+  cells died months ago, and HA shows them as ordinary and healthy. Downstream
+  automation then sees permanent motion. `unavailable` at least fails loudly;
+  stuck-at-a-plausible-value does not, so a sweep has to look for staleness and
+  not only for error states.
+- **A dead registry entry squats its entity id**, and the live entity that wants
+  that id silently gets a `_2` suffix. So the obvious-looking id can be the dead
+  one and the real device can be on the suffixed id. Check `attributes.restored`
+  before trusting an id that appears in YAML, a dashboard or an external caller.
 - **The upstream leg of the gate is testable from any pod** without a browser:
   send the appliance a request carrying `X-Forwarded-For`. 400 means it is
   rejecting proxied requests, 200 means the path works. This caught a wrong CIDR
