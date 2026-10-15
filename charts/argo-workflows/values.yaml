@@ -76,9 +76,35 @@ argo-workflows:
           hosts:
             - argo.tiles.symmatree.com
 
-  # ARTIFACT REPOSITORY: deliberately not set here, because there is nothing to point it
-  # at yet. Loki and Mimir both run `minio: enabled: false` against filesystem PVCs, so
-  # this cluster has no S3-compatible endpoint and no bucket. Standing up one is its own
-  # decision -- see tiles#827 -- and until it is made, workflows pass data between steps
-  # with volumes and leave their record in the step's pod log, which Alloy collects into
-  # Loki.
+  # NO ARTIFACT REPOSITORY, and this is settled rather than pending.
+  #
+  # The cluster has no S3-compatible endpoint -- Loki and Mimir both run
+  # `minio: enabled: false` against filesystem PVCs -- so one would have to be created.
+  # Seth has ruled out both ways of doing that: MinIO because an in-cluster object store
+  # is a large standing commitment, and GCS because it is an external dependency and a
+  # bill. Not an omission waiting to be filled in; do not re-open it by adding one.
+  #
+  # WHAT THAT MEANS FOR WHOEVER WRITES A WORKFLOW HERE. The engine does not require a
+  # repository -- no repository is the chart's own default. What is unavailable:
+  #
+  #   * `outputs.artifacts` without an inline location. There is nowhere to put the file,
+  #     so a step declaring one fails at run time.
+  #   * `archiveLogs: true`, so the Argo UI can show a step's logs only while its pod
+  #     still exists.
+  #   * the UI's artifact download links.
+  #
+  # What works unchanged:
+  #
+  #   * `outputs.parameters` and `valueFrom` -- these ride in the Workflow object, not the
+  #     store, so strings and small JSON pass between steps normally.
+  #   * real files between steps, via `volumeClaimTemplates`: a per-workflow PVC each step
+  #     mounts. This is the normal no-object-store pattern, and `local-path` and NFS
+  #     storage classes are both available here.
+  #   * all the orchestration -- DAGs, steps, retries, cron, suspend/resume, parallelism.
+  #   * logs as a durable record: Alloy ships pod logs to Loki, so they survive the pod.
+  #     They live in Grafana rather than in the Argo UI.
+  #
+  # Not the same thing as the WORKFLOW ARCHIVE, which the names invite confusing. That is
+  # a Postgres/MySQL database of completed-workflow history (`persistence`, also unset).
+  # Without it a finished Workflow is a CR in etcd and goes when it is garbage-collected,
+  # so how far back history reaches is a retention question, not an object-store one.
