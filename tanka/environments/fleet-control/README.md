@@ -22,7 +22,7 @@ without anyone noticing, which is exactly what happened: this README described `
 | Argo CD | [`fleet-control-application.helm.yaml`](../../../charts/argocd-applications/templates/fleet-control-application.helm.yaml) (prod only) |
 | Issues | coordinator [#236](https://github.com/symmatree/coordinator/issues/236), [#223](https://github.com/symmatree/coordinator/issues/223) |
 
-Runs on both clusters.
+Prod (`tiles`) only: it converges the fleet, and the fleet SSH key has exactly one writer.
 
 ## Two credentials, both from 1Password
 
@@ -34,9 +34,10 @@ Both items must exist in the `tiles-secrets` vault before the first sync.
 | fleet SSH key | `fleet-ssh-key-managed` (SSH Key) | `private-key` | created by `tf/nodes/fleet-ssh-key.tf`; mounted at `/secrets/ssh/id` |
 | GitHub token | `FLEET_GITHUB_TOKEN` (Login) | `password` | *Actions: read-only*, fine-grained |
 
-Unprefixed and shared: there is one fleet, one key, and both clusters read the same vault
-(`onepassword_vault_name` is set in `terraform.tfvars`, not per workspace). The item names are
-parameters -- point them at an item that exists rather than copying a key into a new one.
+Unprefixed: there is one fleet and one key, and `onepassword_vault_name` comes from
+`terraform.tfvars` rather than per workspace, so the name is not qualified by cluster and must not
+be written from more than one place -- see `tf/nodes/fleet-ssh-key.tf`. The item names are
+parameters: point them at an item that exists rather than copying a key into a new one.
 
 The operator lowercases field labels and replaces spaces with hyphens, which is why an SSH Key
 item's *private key* field arrives as `private-key`. The 1Password *title* `FLEET_GITHUB_TOKEN`
