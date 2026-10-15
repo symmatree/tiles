@@ -18,19 +18,15 @@
 # deliberate choice, not a compromise: the bucket's integrity traces to Google's, which is
 # at least as good a custodian as 1Password for this.
 
-# PROD ONLY, and the reason is a collision rather than tidiness.
+# PROD ONLY, AND EXACTLY ONE WRITER.
 #
-# `onepassword_vault_name` is set in terraform.tfvars, which is auto-loaded for EVERY workspace,
-# and neither test.tfvars nor prod.tfvars overrides it -- so both workspaces wrote into
-# `tiles-secrets`. The item title was a literal with no `cluster_name` in it, unlike every other
-# per-cluster item here. Each workspace has its own state, so each believed it owned the item and
-# neither cleaned up the other's: the vault ended up with TWO items titled `fleet-ssh-key-managed`
-# holding DIFFERENT keypairs, and 1Password refuses a name lookup when a title is ambiguous. That
-# is why `terraform output` here and the key fleet-control actually loads disagreed.
-#
-# Prefixing per cluster is the wrong fix: there is ONE physical fleet, and a device's
-# authorized_keys can only sensibly trust one fleet key. So one writer, in prod -- which is also
-# the only cluster that converges the fleet. fleet-control's Application is gated the same way.
+# There is one physical fleet, and a device's authorized_keys can only sensibly trust one fleet
+# key, so the item must not be per-cluster. `onepassword_vault_name` comes from terraform.tfvars,
+# which every workspace auto-loads, and the title is a literal with no `cluster_name` -- so any
+# workspace that creates this is writing to the same name in the same vault as every other one.
+# Gated to prod, which is also the only cluster that converges the fleet; fleet-control's
+# Application is gated the same way. Two writers here means two items of the same name, and
+# 1Password refuses a name lookup when a title is ambiguous.
 locals {
   fleet_ssh_key_here = var.cluster_name == "tiles" ? 1 : 0
 }
