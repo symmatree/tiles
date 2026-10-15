@@ -33,6 +33,8 @@ page should shrink when that happens:
 - `konnected` and `songpal` not loaded; `roborock` fails on credentials; `xbox`
   fails against its account-link endpoint. All predate the current work.
 - Hubitat's own Z-Wave radio reports `isRadioUpdateNeeded: true`.
+- `ha-config#11` removes the migrated `http:` block; `#4`-`#10` are the
+  maintenance and monitoring plan.
 
 ## Technique
 
@@ -52,11 +54,19 @@ websocket `supervisor/api` passthrough with `endpoint` and `method` instead.
 | disk, backups, add-ons, host actions | `supervisor/api` |
 | backup schedule and retention | `backup/config/info` |
 | outstanding Repairs | `repairs/list_issues` |
+| the live HTTP config (TLS paths, trusted proxies) | `http/config` -- see below |
 
 `homeassistant.restart` restarts Core only (~6 min); `/host/reboot` through the
 passthrough reboots the appliance, which is what a radio firmware change wants.
 A restart call returns **504** because Core tears down its own HTTP server
 mid-request -- that is success.
+
+**HTTP config is no longer YAML.** Home Assistant migrated it to storage in
+2026.10; `configuration.yaml`'s `http:` block is ignored from that point and
+stops working in 2027.2.0. `http/config` returns `stable`, `pending`,
+`revert_at` and `active_config_type` -- a freshly migrated or edited config is
+staged as a *pending trial* and reverts after five minutes unless promoted, so
+check `active_config_type` rather than assuming an edit stuck.
 
 A shallow sparse clone of `home-assistant/core` is at
 `/home/jovyan/upstream/home-assistant-core`, pinned to the tag the appliance

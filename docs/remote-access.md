@@ -127,7 +127,9 @@ node, never the pod. Its `trusted_proxies` is therefore the node subnet
 SNATs into the pod CIDR, while the upstream hop is masqueraded to a node.
 Measured -- a login through the gate gave `AuthSuccess` and then `400`, with HA
 logging `a request from a reverse proxy was received from 10.0.128.23`
-(`tiles-wk-3`). An in-cluster upstream never shows this, because the traffic
+(`tiles-wk-3`). Note that this setting lives in Home Assistant's storage rather
+than its YAML, since 2026.10; read the active value over its websocket API with
+`{"type": "http/config"}`. An in-cluster upstream never shows this, because the traffic
 never leaves and never gets masqueraded.
 
 For an in-cluster app the `ClusterIP` flip makes through-mode structural. For
