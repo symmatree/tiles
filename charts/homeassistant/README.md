@@ -76,15 +76,21 @@ These are manual and are **not** created by this chart. Until they exist the gat
 2. **1Password item** `homeassistant-oauth2-proxy` in the `tiles-secrets` vault, with field labels
    exactly `client-id` / `client-secret` / `cookie-secret`: the first two from that client, the third
    from `openssl rand -base64 32 | tr -- '+/' '-_'`.
-3. **`ha-config`**: `http.use_x_forwarded_for: true` and `http.trusted_proxies: 10.0.128.0/24`.
-   oauth2-proxy sets `X-Forwarded-For` on every upstream request, and Home Assistant raises
-   `HTTPBadRequest` for an `X-Forwarded-For` it was not configured to expect -- so without this the
-   gate authenticates you and then every request returns 400. Landing this change early is harmless:
-   nothing else sends Home Assistant an `X-Forwarded-For` today. Needs `ha core restart`.
+3. **On the appliance**, "Trust X-Forwarded-For" enabled and trusted proxies set to the cluster's
+   node subnet `10.0.128.0/24`. oauth2-proxy sets `X-Forwarded-For` on every upstream request, and
+   Home Assistant raises `HTTPBadRequest` for an `X-Forwarded-For` it was not configured to expect
+   -- so without this the gate authenticates you and then every request returns 400.
 
-   That is the **node** subnet, not the pod CIDR -- see
-   [docs/remote-access.md](../../docs/remote-access.md#upstreams-outside-the-cluster). Do not reach
-   for `--trusted-proxy-ip`'s value here; the two point in opposite directions.
+   **This is no longer a YAML setting.** Home Assistant migrated HTTP config out of
+   `configuration.yaml` into storage in 2026.10; YAML is ignored after that migration and stops
+   working in 2027.2.0. Set it under **Settings > System > Network**, and read back what is actually
+   active over the websocket API with `{"type": "http/config"}` -- which reports `stable`,
+   `pending` and `active_config_type`, because a freshly migrated or edited config is staged as a
+   timed trial before it is promoted.
+
+   It is the **node** subnet, not the pod CIDR, and that is not interchangeable with
+   `--trusted-proxy-ip` above -- see
+   [docs/remote-access.md](../../docs/remote-access.md#upstreams-outside-the-cluster).
 
 ## The second layer is a local Home Assistant account
 
