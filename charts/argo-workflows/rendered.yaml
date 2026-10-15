@@ -756,6 +756,15 @@ spec:
             timeoutSeconds: 30
       nodeSelector:
         kubernetes.io/os: linux
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - lancer
 
 ---
 # Source: argo-workflows/charts/argo-workflows/templates/server/server-deployment.yaml
@@ -852,6 +861,15 @@ spec:
         emptyDir: {}
       nodeSelector:
         kubernetes.io/os: linux
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - lancer
 ---
 # Source: argo-workflows/charts/argo-workflows/templates/server/server-ingress.yaml
 apiVersion: networking.k8s.io/v1

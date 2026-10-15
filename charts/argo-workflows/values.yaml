@@ -11,16 +11,26 @@
 argo-workflows:
   # NOT ON LANCER. lancer is where Seth runs notebooks and mapping jobs, and its headroom
   # exists so that those large allocations succeed -- not as a place to push workloads off
-  # the machines that exist to serve. It is reserved behind a `dedicated=heavy` taint, so
-  # the way to stay off it is to not tolerate that taint, and there is deliberately no
-  # `tolerations:` here. Adding one needs Seth's express approval, not a values edit.
+  # the machines that exist to serve. Putting it back needs his express approval, not a
+  # values edit.
   #
-  # This applies to the controller and the server. A workflow's own pods are a separate
+  # IT TAKES THE AFFINITY, NOT JUST THE MISSING TOLERATION. lancer's taint is
+  # `dedicated=heavy:PreferNoSchedule` -- `tf/nodes/prod.tfvars` sets `taint = "heavy"` and
+  # `taint_effect = "PreferNoSchedule"` on the following line, and the module renders
+  # `dedicated=${taint}:${taint_effect}`. Prefer, not NoSchedule: so having no toleration
+  # is only a hint, and the scheduler will still place here when it likes the node. The
+  # `nodeAffinity` below is what actually holds. (Comments in `tanka/environments/odm` and
+  # `charts/jupyterhub/values-tiles.yaml` say NoSchedule; they are stale, and the tfvars is
+  # the thing that runs.)
+  #
+  # It stays correct if the taint is ever made hard -- then it is merely redundant.
+  #
+  # Applies to the controller and the server. A workflow's own pods are a separate
   # question, decided per workflow by whoever writes it.
   #
-  # Nothing is pinned to a particular worker. `tiles-wk-1` is full (19 MiB unrequested) so
-  # the scheduler skips it, `tiles-wk-3` has the room (3.0 GiB unrequested, 36% used), and
-  # naming a node here would only go stale.
+  # Nothing else is pinned. `tiles-wk-1` is full (19 MiB unrequested) so the scheduler
+  # skips it, `tiles-wk-3` has the room (3.0 GiB unrequested, 36% used), and naming a node
+  # here would only go stale.
 
   # CRDs come from the bootstrap layer, not from this chart, like every other CRD-bearing
   # component here: ci-tools/crd-charts/sources.yaml builds them and
@@ -42,6 +52,15 @@ argo-workflows:
         memory: 128Mi
       limits:
         memory: 512Mi
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: NotIn
+                  values:
+                    - lancer
 
   server:
     # On. This is the thing that makes a workflow engine usable by a person -- what ran,
@@ -53,6 +72,15 @@ argo-workflows:
         memory: 64Mi
       limits:
         memory: 256Mi
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: NotIn
+                  values:
+                    - lancer
     # Same posture as the other UIs on this cluster (fleet-control, Grafana): reachable on
     # the internal network over TLS, with no separate login in front. `server` auth mode
     # means the UI acts as the server's own ServiceAccount rather than asking the browser
