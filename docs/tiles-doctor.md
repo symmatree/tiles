@@ -142,9 +142,12 @@ done is a comment saying so, not a retitle around the survivor.
 
 ### Mechanics
 
+- [`AGENTS.md`](../AGENTS.md) -- the build and deploy procedures, including the
+  two commands that regenerate `rendered.yaml` and why running `build.sh` alone
+  renders nothing past the first chart with missing dependencies. Read it rather
+  than reassembling the commands from the scripts.
 - [`build.sh`](../build.sh) and [`scripts/helm-common.bash`](../scripts/helm-common.bash)
-  -- how `rendered.yaml` is produced, and the flags to reproduce it by hand for
-  one chart.
+  -- how `rendered.yaml` is produced and which flags are applied.
 - [`scripts/argocd-render-diff.sh`](../scripts/argocd-render-diff.sh) -- per-app
   rendering.
 - [`config-propagation.md`](config-propagation.md) -- how values reach a chart
