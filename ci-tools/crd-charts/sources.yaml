@@ -36,10 +36,11 @@ charts:
     version: 0.2.0
     ref: v4.1.5
     description: Argo Workflows CRDs (Workflow, WorkflowTemplate, CronWorkflow, and friends)
-    # minimal, not full: the full argoproj.io_workflows.yaml is 3218769 bytes against the
-    # apiserver request limit of 3145728, so installing it fails with "Request entity too
-    # large". The minimal variant drops the OpenAPI schema, so the apiserver does not
-    # validate Workflow specs -- a malformed one is accepted and fails when it runs.
+    # minimal, not full: the full argoproj.io_workflows.yaml is 2838656 bytes, 90% of the
+    # apiserver's 3145728-byte request limit before the YAML is serialised to JSON, and the
+    # install fails with "Request entity too large". The minimal variant drops the OpenAPI
+    # schema, so the apiserver does not validate Workflow specs -- a malformed one is
+    # accepted and fails when it runs.
     urls:
       - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflows.yaml
       - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowtemplates.yaml
