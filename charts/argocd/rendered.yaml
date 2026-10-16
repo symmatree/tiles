@@ -159,6 +159,19 @@ data:
           clientID: $argocd-oauth2-proxy:client-id
           clientSecret: $argocd-oauth2-proxy:client-secret
   exec.enabled: "true"
+  resource.customizations.health.argoproj.io_Application: |
+    hs = {}
+    hs.status = "Progressing"
+    hs.message = ""
+    if obj.status ~= nil then
+      if obj.status.health ~= nil then
+        hs.status = obj.status.health.status
+        if obj.status.health.message ~= nil then
+          hs.message = obj.status.health.message
+        end
+      end
+    end
+    return hs
   resource.customizations.ignoreResourceUpdates.ConfigMap: |
     jqPathExpressions:
       # Ignore the cluster-autoscaler status
@@ -1617,7 +1630,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
-        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
+        checksum/cm: 8625a945417acd7e42b117f506573908eee3f224fe77cbc772367fd4f67a1c2d
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-repo-server
@@ -2082,7 +2095,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
-        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
+        checksum/cm: 8625a945417acd7e42b117f506573908eee3f224fe77cbc772367fd4f67a1c2d
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-server
@@ -2546,7 +2559,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
-        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
+        checksum/cm: 8625a945417acd7e42b117f506573908eee3f224fe77cbc772367fd4f67a1c2d
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-dex-server
@@ -2926,7 +2939,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 3cee5bc94fe67a73309018177220770fd62b01dac6cd7d1e80c6bb92710747c7
-        checksum/cm: 9c35afe03e088de1876dfc9cad969d3ba6f51a943e61af87e61adc1d87dcae39
+        checksum/cm: 8625a945417acd7e42b117f506573908eee3f224fe77cbc772367fd4f67a1c2d
       labels:
         helm.sh/chart: argo-cd-9.5.2
         app.kubernetes.io/name: argocd-application-controller
