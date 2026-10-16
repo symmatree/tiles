@@ -95,7 +95,7 @@ resource "helm_release" "prometheus_operator_crds" {
 locals {
   crd_charts = {
     "argo-cd-crds"              = "0.1.0"
-    "argo-workflows-crds"       = "0.1.0"
+    "argo-workflows-crds"       = "0.2.0"
     "cert-manager-crds"         = "0.1.0"
     "external-snapshotter-crds" = "0.1.0"
     "gateway-api-crds"          = "0.1.0"
