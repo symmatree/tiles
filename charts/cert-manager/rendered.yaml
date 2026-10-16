@@ -1869,6 +1869,22 @@ spec:
     organizationalUnits:
       - "placeholder"
   secretName: "placeholder-ca-tls"
+  # Two years, renewed after one. Both numbers are load-bearing.
+  #
+  # Without a duration this took cert-manager's 90-day default, which is shorter than the
+  # certificates it signs -- hubble's are 8760h from the cilium chart. cert-manager writes
+  # the signing CA into each leaf Secret's ca.crt once, at issuance, and never refreshes it
+  # on rotation, so a leaf outlives the CA copy it verifies against and the holder starts
+  # failing its own handshakes. That is what took hubble-relay down on 2026-10-09.
+  #
+  # renewBefore is half the duration rather than the 90 days used for the device CA below,
+  # so a rotation always leaves at least a year of validity on the retiring CA -- longer
+  # than the eight months a 1-year leaf waits before renewing, which is what makes the
+  # stranding impossible rather than merely rarer. trust-manager distributes this CA to
+  # labelled namespaces (ca-bundle.yaml), but a consumer reading ca.crt from its own leaf
+  # Secret never sees that bundle.
+  duration: 17520h
+  renewBefore: 8760h
   privateKey:
     algorithm: ECDSA
     size: 256
