@@ -42,6 +42,9 @@ resource "helm_release" "cilium" {
   # loaded by Helm, then the shared and per-cluster overlays, then the keys
   # Argo CD templates into its valuesObject.
   values = [
+    # Listed explicitly so Terraform diffs on it; see the note on
+    # helm_release.argocd in k8s-argocd.tf.
+    file("${local.cilium_chart}/values.yaml"),
     file("${local.cilium_values}/cilium-values.yaml"),
     file("${local.cilium_values}/cilium-${var.cluster_name}-values.yaml"),
     yamlencode({
