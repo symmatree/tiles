@@ -47,9 +47,9 @@ reconstructed command line.
   tag-based deploy flow and Argo CD's two cache layers, which is why a merge
   takes minutes rather than seconds to appear.
 - [`tf/nodes/README.md`](tf/nodes/README.md) -- the **complete** environment
-  block for running Terraform locally. There are five `op read` exports, not
-  two; a partial set fails partway through, and a partial failure around a state
-  mutation leaves declared state and reality out of step.
+  block for running Terraform locally. Copy the Usage block; do not retype a
+  subset from memory. A partial set fails partway through, and a partial failure
+  around a state mutation leaves declared state and reality out of step.
 - [`docs/config-propagation.md`](docs/config-propagation.md) -- how values reach
   a chart through the app-of-apps.
 
