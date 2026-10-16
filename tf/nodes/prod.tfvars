@@ -114,12 +114,17 @@ metal_amd_nodes = {
 # outside every Synology NFS export rule: the rules are written per cluster CIDR
 # (docs/nfs-storage-architecture.md), so any NFS mount from acebase was refused
 # with "access denied by server". See #805 for the rtkbase outage that surfaced it.
+#
+# .53 rather than .52: UniFi rejects a fixed_ip of 10.0.128.52 with
+# api.err.DuplicateFixedIP, so some other client record there still claims it even though
+# nothing answers on the address. That stale record is not cleaned up by moving -- it will
+# block .52 for whatever asks for it next.
 metal_intel_nodes = {
   "acebase" = {
     name                   = "acebase"
     type                   = "worker"
     mac_address            = "00:e0:4c:5f:3d:71"
-    ip_address             = "10.0.128.52"
+    ip_address             = "10.0.128.53"
     taint                  = "gnss"
     machine_config_patches = ["patches/acebase-gnss.yaml"]
   }
