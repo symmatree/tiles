@@ -100,7 +100,11 @@ The objects are a `WorkflowTemplate` (`fleet-control-playbook`), a ServiceAccoun
 workflow's pods, and two Roles.
 
 **`fleet-control-playbook` covers every playbook run** — converge, full provision and
-reimage are the same step with a different `playbook` parameter.
+reimage are the same step with a different `playbook` parameter, plus `extra-vars` for
+whatever that playbook needs beyond `device_role`. `extra-vars` is a JSON object, empty by
+default; the step merges it into the vars the play is given and refuses any key that would
+displace the four it sets itself, since those are how the play reaches the device and what
+key it installs there.
 
 **It does not yet cover the other long operations.** Pulling an FC dataflash log is about
 half an hour for 148 MB at the measured 84 KiB/s, and offloading a session bundle moves
