@@ -318,17 +318,6 @@ local fleetControl = {
                 },
                 { name: 'FLEET_SSH_KEY', value: '/secrets/ssh/id' },
                 { name: 'FLEET_SSH_USER', value: config.sshUser },
-                // Optional for this script -- listing Actions runs is public -- but the
-                // unauthenticated rate limit is per IP and shared by everything here.
-                {
-                  name: 'FLEET_GITHUB_TOKEN',
-                  valueFrom: {
-                    secretKeyRef: {
-                      name: fcObj.githubToken.metadata.name,
-                      key: config.githubTokenField,
-                    },
-                  },
-                },
               ],
               resources: {
                 requests: { cpu: '50m', memory: '64Mi' },

@@ -177,11 +177,18 @@ variable you cannot have in a timing measurement. The steps now come from one de
 
 | step | what it does |
 |---|---|
-| `deploy` | checks fleet-control is serving the newest commit touching its own paths and that the `campod-camera` **job** for the newest camera commit succeeded, converges each campod serially, reboots both, waits for uptime to go backwards and for both cameras to report `ready` |
+| `deploy` | converges each campod serially, reboots both, waits for uptime to go backwards and for both cameras to report `ready` |
 | `arm` | stops the FC talker on the coordinator, writes the arm file |
 | `window` | `suspend`, `window-seconds` long (default 240) |
 | `disarm` | writes the arm file back, waits for the writers to close |
 | `collect` | reboots all three, picks each pod's newest closed session by `last_activity_utc`, offloads it into the named flight |
+
+**Whether the code under test is built is the caller's business, not the workflow's.** An
+earlier version checked that the service was serving the newest commit and that the camera
+image's build job had succeeded before it would converge, which is the stack's provenance
+re-derived from outside it -- and wrong for the common case, where the operator knows
+perfectly well whether they are waiting on a build. Submit it when you want it to run; what
+ran is recorded in each session's `manifests/` afterwards.
 
 The step body is `bench-cycle` out of the service's image, for the same reasons
 `run-playbook.sh` is: it needs that image's python and ssh client, and it drives this
