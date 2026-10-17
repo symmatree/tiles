@@ -146,6 +146,10 @@ local fleetControl = {
             { name: 'device-role' },
             { name: 'artifact-url' },
             { name: 'revision' },
+            // A JSON object, merged into what the play is given. Default empty: a converge
+            // needs none, reimage needs two. The step refuses any that would displace the
+            // vars it sets itself.
+            { name: 'extra-vars', value: '{}' },
           ],
         },
 
@@ -158,6 +162,7 @@ local fleetControl = {
               { name: 'device-role' },
               { name: 'artifact-url' },
               { name: 'revision' },
+              { name: 'extra-vars', value: '{}' },
             ],
           },
           // 0440 and group 1000, matching the key's mode below, as in the Deployment.
@@ -208,6 +213,7 @@ local fleetControl = {
               { name: 'FLEET_SSH_USER', value: config.sshUser },
               { name: 'PLAYBOOK_ARTIFACT_URL', value: '{{inputs.parameters.artifact-url}}' },
               { name: 'PLAYBOOK_REVISION', value: '{{inputs.parameters.revision}}' },
+              { name: 'PLAYBOOK_EXTRA_VARS', value: '{{inputs.parameters.extra-vars}}' },
             ],
             // One ansible interpreter measures about 60 MB.
             resources: {
