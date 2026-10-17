@@ -27,6 +27,10 @@ local fleetControl = {
   local kHttpIngressPath = k.networking.v1.httpIngressPath,
   local kIngressTLS = k.networking.v1.ingressTLS,
   local kServiceAccount = k.core.v1.serviceAccount,
+  local kRole = k.rbac.v1.role,
+  local kRoleBinding = k.rbac.v1.roleBinding,
+  local kPolicyRule = k.rbac.v1.policyRule,
+  local kSubject = k.rbac.v1.subject,
 
   local defaults = {
     name: 'fleet-control',
@@ -45,7 +49,11 @@ local fleetControl = {
     // the coordinator is, so this reads it from there. `host` is optional in the roster and
     // defaults to the node name, which is also a usable address.
     local roster = std.parseJson(importstr 'inventory.json'),
+    // Tanka stamps this onto every object at manifestation; a RoleBinding subject has to
+    // carry it explicitly, so it is read from the same file rather than written twice.
+    namespace: std.parseJson(importstr 'spec.json').spec.namespace,
     local coordinator = std.filter(function(n) n.role == 'coordinator', roster.nodes),
+    sshUser: roster.user,
     brokerHost: if std.length(coordinator) == 1
     then std.get(coordinator[0], 'host', coordinator[0].name)
     else error 'the roster must name exactly one coordinator, for the broker address',
@@ -71,6 +79,202 @@ local fleetControl = {
     // that was not a bigger buffer.
 
     serviceAccount: kServiceAccount.new(config.name),
+
+    // ---- running a converge as an Argo Workflow (coordinator#504) ----------------------
+    //
+    // WHY AT ALL. The service runs `ansible-playbook` as a subprocess of itself today, so a
+    // pod roll kills any converge in flight -- and because `host/ansible/**` is in this
+    // image's rebuild paths, a playbook-only merge IS a pod roll. Every concurrent run is
+    // also a ~60 MB ansible interpreter inside one 256 MB cgroup; three at once OOM-killed
+    // the pod and took all three half-finished applies with it.
+    //
+    // IN THIS NAMESPACE, not Argo's. Everything a converge needs is already here: the fleet
+    // key, the GitHub token, the roster. Running it centrally would mean a second copy of
+    // the fleet key in a second namespace, which is the shape of the problem that locked
+    // this service out of the fleet in the first place.
+
+    // The account the workflow's own PODS run as -- not the controller's, which is
+    // cluster-wide and comes with the chart. Argo's executor reports each step's outcome by
+    // writing a workflowtaskresult, so a pod needs that much and nothing else. This is why
+    // a namespace that runs workflows needs its own small RBAC rather than inheriting the
+    // controller's.
+    workflowServiceAccount: kServiceAccount.new(std.format('%s-workflow', config.name)),
+
+    workflowRole:
+      kRole.new(std.format('%s-workflow', config.name))
+      + kRole.withRules([
+        kPolicyRule.withApiGroups(['argoproj.io'])
+        + kPolicyRule.withResources(['workflowtaskresults'])
+        + kPolicyRule.withVerbs(['create', 'patch']),
+      ]),
+
+    workflowRoleBinding:
+      kRoleBinding.new(std.format('%s-workflow', config.name))
+      + kRoleBinding.bindRole(self.workflowRole)
+      + kRoleBinding.withSubjects([
+        kSubject.withKind('ServiceAccount')
+        + kSubject.withName(self.workflowServiceAccount.metadata.name)
+        + kSubject.withNamespace(config.namespace),
+      ]),
+
+    // And what the SERVICE may do: submit a converge and then find it again. Finding it is
+    // by label rather than by an id held in memory, so a pod roll does not orphan a running
+    // workflow -- which is the whole property being bought here.
+    submitRole:
+      kRole.new(std.format('%s-submit', config.name))
+      + kRole.withRules([
+        kPolicyRule.withApiGroups(['argoproj.io'])
+        + kPolicyRule.withResources(['workflows'])
+        + kPolicyRule.withVerbs(['create', 'get', 'list', 'watch', 'delete']),
+        // Reading a step's log while it runs. Afterwards Alloy has it in Loki.
+        kPolicyRule.withApiGroups([''])
+        + kPolicyRule.withResources(['pods', 'pods/log'])
+        + kPolicyRule.withVerbs(['get', 'list', 'watch']),
+      ]),
+
+    submitRoleBinding:
+      kRoleBinding.new(std.format('%s-submit', config.name))
+      + kRoleBinding.bindRole(self.submitRole)
+      + kRoleBinding.withSubjects([
+        kSubject.withKind('ServiceAccount')
+        + kSubject.withName(self.serviceAccount.metadata.name)
+        + kSubject.withNamespace(config.namespace),
+      ]),
+
+    // The converge itself, declared rather than constructed. A WorkflowTemplate is a
+    // definition, so it belongs in git and under review; what the service submits is a
+    // reference to it plus parameters. That is only possible because the Argo CRDs are
+    // installed ahead of the Argo CD tree (tiles#827) -- Argo CD cannot diff a resource
+    // whose type it does not know.
+    //
+    // The body is `run-playbook.sh` from the service's own image. Whether that script
+    // belongs in that image is undecided and deliberately not decided here; moving it later
+    // changes `image` and `command` and nothing else.
+    convergeTemplate: {
+      apiVersion: 'argoproj.io/v1alpha1',
+      kind: 'WorkflowTemplate',
+      metadata: { name: std.format('%s-converge', config.name) },
+      spec: {
+        serviceAccountName: fcObj.workflowServiceAccount.metadata.name,
+        entrypoint: 'run',
+
+        // NO activeDeadlineSeconds. A previous version of this service had a 60-minute
+        // ceiling, hit it on a slow node, and reported a SUCCESSFUL converge as a failure
+        // while the play was still running. Killing a play half-way leaves a part-configured
+        // box, which is worse than waiting. Ansible's own timeouts bound it.
+
+        // How long a finished Workflow stays readable. It is the run record now -- there is
+        // no workflow archive (tiles#831) -- so this is how far back `what ran` reaches in
+        // the API. The log outlives it either way: Alloy ships the step's stdout to Loki.
+        ttlStrategy: { secondsAfterCompletion: 604800 },
+
+        arguments: {
+          parameters: [
+            { name: 'playbook' },
+            { name: 'host' },
+            { name: 'device-role' },
+            // Resolved by the submitter, which already knows how to talk to the Actions
+            // API (src/github.ts). The step verifies the archive carries `revision` and
+            // refuses it otherwise, so a URL resolving to the wrong commit is caught at the
+            // one place that can still see both numbers.
+            { name: 'artifact-url' },
+            { name: 'revision' },
+          ],
+        },
+
+        templates: [{
+          name: 'run',
+          inputs: {
+            parameters: [
+              { name: 'playbook' },
+              { name: 'host' },
+              { name: 'device-role' },
+              { name: 'artifact-url' },
+              { name: 'revision' },
+            ],
+          },
+          // NOT ON LANCER, the same as the controller and for the same reason: lancer is
+          // where notebooks and mapping jobs run, and its headroom exists so those
+          // allocations succeed. Its taint is PreferNoSchedule, so having no toleration is
+          // only a hint -- the affinity is what holds.
+          affinity: {
+            nodeAffinity: {
+              requiredDuringSchedulingIgnoredDuringExecution: {
+                nodeSelectorTerms: [{
+                  matchExpressions: [{
+                    key: 'kubernetes.io/hostname',
+                    operator: 'NotIn',
+                    values: ['lancer'],
+                  }],
+                }],
+              },
+            },
+          },
+          // The key is mode 0440 and owned by group 1000, as in the Deployment.
+          securityContext: { fsGroup: 1000 },
+          volumes: [{
+            name: 'ssh-key',
+            secret: {
+              secretName: fcObj.sshKey.metadata.name,
+              defaultMode: 288,  // 0440
+            },
+          }],
+          container: {
+            image: config.image,
+            command: [
+              '/usr/local/bin/run-playbook.sh',
+              '{{inputs.parameters.playbook}}',
+              '{{inputs.parameters.host}}',
+              '{{inputs.parameters.device-role}}',
+            ],
+            volumeMounts: [{
+              name: 'ssh-key',
+              mountPath: '/secrets/ssh/id',
+              subPath: config.sshKeyField,
+              readOnly: true,
+            }],
+            env: [
+              { name: 'FLEET_SSH_KEY', value: '/secrets/ssh/id' },
+              // The PUBLIC half, from the same 1Password item as the private one.
+              // Terraform generates the pair and writes both fields together, so these are
+              // two fields of one object with one writer -- which is what makes a declared
+              // public key safe. The earlier disagreement came from two items sharing a
+              // title, not from declaring the value.
+              {
+                name: 'FLEET_SSH_PUBLIC_KEY',
+                valueFrom: {
+                  secretKeyRef: {
+                    name: fcObj.sshKey.metadata.name,
+                    key: 'public-key',
+                  },
+                },
+              },
+              {
+                name: 'FLEET_GITHUB_TOKEN',
+                valueFrom: {
+                  secretKeyRef: {
+                    name: fcObj.githubToken.metadata.name,
+                    key: config.githubTokenField,
+                  },
+                },
+              },
+              // The login account, from the roster rather than written again here -- the
+              // service reads it from the same file, and the same value in two places is
+              // one of them being wrong later.
+              { name: 'FLEET_SSH_USER', value: config.sshUser },
+              { name: 'PLAYBOOK_ARTIFACT_URL', value: '{{inputs.parameters.artifact-url}}' },
+              { name: 'PLAYBOOK_REVISION', value: '{{inputs.parameters.revision}}' },
+            ],
+            // Measured: one ansible interpreter is about 60 MB. The limit is headroom for a
+            // play that forks, not a target.
+            resources: {
+              requests: { cpu: '50m', memory: '128Mi' },
+              limits: { memory: '512Mi' },
+            },
+          },
+        }],
+      },
+    },
 
     // The fleet SSH key. `pi` has passwordless sudo on every node, so this credential is
     // root on the fleet -- see coordinator#261 on giving automation its own key.
