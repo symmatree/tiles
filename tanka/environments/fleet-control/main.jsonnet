@@ -125,11 +125,12 @@ local fleetControl = {
         + kSubject.withNamespace(config.namespace),
       ]),
 
-    // The converge the service submits against. See README.md.
-    convergeTemplate: {
+    // What the service submits a playbook run against: converge, full provision, reimage.
+    // See README.md.
+    playbookTemplate: {
       apiVersion: 'argoproj.io/v1alpha1',
       kind: 'WorkflowTemplate',
-      metadata: { name: std.format('%s-converge', config.name) },
+      metadata: { name: std.format('%s-playbook', config.name) },
       spec: {
         serviceAccountName: fcObj.workflowServiceAccount.metadata.name,
         entrypoint: 'run',
@@ -158,21 +159,6 @@ local fleetControl = {
               { name: 'artifact-url' },
               { name: 'revision' },
             ],
-          },
-          // Keeps it off lancer. The taint there is PreferNoSchedule, so a missing
-          // toleration is only a hint and this is what actually holds.
-          affinity: {
-            nodeAffinity: {
-              requiredDuringSchedulingIgnoredDuringExecution: {
-                nodeSelectorTerms: [{
-                  matchExpressions: [{
-                    key: 'kubernetes.io/hostname',
-                    operator: 'NotIn',
-                    values: ['lancer'],
-                  }],
-                }],
-              },
-            },
           },
           // 0440 and group 1000, matching the key's mode below, as in the Deployment.
           securityContext: { fsGroup: 1000 },
