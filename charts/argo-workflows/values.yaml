@@ -9,19 +9,6 @@
 # machinery for jobs, not as an implementation detail of that issue.
 
 argo-workflows:
-  # NOT ON LANCER. lancer is where Seth runs notebooks and mapping jobs, and its headroom
-  # exists so that those large allocations succeed -- not as a place to push workloads off
-  # the machines that exist to serve. It is reserved behind a `dedicated=heavy` taint, so
-  # the way to stay off it is to not tolerate that taint, and there is deliberately no
-  # `tolerations:` here. Adding one needs Seth's express approval, not a values edit.
-  #
-  # This applies to the controller and the server. A workflow's own pods are a separate
-  # question, decided per workflow by whoever writes it.
-  #
-  # Nothing is pinned to a particular worker. `tiles-wk-1` is full (19 MiB unrequested) so
-  # the scheduler skips it, `tiles-wk-3` has the room (3.0 GiB unrequested, 36% used), and
-  # naming a node here would only go stale.
-
   # CRDs come from the bootstrap layer, not from this chart, like every other CRD-bearing
   # component here: ci-tools/crd-charts/sources.yaml builds them and
   # tf/nodes/k8s-bootstrap.tf installs them. The reason is in sources.yaml -- Helm never

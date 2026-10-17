@@ -90,14 +90,23 @@ is what makes the 0440 key readable by the process that needs it.
   playbook is baked into this image**, so a stale pod converges nodes with a playbook that is
   not the one on `main`.
 
-## Converges run as Argo Workflows
+## Fleet operations run as Argo Workflows
 
 [coordinator#504](https://github.com/symmatree/coordinator/issues/504). The service runs
 `ansible-playbook` as a subprocess of itself today; this is the deployment side of moving it
 into a pod of its own. Nothing submits one yet.
 
-The objects are a `WorkflowTemplate` (`fleet-control-converge`), a ServiceAccount for the
+The objects are a `WorkflowTemplate` (`fleet-control-playbook`), a ServiceAccount for the
 workflow's pods, and two Roles.
+
+**`fleet-control-playbook` covers every playbook run** — converge, full provision and
+reimage are the same step with a different `playbook` parameter.
+
+**It does not yet cover the other long operations.** Pulling an FC dataflash log is about
+half an hour for 148 MB at the measured 84 KiB/s, and offloading a session bundle moves
+gigabytes; both run in the service's own process today and both die with a pod roll for
+exactly the same reason a converge does. They want a second template that mounts the flights
+volume rather than running a playbook, which is not written yet.
 
 ### Why a template rather than a Workflow built in code
 
@@ -150,11 +159,6 @@ Killing a play half-way leaves a part-configured box. Ansible's own timeouts bou
 There is no workflow archive ([#831](https://github.com/symmatree/tiles/pull/831)), so the
 `Workflow` object *is* the run record and this is how far back the API can answer "what ran".
 The log outlives it either way: Alloy ships the step's stdout to Loki.
-
-### Not on lancer
-
-Same as the Argo Workflows controller itself. lancer's taint is `PreferNoSchedule`, so
-omitting the toleration is only a hint — the `nodeAffinity` is what holds.
 
 ## Auth
 
