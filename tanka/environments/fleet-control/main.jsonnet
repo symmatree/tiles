@@ -225,6 +225,121 @@ local fleetControl = {
       },
     },
 
+    // The bench simulated-flight cycle (coordinator#541). Design and reasoning are in
+    // README.md. The stages are `bench-cycle` in the same image, so they version with it.
+    benchTemplate: {
+      apiVersion: 'argoproj.io/v1alpha1',
+      kind: 'WorkflowTemplate',
+      metadata: { name: 'bench-simflight' },
+      spec: {
+        serviceAccountName: fcObj.workflowServiceAccount.metadata.name,
+        entrypoint: 'cycle',
+        onExit: 'disarm',
+        ttlStrategy: { secondsAfterCompletion: 604800 },
+        // Unlike the playbook template, which deliberately has none: this one holds the rig
+        // armed, and a cycle that hangs somewhere holds it armed indefinitely. Generous
+        // enough for two converges, three reboots and the window.
+        activeDeadlineSeconds: 5400,
+
+        arguments: {
+          parameters: [
+            { name: 'flight' },
+            { name: 'window-seconds', value: '240' },
+          ],
+        },
+
+        templates: [
+          {
+            name: 'cycle',
+            steps: [
+              [{ name: 'deploy', template: 'stage', arguments: { parameters: [{ name: 'stage', value: 'deploy' }] } }],
+              [{ name: 'arm', template: 'stage', arguments: { parameters: [{ name: 'stage', value: 'arm' }] } }],
+              [{ name: 'window', template: 'window' }],
+              [{ name: 'disarm', template: 'stage', arguments: { parameters: [{ name: 'stage', value: 'disarm' }] } }],
+              [{ name: 'collect', template: 'stage', arguments: { parameters: [{ name: 'stage', value: 'collect' }] } }],
+            ],
+          },
+
+          // The measurement window. A suspended step has no pod, so nothing of ours is
+          // scheduled, logging or polling on a 417 MiB board while the cameras are timed.
+          {
+            name: 'window',
+            suspend: { duration: '{{workflow.parameters.window-seconds}}' },
+          },
+
+          // Runs on exit whatever happened, so a cycle that fails or is stopped mid-window
+          // does not leave the rig armed with the FC talker stopped. Writing 0 twice is
+          // what the device already expects.
+          {
+            name: 'disarm',
+            steps: [
+              [{
+                name: 'disarm',
+                template: 'stage',
+                arguments: { parameters: [{ name: 'stage', value: 'disarm' }] },
+              }],
+            ],
+          },
+
+          {
+            name: 'stage',
+            inputs: { parameters: [{ name: 'stage' }] },
+            // No retryStrategy, on purpose: a failed converge or a missed `ready` means the
+            // fleet is not in the state the trial assumes, and retrying against a device
+            // mid-reboot produces a trial whose conditions nobody knows.
+            securityContext: { fsGroup: 1000 },
+            volumes: [{
+              name: 'ssh-key',
+              secret: {
+                secretName: fcObj.sshKey.metadata.name,
+                defaultMode: 288,  // 0440
+              },
+            }],
+            container: {
+              image: config.image,
+              command: [
+                '/usr/local/bin/bench-cycle',
+                '{{inputs.parameters.stage}}',
+                '--flight',
+                '{{workflow.parameters.flight}}',
+              ],
+              volumeMounts: [{
+                name: 'ssh-key',
+                mountPath: '/secrets/ssh/id',
+                subPath: config.sshKeyField,
+                readOnly: true,
+              }],
+              env: [
+                // The service's own address in this namespace, not the ingress: a step has
+                // no reason to leave the cluster to reach it.
+                {
+                  name: 'FLEET_URL',
+                  value: std.format('http://%s:%d', [config.name, config.port.containerPort]),
+                },
+                { name: 'FLEET_SSH_KEY', value: '/secrets/ssh/id' },
+                { name: 'FLEET_SSH_USER', value: config.sshUser },
+                // Optional for this script -- listing Actions runs is public -- but the
+                // unauthenticated rate limit is per IP and shared by everything here.
+                {
+                  name: 'FLEET_GITHUB_TOKEN',
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: fcObj.githubToken.metadata.name,
+                      key: config.githubTokenField,
+                    },
+                  },
+                },
+              ],
+              resources: {
+                requests: { cpu: '50m', memory: '64Mi' },
+                limits: { memory: '256Mi' },
+              },
+            },
+          },
+        ],
+      },
+    },
+
     // The fleet SSH key. `pi` has passwordless sudo on every node, so this credential is
     // root on the fleet -- see coordinator#261 on giving automation its own key.
     sshKey: op.item.new(config.sshKeySecret, 'vaults/' + APP.vault_name + '/items/' + config.sshKeySecret),
