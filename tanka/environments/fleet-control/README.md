@@ -164,6 +164,54 @@ There is no workflow archive ([#831](https://github.com/symmatree/tiles/pull/831
 `Workflow` object *is* the run record and this is how far back the API can answer "what ran".
 The log outlives it either way: Alloy ships the step's stdout to Loki.
 
+## The bench simulated-flight cycle
+
+[coordinator#541](https://github.com/symmatree/coordinator/pull/541). `bench-simflight` is
+the camera-sync test procedure on the bench rig, declared. It was a local python script run
+by hand, and the cycle drifted trial to trial -- a wait skipped, a different window length,
+a flight name that did not match the session that got collected -- which is exactly the
+variable you cannot have in a timing measurement. The steps now come from one definition:
+
+    argo submit --from workflowtemplate/bench-simflight -n fleet-control \
+        -p flight=bench-20261017-simflight-11
+
+| step | what it does |
+|---|---|
+| `deploy` | checks fleet-control is serving the newest commit touching its own paths and that the `campod-camera` **job** for the newest camera commit succeeded, converges each campod serially, reboots both, waits for uptime to go backwards and for both cameras to report `ready` |
+| `arm` | stops the FC talker on the coordinator, writes the arm file |
+| `window` | `suspend`, `window-seconds` long (default 240) |
+| `disarm` | writes the arm file back, waits for the writers to close |
+| `collect` | reboots all three, picks each pod's newest closed session by `last_activity_utc`, offloads it into the named flight |
+
+The step body is `bench-cycle` out of the service's image, for the same reasons
+`run-playbook.sh` is: it needs that image's python and ssh client, and it drives this
+service's own API. Arming is the one step that touches a device directly -- the arm file has
+no API verb -- so the steps mount the fleet key.
+
+### The window is a `suspend` step
+
+Not a sleep in a container. A suspended step has no pod, so during the measurement nothing
+of ours is scheduled, logging, or polling. The pods are 417 MiB boards and the thing under
+test is frame timing; a poll that evicts the camera's working set is a poll that changes the
+measurement.
+
+### `activeDeadlineSeconds: 5400`, unlike the playbook template
+
+The reason that one has none does not apply here. This workflow holds the rig **armed**
+between two of its steps, so a cycle that hangs holds it armed indefinitely, filling cards
+with frames no trial will use. 90 minutes is generous for two converges, three reboots and
+a four-minute window.
+
+`onExit: disarm` runs the disarm step whatever happened, so a failure or a stop mid-window
+does not leave the rig armed with the FC talker stopped. Writing `0` twice is what the
+device already expects.
+
+### No `retryStrategy`
+
+A failed converge or a missed `ready` means the fleet is not in the state the trial assumes.
+Retrying against a device that is mid-reboot produces a trial whose conditions nobody knows,
+which is worse than no trial.
+
 ## Auth
 
 None. On-network only, like the other private-address services here. If it is ever wanted
