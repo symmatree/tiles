@@ -90,6 +90,72 @@ is what makes the 0440 key readable by the process that needs it.
   playbook is baked into this image**, so a stale pod converges nodes with a playbook that is
   not the one on `main`.
 
+## Converges run as Argo Workflows
+
+[coordinator#504](https://github.com/symmatree/coordinator/issues/504). The service runs
+`ansible-playbook` as a subprocess of itself today; this is the deployment side of moving it
+into a pod of its own. Nothing submits one yet.
+
+The objects are a `WorkflowTemplate` (`fleet-control-converge`), a ServiceAccount for the
+workflow's pods, and two Roles.
+
+### Why a template rather than a Workflow built in code
+
+A `WorkflowTemplate` is a definition, so it is reviewable in git; what the service submits is
+a reference to it plus parameters. That is only possible because the Argo CRDs are installed
+by `tf/nodes/k8s-bootstrap.tf`, ahead of the Argo CD tree — Argo CD cannot diff a resource
+whose type it does not know. See [#827](https://github.com/symmatree/tiles/issues/827).
+
+The step's body is `run-playbook.sh` out of the service's own image. Whether that script
+belongs in that image is an open question; moving it changes `image` and `command` here and
+nothing else.
+
+### Why in this namespace
+
+Everything a converge needs is already here: the fleet key, the GitHub token, the roster.
+Running workflows in a central namespace would mean a second copy of the fleet key in a
+second namespace, and one key with two homes is how this service came to present a key no
+device trusted.
+
+`FLEET_SSH_PUBLIC_KEY` is the `public-key` field of the **same 1Password item** that holds
+`private-key`; `charts/jupyterhub` consumes its own ssh-key item the same way. Terraform
+generates the pair and writes both fields together.
+
+### Why two Roles
+
+| Role | grants | to |
+|---|---|---|
+| `fleet-control-workflow` | `workflowtaskresults` create, patch | the workflow's **pods** |
+| `fleet-control-submit` | `workflows` create/get/list/watch/delete, `pods` + `pods/log` read | the **service** |
+
+Argo's executor reports each step's outcome by writing a `workflowtaskresult`, so a pod needs
+that much. This is why a namespace that runs workflows carries a little RBAC of its own
+rather than inheriting the controller's, which is cluster-wide and comes with the chart.
+
+The service's half is submitting and then finding its workflow again — **by label, not by an
+id held in memory**, so that a pod roll does not orphan a workflow that is still running.
+That is the property the whole change exists to buy.
+
+In Kubernetes terms the workflow pod is nearly unprivileged: two verbs on one resource. Its
+reach comes from the mounted fleet key, which is root on every device.
+
+### No `activeDeadlineSeconds`
+
+Deliberate. A previous version of the service imposed a 60-minute ceiling, hit it on a slow
+node, and reported a successful converge as a failure while the play was still running.
+Killing a play half-way leaves a part-configured box. Ansible's own timeouts bound it.
+
+### `ttlStrategy: 7 days`
+
+There is no workflow archive ([#831](https://github.com/symmatree/tiles/pull/831)), so the
+`Workflow` object *is* the run record and this is how far back the API can answer "what ran".
+The log outlives it either way: Alloy ships the step's stdout to Loki.
+
+### Not on lancer
+
+Same as the Argo Workflows controller itself. lancer's taint is `PreferNoSchedule`, so
+omitting the toleration is only a hint — the `nodeAffinity` is what holds.
+
 ## Auth
 
 None. On-network only, like the other private-address services here. If it is ever wanted
