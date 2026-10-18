@@ -164,6 +164,40 @@ There is no workflow archive ([#831](https://github.com/symmatree/tiles/pull/831
 `Workflow` object *is* the run record and this is how far back the API can answer "what ran".
 The log outlives it either way: Alloy ships the step's stdout to Loki.
 
+## Collecting a flight
+
+[coordinator#566](https://github.com/symmatree/coordinator/issues/566). `fleet-control-collect`
+is one offload step per campod, fanned out with `withParam` over a `targets` parameter, then a
+join step that composes `flight.json`.
+
+The service used to move these bytes itself. That made the two campods serial -- 336 and 361
+MB landing at 18:23:32 and 18:30:58 on 2026-10-18, the second waiting on nothing but the first
+-- and tied a transfer to that pod's lifetime, so a roll mid-collect took it with it. Here
+each is a pod that starts when the other does.
+
+### The flights PVC, mounted by the steps
+
+This is the one template whose steps need the datasets share. It is `ReadWriteMany` NFS, which
+is what lets two step pods on different nodes write into one flight directory at the same
+time; the playbook steps mount nothing.
+
+### Why a join step
+
+Each offload writes its own file under `collected/` and recomposes `flight.json` from the set,
+so the summary is never read-modify-written by two pods at once -- that loses whichever entry
+was read before the other's write, leaving a verified bundle on the share that nothing names.
+The join is one final compose after both have stopped writing, which two independent
+workflows would have nowhere to put.
+
+It depends on `offload.AnySucceeded`, not all: a flight short one campod still has the
+other's bundle, and a summary naming it is how that is visible.
+
+### `imagePullPolicy: Always`, as for the bench steps
+
+Same reason, and it holds for every template here: `:main` floats, so Kubernetes defaults to
+`IfNotPresent` and a node with a stale cached layer runs old code, with no tag watcher to
+correct it the way the Deployment has.
+
 ## The bench simulated-flight cycle
 
 [coordinator#541](https://github.com/symmatree/coordinator/pull/541). `bench-simflight` is
