@@ -32,7 +32,7 @@ metadata:
   name: homeassistant-oauth2-proxy-accesslist
   namespace: homeassistant
 data:
-  restricted_user_access: "seth.porter@gmail.com\n"
+  restricted_user_access: "seth.porter@gmail.com\nillforgetlater@gmail.com\n"
 
 ---
 # Source: homeassistant/charts/oauth2-proxy/templates/configmap.yaml
@@ -113,7 +113,7 @@ spec:
     metadata:
       annotations:
         checksum/config: 9c1ecd9f0889c5271728298190b5b9b1104baac2492387267c860173bb7765e8
-        checksum/config-emails: e90291cd719299235c3af1b38b2a256a4b9243599aba0c9e6df28477a12a9aad
+        checksum/config-emails: 2ac07af502136280b6a315cc5a20fbcec8d0b5893faf8cba45d31b73edf2e674
         checksum/secret: 8fa6fdae65861caa2986544b8860a5205be1937328c8ec2bad6bad076b9e2425
         checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
