@@ -336,6 +336,142 @@ local fleetControl = {
       },
     },
 
+    // Collecting a flight: an offload step per campod, then a join. coordinator#566, and
+    // the reasoning is in README.md.
+    //
+    // The service used to move these bytes itself, which made the campods serial and tied a
+    // transfer to that pod's lifetime -- 336 and 361 MB landing seven minutes apart on
+    // 2026-10-18. Here they are two pods that start together.
+    collectTemplate: {
+      apiVersion: 'argoproj.io/v1alpha1',
+      kind: 'WorkflowTemplate',
+      metadata: { name: std.format('%s-collect', config.name) },
+      spec: {
+        serviceAccountName: fcObj.workflowServiceAccount.metadata.name,
+        entrypoint: 'collect',
+        // As for the playbook template: no activeDeadlineSeconds, and the TTL is how far
+        // back the record reaches. A transfer is slow by nature, and a deadline would fail
+        // the long ones -- which are the ones carrying the most data.
+        ttlStrategy: { secondsAfterCompletion: 604800 },
+
+        arguments: {
+          parameters: [
+            { name: 'flight' },
+            // `[{"node": ..., "session": ...}, ...]`. The fan-out spreads this, so another
+            // campod is a longer list and nothing else.
+            { name: 'targets' },
+          ],
+        },
+
+        volumes: [
+          {
+            name: 'ssh-key',
+            secret: { secretName: fcObj.sshKey.metadata.name, defaultMode: 288 },  // 0440
+          },
+          // The datasets share. RWX, which is what lets two step pods on different nodes
+          // write into one flight directory at the same time.
+          {
+            name: 'flights',
+            persistentVolumeClaim: { claimName: fcObj.flightsPvc.metadata.name },
+          },
+          { name: 'inventory', configMap: { name: fcObj.inventory.metadata.name } },
+        ],
+
+        local mounts = [
+          { name: 'flights', mountPath: '/mnt/flights' },
+          { name: 'inventory', mountPath: '/config', readOnly: true },
+        ],
+        // The same env the Deployment gives the service, because a step runs the service's
+        // own code: it reads the roster, reaches a device over ssh, and quiesces it over
+        // the pod bus before touching it.
+        local stepEnv = [
+          { name: 'FLEET_INVENTORY', value: '/config/inventory.json' },
+          { name: 'FLEET_FLIGHTS_DIR', value: '/mnt/flights/rekon10' },
+          { name: 'FLEET_MQTT_URL', value: 'mqtt://' + config.brokerHost + ':1883' },
+          { name: 'FLEET_SSH_KEY', value: '/secrets/ssh/id' },
+          { name: 'FLEET_SSH_USER', value: config.sshUser },
+        ],
+
+        templates: [
+          {
+            name: 'collect',
+            inputs: { parameters: [{ name: 'flight' }, { name: 'targets' }] },
+            dag: {
+              tasks: [
+                {
+                  name: 'offload',
+                  template: 'offload',
+                  withParam: '{{inputs.parameters.targets}}',
+                  arguments: {
+                    parameters: [
+                      { name: 'node', value: '{{item.node}}' },
+                      { name: 'session', value: '{{item.session}}' },
+                    ],
+                  },
+                },
+                {
+                  name: 'join',
+                  template: 'join',
+                  // ANY, not all. A flight short one campod still has the other's bundle on
+                  // the share, and a summary naming it is how that is visible -- the
+                  // alternative is a verified tarball nothing refers to.
+                  depends: 'offload.AnySucceeded',
+                },
+              ],
+            },
+          },
+          {
+            name: 'offload',
+            inputs: { parameters: [{ name: 'node' }, { name: 'session' }] },
+            // 0440 and group 1000, matching the key's mode, as in the Deployment.
+            securityContext: { fsGroup: 1000 },
+            container: {
+              image: config.image,
+              // ALWAYS, for the reason the bench template gives: `:main` floats, and a
+              // workflow pod has no tag watcher to roll it, so a cached layer wins silently.
+              imagePullPolicy: 'Always',
+              command: [
+                'node',
+                '/app/dist/offload-step.js',
+                '{{inputs.parameters.node}}',
+                '{{inputs.parameters.session}}',
+                '{{workflow.parameters.flight}}',
+              ],
+              volumeMounts: mounts + [{
+                name: 'ssh-key',
+                mountPath: '/secrets/ssh/id',
+                subPath: config.sshKeyField,
+                readOnly: true,
+              }],
+              env: stepEnv,
+              // The transfer is streamed to disk and hashed in the same pass, so what this
+              // holds is a few buffers rather than the bundle: 361 MB moved by a process
+              // that never has it.
+              resources: {
+                requests: { cpu: '100m', memory: '96Mi' },
+                limits: { memory: '384Mi' },
+              },
+            },
+          },
+          {
+            name: 'join',
+            container: {
+              image: config.image,
+              imagePullPolicy: 'Always',
+              command: ['node', '/app/dist/collect-join.js', '{{workflow.parameters.flight}}'],
+              volumeMounts: mounts,
+              env: stepEnv,
+              // Reads a handful of small JSON files and writes one.
+              resources: {
+                requests: { cpu: '50m', memory: '64Mi' },
+                limits: { memory: '192Mi' },
+              },
+            },
+          },
+        ],
+      },
+    },
+
     // The fleet SSH key. `pi` has passwordless sudo on every node, so this credential is
     // root on the fleet -- see coordinator#261 on giving automation its own key.
     sshKey: op.item.new(config.sshKeySecret, 'vaults/' + APP.vault_name + '/items/' + config.sshKeySecret),
