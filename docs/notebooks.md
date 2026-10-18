@@ -214,16 +214,22 @@ with real variance), not a dump of everything the exporter emits.
   changes or the observation is worth recording, not on a timer (a scheduled
   runner writing rendered outputs to the NAS is the follow-up in #644).
 
-## Environment facts (verified 2026-07-27; Loki facts 2026-07-29)
+## Environment facts (verified 2026-07-27; Loki facts 2026-07-29, structured metadata 2026-10-18)
 
 - Mimir: `http://mimir-gateway.mimir.svc`, header `X-Scope-OrgID: tiles`.
   Alertmanager API at `<gateway>/alertmanager/api/v2/alerts`. Configured
   limits appear in `cortex_limits_defaults` (not `_overrides`).
 - Loki: `http://loki.loki.svc:3100` (SingleBinary, `gateway.enabled: false`, so
   no loki-gateway), same `X-Scope-OrgID: tiles` header (`auth_enabled: true`).
-  `detected_level` is structured metadata: filter with
-  `{...} | detected_level=~"error|warn"` as a pipeline stage -- in a stream
-  selector it silently matches nothing.
+  Structured metadata is **not** indexed and silently matches nothing in a stream
+  selector -- filter it as a pipeline stage instead. On pod logs the structured
+  keys are `pod`, `service_instance_id` (`namespace.pod.container`) and
+  `detected_level`; the indexed labels are `cluster`, `container`, `filename`,
+  `flags`, `instance`, `job`, `k8s_cluster_name`, `namespace`, `service_name`,
+  `service_namespace`, `source` and `stream`. So `{namespace="x", pod="y"}` scans
+  zero bytes and returns nothing, which is indistinguishable from the pod having
+  logged nothing; ``{namespace="x"} | pod=`y` `` is the working form. Same for
+  `{...} | detected_level=~"error|warn"`.
 - Loki self-metrics (`loki_*`) are scraped **into Mimir** via serviceMonitor;
   query them through `mimir-gateway.mimir.svc`, not Loki. Loki's own HTTP API is
   used only for its logs (LogQL). Loki's mixin **rules are not deployed**
