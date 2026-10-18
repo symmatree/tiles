@@ -297,6 +297,13 @@ local fleetControl = {
             }],
             container: {
               image: config.image,
+              // ALWAYS, because the tag floats. `:main` is not `:latest`, so Kubernetes
+              // defaults it to IfNotPresent: on 2026-10-18 all three steps ran on
+              // tiles-wk-3, whose cached `:main` predated the fix they were testing, and
+              // the kubelet said so -- "already present on machine". The Deployment does
+              // not have this problem because the tag watcher rolls it on digest change,
+              // which pulls; a workflow pod has no such trigger.
+              imagePullPolicy: 'Always',
               command: [
                 '/usr/local/bin/bench-cycle',
                 '{{inputs.parameters.stage}}',
