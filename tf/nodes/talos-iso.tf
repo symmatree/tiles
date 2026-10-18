@@ -15,6 +15,16 @@
 # amdgpu-firmware is deliberately absent: no such official extension exists for this Talos
 # version, so the filter it replaced silently matched nothing. Adding a name that the factory
 # does not know now fails loudly when the schematic is next created.
+
+# talos.dashboard.disabled=1 on every schematic: the console dashboard polls machined
+# over the local unix socket every 5s (NetworkDeviceStats, CPUInfo, CPUFreqStats,
+# SystemStat, Memory, LoadAvg, ServiceList, Processes), and machined logs three lines per
+# call -- two authz grants and a success record. That is ~19.4k lines/hour/node, which was
+# 53% of all Loki ingest across the eight nodes (#774). Disabling it also stops Talos
+# redirecting kernel logs to /dev/tty1, so the KVM console shows kernel output instead of
+# the dashboard. Kernel args live in the schematic, not machine.install.extraKernelArgs --
+# see the install block in tf/modules/talos-cluster/talos-config.yaml for why.
+
 locals {
   talos_extensions_vm          = ["siderolabs/qemu-guest-agent"]
   talos_extensions_metal_amd   = ["siderolabs/amdgpu", "siderolabs/amd-ucode"]
@@ -29,7 +39,7 @@ resource "talos_image_factory_schematic" "vm" {
         systemExtensions = {
           officialExtensions = local.talos_extensions_vm
         }
-        extraKernelArgs = ["vga=792", "net.ifnames=0", "-talos.halt_if_installed"]
+        extraKernelArgs = ["vga=792", "net.ifnames=0", "-talos.halt_if_installed", "talos.dashboard.disabled=1"]
       }
     }
   )
@@ -43,7 +53,7 @@ resource "talos_image_factory_schematic" "metal_amd" {
         systemExtensions = {
           officialExtensions = local.talos_extensions_metal_amd
         }
-        extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed"]
+        extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed", "talos.dashboard.disabled=1"]
       }
     }
   )
@@ -57,7 +67,7 @@ resource "talos_image_factory_schematic" "metal_intel" {
         systemExtensions = {
           officialExtensions = local.talos_extensions_metal_intel
         }
-        extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed"]
+        extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed", "talos.dashboard.disabled=1"]
       }
     }
   )
