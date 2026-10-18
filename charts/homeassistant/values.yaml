@@ -76,6 +76,7 @@ oauth2-proxy:
     enabled: true
     restricted_access: |
       seth.porter@gmail.com
+      illforgetlater@gmail.com
   ingress:
     enabled: true
     className: cilium
