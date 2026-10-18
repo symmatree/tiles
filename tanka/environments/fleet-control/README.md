@@ -167,8 +167,8 @@ The log outlives it either way: Alloy ships the step's stdout to Loki.
 ## Collecting a flight
 
 [coordinator#566](https://github.com/symmatree/coordinator/issues/566). `fleet-control-collect`
-is one offload step per campod, fanned out with `withParam` over a `targets` parameter, then a
-join step that composes `flight.json`.
+is one offload step per campod, fanned out with `withParam` over a `targets` parameter. There
+is nothing after them.
 
 The service used to move these bytes itself. That made the two campods serial -- 336 and 361
 MB landing at 18:23:32 and 18:30:58 on 2026-10-18, the second waiting on nothing but the first
@@ -181,16 +181,16 @@ This is the one template whose steps need the datasets share. It is `ReadWriteMa
 is what lets two step pods on different nodes write into one flight directory at the same
 time; the playbook steps mount nothing.
 
-### Why a join step
+### Why there is no join step
 
-Each offload writes its own file under `collected/` and recomposes `flight.json` from the set,
-so the summary is never read-modify-written by two pods at once -- that loses whichever entry
-was read before the other's write, leaving a verified bundle on the share that nothing names.
-The join is one final compose after both have stopped writing, which two independent
-workflows would have nowhere to put.
+Each offload writes its own file under the flight's `collected/`, so nothing has to be
+merged. The alternative was a single `flight.json` appended to by both steps -- which is
+read-modify-write across two pods, loses whichever entry was read before the other's write,
+and then needs a join step to reconcile what it lost. Dropping the shared file drops all of
+it: the reader globs the directory.
 
-It depends on `offload.AnySucceeded`, not all: a flight short one campod still has the
-other's bundle, and a summary naming it is how that is visible.
+A flight short one campod is a directory with one file in it, which is what being short one
+looks like.
 
 ### `imagePullPolicy: Always`, as for the bench steps
 
