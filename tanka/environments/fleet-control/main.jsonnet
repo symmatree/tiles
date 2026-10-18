@@ -336,12 +336,16 @@ local fleetControl = {
       },
     },
 
-    // Collecting a flight: an offload step per campod, then a join. coordinator#566, and
-    // the reasoning is in README.md.
+    // Collecting a flight: one offload step per campod, and nothing after them.
+    // coordinator#566, and the reasoning is in README.md.
     //
     // The service used to move these bytes itself, which made the campods serial and tied a
     // transfer to that pod's lifetime -- 336 and 361 MB landing seven minutes apart on
     // 2026-10-18. Here they are two pods that start together.
+    //
+    // NO JOIN. Each step writes its own file under the flight's `collected/`, so there is
+    // no manifest to merge and nothing for a final step to reconcile. The reader globs the
+    // directory.
     collectTemplate: {
       apiVersion: 'argoproj.io/v1alpha1',
       kind: 'WorkflowTemplate',
@@ -409,14 +413,6 @@ local fleetControl = {
                     ],
                   },
                 },
-                {
-                  name: 'join',
-                  template: 'join',
-                  // ANY, not all. A flight short one campod still has the other's bundle on
-                  // the share, and a summary naming it is how that is visible -- the
-                  // alternative is a verified tarball nothing refers to.
-                  depends: 'offload.AnySucceeded',
-                },
               ],
             },
           },
@@ -450,21 +446,6 @@ local fleetControl = {
               resources: {
                 requests: { cpu: '100m', memory: '96Mi' },
                 limits: { memory: '384Mi' },
-              },
-            },
-          },
-          {
-            name: 'join',
-            container: {
-              image: config.image,
-              imagePullPolicy: 'Always',
-              command: ['node', '/app/dist/collect-join.js', '{{workflow.parameters.flight}}'],
-              volumeMounts: mounts,
-              env: stepEnv,
-              // Reads a handful of small JSON files and writes one.
-              resources: {
-                requests: { cpu: '50m', memory: '64Mi' },
-                limits: { memory: '192Mi' },
               },
             },
           },
