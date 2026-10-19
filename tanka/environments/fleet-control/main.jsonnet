@@ -336,12 +336,17 @@ local fleetControl = {
       },
     },
 
-    // Collecting a flight: one offload step per campod, and nothing after them.
+    // Collecting a flight: one step per thing retrieved, and nothing after them.
     // coordinator#566, and the reasoning is in README.md.
     //
-    // The service used to move these bytes itself, which made the campods serial and tied a
-    // transfer to that pod's lifetime -- 336 and 361 MB landing seven minutes apart on
-    // 2026-10-18. Here they are two pods that start together.
+    // The service used to move these bytes itself, which made every retrieval serial and
+    // tied it to that pod's lifetime -- 336 and 361 MB landing seven minutes apart on
+    // 2026-10-18, with an FC log that takes about 30 minutes for 148 MB queued behind them
+    // for no reason, since it is a different device. Here they all start together.
+    //
+    // ONE STEP TEMPLATE FOR BOTH KINDS. A target is `{node, kind, id}` whatever it is, so
+    // the fan-out spreads sessions and FC logs into the same shape and there is no second
+    // template to keep in step with the first.
     //
     // NO JOIN. Each step writes its own file under the flight's `collected/`, so there is
     // no manifest to merge and nothing for a final step to reconcile. The reader globs the
@@ -409,7 +414,8 @@ local fleetControl = {
                   arguments: {
                     parameters: [
                       { name: 'node', value: '{{item.node}}' },
-                      { name: 'session', value: '{{item.session}}' },
+                      { name: 'kind', value: '{{item.kind}}' },
+                      { name: 'id', value: '{{item.id}}' },
                     ],
                   },
                 },
@@ -418,7 +424,7 @@ local fleetControl = {
           },
           {
             name: 'offload',
-            inputs: { parameters: [{ name: 'node' }, { name: 'session' }] },
+            inputs: { parameters: [{ name: 'node' }, { name: 'kind' }, { name: 'id' }] },
             // 0440 and group 1000, matching the key's mode, as in the Deployment.
             securityContext: { fsGroup: 1000 },
             container: {
@@ -430,7 +436,8 @@ local fleetControl = {
                 'node',
                 '/app/dist/offload-step.js',
                 '{{inputs.parameters.node}}',
-                '{{inputs.parameters.session}}',
+                '{{inputs.parameters.kind}}',
+                '{{inputs.parameters.id}}',
                 '{{workflow.parameters.flight}}',
               ],
               volumeMounts: mounts + [{
