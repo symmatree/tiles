@@ -167,13 +167,20 @@ The log outlives it either way: Alloy ships the step's stdout to Loki.
 ## Collecting a flight
 
 [coordinator#566](https://github.com/symmatree/coordinator/issues/566). `fleet-control-collect`
-is one offload step per campod, fanned out with `withParam` over a `targets` parameter. There
-is nothing after them.
+is one step per thing retrieved, fanned out with `withParam` over a `targets` parameter.
+There is nothing after them.
 
 The service used to move these bytes itself. That made the two campods serial -- 336 and 361
 MB landing at 18:23:32 and 18:30:58 on 2026-10-18, the second waiting on nothing but the first
 -- and tied a transfer to that pod's lifetime, so a roll mid-collect took it with it. Here
 each is a pod that starts when the other does.
+
+### One step template, both kinds
+
+A target is `{node, kind, id}` whatever it is -- `kind` is `session` or `fc-log` -- so the
+fan-out spreads both into the same step and there is no second template to keep in step with
+the first. They were separate routes run in sequence before, which put a ~30-minute dataflash
+pull behind the campods for no reason: they are different devices.
 
 ### The flights PVC, mounted by the steps
 
