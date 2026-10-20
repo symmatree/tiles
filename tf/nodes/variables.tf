@@ -33,6 +33,11 @@ variable "talos_version" {
   type        = string
 }
 
+variable "kubernetes_version" {
+  description = "Kubernetes version, matched to the Talos release in talos_version"
+  type        = string
+}
+
 variable "talos_vm_variant" {
   description = "Talos Linux variant (e.g., nocloud, metal)"
   type        = string
