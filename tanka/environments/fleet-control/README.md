@@ -90,6 +90,176 @@ is what makes the 0440 key readable by the process that needs it.
   playbook is baked into this image**, so a stale pod converges nodes with a playbook that is
   not the one on `main`.
 
+## Fleet operations run as Argo Workflows
+
+[coordinator#504](https://github.com/symmatree/coordinator/issues/504). The service runs
+`ansible-playbook` as a subprocess of itself today; this is the deployment side of moving it
+into a pod of its own. Nothing submits one yet.
+
+The objects are a `WorkflowTemplate` (`fleet-control-playbook`), a ServiceAccount for the
+workflow's pods, and two Roles.
+
+**`fleet-control-playbook` covers every playbook run** — converge, full provision and
+reimage are the same step with a different `playbook` parameter, plus `extra-vars` for
+whatever that playbook needs beyond `device_role`. `extra-vars` is a JSON object, empty by
+default; the step merges it into the vars the play is given and refuses any key that would
+displace the four it sets itself, since those are how the play reaches the device and what
+key it installs there.
+
+**It does not yet cover the other long operations.** Pulling an FC dataflash log is about
+half an hour for 148 MB at the measured 84 KiB/s, and offloading a session bundle moves
+gigabytes; both run in the service's own process today and both die with a pod roll for
+exactly the same reason a converge does. They want a second template that mounts the flights
+volume rather than running a playbook, which is not written yet.
+
+### Why a template rather than a Workflow built in code
+
+A `WorkflowTemplate` is a definition, so it is reviewable in git; what the service submits is
+a reference to it plus parameters. That is only possible because the Argo CRDs are installed
+by `tf/nodes/k8s-bootstrap.tf`, ahead of the Argo CD tree — Argo CD cannot diff a resource
+whose type it does not know. See [#827](https://github.com/symmatree/tiles/issues/827).
+
+The step's body is `run-playbook.sh` out of the service's own image. Whether that script
+belongs in that image is an open question; moving it changes `image` and `command` here and
+nothing else.
+
+### Why in this namespace
+
+Everything a converge needs is already here: the fleet key, the GitHub token, the roster.
+Running workflows in a central namespace would mean a second copy of the fleet key in a
+second namespace, and one key with two homes is how this service came to present a key no
+device trusted.
+
+`FLEET_SSH_PUBLIC_KEY` is the `public-key` field of the **same 1Password item** that holds
+`private-key`; `charts/jupyterhub` consumes its own ssh-key item the same way. Terraform
+generates the pair and writes both fields together.
+
+### Why two Roles
+
+| Role | grants | to |
+|---|---|---|
+| `fleet-control-workflow` | `workflowtaskresults` create, patch | the workflow's **pods** |
+| `fleet-control-submit` | `workflows` create/get/list/watch/delete, `pods` + `pods/log` read | the **service** |
+
+Argo's executor reports each step's outcome by writing a `workflowtaskresult`, so a pod needs
+that much. This is why a namespace that runs workflows carries a little RBAC of its own
+rather than inheriting the controller's, which is cluster-wide and comes with the chart.
+
+The service's half is submitting and then finding its workflow again — **by label, not by an
+id held in memory**, so that a pod roll does not orphan a workflow that is still running.
+That is the property the whole change exists to buy.
+
+In Kubernetes terms the workflow pod is nearly unprivileged: two verbs on one resource. Its
+reach comes from the mounted fleet key, which is root on every device.
+
+### No `activeDeadlineSeconds`
+
+Deliberate. A previous version of the service imposed a 60-minute ceiling, hit it on a slow
+node, and reported a successful converge as a failure while the play was still running.
+Killing a play half-way leaves a part-configured box. Ansible's own timeouts bound it.
+
+### `ttlStrategy: 7 days`
+
+There is no workflow archive ([#831](https://github.com/symmatree/tiles/pull/831)), so the
+`Workflow` object *is* the run record and this is how far back the API can answer "what ran".
+The log outlives it either way: Alloy ships the step's stdout to Loki.
+
+## Collecting a flight
+
+[coordinator#566](https://github.com/symmatree/coordinator/issues/566). `fleet-control-collect`
+is one step per thing retrieved, fanned out with `withParam` over a `targets` parameter.
+There is nothing after them.
+
+The service used to move these bytes itself. That made the two campods serial -- 336 and 361
+MB landing at 18:23:32 and 18:30:58 on 2026-10-18, the second waiting on nothing but the first
+-- and tied a transfer to that pod's lifetime, so a roll mid-collect took it with it. Here
+each is a pod that starts when the other does.
+
+### One step template, both kinds
+
+A target is `{node, kind, id}` whatever it is -- `kind` is `session` or `fc-log` -- so the
+fan-out spreads both into the same step and there is no second template to keep in step with
+the first. They were separate routes run in sequence before, which put a ~30-minute dataflash
+pull behind the campods for no reason: they are different devices.
+
+### The flights PVC, mounted by the steps
+
+This is the one template whose steps need the datasets share. It is `ReadWriteMany` NFS, which
+is what lets two step pods on different nodes write into one flight directory at the same
+time; the playbook steps mount nothing.
+
+### Why there is no join step
+
+Each offload writes its own file under the flight's `collected/`, so nothing has to be
+merged. The alternative was a single `flight.json` appended to by both steps -- which is
+read-modify-write across two pods, loses whichever entry was read before the other's write,
+and then needs a join step to reconcile what it lost. Dropping the shared file drops all of
+it: the reader globs the directory.
+
+A flight short one campod is a directory with one file in it, which is what being short one
+looks like.
+
+### `imagePullPolicy: Always`, as for the bench steps
+
+Same reason, and it holds for every template here: `:main` floats, so Kubernetes defaults to
+`IfNotPresent` and a node with a stale cached layer runs old code, with no tag watcher to
+correct it the way the Deployment has.
+
+## The bench simulated-flight cycle
+
+[coordinator#541](https://github.com/symmatree/coordinator/pull/541). `bench-simflight` is
+the camera-sync test procedure on the bench rig, declared. It was a local python script run
+by hand, and the cycle drifted trial to trial -- a wait skipped, a different window length,
+a flight name that did not match the session that got collected -- which is exactly the
+variable you cannot have in a timing measurement. The steps now come from one definition:
+
+    argo submit --from workflowtemplate/bench-simflight -n fleet-control \
+        -p flight=bench-20261017-simflight-11
+
+| step | what it does |
+|---|---|
+| `deploy` | converges each campod serially, reboots both, waits for uptime to go backwards and for both cameras to report `ready` |
+| `arm` | stops the FC talker on the coordinator, writes the arm file |
+| `window` | `suspend`, `window-seconds` long (default 240) |
+| `disarm` | writes the arm file back, waits for the writers to close |
+| `collect` | reboots all three, picks each pod's newest closed session by `last_activity_utc`, offloads it into the named flight |
+
+**Whether the code under test is built is the caller's business, not the workflow's.** An
+earlier version checked that the service was serving the newest commit and that the camera
+image's build job had succeeded before it would converge, which is the stack's provenance
+re-derived from outside it -- and wrong for the common case, where the operator knows
+perfectly well whether they are waiting on a build. Submit it when you want it to run; what
+ran is recorded in each session's `manifests/` afterwards.
+
+The step body is `bench-cycle` out of the service's image, for the same reasons
+`run-playbook.sh` is: it needs that image's python and ssh client, and it drives this
+service's own API. Arming is the one step that touches a device directly -- the arm file has
+no API verb -- so the steps mount the fleet key.
+
+### The window is a `suspend` step
+
+Not a sleep in a container. A suspended step has no pod, so during the measurement nothing
+of ours is scheduled, logging, or polling. The pods are 417 MiB boards and the thing under
+test is frame timing; a poll that evicts the camera's working set is a poll that changes the
+measurement.
+
+### `activeDeadlineSeconds: 5400`, unlike the playbook template
+
+The reason that one has none does not apply here. This workflow holds the rig **armed**
+between two of its steps, so a cycle that hangs holds it armed indefinitely, filling cards
+with frames no trial will use. 90 minutes is generous for two converges, three reboots and
+a four-minute window.
+
+`onExit: disarm` runs the disarm step whatever happened, so a failure or a stop mid-window
+does not leave the rig armed with the FC talker stopped. Writing `0` twice is what the
+device already expects.
+
+### No `retryStrategy`
+
+A failed converge or a missed `ready` means the fleet is not in the state the trial assumes.
+Retrying against a device that is mid-reboot produces a trial whose conditions nobody knows,
+which is worse than no trial.
+
 ## Auth
 
 None. On-network only, like the other private-address services here. If it is ever wanted

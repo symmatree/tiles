@@ -22,10 +22,24 @@ page should shrink when that happens:
 - Core is current. The Yellow's Zigbee radio was stuck behind a disk-full
   condition for months; both are resolved and `zha` loads, with no paired
   devices on it. All Z-Wave and Zigbee runs through the Hubitat hub.
-- The browser door is live. The companion-app door (mutual TLS) is built but
-  unmerged, waiting on a hands-on test with a device.
+- **The browser door is live and in real use**, with two identities on the
+  allowlist, verified end to end by someone other than the agent -- Google at
+  the gate, then an HA local account. The two-prompt cost is handled
+  client-side with a stored URL and autofill, so the idea of collapsing the
+  layers (header auth, `--prompt=select_account`, installing hass-oidc-auth) is
+  **closed, not deferred**. The only argument left for HA-side OIDC was
+  revoking people centrally, which does not apply to this household.
+- The companion-app door (mutual TLS) is rebased, green and mergeable, pinned
+  to ghostunnel `v1.11.4-distroless`. Its cluster-side prerequisites are live:
+  `tiles-device-ca-issuer` ready, both trust-manager Bundles synced, the CA
+  valid to Oct 2028, `10.0.130.2` unallocated. Every bypass that was testable
+  fails closed, and the Terraform plan is one addition. What is left is the
+  Android enrolment, which needs a device in hand.
 - Five of six Zooz motion sensors are battery-dead and feed `entity_controller`.
   Tracked as `ha-config#4`; the surrounding maintenance plan is `#5`-`#10`.
+  `ha-config#12` fixed a separate fault found the same way: both the garage and
+  basement controllers were pointing at a ratgdo entity id that no longer
+  exists.
 - First pass of the entity sweep is done. Of 2709 registry entries: 1391
   disabled (1387 of those by the integration itself, which is routine -- only 4
   are deliberate), 0 orphaned with no state, 470 `restored`, 19 `unavailable`,
@@ -35,8 +49,10 @@ page should shrink when that happens:
 - `konnected` and `songpal` not loaded; `roborock` fails on credentials; `xbox`
   fails against its account-link endpoint. All predate the current work.
 - Hubitat's own Z-Wave radio reports `isRadioUpdateNeeded: true`.
-- `ha-config#11` removes the migrated `http:` block; `#4`-`#10` are the
-  maintenance and monitoring plan.
+- `ha-config#11` (the migrated `http:` block) and `#12` (the ratgdo id) are
+  merged, pulled onto the appliance and applied by a Core restart; the
+  `yaml_still_present_after_migration` repair has cleared. The one repair left
+  is the Xbox account-link reauth, which predates all of this.
 
 ## Technique
 
@@ -69,6 +85,17 @@ stops working in 2027.2.0. `http/config` returns `stable`, `pending`,
 `revert_at` and `active_config_type` -- a freshly migrated or edited config is
 staged as a *pending trial* and reverts after five minutes unless promoted, so
 check `active_config_type` rather than assuming an edit stuck.
+
+**Landing a `ha-config` commit on the appliance is not a plain `git pull`.**
+`/root/.gitconfig` carries a URL-scoped credential helper pointing at
+`/usr/local/bin/gh`, which exists only in the VSCode Server add-on -- so from the
+SSH add-on, where an agent lands, git cannot authenticate to GitHub and the pull
+fails on "could not read Username". Either pull from the VSCode terminal, or move
+the objects without credentials: `git bundle create f <ref> --not <box HEAD>`
+locally, `scp` it over, then `git fetch /tmp/f refs/heads/<ref>:refs/remotes/origin/main`
+and `git merge --ff-only`. Bundle the ref under a name the box can fetch -- a
+bundle of `origin/main` carries `refs/remotes/origin/main`, which a
+`refs/heads/main` refspec will not match.
 
 A shallow sparse clone of `home-assistant/core` is at
 `/home/jovyan/upstream/home-assistant-core`, pinned to the tag the appliance
@@ -115,10 +142,16 @@ Kept on this page because they are about method rather than about the system.
   in routine lines, has produced wrong conclusions here more than once.
 - **A dead battery does not make a binary sensor unavailable -- it freezes it.**
   Several motion sensors here have been reporting `on` continuously since their
-  cells died months ago, and HA shows them as ordinary and healthy. Downstream
-  automation then sees permanent motion. `unavailable` at least fails loudly;
-  stuck-at-a-plausible-value does not, so a sweep has to look for staleness and
-  not only for error states.
+  cells died months ago, and HA shows them as ordinary and healthy. `unavailable`
+  at least fails loudly; stuck-at-a-plausible-value does not, so a sweep has to
+  look for staleness and not only for error states.
+
+  What a frozen sensor does *not* do is drive anything: `entity_controller` arms
+  on a state *transition*, which a frozen input can never emit again, so the
+  timers expire normally. Verified against a real walk-through -- both delays
+  fired to the second. The first version of this note claimed the opposite, from
+  a single observation of `active_timer` that had another cause. Lost coverage,
+  not an active fault.
 - **A dead registry entry squats its entity id**, and the live entity that wants
   that id silently gets a `_2` suffix. So the obvious-looking id can be the dead
   one and the real device can be on the suffixed id. Check `attributes.restored`

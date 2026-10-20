@@ -17,10 +17,16 @@ external_ip_cidr  = "10.0.129.0/24"
 # Fixed IP for the shared Cilium ingress (the WAN-forwarded front door), served
 # from the dedicated static-LB pool. MUST be inside the /24 hardcoded in
 # charts/cilium-config/templates/lb-static-pool.helm.yaml -- keep the two in
-# sync. Reserve it out of DHCP on the UniFi side.
+# sync. Nothing to reserve on the UniFi side: DHCP serves 10.0.11.1-10.0.12.254
+# (see README.md "Network ranges"), nowhere near this /18.
 ingress_lb_ip = "10.0.130.1"
 service_cidr  = "10.0.136.0/21"
 pod_cidr      = "10.0.144.0/20"
+
+# Fixed IP for the mutual-TLS door (charts/homeassistant ghostunnel),
+# from the same static-LB pool as ingress_lb_ip above. Propagated into the chart
+# through app_of_apps_values, so this is the only place it is written.
+homeassistant_tls_lb_ip = "10.0.130.2"
 
 virtual_machines = {
   "tiles-cp-1" = {

@@ -8,6 +8,8 @@ pod_cidr: placeholder
 cluster_name: placeholder
 external_ip_cidr: placeholder
 ingress_lb_ip: placeholder
+homeassistant_tls_lb_ip: placeholder
+homeassistant_tls_port: placeholder
 vault_name: placeholder
 project_id: placeholder
 seed_project_id: placeholder

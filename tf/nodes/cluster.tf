@@ -36,17 +36,19 @@ module "cluster" {
   talos_metal_intel_variant   = var.talos_metal_intel_variant
   talos_metal_intel_schematic = talos_image_factory_schematic.metal_intel.id
 
-  admin_user             = var.admin_user
-  external_ip_cidr       = var.external_ip_cidr
-  ingress_lb_ip          = var.ingress_lb_ip
-  pod_cidr               = var.pod_cidr
-  service_cidr           = var.service_cidr
-  control_plane_vip      = var.control_plane_vip
-  control_plane_vip_link = "eth0" # This depends on predictable network ifaces being off
-  vms                    = var.virtual_machines
-  metal_amd_nodes        = local.metal_amd_nodes
-  metal_intel_nodes      = local.metal_intel_nodes
-  metal_apply_mode       = var.metal_apply_mode
+  admin_user              = var.admin_user
+  external_ip_cidr        = var.external_ip_cidr
+  ingress_lb_ip           = var.ingress_lb_ip
+  homeassistant_tls_lb_ip = var.homeassistant_tls_lb_ip
+  homeassistant_tls_port  = var.homeassistant_tls_port
+  pod_cidr                = var.pod_cidr
+  service_cidr            = var.service_cidr
+  control_plane_vip       = var.control_plane_vip
+  control_plane_vip_link  = "eth0" # This depends on predictable network ifaces being off
+  vms                     = var.virtual_machines
+  metal_amd_nodes         = local.metal_amd_nodes
+  metal_intel_nodes       = local.metal_intel_nodes
+  metal_apply_mode        = var.metal_apply_mode
 
   kubelet_eviction_memory_available = var.kubelet_eviction_memory_available
   nodes_to_iso_ids                  = local.nodes_to_iso_ids

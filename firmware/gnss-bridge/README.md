@@ -15,10 +15,25 @@ The receiver is on a UART rather than its USB port because the ESP32 has no USB 
 port keeps its own independent `CFG-MSGOUT` configuration, untouched, so a USB cable into any
 machine is a working fallback.
 
-**Status: nothing here has been built.** The ESP32 board is on hand; headers, crimp contacts
-are not ordered. Pin assignments below are read off the two vendors.
-schematics, not off a working unit. This is a reference for whenever the parts show up, not a
-queued task -- the rest of PR #813 is inert until the prod tag moves anyway.
+## Status
+
+**The board is flashed and on the network. The harness is not built.**
+
+| | |
+|---|---|
+| ESP32 flashed, PoE, link up | yes -- `gnss-bridge`, **10.0.4.196** |
+| `stream_server` listening on 6638 | yes -- accepts a connection, 0 bytes with no UART attached |
+| ESPHome API on 6053 | yes -- discovered and adopted by Home Assistant |
+| Harness soldered and crimped | **no** |
+| Receiver reconfigured for UART1 | **no** -- still USB-only, `CFG-MSGOUT-*_USB` |
+| `settings.conf` pointing at the bridge | yes, merged in #813 -- takes effect when the prod tag moves |
+
+So the Ethernet, PoE and TCP-listener half is confirmed on real hardware; everything
+downstream of the UART pins is not. Pin assignments below come from the two vendors'
+schematics, not from a working link.
+
+`10.0.4.196` is a DHCP lease. `settings.conf` resolves `gnss-bridge.local.symmatree.com` at
+startup, so that name wants a reservation before the cutover.
 
 ## Wiring
 
@@ -36,6 +51,84 @@ config ([`gnss-bridge.yaml`](gnss-bridge.yaml)), not a constraint: GPIO32/33 (EX
 5) are the fallback if these two misbehave with Ethernet up.
 
 The breakout's `DSEL` jumper selects SPI when closed, which disables UART1. It ships open.
+
+### Pinout: ESP32-POE-ISO Rev L
+
+Harness pins in **bold**. Transcribed from the Rev L KiCad netlist
+([OLIMEX/ESP32-POE-ISO](https://github.com/OLIMEX/ESP32-POE-ISO)); pull-ups from the board's
+pinout sheet. `GPI34`-`GPI39` are input-only, an ESP32 limitation, not a board one.
+
+**EXT1** (1x10) -- the only header with power on it:
+
+| Pin | Signal | Notes |
+|---|---|---|
+| **1** | **`+5V`** | **harness: power.** Output only when on USB or PoE; 0.4 A / 2 W |
+| 2 | `+3V3` | also UEXT-1. Output only, 0.3 A / 1 W |
+| **3** | **`GND`** | **harness: ground** |
+| 4 | `ESP_EN` | reset, tied to RST1 |
+| 5 | `GPIO0` | strapping (boot mode); free after programming |
+| 6 | `GPIO1` | `U0TXD` -- USB-serial console |
+| 7 | `GPIO2` | strapping; SD-card `HS2_DATA0`; 2.2k pull-up; also UEXT-8 |
+| 8 | `GPIO3` | `U0RXD` -- USB-serial console |
+| **9** | **`GPIO4`** | **harness: UART1 TX.** Also UEXT-3 |
+| **10** | **`GPIO5`** | **harness: UART1 RX.** Strapping (SDIO timing, unused); 10k pull-up; also UEXT-10 |
+
+**EXT2** (1x10) -- no power pins:
+
+| Pin | Signal | Notes |
+|---|---|---|
+| 1 | `GPI39` | input only; external-supply sense |
+| 2 | `GPI36` | input only; 2.2k pull-up; reaches UEXT-4 through `D4` |
+| 3 | `GPI35` | input only; LiPo voltage sense if `SENS_BAT_E1` is closed |
+| 4 | `GPI34` | input only; user button BUT1; 10k pull-up |
+| 5 | `GPIO33` | free -- UART fallback |
+| 6 | `GPIO32` | free -- UART fallback |
+| 7 | `GPIO16` | I2C SCL; 2.2k pull-up; also UEXT-5 |
+| 8 | `GPIO15` | SD-card `HS2_CMD`; strapping; 10k pull-up; also UEXT-7 |
+| 9 | `GPIO14` | SD-card `HS2_CLK`; also UEXT-9 |
+| 10 | `GPIO13` | I2C SDA; 2.2k pull-up; also UEXT-6 |
+
+**UEXT** (2x5 boxed) -- every pin is shared with EXT1/EXT2, so do not use the same GPIO on
+both connectors:
+
+| Pin | Signal | | Pin | Signal |
+|---|---|---|---|---|
+| 1 | `+3V3` | | 2 | `GND` |
+| 3 | `GPIO4` | | 4 | `GPI36` **through `D4`, a series 1N5819** |
+| 5 | `GPIO16` SCL | | 6 | `GPIO13` SDA |
+| 7 | `GPIO15` | | 8 | `GPIO2` |
+| 9 | `GPIO14` | | 10 | `GPIO5` |
+
+**Consumed by Ethernet, not on any header:** `GPIO12` PHY power, `GPIO17` EMAC clock out,
+`GPIO18` MDIO, `GPIO23` MDC, and the fixed RMII pins `GPIO19`, `GPIO21`, `GPIO22`, `GPIO25`,
+`GPIO26`, `GPIO27`. On WROVER variants `GPIO16`/`GPIO17` go to PSRAM and the Ethernet clock
+moves to `GPIO0` -- this board is a WROOM-32UE, so it does not.
+
+### Pinout: SparkFun GPS-RTK-SMA (ZED-F9P)
+
+Header **J7**, 1x9. From the Eagle schematic in
+[sparkfun/Qwiic_GPS-RTK2](https://github.com/sparkfun/Qwiic_GPS-RTK2). Silkscreen labels carry
+both names because the pins are shared between UART1/I2C and SPI; `DSEL` open (the default)
+selects UART1 + I2C, closed selects SPI.
+
+| Pin | Signal | Notes |
+|---|---|---|
+| 1 | `SCL/SCK` | I2C clock, or SPI clock |
+| **2** | **`TXO/MISO`** | **harness: receiver TX out** -> ESP32 `GPIO5` |
+| **3** | **`RXI/MOSI`** | **harness: receiver RX in** <- ESP32 `GPIO4` |
+| 4 | `SDA/CS` | I2C data, or SPI chip select |
+| 5 | `RX2` | UART2 in -- the F9P's dedicated RTCM correction input |
+| 6 | `TX2` | UART2 out |
+| 7 | `3.3V` | regulated rail; feeding here bypasses the onboard AP2112 |
+| **8** | **`5V`** | **harness: power.** Into the onboard AP2112 |
+| **9** | **`GND`** | **harness: ground** |
+
+Pin order differs between the two boards: EXT1 1-2-3 is +5V, +3.3V, GND; J7 7-8-9 is 3.3V, 5V,
+GND.
+
+Also on the board, not on J7: two Qwiic connectors (same I2C as pins 1 and 4), USB-C (its own
+independent `CFG-MSGOUT` configuration, which is the fallback path), and the SMA for the
+antenna, whose LNA is fed through a bias tee off the 3.3V rail.
 
 ### Why EXT1 and not UEXT
 
@@ -100,8 +193,6 @@ total draw and less heat, but a switching rail into a receiver that wants a quie
 pinout sheet is ISO-specific and matches the `F0505S-2WR2` fitted on the board, so these
 figures follow the sheet.)
 
-Pin order differs between the two: EXT1 1-2-3 is +5V, +3.3V, GND; J7 7-8-9 is 3.3V, 5V, GND.
-
 ## Temperature
 
 `ESP32-POE-ISO-EA` is the commercial grade part, **0-70 C**; `-IND` is -40/+85. The other
@@ -145,27 +236,38 @@ for -- so the board can stay on Ethernet while you flash it.
 
 ## Cutover
 
-1. Flash over USB on the bench. The ISO board tolerates USB and PoE together; the non-isolated
-   `ESP32-POE` does not. Thereafter it is OTA.
-2. Give it a DHCP reservation as `gnss-bridge.local.symmatree.com` -- the name
-   [`settings.conf`](../../tanka/environments/ntrip/settings.conf) resolves as
-   `[main] ext_tcp_source`.
-3. Record the receiver's current configuration over USB, while it still works:
-   `./receiver-config.py export --serial /dev/ttyACM0 > receiver-config.txt`. This is the
-   read-back path [tiles#704](https://github.com/symmatree/tiles/issues/704) asks for; commit
-   the result so drift is a diff.
-4. Wire per the table, then `./receiver-config.py apply --serial /dev/ttyACM0` to set the
-   UART1 baud rate and message set in RAM and Flash. Flash, not BBR: the breakout has no
-   battery backup, so a PoE drop would otherwise lose it.
-5. Move the prod tag. `str2str_tcp` dials the bridge; `MON-COMMS` `txPeakUsage` and
-   `overrunErrs` say whether the UART has headroom.
+Done:
+
+1. ~~Flash the board, confirm it pulls a DHCP lease over PoE.~~ Done -- `10.0.4.196`,
+   listening on 6638, adopted by Home Assistant.
+
+Remaining, in order:
+
+2. Reserve `gnss-bridge.local.symmatree.com` for the board, since `settings.conf` resolves
+   that name and `10.0.4.196` is currently a lease.
+3. **Export the receiver's config over USB, before touching it**, and commit the result:
+   `./receiver-config.py export --serial /dev/ttyACM0 > receiver-config.txt`. It is the only
+   record of what is in that receiver's flash, and the revert path
+   ([#704](https://github.com/symmatree/tiles/issues/704)).
+4. Solder the headers, crimp the harness, connect it ([Wiring](#wiring)).
+5. `./receiver-config.py apply --serial /dev/ttyACM0` -- UART1 to 460800 and the message set,
+   to RAM and Flash. Not BBR: the breakout has no battery backup. Nothing in the apply touches
+   the USB port's own configuration, so USB stays a working fallback.
+6. Confirm the bridge is carrying the receiver:
+   `nc gnss-bridge.local.symmatree.com 6638 | xxd | head` should show UBX frames starting
+   `b5 62`. Everything downstream of that is TCP.
+7. Move the prod tag. `str2str_tcp` dials the bridge; watch `MON-COMMS` `txPeakUsage` and
+   `overrunErrs` for UART headroom, and `MON-RF` `noisePerMS` / `agcCnt` / `antStatus` for the
+   antenna feed and whether the supply choice costs anything.
 
 `MON-COMMS` and `MON-RF` are the diagnostics this receiver has. `MON-SYS` -- CPU load, memory,
 die temperature -- is not available: the ZED-F9P Interface Description (UBX protocol 27.10)
 never mentions it, and it first appears in the F9 HPS line at protocol 33.40. This firmware is
 HPG 1.32, protocol 27.31.
 
-Reverting is the same list backwards, and step 3's export is what makes that possible.
+**Nothing downstream moves until step 7.** The image rewrites `str2str_tcp` to dial the bridge
+instead of opening a serial device, so a pod restart after that tag move needs the bridge
+answering. Until then the merged change does not affect what is running.
 
 ## When the link is down, corrections stop
 

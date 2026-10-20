@@ -229,6 +229,27 @@ nodeLogs:
 podLogsViaLoki:
   enabled: true
   collector: alloy-logs
+  # Read each pod log file from the start, not from its end. This sets
+  # `tail_from_end` on `loki.source.file "pod_logs"`; the chart default is true.
+  #
+  # Pod discovery is a watch and so is immediate, but collection tails files under
+  # /var/log/pods and `local.file_match` polls the filesystem (10s default). With
+  # tail_from_end, Alloy seeks to EOF when it finally opens a file, so anything the
+  # pod wrote before that seek is never read and there is no catch-up. A pod that
+  # writes its output in the first second or two and exits is collected as nothing.
+  #
+  # Measured 2026-10-17: two pods in one namespace with the same marker, one writing
+  # at t+25s and persisting, one writing at t+0s and exiting at ~t+1s. The long one
+  # reached Loki, the short one did not, while both stayed readable with
+  # `kubectl logs`. That covers every Argo Workflow step pod (fleet-control's
+  # converge steps run ~15s), every CronJob pod that finishes quickly, and every
+  # ephemeral debug pod -- so an absence of logs in Loki for a short-lived pod was
+  # not evidence of anything.
+  #
+  # Cost of false: on a fresh position file the collector re-reads existing files
+  # from the start instead of from EOF. Positions are tracked in collector state, so
+  # that is a one-off rather than per restart.
+  onlyGatherNewLogLines: false
 
 applicationObservability:
   enabled: true
