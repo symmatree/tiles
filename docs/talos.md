@@ -25,6 +25,27 @@ https://factory.talos.dev/image/<SCHEMATIC_ID>/v<TALOS_VERSION>/nocloud-amd64.is
 
 After changing `talos_version`, run Terraform so `proxmox_virtual_environment_download_file` refreshes ISOs and VM CD-ROM references stay consistent.
 
+## Versions that must move together
+
+Three versions are coupled, and only two of them are visible in tfvars:
+
+| What | Where | Current |
+|---|---|---|
+| Talos OS on the nodes | `talos_version` in [terraform.tfvars](../tf/nodes/terraform.tfvars) | 1.14.4 |
+| Kubernetes | `kubernetes_version` in the same file | 1.37.1 |
+| The config shape and the `kubernetes_version` default | `siderolabs/talos` provider pin in [.terraform.lock.hcl](../tf/nodes/.terraform.lock.hcl) | 0.12.0 |
+
+The Talos **Terraform provider** vendors its own copy of Talos `pkg/machinery`, and that
+copy -- not `talos_version` -- decides which config document kinds parse and what
+`kubernetes_version` defaults to. Provider 0.11.0 carries machinery 1.13.0; 0.12.0 carries
+1.14.0. So a `talos_version` bump across a minor needs the provider bumped with it, or the
+nodes run a Talos release whose config kinds the provider cannot generate or validate.
+
+`kubernetes_version` is pinned rather than defaulted because the provider's default follows
+its vendored machinery (1.37.0 for provider 0.12.0) while the Talos release itself pairs
+with a later patch (1.37.1 for Talos 1.14.4). Pinning gets the matched version and keeps a
+provider bump from moving Kubernetes as a side effect.
+
 ## talosctl
 
 Use a **talosctl** build that matches the cluster Talos version (same minor line as nodes). Always pass `--talosconfig` explicitly; see [secrets.md](secrets.md#talos-client-configuration-talosconfig) and [dev-setup.md](dev-setup.md).

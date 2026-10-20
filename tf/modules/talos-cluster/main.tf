@@ -98,6 +98,12 @@ data "talos_machine_configuration" "machineconfig_cp" {
   cluster_endpoint = "https://${var.control_plane_vip}:6443"
   machine_type     = "controlplane"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
+  # Pinned rather than left to the provider's default. The default comes from the
+  # provider's own bundled pkg/machinery, not from var.talos_version: provider
+  # 0.12.0 bundles machinery v1.14.0, whose default is 1.37.0, while Talos 1.14.4
+  # itself pairs with 1.37.1. Pinning is the only way to get the matched version,
+  # and it stops a provider bump from moving Kubernetes as a side effect.
+  kubernetes_version = var.kubernetes_version
   # Keep data source minimal - patches go in talos_machine_configuration_apply
 }
 
@@ -106,6 +112,12 @@ data "talos_machine_configuration" "machineconfig_worker" {
   cluster_endpoint = "https://${var.control_plane_vip}:6443"
   machine_type     = "worker"
   machine_secrets  = talos_machine_secrets.this.machine_secrets
+  # Pinned rather than left to the provider's default. The default comes from the
+  # provider's own bundled pkg/machinery, not from var.talos_version: provider
+  # 0.12.0 bundles machinery v1.14.0, whose default is 1.37.0, while Talos 1.14.4
+  # itself pairs with 1.37.1. Pinning is the only way to get the matched version,
+  # and it stops a provider bump from moving Kubernetes as a side effect.
+  kubernetes_version = var.kubernetes_version
   # Keep data source minimal - patches go in talos_machine_configuration_apply
 }
 

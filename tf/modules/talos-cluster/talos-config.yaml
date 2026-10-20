@@ -1,43 +1,84 @@
+# Base machine configuration, applied to every node as the first config patch.
+#
+# Talos 1.14 moved most of this out of the v1alpha1 `machine:`/`cluster:` tree into
+# per-concern documents and deprecated the v1alpha1 spellings. Only what has no
+# document equivalent is left below. See docs/talos.md for the version pairing this
+# depends on: the document kinds are parsed by the Talos Terraform provider's bundled
+# pkg/machinery, so the provider and talos_version move together.
 version: v1alpha1
-cluster:
-  network:
-    # cilium will become our CNI.
-    cni:
-      name: none
-  controllerManager:
-    extraArgs:
-      # Listen to more than localhost so we can scrape from Alloy.
-      bind-address: 0.0.0.0
-  scheduler:
-    extraArgs:
-      # Listen to more than localhost so we can scrape from Alloy.
-      bind-address: 0.0.0.0
-  apiServer:
-    extraArgs:
-      # Listen to more than localhost so we can scrape from Alloy.
-      bind-address: 0.0.0.0
-  proxy:
-    # Cilium will replace the proxy
-    disabled: true
 machine:
-  sysctls:
-    user.max_user_namespaces: "8192"
-  # https://www.talos.dev/v1.10/talos-guides/configuration/containerd/#exposing-metrics
-  files:
-    - content: |
-        [metrics]
-          address = "0.0.0.0:11234"
-      path: /etc/cri/conf.d/20-customization.part
-      op: create
   features:
+    # No document equivalent in 1.14; still a v1alpha1 feature flag.
     diskQuotaSupport: true
-    hostDNS:
-      enabled: true
-      resolveMemberNames: true
-      forwardKubeDNSToHost: false
-    imageCache:
-      localEnabled: true
   install:
     # wipe: true
     # extraKernelArgs are set in the schematic customization, not here
     # Setting them here conflicts with grubUseUKICmdline when using schematics
+---
+# Cilium is the CNI. In the multi-document config there is no `cni: none` to set:
+# CNIName is derived from whether a KubeFlannelCNIConfig document exists, and the
+# generated config ships one. Deleting it is how "no Talos-managed CNI" is expressed.
+apiVersion: v1alpha1
+kind: KubeFlannelCNIConfig
+$patch: delete
+---
+# Cilium replaces kube-proxy.
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+enabled: false
+---
+# Listen on more than localhost so Alloy can scrape these.
+apiVersion: v1alpha1
+kind: KubeAPIServerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+apiVersion: v1alpha1
+kind: KubeControllerManagerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+apiVersion: v1alpha1
+kind: KubeSchedulerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+apiVersion: v1alpha1
+kind: SysctlConfig
+params:
+  user.max_user_namespaces: "8192"
+---
+# Expose containerd's metrics endpoint. Was machine.files writing
+# /etc/cri/conf.d/20-customization.part, which 1.14 deprecates in favour of this
+# document; the legacy file is reserved under the name `customization`, so this one
+# cannot use that name. TOML content is unchanged from the file it replaces.
+# https://docs.siderolabs.com/talos/v1.14/reference/configuration/cri/cricustomizationconfig
+apiVersion: v1alpha1
+kind: CRICustomizationConfig
+name: metrics
+content: |
+  [metrics]
+    address = "0.0.0.0:11234"
+---
+apiVersion: v1alpha1
+kind: ResolverConfig
+hostDNS:
+  enabled: true
+  resolveMemberNames: true
+  forwardKubeDNSToHost: false
+---
+apiVersion: v1alpha1
+kind: ImageCacheConfig
+local:
+  enabled: true
+---
+# Set explicitly because this is a reinstall, not an upgrade: `talosctl gen config`
+# emits this document with workloadIsolation: true for 1.14+, so freshly generated
+# config would enable it. Nothing about the non-isolated path is deprecated -- an
+# upgraded cluster keeps it and upstream states upgrades change nothing on their own.
+# Keeping it off here means this reinstall changes config shape and version pairing
+# without also changing runtime behaviour. Isolation is a per-node document, so it can
+# be enabled on one node later and compared against the others.
+apiVersion: v1alpha1
+kind: SecurityProfileConfig
+workloadIsolation: false
