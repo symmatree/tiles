@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=quay.io/jupyter/datascience-notebook
 # https://quay.io/repository/jupyter/datascience-notebook?tab=tags&tag=latest
-ARG BASE_TAG=2025-05-24
+ARG BASE_TAG=2026-10-19
 FROM $BASE_IMAGE:$BASE_TAG
 
 USER root
