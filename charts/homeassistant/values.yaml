@@ -126,7 +126,7 @@ ghostunnel:
   # precisely because the upstream hop mounts trust-bundle explicitly instead of
   # relying on the image to ship a trust store. Pinned, like the oauth2-proxy
   # image, because this is internet-facing auth.
-  image: ghostunnel/ghostunnel:v1.11.3-distroless
+  image: ghostunnel/ghostunnel:v1.11.4-distroless
   hostname: homeassistant-tls.placeholder.symmatree.com
   # The ONLY client-certificate subjects admitted, one line per device, so
   # revoking a single device is deleting its line. ghostunnel has no CRL or OCSP
