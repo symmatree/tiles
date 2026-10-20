@@ -1,9 +1,14 @@
 # AceBase ZED-F9P on USB (discovered 2026-06-07 via talosctl on acebase):
 #   idVendor=1546 (u-blox AG), idProduct=01a9 (ZED-F9P), driver=cdc_acm, device=ttyACM0
-machine:
-  kernel:
-    modules:
-      - name: cdc_acm
-  udev:
-    rules:
-      - SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a9", SYMLINK+="gnss"
+#
+# machine.kernel.modules and machine.udev.rules are both deprecated in Talos 1.14;
+# these are the KernelModuleConfig and UdevRulesConfig documents that replace them.
+# KernelModuleConfig is one module per document.
+apiVersion: v1alpha1
+kind: KernelModuleConfig
+name: cdc_acm
+---
+apiVersion: v1alpha1
+kind: UdevRulesConfig
+rules:
+  - SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a9", SYMLINK+="gnss"

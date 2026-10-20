@@ -29,19 +29,17 @@ locals {
   # Widen the within-node OOM safety margin: raise the kubelet hard-eviction
   # threshold so the kubelet reclaims (evicts low-priority pods) before the
   # kernel OOM-killer fires. Re-declares the default nodefs/imagefs thresholds
-  # so the extraConfig merge does not drop disk-pressure eviction. Empty list
+  # so the KubeletConfig merge does not drop disk-pressure eviction. Empty list
   # (no patch) when the knob is unset -- e.g. the test cluster keeps defaults.
   eviction_patches = var.kubelet_eviction_memory_available == null ? [] : [yamlencode({
-    machine = {
-      kubelet = {
-        extraConfig = {
-          evictionHard = {
-            "memory.available"  = var.kubelet_eviction_memory_available
-            "nodefs.available"  = "10%"
-            "nodefs.inodesFree" = "5%"
-            "imagefs.available" = "15%"
-          }
-        }
+    apiVersion = "v1alpha1"
+    kind       = "KubeletConfig"
+    config = {
+      evictionHard = {
+        "memory.available"  = var.kubelet_eviction_memory_available
+        "nodefs.available"  = "10%"
+        "nodefs.inodesFree" = "5%"
+        "imagefs.available" = "15%"
       }
     }
   })]
@@ -88,12 +86,10 @@ module "talos-vm" {
     })],
     each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
-      "machine" = {
-        "kubelet" = {
-          "extraArgs" = {
-            "register-with-taints" = "dedicated=${each.value.taint}:NoSchedule"
-          }
-        }
+      "apiVersion" = "v1alpha1"
+      "kind"       = "KubeNodeConfig"
+      "taints" = {
+        "dedicated" = "${each.value.taint}:NoSchedule"
       }
     })] : []
   )
@@ -123,12 +119,10 @@ module "talos-amd-metal" {
     })],
     each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
-      "machine" = {
-        "kubelet" = {
-          "extraArgs" = {
-            "register-with-taints" = "dedicated=${each.value.taint}:${each.value.taint_effect}"
-          }
-        }
+      "apiVersion" = "v1alpha1"
+      "kind"       = "KubeNodeConfig"
+      "taints" = {
+        "dedicated" = "${each.value.taint}:${each.value.taint_effect}"
       }
     })] : [],
     each.value.machine_config_patches
@@ -165,12 +159,10 @@ module "talos-intel-metal" {
     })],
     each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
-      "machine" = {
-        "kubelet" = {
-          "extraArgs" = {
-            "register-with-taints" = "dedicated=${each.value.taint}:${each.value.taint_effect}"
-          }
-        }
+      "apiVersion" = "v1alpha1"
+      "kind"       = "KubeNodeConfig"
+      "taints" = {
+        "dedicated" = "${each.value.taint}:${each.value.taint_effect}"
       }
     })] : [],
     each.value.machine_config_patches

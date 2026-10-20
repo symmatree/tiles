@@ -174,7 +174,16 @@ variable "admin_user" {
 }
 
 variable "kubelet_eviction_memory_available" {
-  description = "kubelet evictionHard `memory.available` threshold, applied to every node in the cluster. This is the free-memory margin the kubelet keeps so it evicts low-priority pods *before* the kernel OOM-killer fires (within-node OOM protection). null = leave kubelet defaults untouched (memory.available<100Mi). When set (e.g. \"512Mi\"), the nodefs/imagefs disk-eviction defaults are re-declared unchanged so the extraConfig merge does not drop disk-pressure eviction."
+  description = "kubelet evictionHard `memory.available` threshold, applied to every node in the cluster. This is the free-memory margin the kubelet keeps so it evicts low-priority pods *before* the kernel OOM-killer fires (within-node OOM protection). null = leave kubelet defaults untouched (memory.available<100Mi). When set (e.g. \"512Mi\"), the nodefs/imagefs disk-eviction defaults are re-declared unchanged so the KubeletConfig merge does not drop disk-pressure eviction."
   type        = string
   default     = null
+}
+
+# Kubernetes version, matched to var.talos_version. Talos 1.14.4's own
+# DefaultKubernetesVersion is 1.37.1; the Talos Terraform provider would
+# otherwise supply its bundled machinery's default (1.37.0 for provider 0.12.0),
+# which is a patch behind. See docs/talos.md.
+variable "kubernetes_version" {
+  description = "Kubernetes version, matched to the Talos release in talos_version"
+  type        = string
 }

@@ -28,6 +28,7 @@ module "cluster" {
   onepassword_vault           = data.onepassword_vault.tf_secrets.uuid
   onepassword_vault_name      = data.onepassword_vault.tf_secrets.name
   talos_version               = var.talos_version
+  kubernetes_version          = var.kubernetes_version
   talos_arch                  = var.talos_arch
   talos_vm_variant            = var.talos_vm_variant
   talos_vm_schematic          = talos_image_factory_schematic.vm.id
