@@ -9,6 +9,12 @@ sshHostname: notebook-ssh.placeholder.symmatree.com
 
 jupyterhub:
   hub:
+    # 14-day p85 197, p99 198, max 201 (prod Mimir). Sizing rule as elsewhere:
+    # p85 rounded up to the next 8Mi, no margin -- a request is a scheduling
+    # floor, not a ceiling.
+    resources:
+      requests:
+        memory: 200Mi
     # Placeholder values are for stable rendered.yaml only. At runtime,
     # hub-credentials (OnePasswordItem from Terraform-generated 1Password
     # items) supplies the real cookie_secret and CryptKeeper.keys via

@@ -32,6 +32,31 @@ charts:
       - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/applicationset-crd.yaml
       - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/appproject-crd.yaml
 
+  - name: argo-workflows-crds
+    version: 0.3.0
+    ref: v4.1.5
+    description: Argo Workflows CRDs (Workflow, WorkflowTemplate, CronWorkflow, and friends)
+    # ALL EIGHT, and that is load-bearing. The controller starts one informer per type and
+    # cache sync is all-or-nothing, so a single missing CRD stops it reconciling ANYTHING:
+    # with workflowtaskresults absent it logged `failed to list *v1alpha1.WorkflowTaskResult`
+    # every 40s, never touched a submitted workflow, and reported itself healthy and 1/1.
+    # List against the upstream directory, not against the types you think are used --
+    # workflowtaskresults is written by the executor, so nothing here references it.
+    # minimal, not full: the full argoproj.io_workflows.yaml is 2838656 bytes, 90% of the
+    # apiserver's 3145728-byte request limit before the YAML is serialised to JSON, and the
+    # install fails with "Request entity too large". The minimal variant drops the OpenAPI
+    # schema, so the apiserver does not validate Workflow specs -- a malformed one is
+    # accepted and fails when it runs.
+    urls:
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflows.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowtemplates.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_clusterworkflowtemplates.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_cronworkflows.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowtaskresults.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowtasksets.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowartifactgctasks.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workfloweventbindings.yaml
+
   - name: cert-manager-crds
     version: 0.1.0
     ref: v1.19.2

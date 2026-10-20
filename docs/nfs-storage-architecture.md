@@ -12,7 +12,9 @@ Each PVC gets its own isolated directory, preventing conflicts but also preventi
 
 ## Why NFS (Shared Filesystem Required)
 
-Loki and Mimir require a shared filesystem that supports ReadWriteMany (RWX) access mode because multiple components (ingesters, compactors, queriers, store-gateways) must concurrently mount and access the same data directories. NFS is chosen over SMB because SMB has known issues with memory leaks and OOM conditions that can cause Kubernetes nodes to become unreachable when mounts consume excessive memory.
+Loki and Mimir require a shared filesystem that supports ReadWriteMany (RWX) access mode because multiple components (ingesters, compactors, queriers, store-gateways) must concurrently mount and access the same data directories.
+
+NFS is used rather than SMB. Write-heavy workloads against SMB mounts have a pattern of consuming memory that is not attributed to the container, which can eventually hang the whole node. That is the operator's professional experience rather than a citable source.
 
 ## Storage Strategy
 
@@ -39,7 +41,12 @@ Provisioned by the `cluster-nfs` and `local-path` StorageClasses, both of which 
 
 - **Mimir**: `storage-mimir-ingester-N` (TSDB head and WAL at `/data`), `storage-mimir-compactor-0`, `storage-mimir-store-gateway-0`, `storage-mimir-alertmanager-0`, `kafka-data-mimir-kafka-0` (the ingest queue)
 - **Loki**: `storage-loki-0` (WAL at `/var/loki`)
-- **Others**: `grafana`, `odm-postgres`, `apprise-attach`, `fleet-control-state`, `rtkbase-persist`, `hub-db-dir`
+- **Others** (`local-path`): `grafana`, `odm-postgres`, `apprise-attach`,
+  `fleet-control-state`, `rtkbase-persist`
+- **Others** (`cluster-nfs`): `hub-db-dir`, `fleet-control-images` -- dynamic and
+  `Delete` like the rest of this tier, but on NFS rather than node-local disk, so
+  they carry no node affinity and do not pin their pod. `hub-db-dir` was moved here
+  from `local-path` in #610.
 
 Losing this tier costs the **window of recent data that has not yet been flushed to the durable tier** -- samples still in the ingester head or the Kafka queue, log lines still in the WAL. Everything already written to blocks or chunks is unaffected. Note that `grafana` and `odm-postgres` are on this tier and are *not* reconstructible in the same way; they are dynamic today, which is a choice worth revisiting rather than a guarantee.
 
@@ -47,9 +54,15 @@ Losing this tier costs the **window of recent data that has not yet been flushed
 
 ### Mount Options
 
-Storage classes use NFSv4.1 with built-in locking (no `rpc.statd` required):
+NFSv4.1 with built-in locking (no `rpc.statd` required):
 
-- `vers=4.1` - NFSv4.1 protocol
+- `vers=4.1` - NFSv4.1 protocol. The `cluster-nfs` StorageClass sets this in
+  `mountOptions`, so dynamically-provisioned volumes get it by declaration.
+  Among the static PVs only `jupyterhub-home` and `jupyterhub-datasets` declare
+  it; the other six (including `mimir-mimir-data` and `loki-loki-data`) set no
+  `mountOptions` and negotiate 4.1 with this server anyway -- every NFS mount on
+  `tiles-wk-1` and `tiles-wk-3` reads `vers=4.1` in `/proc/mounts`. The result is
+  correct but, for those six, not pinned.
 - Server uses `squash_all` - all users mapped to admin user on NAS
 - No UID mapping mount options needed since server handles user mapping
 

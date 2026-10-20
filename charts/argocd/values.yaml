@@ -1,14 +1,6 @@
 # https://raw.githubusercontent.com/argoproj/argo-helm/refs/tags/argo-cd-7.8.23/charts/argo-cd/values.yaml
 # then deleted values we do not override.
 
-# global:
-#   tolerations:
-#     - effect: NoSchedule
-#       key: node-role.kubernetes.io/control-plane
-#       operator: Exists
-#   nodeSelector:
-#     kubernetes.io/os: linux
-#     node-role.kubernetes.io/control-plane: ""
 argo-cd:
   ## Argo CD configuration
   ## Ref: https://github.com/argoproj/argo-cd
@@ -68,6 +60,20 @@ argo-cd:
               # references resolve. One client to rotate; no second 1Password item.
               clientID: $argocd-oauth2-proxy:client-id
               clientSecret: $argocd-oauth2-proxy:client-secret
+      # Gate sync waves on completing sync not just starting.
+      resource.customizations.health.argoproj.io_Application: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = ""
+        if obj.status ~= nil then
+          if obj.status.health ~= nil then
+            hs.status = obj.status.health.status
+            if obj.status.health.message ~= nil then
+              hs.message = obj.status.health.message
+            end
+          end
+        end
+        return hs
       # Override this whole value just to remove Endpoints (needed for Cilium)
       resource.exclusions: |
         ### Network resources created by the Kubernetes control plane and excluded to reduce the number of watched events and UI clutter

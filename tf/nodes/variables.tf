@@ -136,6 +136,18 @@ variable "ingress_lb_ip" {
   default     = ""
 }
 
+variable "homeassistant_tls_lb_ip" {
+  description = "Fixed LoadBalancer IP for the mutual-TLS door in front of Home Assistant (charts/homeassistant). Must be inside the static-LB pool /24. Propagated to the chart so the value is not duplicated. Empty = no WAN forward for it (e.g. test)."
+  type        = string
+  default     = ""
+}
+
+variable "homeassistant_tls_port" {
+  description = "Port for the mutual-TLS door, on the WAN and on the Service alike. Not 443: that is taken by the shared ingress, and TLS passthrough routing is not available to multiplex them (no tlsroutes CRD). 8443 reads as alternate-HTTPS and survives restrictive networks better than an arbitrary high port. Propagated to charts/homeassistant so the value is not duplicated."
+  type        = string
+  default     = "8443"
+}
+
 variable "pod_cidr" {
   description = "Pod CIDR for the cluster"
   type        = string

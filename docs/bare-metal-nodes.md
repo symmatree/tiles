@@ -83,9 +83,26 @@ Terraform only removes the **UniFi client** and the **`talos_machine_configurati
 1. **Evict workloads** -- `kubectl cordon <node-name>` then `kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data` (add `--force` only if you accept deleting standalone pods). Wait until drain completes.
 2. **Remove the Kubernetes node object** -- `kubectl delete node <node-name>`.
 3. **Remove Terraform state** -- Delete that node's entry from `metal_amd_nodes` or `metal_intel_nodes` and run `terraform apply`.
-4. **Optional: wipe the machine** -- See [Wipe and reinstall](#3-wipe-and-reinstall-talos-on-the-same-machine).
+4. **Optional: wipe the machine** -- See [Wipe and reinstall](#4-wipe-and-reinstall-talos-on-the-same-machine).
 
-### 3. Wipe and reinstall Talos on the same machine
+### 3. Change a bare-metal node's IP
+
+`ip_address` feeds two resources in [`tf/modules/talos-metal`](../tf/modules/talos-metal/main.tf): `unifi_user.metal_client.fixed_ip` (which carries `local_dns_record` with it) and `talos_machine_configuration_apply.node`, which is **where Terraform connects**. One apply cannot do both, and the failure in the middle is expected rather than a fault:
+
+1. **Change `ip_address`** in that node's `metal_amd_nodes` / `metal_intel_nodes` entry and apply. The UniFi reservation and DNS move to the new address.
+2. **The same apply then fails** reaching the node at the new address -- the machine still holds the old lease. `Error applying configuration ... dial tcp <new-ip>:50000: connect: no route to host`.
+3. **Reboot the node by hand** -- `talosctl --talosconfig ~/.talos/<cluster>.yaml -n <OLD_IP> reboot`. It re-DHCPs onto the new reservation.
+4. **Re-run the apply.** It reaches the node and settles. `apply_mode` defaults to `reboot`, so the node reboots once more here.
+
+Rebooting first does not avoid step 2: the node just renews onto the old address until the reservation has moved.
+
+This is an **in-place update, not a replacement** -- `talos_machine_configuration_apply` declares no `RequiresReplace`, so the module's `on_destroy` (`reset = true`, wiping STATE and EPHEMERAL) does not run. No Kubernetes rejoin is needed either: node identity is the **name**, which comes from the same DHCP lease and does not change, so kubelet updates `status.addresses[InternalIP]` in place.
+
+**Stay inside the cluster CIDR.** Synology NFS exports are written per cluster CIDR ([nfs-storage-architecture.md](nfs-storage-architecture.md)), so a node outside `10.0.128.0/18` is refused every NFS mount with `access denied by server` -- see #805, and #807 for the move that fixed it.
+
+**A UniFi fixed IP is not released by moving off it.** The client record keeps its claim, and a later request for that address fails the apply with `api.err.DuplicateFixedIP (400)` even though nothing answers on it. Clearing the stale record needs the UniFi controller.
+
+### 4. Wipe and reinstall Talos on the same machine
 
 **A. Node still reaches the Talos API**
 
@@ -129,7 +146,7 @@ A config *apply* is not a *reset*. PKI is preserved across the recreate (both ap
 
 `metal_apply_mode` now **defaults to `reboot`** for every apply (PR / push / daily schedule / dispatch). This is **not** a reboot-every-apply: the metal `talos_machine_configuration_apply` has no `replace_triggered_by` and stable inputs, so Terraform only re-runs it -- and only reboots -- when the metal config **actually changes** (or on a `taint-vms` rebuild). Rebooting on a real change guarantees the config fully applies (Talos `auto` reboots only when it judges a changed field requires it, which is unreliable -- it can hold state until reboot) and lets a rebuilt node rejoin the new etcd. Override to `auto` / `no_reboot` / `staged` only when you deliberately want a live-only apply.
 
-> **apply-config modes** ([Talos v1.13](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed; `reboot` always reboots to apply; `staged` applies on next reboot. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#3-wipe-and-reinstall-talos-on-the-same-machine).
+> **apply-config modes** ([Talos v1.13](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed; `reboot` always reboots to apply; `staged` applies on next reboot. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#4-wipe-and-reinstall-talos-on-the-same-machine).
 >
 > Why `reboot` works on unchanged config: in v1.13 machined's `ApplyConfiguration` REBOOT case persists the config and **unconditionally** sequences a reboot -- there is no config-diff short-circuit ([v1alpha1_server.go](https://github.com/siderolabs/talos/blob/v1.13.0/internal/app/machined/internal/server/v1alpha1/v1alpha1_server.go)). **Forward-compat:** the deprecated `REBOOT` gRPC mode is slated for removal on Talos `main` ("use AUTO or NO_REBOOT"), so **re-verify this mechanism when bumping `talos_version`** past 1.13.
 
@@ -170,7 +187,7 @@ case temperature, and do not treat its lack of an alert as a monitoring gap.
 
 A node's hostname comes from **DHCP**: the UniFi fixed-IP reservation supplies the name. The provider-injected `HostnameConfig: {auto: stable}` (a siderolabs/talos default, not set in this repo) is only a fallback -- when no hostname is available at boot, the node self-assigns a deterministic `talos-<rand>` name. The shared config sets no static `machine.network.hostname`, so naming depends on DHCP being reachable at boot.
 
-Hostname is DHCP, **not DNS**. Reverse DNS (PTR) has no role in naming; a missing PTR neither causes nor predicts a `talos-<rand>` name. PTR coverage is split by address range: raconteur is authoritative for `0.10.in-addr.arpa` (all of `10.0.0.0/16`) but holds records only for `10.0.0.x` and `10.0.99.x`, so `acebase` (`10.0.99.14`) reverses there while node IPs in the Tiles `10.0.128.0/18` allocation are served only by UniFi. Because raconteur is authoritative for the whole reverse zone, its forwarder is never consulted for that gap -- it returns an authoritative NXDOMAIN.
+Hostname is DHCP, **not DNS**. Reverse DNS (PTR) has no role in naming; a missing PTR neither causes nor predicts a `talos-<rand>` name. PTR coverage is split by address range: raconteur is authoritative for `0.10.in-addr.arpa` (all of `10.0.0.0/16`) but holds records only for `10.0.0.x` and `10.0.99.x`, so node IPs in the Tiles `10.0.128.0/18` allocation are served only by UniFi and reverse-resolve nowhere else. Because raconteur is authoritative for the whole reverse zone, its forwarder is never consulted for that gap -- it returns an authoritative NXDOMAIN. Every cluster node now sits in that allocation, `acebase` included; it previously reversed via raconteur from `10.0.99.14` and no longer does, which is cosmetic since nothing depends on PTR.
 
 A node that boots before DHCP is serving names -- e.g. bare metal powering up faster than the UniFi UDM after a site power loss -- gets its reserved **IP** but no hostname, so it comes up as `talos-<rand>` and registers as a **separate** Kubernetes Node object. The original Node (e.g. `acebase`) stays `NotReady` sharing the same INTERNAL-IP, and any workload pinned to that name -- `nodeSelector: kubernetes.io/hostname=<name>`, or a hostname-pinned `local-path` PV -- has no schedulable node. Proxmox **VMs** boot after their hypervisor host, by which point DHCP is up, so they do not hit this.
 

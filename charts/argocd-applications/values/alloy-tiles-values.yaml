@@ -26,3 +26,18 @@ collectors:
           memory: 128Mi
         limits:
           memory: 256Mi
+
+# Neither had a memory request, and both are on wk-2.
+# Sizing rule: see grafana-tiles-values.yaml.
+#
+# alloy-operator     p85 111  p99 118
+alloy-operator:
+  resources:
+    requests:
+      memory: 112Mi
+telemetryServices:
+  # kube-state-metrics p85 62  p99 71
+  kube-state-metrics:
+    resources:
+      requests:
+        memory: 64Mi

@@ -1,0 +1,529 @@
+---
+# Source: homeassistant/charts/oauth2-proxy/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: homeassistant
+    app.kubernetes.io/version: "7.6.0"
+  name: homeassistant-oauth2-proxy
+  namespace: homeassistant
+automountServiceAccountToken: true
+---
+# Source: homeassistant/charts/oauth2-proxy/templates/configmap-authenticated-emails-file.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: homeassistant
+    app.kubernetes.io/version: "7.6.0"
+  name: homeassistant-oauth2-proxy-accesslist
+  namespace: homeassistant
+data:
+  restricted_user_access: "seth.porter@gmail.com\nillforgetlater@gmail.com\n"
+
+---
+# Source: homeassistant/charts/oauth2-proxy/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: homeassistant
+    app.kubernetes.io/version: "7.6.0"
+  name: homeassistant-oauth2-proxy
+  namespace: homeassistant
+data:
+  oauth2_proxy.cfg: "upstreams = [ \"file:///dev/null\" ]"
+
+---
+# Source: homeassistant/charts/oauth2-proxy/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: homeassistant
+    app.kubernetes.io/version: "7.6.0"
+  name: homeassistant-oauth2-proxy
+  namespace: homeassistant
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      appProtocol: http
+      name: http
+    - port: 44180
+      protocol: TCP
+      appProtocol: http
+      targetPort: metrics
+      name: metrics
+  selector:    
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: homeassistant
+
+---
+# Source: homeassistant/templates/ghostunnel.helm.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: homeassistant-tls
+  namespace: "homeassistant"
+  labels:
+    app: homeassistant-tls
+    # Opt into lb-static-pool so the address is pinned rather than assigned from
+    # the dynamic pool -- a UniFi port-forward targets it, so it must not move.
+    tiles.symmatree.com/static-lb: "true"
+  annotations:
+    lbipam.cilium.io/ips: "placeholder"
+    external-dns.alpha.kubernetes.io/hostname: "homeassistant-tls.placeholder.symmatree.com"
+    # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
+    # app resolves the same name to the same place on any network.
+    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+spec:
+  type: LoadBalancer
+  selector:
+    app: homeassistant-tls
+  ports:
+    - name: mtls
+      protocol: TCP
+      port: placeholder
+      targetPort: mtls
+---
+# Source: homeassistant/charts/oauth2-proxy/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: homeassistant
+    app.kubernetes.io/version: "7.6.0"
+  name: homeassistant-oauth2-proxy
+  namespace: homeassistant
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:      
+      app.kubernetes.io/name: oauth2-proxy
+      app.kubernetes.io/instance: homeassistant
+  template:
+    metadata:
+      annotations:
+        checksum/config: 9c1ecd9f0889c5271728298190b5b9b1104baac2492387267c860173bb7765e8
+        checksum/config-emails: 2ac07af502136280b6a315cc5a20fbcec8d0b5893faf8cba45d31b73edf2e674
+        checksum/secret: 8fa6fdae65861caa2986544b8860a5205be1937328c8ec2bad6bad076b9e2425
+        checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+      labels:
+        app: oauth2-proxy        
+        helm.sh/chart: oauth2-proxy-7.7.0
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: authentication-proxy
+        app.kubernetes.io/part-of: oauth2-proxy
+        app.kubernetes.io/name: oauth2-proxy
+        app.kubernetes.io/instance: homeassistant
+        app.kubernetes.io/version: "7.6.0"
+    spec:
+      serviceAccountName: homeassistant-oauth2-proxy
+      automountServiceAccountToken: true
+      containers:
+      - name: oauth2-proxy
+        image: "quay.io/oauth2-proxy/oauth2-proxy:v7.15.3"
+        imagePullPolicy: IfNotPresent
+        args:
+          - --http-address=0.0.0.0:4180
+          - --https-address=0.0.0.0:4443
+          - --metrics-address=0.0.0.0:44180
+          - --provider=google
+          - --upstream=https://homeassistant.local.symmatree.com:8123
+          - --pass-host-header=true
+          - --set-xauthrequest=true
+          - --silence-ping-logging=true
+          - --skip-provider-button=true
+          - --reverse-proxy=true
+          - --trusted-proxy-ip=10.0.144.0/20
+          - --config=/etc/oauth2_proxy/oauth2_proxy.cfg
+          - --authenticated-emails-file=/etc/oauth2-proxy/homeassistant-oauth2-proxy-accesslist
+        env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name:  homeassistant-oauth2-proxy
+              key: client-id
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  homeassistant-oauth2-proxy
+              key: client-secret
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  homeassistant-oauth2-proxy
+              key: cookie-secret
+        ports:
+          - containerPort: 4180
+            name: http
+            protocol: TCP
+          - containerPort: 44180
+            protocol: TCP
+            name: metrics
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 5
+          successThreshold: 1
+          periodSeconds: 10
+        resources:
+          {}
+        volumeMounts:
+        - mountPath: /etc/oauth2_proxy/oauth2_proxy.cfg
+          name: configmain
+          subPath: oauth2_proxy.cfg
+        - mountPath: /etc/oauth2-proxy
+          name: configaccesslist
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 2000
+          seccompProfile:
+            type: RuntimeDefault
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: homeassistant-oauth2-proxy
+        name: configmain
+      - configMap:
+          name: homeassistant-oauth2-proxy-accesslist
+          items:
+          - key: restricted_user_access
+            path: homeassistant-oauth2-proxy-accesslist
+        name: configaccesslist
+      tolerations:
+        []
+
+---
+# Source: homeassistant/templates/ghostunnel.helm.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homeassistant-tls
+  namespace: "homeassistant"
+  labels:
+    app: homeassistant-tls
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homeassistant-tls
+  template:
+    metadata:
+      labels:
+        app: homeassistant-tls
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        # Matches the distroless :nonroot base.
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        # Hop 1, client-facing: terminates mutual TLS and hands plaintext to hop
+        # 2 over loopback. --cacert is the device CA ALONE, which is what makes
+        # --allow-cn meaningful: a certificate with a matching CN from any other
+        # issuer is rejected at the handshake as unknown authority.
+        - name: mtls
+          image: "ghostunnel/ghostunnel:v1.11.4-distroless"
+          args:
+            - server
+            - --listen=0.0.0.0:placeholder
+            - --target=127.0.0.1:9000
+            - --cert=/etc/ghostunnel/server/tls.crt
+            - --key=/etc/ghostunnel/server/tls.key
+            - --cacert=/etc/ghostunnel/device-ca/device-identity-ca.crt
+            - --allow-cn=seth-pixel
+            - --allow-cn=lisa-pixel
+            # 0.0.0.0, not loopback: a kubelet httpGet probe connects to the
+            # pod IP. /_metrics is served here too, but as a JSON array rather
+            # than Prometheus text, so nothing scrapes it today.
+            - --status=http://0.0.0.0:61000
+          ports:
+            - name: mtls
+              containerPort: placeholder
+          # Readiness only, deliberately. /_status returns 503 whenever the hop's
+          # own target is unreachable (verified: backend_ok false plus the dial
+          # error), which is right for gating the Service but wrong for liveness
+          # -- Home Assistant restarts daily for ~6 minutes when static-certs
+          # pushes its certificate, and a liveness probe on a dependency would
+          # turn that into a restart loop. If ghostunnel dies the container
+          # exits and gets restarted anyway.
+          readinessProbe:
+            httpGet:
+              path: /_status
+              port: 61000
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: server-cert
+              mountPath: /etc/ghostunnel/server
+              readOnly: true
+            - name: device-ca
+              mountPath: /etc/ghostunnel/device-ca
+              readOnly: true
+        # Hop 2, upstream-facing: plaintext from hop 1, verified TLS to Home
+        # Assistant. No --cacert of our own CA here -- the trust store is
+        # trust-bundle (public roots plus the cluster CA), so this keeps working
+        # unchanged if the appliance ever moves from a Let's Encrypt certificate
+        # to a cluster-issued one. --disable-authentication means we present no
+        # client certificate upstream; Home Assistant does not ask for one.
+        - name: upstream
+          image: "ghostunnel/ghostunnel:v1.11.4-distroless"
+          args:
+            - client
+            - --listen=127.0.0.1:9000
+            - --target=homeassistant.local.symmatree.com:8123
+            - --cacert=/etc/ghostunnel/trust/ca-certificates.crt
+            - --disable-authentication
+            - --status=http://0.0.0.0:61001
+          # Same reasoning as above; this one reports Home Assistant itself,
+          # since its target is the appliance.
+          readinessProbe:
+            httpGet:
+              path: /_status
+              port: 61001
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: trust-bundle
+              mountPath: /etc/ghostunnel/trust
+              readOnly: true
+      volumes:
+        - name: server-cert
+          secret:
+            secretName: homeassistant-tls
+        # Published by the device-identity-ca trust-manager Bundle into every
+        # namespace labelled device-identity-ca=enabled (set on this namespace by
+        # the Application's managedNamespaceMetadata).
+        - name: device-ca
+          configMap:
+            name: device-identity-ca
+        - name: trust-bundle
+          configMap:
+            name: trust-bundle
+
+---
+# Source: homeassistant/charts/oauth2-proxy/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app: oauth2-proxy    
+    helm.sh/chart: oauth2-proxy-7.7.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: authentication-proxy
+    app.kubernetes.io/part-of: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: homeassistant
+    app.kubernetes.io/version: "7.6.0"
+  name: homeassistant-oauth2-proxy
+  namespace: homeassistant
+  annotations:
+    cert-manager.io/cluster-issuer: real-cert
+    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    ingress.cilium.io/loadbalancer-mode: shared
+spec:
+  ingressClassName: "cilium"
+  rules:
+    - host: "homeassistant.placeholder.symmatree.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: homeassistant-oauth2-proxy
+                port:
+                  number: 80
+  tls:
+    - hosts:
+      - homeassistant.placeholder.symmatree.com
+      secretName: homeassistant-oauth2-proxy-tls
+---
+# Source: homeassistant/templates/device-certs.helm.yaml
+# Client certificate for seth-pixel. The CN is what ghostunnel matches with
+# --allow-cn, so this name and the ghostunnel.allowedCNs entry are the same
+# string by construction.
+#
+# usages omits server auth deliberately: this credential can only ever
+# authenticate a client, so a leaked key cannot be used to stand up something
+# that impersonates a service.
+#
+# No keystores.pkcs12 here, on purpose. cert-manager writes tls.key into this
+# Secret unencrypted whatever else it does, so a stored keystore password
+# protects nothing from anyone who can read the Secret -- cert-manager's own API
+# docs say as much. The password is only worth anything for the hop from kubectl
+# to the phone, so the .p12 is built at that moment instead; see README.md. That
+# also sidesteps the keystore default of profile LegacyRC2, which OpenSSL 3 and
+# Java 20 refuse to open.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: device-seth-pixel
+  namespace: "homeassistant"
+spec:
+  commonName: "seth-pixel"
+  secretName: device-seth-pixel-tls
+  duration: 17520h
+  renewBefore: 2160h
+  usages:
+    - digital signature
+    - key encipherment
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: "placeholder-device-ca-issuer"
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Source: homeassistant/templates/device-certs.helm.yaml
+# Client certificate for lisa-pixel. The CN is what ghostunnel matches with
+# --allow-cn, so this name and the ghostunnel.allowedCNs entry are the same
+# string by construction.
+#
+# usages omits server auth deliberately: this credential can only ever
+# authenticate a client, so a leaked key cannot be used to stand up something
+# that impersonates a service.
+#
+# No keystores.pkcs12 here, on purpose. cert-manager writes tls.key into this
+# Secret unencrypted whatever else it does, so a stored keystore password
+# protects nothing from anyone who can read the Secret -- cert-manager's own API
+# docs say as much. The password is only worth anything for the hop from kubectl
+# to the phone, so the .p12 is built at that moment instead; see README.md. That
+# also sidesteps the keystore default of profile LegacyRC2, which OpenSSL 3 and
+# Java 20 refuse to open.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: device-lisa-pixel
+  namespace: "homeassistant"
+spec:
+  commonName: "lisa-pixel"
+  secretName: device-lisa-pixel-tls
+  duration: 17520h
+  renewBefore: 2160h
+  usages:
+    - digital signature
+    - key encipherment
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: "placeholder-device-ca-issuer"
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# Source: homeassistant/templates/ghostunnel.helm.yaml
+# Server certificate the phone verifies. An ordinary Let's Encrypt certificate,
+# so no custom root has to be installed on any device -- the device CA is used
+# only in the other direction, to authenticate the client.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homeassistant-tls
+  namespace: "homeassistant"
+spec:
+  dnsNames:
+    - "homeassistant-tls.placeholder.symmatree.com"
+  secretName: homeassistant-tls
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: real-cert
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Source: homeassistant/templates/oauth2-proxy-secret.yaml
+apiVersion: onepassword.com/v1
+kind: OnePasswordItem
+metadata:
+  name: homeassistant-oauth2-proxy
+  namespace: "homeassistant"
+type: Opaque
+spec:
+  itemPath: 'vaults/placeholder/items/homeassistant-oauth2-proxy'

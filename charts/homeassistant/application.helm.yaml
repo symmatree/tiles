@@ -1,0 +1,64 @@
+{{- if eq .Values.cluster_name "tiles" }}
+# Prod only. Home Assistant is a single physical appliance, so a second gate in
+# front of it from tiles-test would be another door to the same box rather than
+# an independent environment -- the same reason charts/static-certs pushes only
+# from prod. Chart rendering is covered by CI (build.sh), not by a test deploy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homeassistant
+  namespace: argocd
+  labels:
+    name: homeassistant
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: charts/homeassistant
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        # From tf/nodes (prod.tfvars / the variable default) via
+        # app_of_apps_values, so the gateway's address and port and the UniFi
+        # forward that targets them cannot drift apart.
+        homeassistant_tls_lb_ip: '{{ required ".Values.homeassistant_tls_lb_ip is required" .Values.homeassistant_tls_lb_ip }}'
+        homeassistant_tls_port: '{{ required ".Values.homeassistant_tls_port is required" .Values.homeassistant_tls_port }}'
+        # Mutual-TLS host, per-cluster (chart default is the placeholder host).
+        # Named for the credential rather than the client: the door is defined by
+        # requiring a client certificate, not by what happens to be presenting
+        # one. Separate name from the oauth2-proxy host below because they are
+        # different doors with different credentials, not two routes to one gate.
+        ghostunnel:
+          hostname: 'homeassistant-tls.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+        # Perimeter gate host, per-cluster (chart default is the placeholder host).
+        oauth2-proxy:
+          ingress:
+            hosts:
+              - 'homeassistant.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            tls:
+              - secretName: homeassistant-oauth2-proxy-tls
+                hosts:
+                  - 'homeassistant.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: homeassistant
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # trust-manager delivers its Bundles by namespace label. The gateway
+        # needs both, and they are deliberately different bundles: trust-bundle
+        # to verify the Home Assistant server, device-identity-ca to
+        # authenticate client certificates. See charts/cert-manager.
+        trust-bundle: enabled
+        device-identity-ca: enabled
+{{- end }}

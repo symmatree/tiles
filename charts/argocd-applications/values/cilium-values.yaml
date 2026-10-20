@@ -1,5 +1,10 @@
 # Chart defaults live in charts/cilium/values.yaml. Templated keys in charts/cilium/application.yaml valuesObject.
 cilium:
+  # Squelch a permadiff with a neutral value.
+  debug:
+    verbose: ""
+  nodePort:
+    addresses: []
   resources:
     requests:
       memory: 160Mi

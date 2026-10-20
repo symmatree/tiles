@@ -1,0 +1,97 @@
+# Argo Workflows, for jobs that want their own pod rather than someone else's process.
+#
+# Cluster-wide machinery, deliberately. Workflows run in whatever namespace the work
+# naturally belongs to rather than being funnelled into one -- a converge belongs with
+# fleet-control, where its SSH key and config already are, and routing it elsewhere would
+# mean a second copy of that key in a second namespace.
+#
+# First consumer is coordinator#504, but not the only one: this is here as general
+# machinery for jobs, not as an implementation detail of that issue.
+
+argo-workflows:
+  # CRDs come from the bootstrap layer, not from this chart, like every other CRD-bearing
+  # component here: ci-tools/crd-charts/sources.yaml builds them and
+  # tf/nodes/k8s-bootstrap.tf installs them. The reason is in sources.yaml -- Helm never
+  # upgrades or deletes anything in a chart's crds/, so a CRD parked there can only ever be
+  # created once.
+  crds:
+    install: false
+
+  controller:
+    # No `workflowNamespaces`: the controller watches the whole cluster, which is what
+    # lets a workflow live next to the thing it is for. The ClusterRole this implies --
+    # pods create/exec, secrets get -- is the normal grant for cluster-wide machinery,
+    # and is not a step up on a cluster where Argo CD already applies arbitrary manifests
+    # everywhere.
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  server:
+    # On. This is the thing that makes a workflow engine usable by a person -- what ran,
+    # what it did, why it stopped, and the logs without knowing the pod name first.
+    enabled: true
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    # Same posture as the other UIs on this cluster (fleet-control, Grafana): reachable on
+    # the internal network over TLS, with no separate login in front. `server` auth mode
+    # means the UI acts as the server's own ServiceAccount rather than asking the browser
+    # for credentials, which matches that.
+    authModes:
+      - server
+    ingress:
+      enabled: true
+      ingressClassName: cilium
+      annotations:
+        cert-manager.io/cluster-issuer: real-cert
+      hosts:
+        - argo.tiles.symmatree.com
+      # Prefix rather than the chart's ImplementationSpecific, which under Cilium matches
+      # only the exact "/" and 404s everything below it.
+      paths:
+        - /
+      pathType: Prefix
+      tls:
+        - secretName: argo-workflows-server-tls
+          hosts:
+            - argo.tiles.symmatree.com
+
+  # NO ARTIFACT REPOSITORY, and this is settled rather than pending.
+  #
+  # The cluster has no S3-compatible endpoint -- Loki and Mimir both run
+  # `minio: enabled: false` against filesystem PVCs -- so one would have to be created.
+  # Seth has ruled out both ways of doing that: MinIO because an in-cluster object store
+  # is a large standing commitment, and GCS because it is an external dependency and a
+  # bill. Not an omission waiting to be filled in; do not re-open it by adding one.
+  #
+  # WHAT THAT MEANS FOR WHOEVER WRITES A WORKFLOW HERE. The engine does not require a
+  # repository -- no repository is the chart's own default. What is unavailable:
+  #
+  #   * `outputs.artifacts` without an inline location. There is nowhere to put the file,
+  #     so a step declaring one fails at run time.
+  #   * `archiveLogs: true`, so the Argo UI can show a step's logs only while its pod
+  #     still exists.
+  #   * the UI's artifact download links.
+  #
+  # What works unchanged:
+  #
+  #   * `outputs.parameters` and `valueFrom` -- these ride in the Workflow object, not the
+  #     store, so strings and small JSON pass between steps normally.
+  #   * real files between steps, via `volumeClaimTemplates`: a per-workflow PVC each step
+  #     mounts. This is the normal no-object-store pattern, and `local-path` and NFS
+  #     storage classes are both available here.
+  #   * all the orchestration -- DAGs, steps, retries, cron, suspend/resume, parallelism.
+  #   * logs as a durable record: Alloy ships pod logs to Loki, so they survive the pod.
+  #     They live in Grafana rather than in the Argo UI.
+  #
+  # Not the same thing as the WORKFLOW ARCHIVE, which the names invite confusing. That is
+  # a Postgres/MySQL database of completed-workflow history (`persistence`, also unset).
+  # Without it a finished Workflow is a CR in etcd and goes when it is garbage-collected,
+  # so how far back history reaches is a retention question, not an object-store one.

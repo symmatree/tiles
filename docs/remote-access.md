@@ -89,7 +89,9 @@ Each protected app gets its own `oauth2-proxy` (a subchart dependency of the
 app's chart) sitting in front of it on the shared Cilium ingress:
 
 - oauth2-proxy is the **only** thing with an Ingress; the app's own Service is
-  flipped to `ClusterIP` so it is reachable *only* through the gate.
+  flipped to `ClusterIP` so it is reachable *only* through the gate. Home
+  Assistant is the exception -- it is not a workload here at all; see
+  [Upstreams outside the cluster](#upstreams-outside-the-cluster).
 - Google OAuth + an **email allowlist** (`--authenticated-emails-file`) is the
   real gate. There is no domain rule -- the allowlist is the sole restriction.
 - TLS terminates once, at the shared Cilium ingress (cert-manager `real-cert`).
@@ -100,10 +102,67 @@ Currently protected this way:
 |-----|------|-------------|-------|
 | Argo CD | `argocd.{cluster}.symmatree.com` | `charts/argocd/values.yaml` (`oauth2-proxy:` block) | `charts/argocd` |
 | JupyterHub | `notebook.{cluster}.symmatree.com` | `charts/jupyterhub/values.yaml` (`oauth2-proxy:` block) | `charts/jupyterhub` ([README](../charts/jupyterhub/README.md)) |
+| Home Assistant | `homeassistant.{cluster}.symmatree.com` (prod only) | `charts/homeassistant/values.yaml` (`oauth2-proxy:` block) | `charts/homeassistant` ([README](../charts/homeassistant/README.md)) |
 
 Each has its own oauth2-proxy Deployment and its own 1Password item (see
 [Secrets](#secrets)). The two configs are intentionally near-identical -- the
 hardening lessons below were paid for once on Argo CD and copied to JupyterHub.
+
+### The one non-oauth2-proxy door: mutual TLS
+
+Every gate above challenges for Google, which requires a browser. The Home Assistant
+companion app does not have one -- it renders its login in an Android `WebView`, and
+Google has refused OAuth in embedded webviews since 2023-07-24. No oauth2-proxy
+configuration fixes that.
+
+So one host is gated by a client certificate instead: `homeassistant-tls.{cluster}.symmatree.com`
+on port **8443**, terminated by [ghostunnel](https://github.com/ghostunnel/ghostunnel)
+rather than oauth2-proxy, admitting only certificates from the device-identity CA whose
+subject is listed in `allowedCNs`. It is still through-mode and still a small
+single-purpose proxy; what differs is the credential and that it is checked during the
+TLS handshake rather than over HTTP.
+
+It is a separate WAN port because 443 belongs to the shared ingress and the two cannot
+be multiplexed: ghostunnel is a single-target TCP proxy, this cluster has no `tlsroutes`
+CRD, and the Cilium ingress terminates TLS so it cannot pass a raw handshake through.
+
+The CA is deliberately not a server-trust root anywhere -- see
+[charts/cert-manager](../charts/cert-manager/README.md). The phone verifies an ordinary
+Let's Encrypt certificate, so nothing custom is installed on any device.
+
+Details, including the enrolment order the app's code requires, are in
+[charts/homeassistant/README.md](../charts/homeassistant/README.md).
+
+### Upstreams outside the cluster
+
+Home Assistant is a HA Yellow appliance at `10.0.99.9` serving HTTPS on `:8123`,
+not a workload here, so there is no Service to flip to `ClusterIP`. No
+`ExternalName` Service or hand-written EndpointSlice is involved either:
+oauth2-proxy's `--upstream` takes a URL, so the upstream is just
+`https://homeassistant.local.symmatree.com:8123`. Addressing it by the name on
+the certificate `charts/static-certs` pushes to it means the upstream handshake
+verifies against the real chain.
+
+A second consequence of the upstream being off-cluster: Cilium masquerades pod
+traffic leaving the cluster to the **node's** address, so Home Assistant sees the
+node, never the pod. Its `trusted_proxies` is therefore the node subnet
+`10.0.128.0/24`, *not* the pod CIDR that oauth2-proxy's own
+`--trusted-proxy-ip` uses. Those two settings look interchangeable and are not:
+`--trusted-proxy-ip` governs the inbound hop, where the Cilium ingress Envoy
+SNATs into the pod CIDR, while the upstream hop is masqueraded to a node.
+Measured -- a login through the gate gave `AuthSuccess` and then `400`, with HA
+logging `a request from a reverse proxy was received from 10.0.128.23`
+(`tiles-wk-3`). Note that this setting lives in Home Assistant's storage rather
+than its YAML, since 2026.10; read the active value over its websocket API with
+`{"type": "http/config"}`. An in-cluster upstream never shows this, because the traffic
+never leaves and never gets masqueraded.
+
+For an in-cluster app the `ClusterIP` flip makes through-mode structural. For
+this one it is not: **the only thing preventing a direct path to `10.0.99.9` is
+that no UniFi forward reaches it.** Adding one would silently undo the gate.
+On the LAN the appliance stays directly reachable, as it must for ESPHome, the
+Alloy scrape of its `/api/prometheus`, and the `static-certs` push -- the gate
+is the internet perimeter, not a LAN perimeter.
 
 ## The access path, end to end
 
@@ -125,10 +184,22 @@ Internet client
   -> upstream app Service (ClusterIP: proxy-public / argocd-server)
 ```
 
-On the **LAN**, split-horizon DNS resolves the host to the internal ingress VIP
-directly, so it is reachable on-network even without the WAN plumbing. That is
-why an on-LAN test is only a partial test -- it exercises the gate but not the
-WAN port-forward / DNS path.
+There is **no split-horizon DNS and no on-LAN bypass.** A published host is a
+single CNAME to `lhitw` for every client, so a browser on the house LAN resolves
+the WAN address and hairpins back in through the UniFi forward, arriving at the
+same gate as a client on the internet. Network position confers nothing -- that
+is the BeyondCorp property, not an accident of the DNS setup. Verified from a
+pod: `argocd` and `notebook` both answer `CNAME lhitw.symmatree.com` and nothing
+else.
+
+Two consequences follow:
+
+- **An on-LAN test is a near-complete test.** It exercises the published record,
+  the UniFi forward, the ingress and the gate. Only the off-net client path
+  itself goes untested.
+- **A host is unreachable on the LAN whenever the WAN plumbing is broken** --
+  including while the WAN address has changed and `lhitw` has not caught up.
+  [Direct access](#direct-access) is the way in when that happens.
 
 ### The WAN exposure switch
 
@@ -234,6 +305,9 @@ gate failing closed against real traffic.
 - **Double login.** The perimeter and the app each do their own Google
   round-trip; sharing the OAuth client makes the inner one a near-silent
   redirect. See [Two layers](#two-layers).
+- **The Home Assistant companion app**, which cannot complete a Google challenge
+  in its `WebView` and so is gated by a client certificate on a separate host and
+  port instead. See [mutual TLS](#the-one-non-oauth2-proxy-door-mutual-tls).
 
 ## See also
 

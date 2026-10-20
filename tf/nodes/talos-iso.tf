@@ -1,17 +1,33 @@
-# VM schematic (for Proxmox VMs)
-data "talos_image_factory_extensions_versions" "vm" {
-  talos_version = "v${var.talos_version}"
-  filters = {
-    names = ["qemu-guest-agent"]
-  }
+# Official extension names for each schematic, pinned rather than resolved from the image
+# factory at plan time.
+#
+# These were read from the talos_image_factory_extensions_versions data sources they replace,
+# and produce byte-identical schematics: the same three schematic IDs, so the same images.
+# A name is not tied to a Talos version -- the version is bound in the image URL
+# (/image/<schematic>/v<version>/...), not in the schematic -- so a talos_version bump needs
+# no change here.
+#
+# Pinned because a data source is re-read on every plan, including with -refresh=false, which
+# made every plan depend on reaching factory.talos.dev from the GitHub runner. The schematic
+# resources below do not: their Read is a no-op, so they only contact the factory when a
+# schematic actually changes, and the Proxmox hosts (not the runner) fetch the images.
+#
+# amdgpu-firmware is deliberately absent: no such official extension exists for this Talos
+# version, so the filter it replaced silently matched nothing. Adding a name that the factory
+# does not know now fails loudly when the schematic is next created.
+locals {
+  talos_extensions_vm          = ["siderolabs/qemu-guest-agent"]
+  talos_extensions_metal_amd   = ["siderolabs/amdgpu", "siderolabs/amd-ucode"]
+  talos_extensions_metal_intel = ["siderolabs/i915", "siderolabs/intel-ucode"]
 }
 
+# VM schematic (for Proxmox VMs)
 resource "talos_image_factory_schematic" "vm" {
   schematic = yamlencode(
     {
       customization = {
         systemExtensions = {
-          officialExtensions = data.talos_image_factory_extensions_versions.vm.extensions_info.*.name
+          officialExtensions = local.talos_extensions_vm
         }
         extraKernelArgs = ["vga=792", "net.ifnames=0", "-talos.halt_if_installed"]
       }
@@ -20,19 +36,12 @@ resource "talos_image_factory_schematic" "vm" {
 }
 
 # Bare-metal AMD schematic (for AMD Ryzen APUs)
-data "talos_image_factory_extensions_versions" "metal_amd" {
-  talos_version = "v${var.talos_version}"
-  filters = {
-    names = ["amd-ucode", "amdgpu", "amdgpu-firmware"]
-  }
-}
-
 resource "talos_image_factory_schematic" "metal_amd" {
   schematic = yamlencode(
     {
       customization = {
         systemExtensions = {
-          officialExtensions = data.talos_image_factory_extensions_versions.metal_amd.extensions_info.*.name
+          officialExtensions = local.talos_extensions_metal_amd
         }
         extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed"]
       }
@@ -41,19 +50,12 @@ resource "talos_image_factory_schematic" "metal_amd" {
 }
 
 # Bare-metal Intel schematic (e.g. Alder Lake-N integrated graphics)
-data "talos_image_factory_extensions_versions" "metal_intel" {
-  talos_version = "v${var.talos_version}"
-  filters = {
-    names = ["intel-ucode", "i915"]
-  }
-}
-
 resource "talos_image_factory_schematic" "metal_intel" {
   schematic = yamlencode(
     {
       customization = {
         systemExtensions = {
-          officialExtensions = data.talos_image_factory_extensions_versions.metal_intel.extensions_info.*.name
+          officialExtensions = local.talos_extensions_metal_intel
         }
         extraKernelArgs = ["net.ifnames=0", "-talos.halt_if_installed"]
       }

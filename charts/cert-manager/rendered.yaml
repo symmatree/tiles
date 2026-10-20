@@ -1369,6 +1369,9 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          resources:
+            requests:
+              memory: 112Mi
           # LivenessProbe settings are based on those used for the Kubernetes
           # controller-manager. See:
           # https://github.com/kubernetes/kubernetes/blob/806b30170c61a38fedd54cc9ede4cd6275a1ad3b/cmd/kubeadm/app/util/staticpod/utils.go#L241-L245
@@ -1588,7 +1591,8 @@ spec:
           name: packages
           readOnly: true
         resources:
-            {}
+            requests:
+              memory: 56Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -1764,6 +1768,34 @@ spec:
         trust-bundle: enabled
 
 ---
+# Source: cert-manager/templates/device-ca-bundle.yaml
+# Distributes the device-identity CA certificate to namespaces that terminate
+# mutual TLS, so a verifier can mount it as a file.
+#
+# Note what is NOT here: `useDefaultCAs`. This bundle is a *ClientCAs* source
+# only -- the one and only thing it is for is checking certificates that devices
+# present to us. It is kept separate from `trust-bundle` (which is a RootCAs
+# source and does merge the public set) precisely so the device CA can never end
+# up vouching for a server. See the rationale in
+# templates/device-identity-issuer.yaml.
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: device-identity-ca
+  namespace: "cert-manager"
+spec:
+  sources:
+    - secret:
+        name: "placeholder-device-ca-tls"
+        key: ca.crt
+  target:
+    configMap:
+      key: device-identity-ca.crt
+    namespaceSelector:
+      matchLabels:
+        device-identity-ca: enabled
+
+---
 # Source: cert-manager/charts/trust-manager/templates/certificate.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -1789,6 +1821,39 @@ spec:
     kind: Issuer
     group: cert-manager.io
 ---
+# Source: cert-manager/templates/device-identity-issuer.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "placeholder-device-ca"
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: "placeholder device identity"
+  subject:
+    organizations:
+      - "placeholder"
+    organizationalUnits:
+      - device-identity
+  # Two years. cert-manager's default is 90 days, which is what
+  # {cluster_name}-ca is running on today -- fine for in-cluster leaf certs that
+  # renew themselves, wrong for a root whose leaves are installed by hand.
+  duration: 17520h
+  renewBefore: 2160h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    # Renewal must re-sign with the SAME key. The replacement certificate then
+    # carries the same subject and public key, so device certificates already
+    # issued continue to chain to it. With Always, every issued device
+    # certificate would stop verifying the moment this renews.
+    rotationPolicy: Never
+  secretName: "placeholder-device-ca-tls"
+  issuerRef:
+    name: "placeholder-device-selfsigned-root"
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
 # Source: cert-manager/templates/self-signed-issuer.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -1804,6 +1869,22 @@ spec:
     organizationalUnits:
       - "placeholder"
   secretName: "placeholder-ca-tls"
+  # Two years, renewed after one. Both numbers are load-bearing.
+  #
+  # Without a duration this took cert-manager's 90-day default, which is shorter than the
+  # certificates it signs -- hubble's are 8760h from the cilium chart. cert-manager writes
+  # the signing CA into each leaf Secret's ca.crt once, at issuance, and never refreshes it
+  # on rotation, so a leaf outlives the CA copy it verifies against and the holder starts
+  # failing its own handshakes. That is what took hubble-relay down on 2026-10-09.
+  #
+  # renewBefore is half the duration rather than the 90 days used for the device CA below,
+  # so a rotation always leaves at least a year of validity on the retiring CA -- longer
+  # than the eight months a 1-year leaf waits before renewing, which is what makes the
+  # stranding impossible rather than merely rarer. trust-manager distributes this CA to
+  # labelled namespaces (ca-bundle.yaml), but a consumer reading ca.crt from its own leaf
+  # Secret never sees that bundle.
+  duration: 17520h
+  renewBefore: 8760h
   privateKey:
     algorithm: ECDSA
     size: 256
@@ -1811,6 +1892,40 @@ spec:
     name: "placeholder-selfsigned-root"
     kind: ClusterIssuer
     group: cert-manager.io
+---
+# Source: cert-manager/templates/device-identity-issuer.yaml
+# Device-identity CA: a trust root used ONLY to authenticate machines that must
+# prove who they are to us and cannot run an OAuth/OIDC flow -- phones presenting
+# a client certificate to a TLS terminator, and later any rover or base station
+# with the same problem. It is named for the capability, not for its first
+# consumer, so a second consumer does not need a second CA.
+#
+# Deliberately separate from {cluster_name}-ca-issuer, for two reasons:
+#
+#   1. Lifetime. Device certificates are installed by hand on hardware we may not
+#      be holding, so they are issued long. A CA that rotates underneath them
+#      invalidates every one of them at once, which is the failure this chain
+#      exists to avoid.
+#   2. Position. This CA is only ever loaded as a verifier of *client*
+#      certificates. It must never appear in a RootCAs position, so it is NOT a
+#      source in templates/ca-bundle.yaml and must not be added to one -- that
+#      would make it trusted to vouch for servers as well.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: "placeholder-device-selfsigned-root"
+spec:
+  selfSigned: {}
+---
+# Source: cert-manager/templates/device-identity-issuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: "placeholder-device-ca-issuer"
+spec:
+  ca:
+    secretName: "placeholder-device-ca-tls"
+
 ---
 # Source: cert-manager/templates/lets-encrypt-issuers.yaml
 apiVersion: cert-manager.io/v1

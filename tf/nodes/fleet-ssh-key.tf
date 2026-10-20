@@ -18,7 +18,21 @@
 # deliberate choice, not a compromise: the bucket's integrity traces to Google's, which is
 # at least as good a custodian as 1Password for this.
 
+# PROD ONLY, AND EXACTLY ONE WRITER.
+#
+# There is one physical fleet, and a device's authorized_keys can only sensibly trust one fleet
+# key, so the item must not be per-cluster. `onepassword_vault_name` comes from terraform.tfvars,
+# which every workspace auto-loads, and the title is a literal with no `cluster_name` -- so any
+# workspace that creates this is writing to the same name in the same vault as every other one.
+# Gated to prod, which is also the only cluster that converges the fleet; fleet-control's
+# Application is gated the same way. Two writers here means two items of the same name, and
+# 1Password refuses a name lookup when a title is ambiguous.
+locals {
+  fleet_ssh_key_here = var.cluster_name == "tiles" ? 1 : 0
+}
+
 resource "tls_private_key" "fleet" {
+  count     = local.fleet_ssh_key_here
   algorithm = "ED25519"
 }
 
@@ -29,6 +43,7 @@ resource "tls_private_key" "fleet" {
 # unchanged, so `private-key` arrives as the secret key `private-key` -- the same name
 # fleet-control's `ssh_key_field` already mounts.
 resource "onepassword_item" "fleet_ssh_key" {
+  count    = local.fleet_ssh_key_here
   vault    = data.onepassword_vault.tf_secrets.uuid
   title    = "fleet-ssh-key-managed"
   category = "secure_note"
@@ -38,12 +53,12 @@ resource "onepassword_item" "fleet_ssh_key" {
     field {
       label = "private-key"
       type  = "CONCEALED"
-      value = tls_private_key.fleet.private_key_openssh
+      value = tls_private_key.fleet[0].private_key_openssh
     }
     field {
       label = "public-key"
       type  = "STRING"
-      value = tls_private_key.fleet.public_key_openssh
+      value = tls_private_key.fleet[0].public_key_openssh
     }
   }
 
@@ -64,9 +79,10 @@ resource "onepassword_item" "fleet_ssh_key" {
   }
 }
 
-# The half that has to reach the devices. Ansible installs this in `pi`'s authorized_keys
-# during convergence, which is what makes rotation independent of the image.
+# The half that reaches the devices. fleet-control derives it from the private key it is about to
+# authenticate with and passes it to the play (coordinator#482), so this is for a person who wants
+# to read it rather than something a converge consumes -- and null outside prod, which has no key.
 output "fleet_ssh_public_key" {
-  description = "Public half of the fleet management key, for authorized_keys on every fleet node."
-  value       = tls_private_key.fleet.public_key_openssh
+  description = "Public half of the fleet management key. Null outside prod, which has no key."
+  value       = one(tls_private_key.fleet[*].public_key_openssh)
 }

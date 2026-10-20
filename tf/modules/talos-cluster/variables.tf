@@ -146,6 +146,18 @@ variable "ingress_lb_ip" {
   default     = ""
 }
 
+variable "homeassistant_tls_lb_ip" {
+  description = "Fixed LoadBalancer IP for the mutual-TLS door. Empty = not deployed."
+  type        = string
+  default     = ""
+}
+
+variable "homeassistant_tls_port" {
+  description = "Port for the mutual-TLS door, on the WAN and on its Service."
+  type        = string
+  default     = "8443"
+}
+
 variable "onepassword_vault" {
   description = "1Password vault UUID."
   type        = string

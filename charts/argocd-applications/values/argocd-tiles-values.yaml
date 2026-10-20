@@ -1,8 +1,31 @@
-# # Per-cluster overrides for tiles.
-# argo-cd:
-#   repoServer:
-#     resources:
-#       limits:
-#         memory: 384Mi
-#       requests:
-#         memory: 128Mi
+# Per-cluster overrides for tiles.
+# Sizing rule: see grafana-tiles-values.yaml.
+#
+# These five had no memory request, so the scheduler saw no cost in them and all
+# five ended up on wk-2.
+argo-cd:
+  dex:
+    # p85 196  p99 199
+    resources:
+      requests:
+        memory: 200Mi
+  server:
+    # p85 71  p99 104
+    resources:
+      requests:
+        memory: 72Mi
+  applicationSet:
+    # p85 38  p99 47
+    resources:
+      requests:
+        memory: 40Mi
+  redis:
+    # p85 8  p99 13
+    resources:
+      requests:
+        memory: 8Mi
+oauth2-proxy:
+  # p85 12  p99 28
+  resources:
+    requests:
+      memory: 16Mi

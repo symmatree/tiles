@@ -33,6 +33,15 @@ resource "helm_release" "argocd" {
   # identical output. values.yaml is not template-expanded, which is why the
   # hosts are built here rather than there.
   values = [
+    # The chart's own values.yaml, passed explicitly. Helm loads it as the base
+    # regardless -- but Terraform diffs this resource on its arguments, not on the
+    # contents of the chart directory, so without it listed here an edit to that
+    # file is invisible and the release is never upgraded. Argo CD re-renders from
+    # git on every sync and does see the change, which is how you get a permanent
+    # OutOfSync while Terraform reports "No changes" (observed 2026-10-16, the
+    # argocd-cm healthcheck key). Listed first so Helm's precedence is unchanged:
+    # chart defaults, then the overlays below.
+    file("${local.argocd_chart}/values.yaml"),
     file("${local.argocd_values}/argocd-values.yaml"),
     file("${local.argocd_values}/argocd-${var.cluster_name}-values.yaml"),
     yamlencode({
@@ -75,7 +84,12 @@ resource "helm_release" "argocd_applications_installer" {
   namespace = kubernetes_namespace_v1.argocd.metadata[0].name
   chart     = "${path.module}/../../charts/argocd-applications-installer"
 
-  values = [yamlencode(module.cluster.app_of_apps_values)]
+  # Chart's own values.yaml listed explicitly so Terraform diffs on it; see the
+  # note on helm_release.argocd above.
+  values = [
+    file("${path.module}/../../charts/argocd-applications-installer/values.yaml"),
+    yamlencode(module.cluster.app_of_apps_values),
+  ]
 
   # Applying a custom resource; Argo CD reconciles it when its controller is
   # ready, which may be after this returns.

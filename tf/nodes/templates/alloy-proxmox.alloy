@@ -45,6 +45,15 @@ prometheus.relabel "unix_node_job" {
     target_label  = "job"
     replacement   = "integrations/node_exporter"
   }
+
+  // Machine-class label. The node-exporter mixin keys its NodeMemoryHighUtilization exclusion
+  // off host_role, so the exemption is a property of the host rather than a name list in the
+  // rule -- see docs/proxmox-monitoring.md and tanka/environments/node-exporter-mixin.
+  rule {
+    action       = "replace"
+    target_label = "host_role"
+    replacement  = "proxmox"
+  }
 }
 
 // Convert Prometheus to OTLP

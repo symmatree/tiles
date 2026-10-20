@@ -466,6 +466,36 @@ spec:
       - ServerSideApply=true
 
 ---
+# Source: argocd-applications/templates/argo-workflows-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows
+spec:
+  project: 'placeholder'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: 'placeholder'
+    path: charts/argo-workflows
+    helm:
+      # CRDs are installed by tf/nodes/k8s-bootstrap.tf, not by this sync.
+      skipCrds: true
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: 'placeholder'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-workflows
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
 # Source: argocd-applications/templates/argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -866,67 +896,6 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/warn: baseline
-
----
-# Source: argocd-applications/templates/fleet-control-application.yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: fleet-control
-spec:
-  project: 'placeholder'
-  source:
-    repoURL: https://github.com/symmatree/tiles.git
-    targetRevision: 'placeholder'
-    path: tanka
-    plugin:
-      env:
-        - name: TK_ENV
-          value: fleet-control
-      parameters:
-        - name: cluster_name
-          string: 'placeholder'
-        - name: vault_name
-          string: 'placeholder'
-        - name: project_id
-          string: 'placeholder'
-        - name: app_settings
-          map:
-            image: 'ghcr.io/symmatree/coordinator-fleet-control:main'
-            hostname: 'fleet.placeholder.symmatree.com'
-            cluster_issuer: "real-cert"
-            # Shared across clusters (no prefix): there is one fleet and one key, and both
-            # clusters read the same vault. Created by terraform, tf/nodes/fleet-ssh-key.tf
-            # -- the item it replaced was hand-made and held the key in PKCS8, which ssh
-            # cannot read for ed25519 (`Load key: invalid format`, coordinator#261).
-            ssh_key_secret: 'fleet-ssh-key-managed'
-            # The operator passes a field label straight through when it is already a valid
-            # ConfigMap key, so terraform's `private-key` field arrives under that name.
-            # charts/jupyterhub consumes `public-key` from its own ssh-key item the same way.
-            ssh_key_field: 'private-key'
-            # Downloading a build artifact needs a credential; listing them does not, so the
-            # status screen works without this and only the image fetch uses it. A login item,
-            # so the operator maps its `password` field to the secret key of the same name.
-            github_token_secret: 'FLEET_GITHUB_TOKEN'
-            github_token_field: 'password'
-            # The datasets share, for post-flight (coordinator#31). A different NFS export
-            # from the one cluster-nfs provisions into, so it needs a static PV -- same
-            # pattern as flight-analysis and vio-offline, which mount the same subpath.
-            nfs_server: 'placeholder'
-            datasets_nfs_path: 'placeholder'
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: fleet-control
   syncPolicy:
     automated:
       prune: true

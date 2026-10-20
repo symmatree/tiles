@@ -1,1 +1,16 @@
 # Per-cluster overrides for tiles-test.
+
+# Nominal memory requests so these containers are Burstable rather than
+# BestEffort. The value is deliberately token-sized: the point is that the
+# scheduler and the eviction ranking see them at all, not to reserve capacity --
+# tiles-test-wk is already ~94% committed and a real reservation would not fit.
+# Measured for reference (30d max working set, tiles-test Mimir):
+# grafana 363Mi, grafana-sc-dashboard 294Mi, grafana-sc-datasources 281Mi.
+resources:
+  requests:
+    memory: 1k
+# Covers both the dashboard and datasource sidecars.
+sidecar:
+  resources:
+    requests:
+      memory: 1k

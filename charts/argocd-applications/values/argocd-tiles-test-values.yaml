@@ -1,1 +1,24 @@
 # Per-cluster overrides for tiles-test.
+# Nominal requests, knocking down argocd-tiles-values.yaml so tiles-test stays
+# schedulable -- its worker is already at ~94% of allocatable in requests.
+argo-cd:
+  dex:
+    resources:
+      requests:
+        memory: 1k
+  server:
+    resources:
+      requests:
+        memory: 1k
+  applicationSet:
+    resources:
+      requests:
+        memory: 1k
+  redis:
+    resources:
+      requests:
+        memory: 1k
+oauth2-proxy:
+  resources:
+    requests:
+      memory: 1k

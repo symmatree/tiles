@@ -116,6 +116,11 @@ clusterMetrics:
     enabled: true
   apiServer:
     metricsTuning:
+      # includeMetrics is the whole allowlist here (no useDefaultAllowList), so
+      # nothing arrives that is not named below. Keep it to single-series gauges:
+      # the apiserver's own histograms (apiserver_request_duration_seconds,
+      # watch/storage latency) are per-resource-per-verb and are what would blow
+      # up the scrape.
       includeMetrics:
         - apiserver_request_total
         - apiserver_request_sli_duration_seconds.*
@@ -124,6 +129,23 @@ clusterMetrics:
         - aggregator_unavailable_apiservice.*
         - rest_client_requests_total
         - kubernetes_build_info
+        # Which resource kinds are watched on which apiserver. Watch clients are
+        # not distributed evenly: KubePrism prefers the lowest-latency endpoint,
+        # which on a control-plane node is its own apiserver, so a node's watchers
+        # concentrate there and its apiserver's watch cache grows to match. This
+        # gauge is per group/version/kind, so it names the resource rather than the
+        # client, and the owning controller has to be inferred from the kind.
+        # Bounded by the number of API resource kinds -- 113 in this cluster, so at
+        # most ~113 series per control-plane node, and fewer in practice because
+        # only kinds with a live watcher emit. Bears on the sizing question in #768.
+        - apiserver_registered_watchers
+        # Apiserver process memory. One series per control-plane node each.
+        # RSS is what the node pays for; heap_inuse is what is live, so the
+        # difference is memory the Go runtime is holding and has not returned --
+        # which on an unlimited static pod only comes back under node pressure.
+        # Sizing the control-plane VMs (#768) turns on that split.
+        - process_resident_memory_bytes
+        - go_memstats_heap_inuse_bytes
   kubeProxy:
     enabled: false
   kube-state-metrics:
@@ -207,6 +229,27 @@ nodeLogs:
 podLogsViaLoki:
   enabled: true
   collector: alloy-logs
+  # Read each pod log file from the start, not from its end. This sets
+  # `tail_from_end` on `loki.source.file "pod_logs"`; the chart default is true.
+  #
+  # Pod discovery is a watch and so is immediate, but collection tails files under
+  # /var/log/pods and `local.file_match` polls the filesystem (10s default). With
+  # tail_from_end, Alloy seeks to EOF when it finally opens a file, so anything the
+  # pod wrote before that seek is never read and there is no catch-up. A pod that
+  # writes its output in the first second or two and exits is collected as nothing.
+  #
+  # Measured 2026-10-17: two pods in one namespace with the same marker, one writing
+  # at t+25s and persisting, one writing at t+0s and exiting at ~t+1s. The long one
+  # reached Loki, the short one did not, while both stayed readable with
+  # `kubectl logs`. That covers every Argo Workflow step pod (fleet-control's
+  # converge steps run ~15s), every CronJob pod that finishes quickly, and every
+  # ephemeral debug pod -- so an absence of logs in Loki for a short-lived pod was
+  # not evidence of anything.
+  #
+  # Cost of false: on a fresh position file the collector re-reads existing files
+  # from the start instead of from EOF. Positions are tracked in collector state, so
+  # that is a one-off rather than per restart.
+  onlyGatherNewLogLines: false
 
 applicationObservability:
   enabled: true

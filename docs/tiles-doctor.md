@@ -51,6 +51,27 @@ anything left dirty there blocks everyone's `git pull`.
 Tanka -- gets rendered before and after and the whole diff accounted for. See
 [Mechanics](#mechanics).
 
+**Build a scratch sandbox rather than shipping a caveat.** "No credentials" is
+not "untestable". A question about how a *construct* behaves usually reproduces
+offline. `talos_machine_secrets` plus `data.talos_machine_configuration` is local
+crypto and rendering only, so a throwaway directory with one pinned provider
+version answers "does this provider accept this config document" exactly, with no
+cluster and no 1Password. The same directory answers it for a second provider
+version, which is how a version-pairing question gets settled instead of hedged.
+Image Factory schematic IDs reproduce the same way: POST the schematic YAML and
+compare the returned ID against one already in a plan, then trust the rest.
+
+**Answer the question that was asked.** The expensive failure is not being wrong,
+it is spending the operator's attention on a question he did not ask -- mechanics
+when he asked about sequencing, whether a boolean needs setting when he asked
+what the end state should be. He pushes back once; the round is still gone.
+
+**Decisions are surfaced, not announced.** "So I'm setting X" inside a
+conversation about X is taking his decision while appearing to report. State the
+basis, give a recommendation, and stop. The multiple-choice widget is not a
+substitute either -- it reads as asking him to be an oracle without the basis.
+Prose, with the evidence and the tradeoff, then wait.
+
 **Ask rather than infer intent.** Write what a change does. The operator's
 reasons are theirs to state; inventing a plausible one and recording it as
 theirs produces documents that argue against their author.
@@ -88,6 +109,10 @@ done is a comment saying so, not a retitle around the survivor.
 | `rendered.yaml` is committed Helm output that CI compares byte-for-byte | Regenerate with the CI-pinned helm version; `build.sh` stops at the first chart with missing deps |
 | Grafana, Mimir and the alerting all run on the cluster they monitor | During an incident the instrument may be the thing that is down |
 | `CLAUDE.md` links to `philosophy/guiding-principles.md`, which is not in this repo | It lives in the fables repo: `~/facts/fables/philosophy/guiding-principles.md` |
+| A terraform plan shows `(known after apply)` instead of your new value | Anything downstream of an unknown (a schematic ID) cannot appear in the plan; read the branch, not the plan, to confirm an input landed |
+| The Talos **Terraform provider** vendors its own `pkg/machinery` | That copy, not `talos_version`, fixes which config document kinds parse and what `kubernetes_version` defaults to. See [talos.md](talos.md) |
+| A Loki query on an unindexed label scans zero bytes and returns nothing | Identical to "logged nothing". `pod` is structured metadata: ``{ns="x"} \| pod=`y` `` works, `{ns="x", pod="y"}` silently does not. See [notebooks.md](notebooks.md) |
+| `tf/nodes` applies **prod** on push to `main` | PR runs are plan-only (`refresh: false`). A merge is a production apply, so sequence live work before the merge, not after |
 
 ## Reading list
 
@@ -142,9 +167,12 @@ done is a comment saying so, not a retitle around the survivor.
 
 ### Mechanics
 
+- [`AGENTS.md`](../AGENTS.md) -- the build and deploy procedures, including the
+  two commands that regenerate `rendered.yaml` and why running `build.sh` alone
+  renders nothing past the first chart with missing dependencies. Read it rather
+  than reassembling the commands from the scripts.
 - [`build.sh`](../build.sh) and [`scripts/helm-common.bash`](../scripts/helm-common.bash)
-  -- how `rendered.yaml` is produced, and the flags to reproduce it by hand for
-  one chart.
+  -- how `rendered.yaml` is produced and which flags are applied.
 - [`scripts/argocd-render-diff.sh`](../scripts/argocd-render-diff.sh) -- per-app
   rendering.
 - [`config-propagation.md`](config-propagation.md) -- how values reach a chart

@@ -1,1 +1,14 @@
 # Per-cluster overrides for tiles-test.
+
+# Nominal memory requests -- see grafana-tiles-test-values.yaml for the rationale.
+# Measured (30d max working set): loki 718Mi, loki-sc-rules 100Mi.
+# loki-canary is left alone: it is a must-run-everywhere DaemonSet, the same
+# class as node-exporter in alloy-values.yaml.
+singleBinary:
+  resources:
+    requests:
+      memory: 1k
+sidecar:
+  resources:
+    requests:
+      memory: 1k

@@ -1,1 +1,13 @@
 # Per-cluster overrides for tiles-test.
+
+# Nominal requests, knocking down alloy-tiles-values.yaml for tiles-test.
+# node-exporter is deliberately left BestEffort; alloy-values.yaml records why.
+alloy-operator:
+  resources:
+    requests:
+      memory: 1k
+telemetryServices:
+  kube-state-metrics:
+    resources:
+      requests:
+        memory: 1k

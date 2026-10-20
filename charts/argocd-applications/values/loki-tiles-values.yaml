@@ -1,5 +1,14 @@
 # Per-cluster overrides for tiles.
+# Sizing rule: see grafana-tiles-values.yaml.
+
+# loki  p85 620  p99 994  (max 1626 is backlog-flush behaviour, not demand)
+# loki-0 is pinned to its node by a local-path PVC (#766).
 singleBinary:
   resources:
     requests:
-      memory: 256Mi
+      memory: 624Mi
+# loki-sc-rules  p85 109  p99 109
+sidecar:
+  resources:
+    requests:
+      memory: 112Mi
