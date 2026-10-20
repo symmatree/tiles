@@ -279,7 +279,7 @@ spec:
         # --allow-cn meaningful: a certificate with a matching CN from any other
         # issuer is rejected at the handshake as unknown authority.
         - name: mtls
-          image: "ghostunnel/ghostunnel:v1.11.3-distroless"
+          image: "ghostunnel/ghostunnel:v1.11.4-distroless"
           args:
             - server
             - --listen=0.0.0.0:placeholder
@@ -334,7 +334,7 @@ spec:
         # to a cluster-issued one. --disable-authentication means we present no
         # client certificate upstream; Home Assistant does not ask for one.
         - name: upstream
-          image: "ghostunnel/ghostunnel:v1.11.3-distroless"
+          image: "ghostunnel/ghostunnel:v1.11.4-distroless"
           args:
             - client
             - --listen=127.0.0.1:9000
