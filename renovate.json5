@@ -1,0 +1,16 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", "group:allNonMajor"],
+  // Ecosystems are enabled one at a time; see docs/renovate.md.
+  enabledManagers: ["github-actions", "custom.regex"],
+  customManagers: [
+    {
+      // The Renovate CLI version pinned in .github/workflows/renovate.yaml.
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/renovate\\.yaml$/"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+npx --yes \\S+@(?<currentValue>\\S+)",
+      ],
+    },
+  ],
+}

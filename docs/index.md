@@ -44,6 +44,8 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 - **[ci-principles.md](ci-principles.md)**: CI/CD principles emphasizing assertive (not adaptive) behavior, where conditionals about environment state are errors and tools should either be installed or fail explicitly rather than checking for existence.
 
+- **[renovate.md](renovate.md)**: Self-hosted Renovate dependency updates -- the nightly workflow running the CLI as a tiles-owned GitHub App, the repository config and enabled ecosystems, PR grouping, the app's permissions and 1Password item, and how to dry-run it locally.
+
 - **[caching-strategy.md](caching-strategy.md)**: Caching strategy for GitHub Actions workflows using date-based invalidation and content-based keys to speed up CI/CD pipelines by avoiding redundant downloads and installations while ensuring caches stay fresh.
 
 - **[oom-troubleshooting.md](oom-troubleshooting.md)**: Guide for diagnosing OOM (Out of Memory) kills, including how to identify which pods were killed, check their resource limits, and understand cgroup paths from Talos OOM logs.

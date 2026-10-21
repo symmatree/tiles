@@ -1,0 +1,45 @@
+name: "renovate"
+# Self-hosted Renovate: the CLI runs directly on the runner, authenticated as the
+# tiles-owned GitHub App. Repository config is renovate.json5; see docs/renovate.md.
+on:
+  schedule:
+    - cron: "0 10 * * *" # Daily at 1000 UTC, after the 0800 nodes-plan-apply
+  workflow_dispatch: {}
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+permissions: {}
+jobs:
+  renovate:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Load secrets
+        id: load_secrets
+        uses: 1password/load-secrets-action@v4
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+          APP_CLIENT_ID: "op://tiles-secrets/github-renovate-app/client-id"
+          APP_PRIVATE_KEY: "op://tiles-secrets/github-renovate-app/private-key"
+
+      - name: Mint GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ steps.load_secrets.outputs.APP_CLIENT_ID }}
+          private-key: ${{ steps.load_secrets.outputs.APP_PRIVATE_KEY }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Run Renovate
+        shell: bash
+        env:
+          RENOVATE_TOKEN: ${{ steps.app_token.outputs.token }}
+          RENOVATE_PLATFORM: "github"
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: "required"
+        run: |
+          # renovate: datasource=npm depName=renovate
+          npx --yes renovate@44.140.0
