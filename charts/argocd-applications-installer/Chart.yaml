@@ -2,4 +2,4 @@ apiVersion: v2
 name: app-of-apps
 description: The root Argo CD Application that owns charts/argocd-applications
 type: application
-version: 0.1.0
+version: 0.1.1
