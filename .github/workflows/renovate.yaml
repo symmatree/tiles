@@ -19,7 +19,7 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
           APP_CLIENT_ID: "op://tiles-secrets/github-renovate-app/client-id"
-          APP_PRIVATE_KEY: "op://tiles-secrets/github-renovate-app/private-key"
+          APP_PRIVATE_KEY: "op://tiles-secrets/github-renovate-app/notesPlain"
 
       - name: Mint GitHub App token
         id: app_token
