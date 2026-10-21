@@ -24,6 +24,8 @@ spec:
         cluster_name: '{{ .Values.cluster_name }}'
         external_ip_cidr: '{{ .Values.external_ip_cidr }}'
         ingress_lb_ip: '{{ .Values.ingress_lb_ip }}'
+        homeassistant_tls_lb_ip: '{{ .Values.homeassistant_tls_lb_ip }}'
+        homeassistant_tls_port: '{{ .Values.homeassistant_tls_port }}'
         vault_name: '{{ .Values.vault_name }}'
         project_id: '{{ .Values.project_id }}'
         seed_project_id: '{{ .Values.seed_project_id }}'
