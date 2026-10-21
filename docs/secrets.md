@@ -15,7 +15,7 @@ and restricted tokens where it can. However some are created manually:
 * `proxmox-root` with a `root` service account for the Proxmox cluster
 * `github-tiles-tf-bootstrap` with a Github PAT token granting read-write access
   to lots of Github assets on the containing repo.
-* `github-renovate-app` with `client-id` and `private-key` for the Renovate GitHub App
+* `github-renovate-app` with a `client-id` field and the private-key PEM in `notesPlain`, for the Renovate GitHub App
   (see [renovate.md](renovate.md))
 * `tiles-machine-secrets` (or `tiles-test-machine-secrets` for test environment) - Talos machine secrets
 

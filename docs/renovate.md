@@ -61,8 +61,10 @@ Repository permissions, per the
 | Workflows | read and write |
 
 The app is installed on the repositories it updates. Its credentials are in the
-1Password item `github-renovate-app` in `tiles-secrets`, fields `client-id` and
-`private-key` (the PEM). The workflow reads them with `load-secrets-action` and mints
+1Password item `github-renovate-app` in `tiles-secrets`: the Client ID in a `client-id`
+field and the PEM in the item's notes (`notesPlain`), which keeps its line breaks; a
+single-line field such as a password collapses them and the key no longer parses
+(`ERR_OSSL_UNSUPPORTED`). The workflow reads them with `load-secrets-action` and mints
 a one-hour installation token with `actions/create-github-app-token`. Commits and PRs
 are authored as the app's `[bot]` user, and pushes with that token trigger the normal
 PR workflows (a `GITHUB_TOKEN` push would not).
