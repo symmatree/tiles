@@ -1,0 +1,10 @@
+apiVersion: v2
+name: fleet-control-gate
+description: oauth2-proxy perimeter gate in front of fleet-control, for reaching it off the LAN
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: oauth2-proxy
+    version: 7.7.0
+    repository: https://oauth2-proxy.github.io/manifests

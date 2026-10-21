@@ -91,7 +91,9 @@ app's chart) sitting in front of it on the shared Cilium ingress:
 - oauth2-proxy is the **only** thing with an Ingress; the app's own Service is
   flipped to `ClusterIP` so it is reachable *only* through the gate. Home
   Assistant is the exception -- it is not a workload here at all; see
-  [Upstreams outside the cluster](#upstreams-outside-the-cluster).
+  [Upstreams outside the cluster](#upstreams-outside-the-cluster). fleet-control
+  keeps its own LAN-only Ingress for the fleet devices; see its
+  [README](../charts/fleet-control-gate/README.md).
 - Google OAuth + an **email allowlist** (`--authenticated-emails-file`) is the
   real gate. There is no domain rule -- the allowlist is the sole restriction.
 - TLS terminates once, at the shared Cilium ingress (cert-manager `real-cert`).
@@ -103,6 +105,7 @@ Currently protected this way:
 | Argo CD | `argocd.{cluster}.symmatree.com` | `charts/argocd/values.yaml` (`oauth2-proxy:` block) | `charts/argocd` |
 | JupyterHub | `notebook.{cluster}.symmatree.com` | `charts/jupyterhub/values.yaml` (`oauth2-proxy:` block) | `charts/jupyterhub` ([README](../charts/jupyterhub/README.md)) |
 | Home Assistant | `homeassistant.{cluster}.symmatree.com` (prod only) | `charts/homeassistant/values.yaml` (`oauth2-proxy:` block) | `charts/homeassistant` ([README](../charts/homeassistant/README.md)) |
+| fleet-control | `fleet-remote.{cluster}.symmatree.com` (prod only) | `charts/fleet-control-gate/values.yaml` (`oauth2-proxy:` block) | `charts/fleet-control-gate` ([README](../charts/fleet-control-gate/README.md)) |
 
 Each has its own oauth2-proxy Deployment and its own 1Password item (see
 [Secrets](#secrets)). The two configs are intentionally near-identical -- the
