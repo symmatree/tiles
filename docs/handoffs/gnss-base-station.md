@@ -19,29 +19,22 @@ page should shrink when that happens:
 
 ## State of play
 
-- **RTK is down, by design, pending hardware.** `c1a9297` moved the receiver's
-  input from a local USB device to `ext_tcp_source=gnss-bridge.local.symmatree.com:6638`
-  -- an Olimex ESP32-POE-ISO-EA that is **not built yet**. The deployment is
-  `image: ...rtkbase:main` with `imagePullPolicy: Always`, so the pod already runs
-  that image and the caster has no input. `ntrip.tiles.symmatree.com:2101` does not
-  answer. This is not a fault to debug.
-- **Raw logging no longer exists.** The same commit removed `str2str_file`, the
-  datadir, the `ProtectSystem` drop-in and the datasets-share PV/PVC, on the
-  grounds that RTK is the product and a PPP capture is an on-demand
-  `str2str -out file://` run against the `:5015` relay. So
-  `datasets/gps-logs/attic-rtk-base/raw/` is **empty and will stay empty** --
-  that directory is a leftover of coordinator#416, which landed and was then
-  superseded three days later.
+- **The receiver is back on acebase USB, with raw logging on the share.** The
+  PoE-bridge change (`c1a9297`) is reverted for the pod, image and `settings.conf`:
+  `str2str_tcp` reads `/dev/gnss` on acebase again, and `str2str_file` writes raw UBX
+  to `datasets/gps-logs/attic-rtk-base/raw/` through the `attic-rtk-base` NFS PV.
+  `firmware/gnss-bridge/` stays in the tree, not wired in; going to the bridge again
+  means re-applying `c1a9297`'s `containers/rtkbase` and `tanka/environments/ntrip`
+  changes.
 - **acebase moved into the cluster allocation**, `10.0.99.14` -> `10.0.128.53`
   (#806; the PR said `.52`, a follow-up commit took `.53`). Done and settled --
   the prod apply is a clean no-op and DNS agrees. The reason was that it sat
-  outside every Synology NFS export CIDR, which is moot for rtkbase now that the
-  mount is gone, but was the right structural fix anyway.
-- **One observation session exists, ever**: `2026-08-13_01-08-14_GNSS-1.ubx`,
+  outside every Synology NFS export CIDR, which is what refused rtkbase's writes
+  to the share before (tiles#797/#799).
+- **One curated observation session exists**: `2026-08-13_01-08-14_GNSS-1.ubx`,
   22.86 h, hand-copied off the pod's PVC in August. Verified: 0 bad checksums,
-  82,305 RAWX epochs at 1 Hz, no gap over 1.5 s, RAWX+SFRBX throughout. Until the
-  bridge exists there is **no way to collect another day**, so treat that file as
-  irreplaceable.
+  82,305 RAWX epochs at 1 Hz, no gap over 1.5 s, RAWX+SFRBX throughout. Continuous
+  capture now lands under `raw/`.
 - **An OPUS solve came back 2026-10-06 and was rejected on quality.** Report at
   `datasets/gps-logs/attic-rtk-base/rinex/opus-response.txt`. It failed three of
   NGS's four criteria -- 60% of observations used against >90%, 4.3 cm RMS against
