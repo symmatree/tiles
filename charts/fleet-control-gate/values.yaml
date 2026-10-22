@@ -1,0 +1,48 @@
+# Placeholders; the app-of-apps parent writes the real values. vault_name is
+# used by templates/oauth2-proxy-secret.yaml.
+cluster_name: placeholder
+vault_name: placeholder
+
+# oauth2-proxy perimeter gate in front of fleet-control (tanka/environments/fleet-control).
+# The flags and the hardening behind them are the shared pattern in
+# docs/remote-access.md, copied from the Argo CD gate; README.md covers what is
+# different here.
+oauth2-proxy:
+  image:
+    tag: v7.15.3
+  # OnePasswordItem 'fleet-control-oauth2-proxy': fields client-id /
+  # client-secret / cookie-secret. Redirect URI
+  # https://fleet-remote.{cluster}.symmatree.com/oauth2/callback.
+  config:
+    existingSecret: fleet-control-oauth2-proxy
+    configFile: |-
+      upstreams = [ "file:///dev/null" ]
+  extraArgs:
+    - --provider=google
+    # The fleet-control Service, in this namespace.
+    - --upstream=http://fleet-control:8080
+    - --pass-host-header=true
+    - --set-xauthrequest=true
+    - --silence-ping-logging=true
+    - --skip-provider-button=true
+    - --reverse-proxy=true
+    - --trusted-proxy-ip=10.0.144.0/20
+  authenticatedEmailsFile:
+    enabled: true
+    restricted_access: |
+      seth.porter@gmail.com
+  ingress:
+    enabled: true
+    className: cilium
+    path: /
+    pathType: Prefix
+    annotations:
+      cert-manager.io/cluster-issuer: real-cert
+      ingress.cilium.io/loadbalancer-mode: shared
+      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    hosts:
+      - fleet-remote.placeholder.symmatree.com
+    tls:
+      - secretName: fleet-control-oauth2-proxy-tls
+        hosts:
+          - fleet-remote.placeholder.symmatree.com

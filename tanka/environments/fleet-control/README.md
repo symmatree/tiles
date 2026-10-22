@@ -16,6 +16,7 @@ without anyone noticing, which is exactly what happened: this README described `
 | | |
 |---|---|
 | Web UI / API | `https://fleet.{cluster}.symmatree.com` -- a private **10.x** address on site LAN, no public exposure |
+| Web UI / API, off the LAN | `https://fleet-remote.{cluster}.symmatree.com` -- behind the oauth2-proxy gate ([charts/fleet-control-gate](../../../charts/fleet-control-gate/README.md)) |
 | Image | `ghcr.io/symmatree/coordinator-fleet-control:main` |
 | Source | [`coordinator/containers/fleet-control`](https://github.com/symmatree/coordinator/tree/main/containers/fleet-control) |
 | Tanka | [`main.jsonnet`](main.jsonnet), settings in [`application.yaml`](application.yaml) |
@@ -261,5 +262,7 @@ which is worse than no trial.
 
 ## Auth
 
-None. On-network only, like the other private-address services here. If it is ever wanted
-remotely it should be fronted with oauth-proxy, per coordinator#223.
+None on `fleet.{cluster}.symmatree.com`, which is on-network only, like the other
+private-address services here, and is the address the devices use. Off the LAN it is reached
+through the oauth2-proxy gate at `fleet-remote.{cluster}.symmatree.com`
+([charts/fleet-control-gate](../../../charts/fleet-control-gate/README.md), coordinator#223).

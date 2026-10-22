@@ -1,0 +1,40 @@
+{{- if eq .Values.cluster_name "tiles" }}
+# Prod only, like the fleet-control Application it fronts.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fleet-control-gate
+  namespace: argocd
+  labels:
+    name: fleet-control-gate
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: charts/fleet-control-gate
+    helm:
+      valueFiles:
+        - values.yaml
+      valuesObject:
+        cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        oauth2-proxy:
+          ingress:
+            hosts:
+              - 'fleet-remote.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+            tls:
+              - secretName: fleet-control-oauth2-proxy-tls
+                hosts:
+                  - 'fleet-remote.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
+  destination:
+    server: https://kubernetes.default.svc
+    # Beside fleet-control, so the upstream is its Service by short name.
+    namespace: fleet-control
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+{{- end }}
