@@ -6,7 +6,7 @@ from the cluster.
 
 **What the service is and does is documented with the service**, in
 [`coordinator/containers/fleet-control/README.md`](https://github.com/symmatree/coordinator/tree/main/containers/fleet-control)
--- the routes, the one action, the image and the run log. That is where it changes, so that is
+-- the routes, the image and the run log. That is where it changes, so that is
 where it is described; **this file is the deployment only.** A copy of it here goes stale
 without anyone noticing, which is exactly what happened: this README described `bootstrap` and
 `update` actions running `./host/one_time.sh` for months after
@@ -69,35 +69,46 @@ one because they have not been flashed.
 
 | mount | claim | why that class |
 |---|---|---|
-| `/state` | 1Gi, `local-path` | recorded SSH host keys. Small and rebuildable -- losing it makes the next contact with each node a first contact. Node-bound, so a node rebuild empties it |
+| `/state` | 1Gi, `local-path` | held recorded SSH host keys. **Nothing reads it now**: host-key checking was removed from the service (coordinator README, "Host keys are not checked"), and `FLEET_KNOWN_HOSTS` with it. The claim and that env var are still declared |
 | `/images` | 20Gi, `cluster-nfs` | disk images the service has pushed (coordinator [#312](https://github.com/symmatree/coordinator/issues/312)). **Not** `local-path`: that would pin the pod to one node and die with it. ~24 images at 813 MiB, nothing evicting |
 | `/mnt/flights` | 2Ti, static NFS PV, `Retain` | where recovered flights land. `FLEET_FLIGHTS_DIR` points at `/mnt/flights/rekon10`, the platform level, because the service joins only the flight name it is given and `flight-data-layout.md` is `flights/<platform>/<flight>/`. A static PV because the datasets share (`datasets_nfs_path`, per cluster) is a different export from the one `cluster-nfs` provisions into, so a dynamic claim cannot reach it -- same pattern and subpath as `flight-analysis` and `vio-offline`. `Retain`, because this holds the only copy of a flight once the device is wiped |
+| `/mnt/ground-tlogs` | 200Gi, static NFS PV | the per-flight tlogs `tlog-split` writes (in the mavproxy environment), read by the ground collect. Static for the same reason as the flights share |
 
 The image runs as `node` (uid/gid 1000) and Secret volumes are root-owned, so `fsGroup: 1000`
 is what makes the 0440 key readable by the process that needs it.
 
 ## Lifecycle
 
-- **`Recreate`, not `RollingUpdate`.** Two replicas could drive the same node at once, and the
-  one-action-per-node guard is per process.
-- **No liveness probe.** A converge holds state in memory for twenty minutes or more, and
-  restarting the pod mid-run abandons the remaining steps -- the work already on the node
-  survives, but nothing issues what comes next. Readiness only.
+What a pod restart costs is the service's to say, and changes with it -- see "Known
+limitations" in the
+[service README](https://github.com/symmatree/coordinator/tree/main/containers/fleet-control).
+Since [coordinator#504](https://github.com/symmatree/coordinator/issues/504) a playbook run or
+a collect is a workflow and outlives the pod; stop, reboot and ground still run in it.
+
+- **`Recreate`, not `RollingUpdate`.** The per-node lock is partly held in the service's memory
+  ([coordinator#566](https://github.com/symmatree/coordinator/issues/566) removes that), so two
+  replicas would be two locks.
+- **No liveness probe.** Readiness only. The reason recorded for it -- a converge running in
+  this process for twenty minutes -- went with coordinator#504.
 - **`roll-on-digest-change: true`**, opting in to
   [argo-tag-watcher](../../../containers/argo-tag-watcher/README.md)'s image side. The image is
   a floating `:main` tag, so a rebuild moves the digest without changing the string here and
-  nothing would otherwise roll the pod. That matters more here than elsewhere: **the ansible
-  playbook is baked into this image**, so a stale pod converges nodes with a playbook that is
-  not the one on `main`.
+  nothing would otherwise roll the pod. The playbook is **not** in this image: a playbook step
+  fetches it as a published artifact at run time, so an ansible change needs no roll.
 
 ## Fleet operations run as Argo Workflows
 
-[coordinator#504](https://github.com/symmatree/coordinator/issues/504). The service runs
-`ansible-playbook` as a subprocess of itself today; this is the deployment side of moving it
-into a pod of its own. Nothing submits one yet.
+How the service submits and follows them is in the
+[service README](https://github.com/symmatree/coordinator/tree/main/containers/fleet-control);
+this section is the declared half.
 
-The objects are a `WorkflowTemplate` (`fleet-control-playbook`), a ServiceAccount for the
-workflow's pods, and two Roles.
+| template | submitted by | |
+|---|---|---|
+| `fleet-control-playbook` | the service: converge, provision, reimage | [coordinator#504](https://github.com/symmatree/coordinator/issues/504) |
+| `fleet-control-collect` | the service: `POST /flights/:flight/collect` | [coordinator#566](https://github.com/symmatree/coordinator/issues/566), below |
+| `bench-simflight` | `argo submit`, by whoever runs the bench | [coordinator#541](https://github.com/symmatree/coordinator/pull/541), below |
+
+Beside them, a ServiceAccount for the workflows' pods and two Roles.
 
 **`fleet-control-playbook` covers every playbook run** — converge, full provision and
 reimage are the same step with a different `playbook` parameter, plus `extra-vars` for
@@ -105,12 +116,6 @@ whatever that playbook needs beyond `device_role`. `extra-vars` is a JSON object
 default; the step merges it into the vars the play is given and refuses any key that would
 displace the four it sets itself, since those are how the play reaches the device and what
 key it installs there.
-
-**It does not yet cover the other long operations.** Pulling an FC dataflash log is about
-half an hour for 148 MB at the measured 84 KiB/s, and offloading a session bundle moves
-gigabytes; both run in the service's own process today and both die with a pod roll for
-exactly the same reason a converge does. They want a second template that mounts the flights
-volume rather than running a playbook, which is not written yet.
 
 ### Why a template rather than a Workflow built in code
 
@@ -168,12 +173,8 @@ The log outlives it either way: Alloy ships the step's stdout to Loki.
 
 [coordinator#566](https://github.com/symmatree/coordinator/issues/566). `fleet-control-collect`
 is one step per thing retrieved, fanned out with `withParam` over a `targets` parameter.
-There is nothing after them.
-
-The service used to move these bytes itself. That made the two campods serial -- 336 and 361
-MB landing at 18:23:32 and 18:30:58 on 2026-10-18, the second waiting on nothing but the first
--- and tied a transfer to that pod's lifetime, so a roll mid-collect took it with it. Here
-each is a pod that starts when the other does.
+There is nothing after them. Why the bytes moved out of the service, with the before-and-after
+timings, is in the service README's "Collecting a flight".
 
 ### One step template, both kinds
 
@@ -216,13 +217,11 @@ variable you cannot have in a timing measurement. The steps now come from one de
     argo submit --from workflowtemplate/bench-simflight -n fleet-control \
         -p flight=bench-20261017-simflight-11
 
-| step | what it does |
-|---|---|
-| `deploy` | converges each campod serially, reboots both, waits for uptime to go backwards and for both cameras to report `ready` |
-| `arm` | stops the FC talker on the coordinator, writes the arm file |
-| `window` | `suspend`, `window-seconds` long (default 240) |
-| `disarm` | writes the arm file back, waits for the writers to close |
-| `collect` | reboots all three, picks each pod's newest closed session by `last_activity_utc`, offloads it into the named flight |
+The steps are `deploy`, `arm`, `window`, `disarm` and `collect`, in that order. All but
+`window` run a stage of
+[`harness/bench_cycle.py`](https://github.com/symmatree/coordinator/blob/main/harness/bench_cycle.py)
+(`bench-cycle` in the service's image), and **what each stage does and waits for is documented
+there**, where it changes. `window` is a `suspend`, `window-seconds` long (default 240).
 
 **Whether the code under test is built is the caller's business, not the workflow's.** An
 earlier version checked that the service was serving the newest commit and that the camera
