@@ -170,6 +170,13 @@ spec:
           - --set-xauthrequest=true
           - --silence-ping-logging=true
           - --skip-provider-button=true
+          - --cookie-csrf-per-request=true
+          - --cookie-csrf-per-request-limit=10
+          - --api-route=^/api/
+          - --api-route=^/auth/token
+          - --api-route=^/manifest\.json
+          - --api-route=^/sw-modern\.js
+          - --api-route=^/hacsfiles/
           - --reverse-proxy=true
           - --trusted-proxy-ip=10.0.144.0/20
           - --config=/etc/oauth2_proxy/oauth2_proxy.cfg
