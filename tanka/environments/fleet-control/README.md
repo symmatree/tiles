@@ -183,6 +183,16 @@ fan-out spreads both into the same step and there is no second template to keep 
 the first. They were separate routes run in sequence before, which put a ~30-minute dataflash
 pull behind the campods for no reason: they are different devices.
 
+### Two of one kind on one device take turns
+
+The step holds a mutex named for its node and kind. FC logs are pulled over the
+coordinator's one UART, and two readers on it each get part of the byte stream: on
+2026-10-25 three fc-log steps on the coordinator started together and two failed with
+pyserial's "device reports readiness to read but returned no data". Keyed on kind as well, so
+a coordinator session -- 15 s each that day -- does not wait behind a 25-minute log; the price
+is that two sessions on one node also take turns. Argo mutexes are namespace-wide, so it holds
+across collect workflows too.
+
 ### The flights PVC, mounted by the steps
 
 This is the one template whose steps need the datasets share. It is `ReadWriteMany` NFS, which

@@ -342,7 +342,8 @@ local fleetControl = {
     // The service used to move these bytes itself, which made every retrieval serial and
     // tied it to that pod's lifetime -- 336 and 361 MB landing seven minutes apart on
     // 2026-10-18, with an FC log that takes about 30 minutes for 148 MB queued behind them
-    // for no reason, since it is a different device. Here they all start together.
+    // for no reason, since it is a different device. Here they all start together, except
+    // two of one kind on one device, which take turns -- see the step's `synchronization`.
     //
     // ONE STEP TEMPLATE FOR BOTH KINDS. A target is `{node, kind, id}` whatever it is, so
     // the fan-out spreads sessions and FC logs into the same shape and there is no second
@@ -425,6 +426,16 @@ local fleetControl = {
           {
             name: 'offload',
             inputs: { parameters: [{ name: 'node' }, { name: 'kind' }, { name: 'id' }] },
+            // ONE AT A TIME PER DEVICE AND KIND. An FC log is pulled over the coordinator's
+            // one UART, and two readers on it each get part of the byte stream: on
+            // 2026-10-25 three fc-log steps started together and two died with pyserial's
+            // "device reports readiness to read but returned no data". Keyed on kind as well
+            // as node so a coordinator session (15 s) does not queue behind a 25-minute log;
+            // that cost two sessions on one node taking turns. Mutexes are namespace-wide, so
+            // this also holds across two collect workflows.
+            synchronization: {
+              mutexes: [{ name: 'collect-{{inputs.parameters.node}}-{{inputs.parameters.kind}}' }],
+            },
             // 0440 and group 1000, matching the key's mode, as in the Deployment.
             securityContext: { fsGroup: 1000 },
             container: {
