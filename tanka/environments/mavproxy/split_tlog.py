@@ -9,21 +9,32 @@ its own files.
 The cut is at disarm. A file beginning at arm would start after the pre-arm window, where RTK
 convergence happens (coordinator#195). Each file runs from the previous cut to the next
 disarm: the start of a session, then its flight.
+
+THE FAN-OUT IS UDP, AND THIS IS THE LISTENER. It was a `tcpin` on mavproxy with this as the
+client, and that produced no finished tlog in a month: pymavlink's `mavtcpin` accepts one
+client and only re-accepts after that client's socket errors on a write -- which, with the
+vehicle off, never happens. Every restart of this pod (it rolls with mavproxy's image) left
+mavproxy holding a dead client; the next instance sat in the listen backlog, "connected"
+and received nothing; once the backlog was full, connects timed out for the pod's whole
+life. Six `.tlog.part` files, five of them empty, were the whole output. A `udpout` from
+mavproxy to a Service here is connectionless: a restart on either side costs nothing and
+nobody holds anybody's state.
 """
 
 from __future__ import annotations
 
 import os
+import signal
+import socket
 import struct
 import sys
 import time
-import socket
 from pathlib import Path
 
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as dialect
 
-ADDR = os.environ.get("TLOG_SPLIT_MASTER", "mavproxy-split.mavproxy.svc:5761")
+LISTEN = os.environ.get("TLOG_SPLIT_LISTEN", "0.0.0.0:5761")
 OUT_DIR = Path(os.environ.get("TLOG_SPLIT_OUT", "/mnt/ground-tlogs"))
 # A bench session never disarms, so the cut cannot only be disarm. Bound it.
 MAX_BYTES = int(os.environ.get("TLOG_SPLIT_MAX_BYTES", str(512 * 1024 * 1024)))
@@ -56,8 +67,15 @@ class Segment:
         self.fh.write(struct.pack(">Q", int(time.time() * 1e6)) + msg.get_msgbuf())
         self.bytes += len(msg.get_msgbuf()) + 8
 
-    def close(self, why: str) -> Path:
+    def close(self, why: str) -> Path | None:
+        """Finish the file. An EMPTY one is removed rather than named: nothing arrived, so
+        there is nothing a reader could want, and a share full of zero-byte `noflight`
+        files is what the old design left behind."""
         self.fh.close()
+        if self.bytes == 0:
+            self.path.unlink()
+            print(f"tlog-split: {self.path.name} was empty, removed ({why})", flush=True)
+            return None
         if self.armed_at is None:
             name = f"{utc(self.started)}-noflight-{why}.tlog"
         else:
@@ -69,50 +87,50 @@ class Segment:
         return final
 
 
-def connect(addr: str) -> socket.socket:
-    """Dial the fan-out, retrying.
-
-    mavproxy is the listener and this is the client, which is the direction that makes this
-    safe to deploy: a `tcpin` out with nobody connected costs mavproxy nothing, so the
-    splitter being down, absent, or wedged cannot affect the link.
-
-    The raw socket rather than `mavutil.mavlink_connection`: that wrapper prints "EOF on TCP
-    socket" and keeps returning no messages when the peer goes away, which is a hot spin every
-    time mavproxy restarts. Owning the socket makes end-of-stream a value rather than a log
-    line.
-    """
+def listen(addr: str) -> socket.socket:
     host, _, port = addr.rpartition(":")
-    while True:
-        try:
-            sock = socket.create_connection((host, int(port)), timeout=30)
-            sock.settimeout(30)
-            print(f"tlog-split: connected to {addr}", flush=True)
-            return sock
-        except OSError as exc:
-            print(f"tlog-split: {addr}: {exc}; retrying in 5s", flush=True)
-            time.sleep(5)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((host, int(port)))
+    # A timeout so the loop wakes to apply the age bound and to notice a shutdown; no
+    # traffic is normal, the vehicle is off most of the time.
+    sock.settimeout(30)
+    print(f"tlog-split: listening on udp {addr}", flush=True)
+    return sock
+
+
+class Shutdown(Exception):
+    """Raised from the signal handler, so it unwinds a blocked `recvfrom` at once rather
+    than waiting for its timeout -- Python retries the read after a handler returns."""
+
+
+def _stop(signum, _frame):
+    raise Shutdown(signum)
 
 
 def main() -> int:
     parser = dialect.MAVLink(None)
-    sock = connect(ADDR)
+    sock = listen(LISTEN)
+    # CLOSE ON SIGTERM. A pod roll used to leave the open segment as an orphaned `.part`
+    # with nothing to say what it was; now it is finished and named like any other cut.
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
     seg = Segment(OUT_DIR, time.time())
     armed = False
-
     while True:
         try:
-            data = sock.recv(4096)
+            data, _peer = sock.recvfrom(65535)
         except socket.timeout:
             data = b""          # no traffic is normal: the vehicle is off
+        except Shutdown as why:
+            # `seg` is whichever segment is open NOW -- a cut rebinds it, so the close has
+            # to happen here where the name is current, not in a caller holding the first.
+            seg.close("shutdown")
+            print(f"tlog-split: stopped on signal {why}", flush=True)
+            return 0
         except OSError as exc:
-            print(f"tlog-split: read failed ({exc}); reconnecting", flush=True)
-            data = None
-
-        if data is None or data == b"" and _peer_gone(sock):
-            # Reconnect WITHOUT cutting the file. mavproxy restarting is not a flight
-            # boundary, and the gap is visible in the timestamps either way.
-            sock.close()
-            sock = connect(ADDR)
+            print(f"tlog-split: read failed ({exc})", flush=True)
+            time.sleep(1)
             continue
 
         for msg in (parser.parse_buffer(data) or []) if data else []:
@@ -135,16 +153,6 @@ def main() -> int:
             # the bound. Cut so one file cannot grow without limit.
             seg.close("bytes" if seg.bytes >= MAX_BYTES else "age")
             seg = Segment(OUT_DIR, time.time())
-
-
-def _peer_gone(sock: socket.socket) -> bool:
-    """A zero-length read means the peer closed; a timeout means quiet. Tell them apart."""
-    try:
-        return sock.recv(1, socket.MSG_PEEK | socket.MSG_DONTWAIT) == b""
-    except BlockingIOError:
-        return False
-    except OSError:
-        return True
 
 
 if __name__ == "__main__":
