@@ -41,12 +41,10 @@ Provisioned by the `cluster-nfs` and `local-path` StorageClasses, both of which 
 
 - **Mimir**: `storage-mimir-ingester-N` (TSDB head and WAL at `/data`), `storage-mimir-compactor-0`, `storage-mimir-store-gateway-0`, `storage-mimir-alertmanager-0`, `kafka-data-mimir-kafka-0` (the ingest queue)
 - **Loki**: `storage-loki-0` (WAL at `/var/loki`)
-- **Others** (`local-path`): `grafana`, `odm-postgres`, `apprise-attach`,
-  `fleet-control-state`, `rtkbase-persist`
-- **Others** (`cluster-nfs`): `hub-db-dir`, `fleet-control-images` -- dynamic and
-  `Delete` like the rest of this tier, but on NFS rather than node-local disk, so
-  they carry no node affinity and do not pin their pod. `hub-db-dir` was moved here
-  from `local-path` in #610.
+- **Others** (`local-path`): `grafana`, `odm-postgres`, `apprise-attach`, `rtkbase-persist`
+- **Others** (`cluster-nfs`): `hub-db-dir` -- dynamic and `Delete` like the rest of
+  this tier, but on NFS rather than node-local disk, so it carries no node affinity and
+  does not pin its pod. Moved here from `local-path` in #610.
 
 Losing this tier costs the **window of recent data that has not yet been flushed to the durable tier** -- samples still in the ingester head or the Kafka queue, log lines still in the WAL. Everything already written to blocks or chunks is unaffected. Note that `grafana` and `odm-postgres` are on this tier and are *not* reconstructible in the same way; they are dynamic today, which is a choice worth revisiting rather than a guarantee.
 
