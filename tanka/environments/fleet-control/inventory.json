@@ -1,11 +1,11 @@
 {
   "user": "pi",
   "nodes": [
-    { "name": "coordinator", "role": "coordinator", "host": "10.0.99.75" },
-    { "name": "campod-se", "role": "campod", "host": "10.0.5.237" },
-    { "name": "campod-sw", "role": "campod", "host": "10.0.2.49" },
-    { "name": "campod-ne", "role": "campod" },
-    { "name": "campod-nw", "role": "campod" },
-    { "name": "blackfly", "role": "rampod", "host": "10.0.2.198" }
+    { "name": "coordinator", "role": "coordinator", "host": "coordinator.local.symmatree.com" },
+    { "name": "campod-se", "role": "campod", "host": "campod-se.local.symmatree.com" },
+    { "name": "campod-sw", "role": "campod", "host": "campod-sw.local.symmatree.com" },
+    { "name": "campod-ne", "role": "campod", "host": "campod-ne.local.symmatree.com" },
+    { "name": "campod-nw", "role": "campod", "host": "campod-nw.local.symmatree.com" },
+    { "name": "blackfly", "role": "rampod", "host": "blackfly.local.symmatree.com" }
   ]
 }

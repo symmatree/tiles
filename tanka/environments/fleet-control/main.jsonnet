@@ -46,8 +46,7 @@ local fleetControl = {
     },
     ingressClassName: 'cilium',
     // Where the pod bus is. The coordinator runs the broker, and the roster already says where
-    // the coordinator is, so this reads it from there. `host` is optional in the roster and
-    // defaults to the node name, which is also a usable address.
+    // the coordinator is, so this reads it from there.
     local roster = std.parseJson(importstr 'inventory.json'),
     // Tanka stamps this onto every object at manifestation, but a RoleBinding subject has
     // to carry it explicitly.
