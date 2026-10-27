@@ -148,6 +148,14 @@ collectors:
           expression          = "ignoring ACPI event: \"wmi"
           drop_counter_reason = "talos_wmi_acpi_noise"
         }
+        // Drop machined's authz-success pair (generic + unix-socket line), emitted for
+        // every call the Talos console dashboard makes polling its own stats (#774). The
+        // 'machined OK [/machine.MachineService/...]' request line for the same call is
+        // kept, and denials do not contain 'authorized'.
+        stage.drop {
+          expression          = "machined/authz/(unix/)?authorizer authorized "
+          drop_counter_reason = "talos_machined_authz_success"
+        }
         // Ingestion-time on purpose (no embedded-timestamp parse): tailing existing /
         // rotated content on first start would otherwise be rejected 'entry too far behind'.
         forward_to = [loki.write.localloki.receiver]
