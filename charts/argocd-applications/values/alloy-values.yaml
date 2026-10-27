@@ -29,6 +29,57 @@ collectors:
       prometheus.exporter.blackbox "blackbox_exporter" {
         config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
       }
+
+      // Home Assistant's own exporter: the `prometheus:` block in ha-config's
+      // configuration.yaml (namespace `ha`, requires_auth false). The appliance is
+      // a LAN host rather than a workload, so there is no ServiceMonitor to
+      // discover; it is a static target, addressed by the name on its certificate
+      // so the handshake verifies against the trust bundle like the oauth2-proxy
+      // upstream does (charts/homeassistant). Both clusters scrape it, as both run
+      // the hubitat/raconteur/morpheus Probes above; the data lands in each
+      // cluster's own tenant.
+      prometheus.scrape "homeassistant" {
+        targets = [{
+          __address__ = "homeassistant.local.symmatree.com:8123",
+          instance    = "homeassistant",
+          job         = "integrations/homeassistant",
+        }]
+        scheme          = "https"
+        metrics_path    = "/api/prometheus"
+        scrape_interval = "60s"
+        forward_to      = [prometheus.relabel.homeassistant.receiver]
+        // alloy-metrics runs the clustered preset. A scrape without this block is
+        // not sharded across the cluster: every replica scrapes the target and
+        // Mimir receives each sample once per replica.
+        clustering {
+          enabled = true
+        }
+      }
+      prometheus.relabel "homeassistant" {
+        // The destination component is named from the destinations key by
+        // helper.alloy_name (lowercased, - and space -> _). It adds the cluster
+        // external label, so a scrape forwarded here needs none of its own.
+        forward_to = [prometheus.remote_write.localmimir.receiver]
+        // Measured 2026-10-27: 6,579 series per scrape, 81% of them four
+        // per-entity bookkeeping families. ha_*_created is the OpenMetrics
+        // counter-creation timestamp HA emits beside every counter, and
+        // ha_last_updated_time_seconds repeats what the sample timestamp already
+        // carries; each is one series per entity (1,328 each). The remaining two,
+        // ha_entity_available and ha_state_change_total, stay: they are the
+        // liveness signal (ha-config#5).
+        rule {
+          source_labels = ["__name__"]
+          regex         = "ha_.*_created|ha_last_updated_time_seconds"
+          action        = "drop"
+        }
+        // UniFi per-client throughput, sensor.<client>_rx/_tx plus the unnamed
+        // sensor.rx_<n>/tx_<n>: 952 series of gauges that move every scrape.
+        rule {
+          source_labels = ["entity"]
+          regex         = "sensor\\..*_(rx|tx)|sensor\\.(rx|tx)(_[0-9]+)?"
+          action        = "drop"
+        }
+      }
     alloy:
       resources:
         requests:

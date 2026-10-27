@@ -62,7 +62,9 @@ has decided to attach to.
 
 What stays on the LAN is the **machine** path. `homeassistant.local.symmatree.com` continues to
 resolve straight to `10.0.99.9`, because the clients that use it cannot pass a Google challenge:
-ESPHome and the device integrations, and the Alloy scrape of the unauthenticated `/api/prometheus`.
+ESPHome and the device integrations, and the Alloy scrape of the unauthenticated `/api/prometheus`
+(a static target in [`alloy-values.yaml`](../argocd-applications/values/alloy-values.yaml); see
+[README-alloy.md](../argocd-applications/templates/README-alloy.md), "Static scrape targets").
 (The `static-certs` push is unaffected either way -- it SSHes to the IP, not the name.) The gate is
 the human perimeter; it is not and cannot be a LAN perimeter for this host.
 

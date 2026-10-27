@@ -19,9 +19,25 @@ page should shrink when that happens:
 
 ## State of play
 
-- Core is current. The Yellow's Zigbee radio was stuck behind a disk-full
-  condition for months; both are resolved and `zha` loads, with no paired
-  devices on it. All Z-Wave and Zigbee runs through the Hubitat hub.
+- Core is 2026.10.2 (updated 2026-10-22, full backup `pre-2026.10.2` taken
+  first), OS 18.3, Supervisor current. The Yellow's Zigbee radio was stuck
+  behind a disk-full condition for months; both are resolved and `zha` loads,
+  with no paired devices on it. All Z-Wave and Zigbee runs through the Hubitat
+  hub.
+- The Supervisor's `rpi_firmware_update_blocked` issue is permanent on this
+  board: the CM4 bootloader EEPROM (1673458852, latest 1767975133) can only be
+  flashed over USB with `rpiboot`; os-agent reports `eeprom_update_unavailable`
+  for every Yellow. Nothing to do from software.
+- Hubitat is on platform 2.5.2.139 (from 2.4.3.149, 2026-10-22; ~13 min of
+  downtime, all 18 Z-Wave nodes present afterwards and reporting into HA). It
+  no longer reports `isRadioUpdateNeeded`; the radio firmware is still 7.18.
+  The hub's JSON endpoints and the update procedure belong in
+  `fables/kb/Devices/Hubitat.md`, which is still a stub.
+- HA's `/api/prometheus` is scraped into Mimir by the cluster's alloy-metrics
+  (`job="integrations/homeassistant"`, ~3,000 series after drops). Before
+  2026-10-27 the docs described this scrape, but nothing performed it, and
+  Mimir held no `ha_*` series; history before that date is only in the
+  appliance's own recorder database.
 - **The browser door is live and in real use**, with two identities on the
   allowlist, verified end to end by someone other than the agent -- Google at
   the gate, then an HA local account. The two-prompt cost is handled
@@ -29,12 +45,26 @@ page should shrink when that happens:
   layers (header auth, `--prompt=select_account`, installing hass-oidc-auth) is
   **closed, not deferred**. The only argument left for HA-side OIDC was
   revoking people centrally, which does not apply to this household.
-- The companion-app door (mutual TLS) is rebased, green and mergeable, pinned
-  to ghostunnel `v1.11.4-distroless`. Its cluster-side prerequisites are live:
-  `tiles-device-ca-issuer` ready, both trust-manager Bundles synced, the CA
-  valid to Oct 2028, `10.0.130.2` unallocated. Every bypass that was testable
-  fails closed, and the Terraform plan is one addition. What is left is the
-  Android enrolment, which needs a device in hand.
+- The browser door has one trap: Home Assistant's frontend is a PWA, and once
+  the oauth2-proxy session expires its service worker keeps requesting in the
+  background. With `--skip-provider-button`, each of those requests started a
+  login and overwrote the single CSRF cookie, so the Google callback failed
+  with `CSRF token mismatch` and then a 500. #865 (merged 2026-10-22) switches
+  the gate to per-request CSRF cookies and makes the frontend's background
+  paths API routes (401, no login). It takes effect when the `prod` tag moves
+  past it; until then the workaround is clearing the site's data in the
+  browser, or an incognito window.
+- The companion-app door (mutual TLS) is live: #812 merged, Deployment
+  `homeassistant-tls` (two ghostunnel `v1.11.4-distroless` hops) on
+  LoadBalancer `10.0.130.2:8443`, `homeassistant-tls.tiles.symmatree.com` a
+  CNAME to `lhitw`. `10.0.130.2` comes from `lb-static-pool`
+  (`charts/cilium-config`, label-selected), announced over L2; the lease is held
+  by acebase. Verified: no client cert is refused at the handshake; the
+  `seth-pixel` cert gets 200 on `/` and 401 on `/api/`; a phone off the LAN
+  gets `ERR_BAD_SSL_CLIENT_AUTH_CERT`, and the gateway logs the rejected
+  handshake from the SNAT address, so the outside path reaches it. Not tested:
+  a wrong-CA cert, an expired cert, websockets. What is left is the Android
+  enrolment (PKCS#12 from the device Secret), which needs a device in hand.
 - Five of six Zooz motion sensors are battery-dead and feed `entity_controller`.
   Tracked as `ha-config#4`; the surrounding maintenance plan is `#5`-`#10`.
   `ha-config#12` fixed a separate fault found the same way: both the garage and
@@ -46,20 +76,32 @@ page should shrink when that happens:
   77 `unknown` and 10 unmanageable. Most of the `unknown` pile is
   stateless-by-design (buttons, Hue scenes). The `restored` pile is where the
   real findings were.
-- `konnected` and `songpal` not loaded; `roborock` fails on credentials; `xbox`
-  fails against its account-link endpoint. All predate the current work.
-- Hubitat's own Z-Wave radio reports `isRadioUpdateNeeded: true`.
+- `konnected` and `songpal` show `not_loaded` because both config entries are
+  ignored discoveries (`source: ignore`); that is their normal state, not a
+  failure. `roborock` authenticated again from 2026-10-15 on. `xbox` fails
+  against the Nabu Casa account-link endpoint (400) and is the one open
+  Repair; the operator has decided it is not worth re-linking. Deleting the
+  entry would clear the Repair.
 - `ha-config#11` (the migrated `http:` block) and `#12` (the ratgdo id) are
   merged, pulled onto the appliance and applied by a Core restart; the
-  `yaml_still_present_after_migration` repair has cleared. The one repair left
-  is the Xbox account-link reauth, which predates all of this.
+  `yaml_still_present_after_migration` repair has cleared.
 
 ## Technique
 
 The REST API covers states and services. Most things worth asking are on the
-websocket API, which is also the only working route to the Supervisor --
-`POST /api/hassio/<path>` returns **401** even with an admin token, so use the
-websocket `supervisor/api` passthrough with `endpoint` and `method` instead.
+websocket API, which is also the only working route to the Supervisor from
+outside -- `POST /api/hassio/<path>` returns **401** even with an admin token,
+so use the websocket `supervisor/api` passthrough with `endpoint` and `method`
+instead.
+
+The shortest route is SSH. The SSH add-on listens on port 22 (22222 is
+refused) and accepts the operator's key, as `root`. From there the `ha` CLI
+covers Supervisor, OS, backups and Core updates (`ha backups new --name ...`,
+`ha core update --version ...`, `ha resolution info`), and the Supervisor
+proxies Core's REST API without a long-lived token:
+`curl -H "Authorization: Bearer $SUPERVISOR_TOKEN" http://supervisor/core/api/states`.
+`/config/.storage/*` is readable directly (config entries, the repairs
+registry, the entity registry); `jq` is installed.
 
 | want | how |
 | --- | --- |
