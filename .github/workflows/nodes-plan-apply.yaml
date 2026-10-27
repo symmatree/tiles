@@ -85,7 +85,7 @@ jobs:
       # 1. Did anything outside the exempt areas change? `every` means a file
       #    counts only when it matches all the rules, so a file under any
       #    excluded prefix drops out.
-      #      charts/, tanka/  Argo CD owns them; argocd-pr-diff previews them
+      #      charts/, tanka/  Argo CD owns them; render-diff previews them
       #      docs/            prose
       #      tf/bootstrap/    a separate root this workflow never runs
       - uses: dorny/paths-filter@v4

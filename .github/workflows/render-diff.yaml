@@ -1,0 +1,56 @@
+name: render-diff
+# Renders every Argo CD Application for both clusters from the PR's merge base and
+# from the PR head, offline, and posts the per-app diff to the PR. No cluster, VPN or
+# secret involved. See docs/render-diff.md.
+on:
+  pull_request:
+    paths:
+      - charts/**
+      - tanka/**
+      - tf/nodes/*.tfvars
+      - tf/nodes/variables.tf
+      - scripts/render-apps.sh
+      - scripts/render-apps-diff.sh
+      - .github/workflows/render-diff.yaml
+      - .github/actions/attach-outputs/**
+      - .github/actions/helm-setup/**
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  render-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/helm-setup
+
+      - name: Install tk, jb and yq
+        # tk matches the CMP in charts/argocd/templates/tanka.yaml so the render is the
+        # one Argo CD produces.
+        run: |
+          set -euo pipefail
+          curl -sSLo /usr/local/bin/tk https://github.com/grafana/tanka/releases/download/v0.32.0/tk-linux-amd64
+          curl -sSLo /usr/local/bin/jb https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.6.0/jb-linux-amd64
+          curl -sSLo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64
+          chmod +x /usr/local/bin/tk /usr/local/bin/jb /usr/local/bin/yq
+          tk --version && jb --version && yq --version
+
+      - name: Render and diff
+        id: render_diff
+        run: |
+          set -euo pipefail
+          export TXT_OUTPUT_DIR=/tmp/txt-outputs
+          scripts/render-apps-diff.sh "${{ github.event.pull_request.base.sha || 'origin/main' }}"
+
+      - name: Attach diffs to PR
+        if: always() && steps.render_diff.outcome != 'skipped'
+        uses: ./.github/actions/attach-outputs
+        with:
+          txt_output_dir: /tmp/txt-outputs
+          outcome: ${{ steps.render_diff.outcome }}

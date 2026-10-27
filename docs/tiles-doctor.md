@@ -174,8 +174,9 @@ done is a comment saying so, not a retitle around the survivor.
   than reassembling the commands from the scripts.
 - [`build.sh`](../build.sh) and [`scripts/helm-common.bash`](../scripts/helm-common.bash)
   -- how `rendered.yaml` is produced and which flags are applied.
-- [`scripts/argocd-render-diff.sh`](../scripts/argocd-render-diff.sh) -- per-app
-  rendering.
+- [`render-diff.md`](render-diff.md) -- `scripts/render-apps-diff.sh`, the offline
+  render of every Application before and after a change; run it locally before
+  committing anything under `charts/` or `tanka/`.
 - [`config-propagation.md`](config-propagation.md) -- how values reach a chart
   through the app-of-apps.
 

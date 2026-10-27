@@ -64,7 +64,7 @@ Two run on the UniFi, for jobs the gate does not cover:
 
 | VPN | Purpose |
 |-----|---------|
-| WireGuard | GitHub Actions reaching the cluster -- `github-vpn-client` in 1Password, used by `nodes-plan-apply`, `taint-vms`, `argocd-pr-diff` and `refresh-api-versions` via [`.github/actions/wg-quick`](../.github/actions/wg-quick/action.yaml). Set up by hand in UniFi; see [tf/bootstrap/README.md](../tf/bootstrap/README.md). |
+| WireGuard | GitHub Actions reaching the cluster -- `github-vpn-client` in 1Password, used by `nodes-plan-apply`, `taint-vms` and `refresh-api-versions` via [`.github/actions/wg-quick`](../.github/actions/wg-quick/action.yaml). Set up by hand in UniFi; see [tf/bootstrap/README.md](../tf/bootstrap/README.md). |
 | UniFi Teleport | general remote access, e.g. RDP |
 
 Both toggle from the UniFi console, so Teleport can stay off when unused.

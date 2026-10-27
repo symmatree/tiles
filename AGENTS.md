@@ -37,6 +37,13 @@ for the placeholder values `build.sh` renders with, and
 [`docs/api-versions-strategy.md`](docs/api-versions-strategy.md) for the pinned
 API versions it passes.
 
+## Render-diff before committing
+
+For anything under `charts/` or `tanka/`, including an `app_settings` change in
+`charts/argocd-applications`, run `scripts/render-apps-diff.sh` and account for every
+line of the per-app diff it prints. The `render-diff` workflow posts the same diff on
+the PR. [`docs/render-diff.md`](docs/render-diff.md).
+
 ## Deploying
 
 Argo CD deploys from the moving `test` and `prod` **git tags**, not from `main`,
