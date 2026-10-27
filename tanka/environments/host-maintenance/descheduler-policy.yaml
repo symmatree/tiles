@@ -1,0 +1,30 @@
+apiVersion: descheduler/v1alpha2
+kind: DeschedulerPolicy
+profiles:
+  - name: rebalance
+    pluginConfig:
+      - name: DefaultEvictor
+        args:
+          # Evict only what fits somewhere else.
+          nodeFit: true
+          podProtections:
+            # A pod on a local-path volume is pinned to its node: evicting it restarts it
+            # in place and moves nothing.
+            extraEnabled:
+              - PodsWithPVC
+      # By requests, as the scheduler counts. Moves pods off nodes above any target onto
+      # nodes below every threshold -- after a drain, the nodes that just came back.
+      - name: LowNodeUtilization
+        args:
+          thresholds:
+            cpu: 20
+            memory: 20
+            pods: 20
+          targetThresholds:
+            cpu: 50
+            memory: 50
+            pods: 50
+    plugins:
+      balance:
+        enabled:
+          - LowNodeUtilization
