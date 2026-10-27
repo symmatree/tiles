@@ -148,7 +148,7 @@ render_one() {
 	local vf
 	while IFS= read -r vf; do
 		[[ -z ${vf} ]] && continue
-		if [[ ${vf} == '$values/'* ]]; then
+		if [[ ${vf} == \$values/* ]]; then
 			helm_args+=(-f "${REPO_ROOT}/${vf#\$values/}")
 		else
 			helm_args+=(-f "${REPO_ROOT}/${path}/${vf}")
