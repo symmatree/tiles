@@ -1,8 +1,8 @@
 # fleet-control
 
-Ground-station control surface for the rekon10 fleet: converge a node, reimage one, read what
-each is running, and pull a flight's captures off the cards -- from a phone, over SSH, driven
-from the cluster.
+Ground-station control surface for the rekon10 fleet: converge a node, read what each is
+running, and pull a flight's captures off the cards -- from a phone, over SSH, driven from the
+cluster.
 
 **What the service is and does is documented with the service**, in
 [`coordinator/containers/fleet-control/README.md`](https://github.com/symmatree/coordinator/tree/main/containers/fleet-control)
@@ -69,8 +69,6 @@ one because they have not been flashed.
 
 | mount | claim | why that class |
 |---|---|---|
-| `/state` | 1Gi, `local-path` | held recorded SSH host keys. **Nothing reads it now**: host-key checking was removed from the service (coordinator README, "Host keys are not checked"), and `FLEET_KNOWN_HOSTS` with it. The claim and that env var are still declared |
-| `/images` | 20Gi, `cluster-nfs` | disk images the service has pushed (coordinator [#312](https://github.com/symmatree/coordinator/issues/312)). **Not** `local-path`: that would pin the pod to one node and die with it. ~24 images at 813 MiB, nothing evicting |
 | `/mnt/flights` | 2Ti, static NFS PV, `Retain` | where recovered flights land. `FLEET_FLIGHTS_DIR` points at `/mnt/flights/rekon10`, the platform level, because the service joins only the flight name it is given and `flight-data-layout.md` is `flights/<platform>/<flight>/`. A static PV because the datasets share (`datasets_nfs_path`, per cluster) is a different export from the one `cluster-nfs` provisions into, so a dynamic claim cannot reach it -- same pattern and subpath as `flight-analysis` and `vio-offline`. `Retain`, because this holds the only copy of a flight once the device is wiped |
 | `/mnt/ground-tlogs` | 200Gi, static NFS PV | the per-flight tlogs `tlog-split` writes (in the mavproxy environment), read by the ground collect. Static for the same reason as the flights share |
 
@@ -104,15 +102,15 @@ this section is the declared half.
 
 | template | submitted by | |
 |---|---|---|
-| `fleet-control-playbook` | the service: converge, provision, reimage | [coordinator#504](https://github.com/symmatree/coordinator/issues/504) |
+| `fleet-control-playbook` | the service: converge, provision | [coordinator#504](https://github.com/symmatree/coordinator/issues/504) |
 | `fleet-control-collect` | the service: `POST /flights/:flight/collect` | [coordinator#566](https://github.com/symmatree/coordinator/issues/566), below |
 | `bench-simflight` | `argo submit`, by whoever runs the bench | [coordinator#541](https://github.com/symmatree/coordinator/pull/541), below |
 
 Beside them, a ServiceAccount for the workflows' pods and two Roles.
 
-**`fleet-control-playbook` covers every playbook run** — converge, full provision and
-reimage are the same step with a different `playbook` parameter, plus `extra-vars` for
-whatever that playbook needs beyond `device_role`. `extra-vars` is a JSON object, empty by
+**`fleet-control-playbook` covers every playbook run** — converge and full provision are
+the same step with a different `playbook` parameter, plus `extra-vars` for whatever that
+playbook needs beyond `device_role`. `extra-vars` is a JSON object, empty by
 default; the step merges it into the vars the play is given and refuses any key that would
 displace the four it sets itself, since those are how the play reaches the device and what
 key it installs there.

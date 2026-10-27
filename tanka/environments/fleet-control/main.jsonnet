@@ -494,14 +494,6 @@ local fleetControl = {
       kConfigMap.new(std.format('%s-inventory', config.name))
       + kConfigMap.withData({ 'inventory.json': importstr 'inventory.json' }),
 
-    // Recorded host keys. Small and rebuildable -- losing it means the next contact with
-    // each node is treated as a first contact.
-    statePvc:
-      kPersistentVolumeClaim.new(std.format('%s-state', config.name))
-      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
-      + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '1Gi' })
-      + kPersistentVolumeClaim.spec.withStorageClassName('local-path'),
-
     // Where recovered flights land. A static PV because `datasets` is a different NFS
     // export from the one cluster-nfs provisions into -- same server, /volume2/datasets
     // rather than /volume2/tiles -- so a dynamic claim cannot reach it. Same pattern and
@@ -542,19 +534,6 @@ local fleetControl = {
       + kPersistentVolumeClaim.spec.withVolumeName(std.format('%s-ground-tlogs', config.name))
       + kPersistentVolumeClaim.spec.withStorageClassName(''),
 
-    // Disk images the service has pushed. Nothing evicts them; the point is that pushing one
-    // image to five machines is one fetch and five local reads (coordinator#312).
-    //
-    // cluster-nfs rather than local-path: local-path is node-local, so the cache would pin
-    // this pod to one node and die with it. Read speed is not a tiebreaker -- a device pulls
-    // at roughly 0.9 MB/s, far below anything the NAS does. 20 Gi is about 24 images at the
-    // current 813 MiB, with nothing evicting.
-    imagePvc:
-      kPersistentVolumeClaim.new(std.format('%s-images', config.name))
-      + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
-      + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '20Gi' })
-      + kPersistentVolumeClaim.spec.withStorageClassName('cluster-nfs'),
-
     local inventoryName = fcObj.inventory.metadata.name,
     local inventoryHash = std.md5(importstr 'inventory.json'),
 
@@ -570,10 +549,6 @@ local fleetControl = {
         + kContainer.withEnvMap({
           FLEET_INVENTORY: '/config/inventory.json',
           FLEET_SSH_KEY: '/secrets/ssh/id',
-          // The name the service actually reads, and the reason the PVC below exists:
-          // recorded host keys must land on /state to survive a pod restart.
-          FLEET_KNOWN_HOSTS: '/state/known_hosts',
-          FLEET_IMAGE_CACHE: '/images',
           // The PLATFORM level, not the flights root. flight-data-layout.md is
           // `flights/<platform>/<flight>/`, and the service joins only the flight name it
           // is given -- so pointed at the root it writes a sibling of `rekon10/` rather
@@ -600,9 +575,6 @@ local fleetControl = {
           // roster below rather than written again here, because the same address in two places
           // is one of them being wrong later.
           FLEET_MQTT_URL: 'mqtt://' + config.brokerHost + ':1883',
-          // Where a DEVICE reaches this service: it fetches its own image with get_url, so
-          // the in-cluster service name is no use to it.
-          FLEET_PUBLIC_URL: 'https://' + config.host,
         })
         + kContainer.withEnvMixin([
           kEnvVar.withName('FLEET_GITHUB_TOKEN')
@@ -649,8 +621,6 @@ local fleetControl = {
         288,  // 0440, readable via fsGroup below
         kVolumeMount.withSubPath(config.sshKeyField) + kVolumeMount.withReadOnly(true)
       )
-      + k_util.pvcVolumeMount(fcObj.statePvc.metadata.name, '/state')
-      + k_util.pvcVolumeMount(fcObj.imagePvc.metadata.name, '/images')
       + k_util.pvcVolumeMount(fcObj.flightsPvc.metadata.name, '/mnt/flights')
       + k_util.pvcVolumeMount(fcObj.tlogsPvc.metadata.name, '/mnt/ground-tlogs'),
 
