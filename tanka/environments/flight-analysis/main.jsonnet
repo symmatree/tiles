@@ -66,6 +66,11 @@ local cronJob =
   + kCronJob.spec.withConcurrencyPolicy('Forbid')
   + kCronJob.spec.withSuccessfulJobsHistoryLimit(3)
   + kCronJob.spec.withFailedJobsHistoryLimit(3)
+  // A wedged run must not hold the next night's (coordinator#193): the job dies before the
+  // next schedule, and a failed pod is not retried inside the same night -- the next run
+  // picks up whatever the freshness check still owes.
+  + kCronJob.spec.jobTemplate.spec.withActiveDeadlineSeconds(72000)
+  + kCronJob.spec.jobTemplate.spec.withBackoffLimit(0)
   + kCronJob.spec.jobTemplate.spec.template.spec.withContainers([container])
   + kCronJob.spec.jobTemplate.spec.template.spec.withVolumes(volumes)
   + kCronJob.spec.jobTemplate.spec.template.spec.withRestartPolicy('OnFailure')

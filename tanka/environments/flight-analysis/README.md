@@ -9,9 +9,11 @@ flight on the raconteur NAS. Which notebooks make up the set, and what each read
 
 ## What one run does
 
-1. For every `.bin` under `/volume2/datasets/flights`: `analysis/flight-analysis.ipynb`, rendered
-   `.ipynb` and `.pdf` beside the log, `polisher.json` in that directory. Unchanged from the
-   original runner.
+1. For every DataFlash log under `/volume2/datasets/flights` -- a `.bin` whose first bytes are the
+   DataFlash header, so a firmware image or a fixture with that suffix is named in the log and
+   skipped (coordinator#193): `analysis/flight-analysis.ipynb`, rendered `.ipynb` and `.pdf` beside
+   the log, and `flight-analysis-<stem>.polisher.json` beside them, one per log. A directory's older
+   per-directory `polisher.json` still counts as fresh for the one log it names.
 2. For every flight directory (one holding a `.bin`, at its root or under `fc/`, or a session
    bundle):
    - **extract** each `<node>_<session>.tar.zst` at the flight root into `captures/`. The tar
@@ -34,7 +36,7 @@ flight on the raconteur NAS. Which notebooks make up the set, and what each read
   collected/campod-sw_<session>.json -- the collection index (bytes, sha256)
   flight-analysis-fc-log-22.ipynb
   flight-analysis-fc-log-22.pdf
-  polisher.json                      -- provenance of the flight-analysis run
+  flight-analysis-fc-log-22.polisher.json   -- provenance of that log's flight-analysis run
   captures/<node>/<session>/         -- the bundle, unpacked; .bundle-sha256 inside
   derived/
     time-sync.{ipynb,pdf,json}, time-sync-*.png
@@ -43,7 +45,12 @@ flight on the raconteur NAS. Which notebooks make up the set, and what each read
     polisher.json                    -- one entry per derived product
 ```
 
-Both `polisher.json` files use RO-Crate-compatible field names (`instrument`, `object`, `result`,
+Every notebook run is bounded: papermill `PAPERMILL_TIMEOUT_S` (default 3600) and nbconvert
+`NBCONVERT_TIMEOUT_S` (default 900) per item, counted as that item's failure; the job itself has
+`activeDeadlineSeconds` 72000 and `backoffLimit` 0, so a wedged night ends before the next one
+starts and nothing retries inside it.
+
+The provenance files use RO-Crate-compatible field names (`instrument`, `object`, `result`,
 `startTime`, `endTime`): the notebook's git **blob** sha, the sha256 of every input, the image
 digest, and output file hashes. `derived/polisher.json` is a map keyed by product
 (`time-sync`, `vibration-spectrogram-campod-sw`, ...).
@@ -58,8 +65,8 @@ This means:
 - New `.bin` files and new bundles are always processed.
 - If a notebook's content changes, every product it made re-runs on the next nightly. Unrelated
   commits to `coordinator` do not: the sha is the notebook's blob hash, not the repo HEAD.
-- To force reprocessing: delete the flight's `polisher.json` (flight-analysis) or the entry in
-  `derived/polisher.json` (a derived product). Deleting `captures/<node>/<session>/.bundle-sha256`
+- To force reprocessing: delete the log's `flight-analysis-<stem>.polisher.json` (and a legacy
+  `polisher.json` beside it, if any) or the entry in `derived/polisher.json` (a derived product). Deleting `captures/<node>/<session>/.bundle-sha256`
   re-extracts that bundle.
 
 ## Architecture
@@ -83,9 +90,9 @@ kubectl create job --from=cronjob/flight-analysis flight-analysis-manual-$(date 
 kubectl logs -n flight-analysis -l job-name=<name> -c runner -f
 ```
 
-**Check what will run vs. skip** before triggering: look for directories that have a `.bin` but no `polisher.json`, bundles with no `captures/<node>/<session>/.bundle-sha256`, or provenance entries with a stale notebook sha.
+**Check what will run vs. skip** before triggering: look for logs with no `flight-analysis-<stem>.polisher.json` (or legacy `polisher.json` naming them), bundles with no `captures/<node>/<session>/.bundle-sha256`, or provenance entries with a stale notebook sha.
 
-**Force full reprocess:** delete all `polisher.json` files on the NAS.
+**Force full reprocess:** delete all `*polisher.json` files on the NAS.
 
 **If a notebook changes:** just wait for the next nightly run -- the freshness check detects the new sha.
 

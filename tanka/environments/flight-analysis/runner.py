@@ -79,17 +79,39 @@ def notebook_blob_sha(repo_dir: Path, rel: str) -> str:
     ).strip()
 
 
-def is_fresh(sidecar: Path, bin_sha: str, notebook_sha: str) -> bool:
+def is_fresh(sidecar: Path, bin_name: str, bin_sha: str, notebook_sha: str) -> bool:
+    """The sidecar records this notebook blob and this .bin -- by name as well as sha, because
+    the legacy per-directory polisher.json (coordinator#193) could only describe one log."""
     if not sidecar.exists():
         return False
     try:
         data = json.loads(sidecar.read_text())
+        obj = data.get("object", [{}])[0]
         return (
             data.get("instrument", {}).get("sha") == notebook_sha
-            and data.get("object", [{}])[0].get("sha256") == bin_sha
+            and obj.get("name") == bin_name
+            and obj.get("sha256") == bin_sha
         )
     except Exception:
         return False
+
+
+DATAFLASH_MAGIC = b"\xa3\x95\x80"   # HEAD_BYTE1, HEAD_BYTE2, then the FMT message that opens every log
+
+
+def is_dataflash(path: Path) -> bool:
+    """*.bin is not a type (coordinator#193: a firmware image wedged the job for three days)."""
+    try:
+        with open(path, "rb") as f:
+            return f.read(3) == DATAFLASH_MAGIC
+    except OSError:
+        return False
+
+
+# A notebook that never returns must not hold the nightly (coordinator#193). Expiry raises
+# TimeoutExpired, which the per-item handler counts as that item's failure and moves on.
+PAPERMILL_TIMEOUT_S = int(os.environ.get("PAPERMILL_TIMEOUT_S", "3600"))
+NBCONVERT_TIMEOUT_S = int(os.environ.get("NBCONVERT_TIMEOUT_S", "900"))
 
 
 def run_notebook(notebook_path: Path, out_ipynb: Path, params: dict) -> Path:
@@ -97,12 +119,12 @@ def run_notebook(notebook_path: Path, out_ipynb: Path, params: dict) -> Path:
     cmd = ["python", "-m", "papermill", str(notebook_path), str(out_ipynb), "--no-progress-bar"]
     for k, v in params.items():
         cmd += ["-p", k, str(v)]
-    subprocess.run(cmd, check=True, cwd=NOTEBOOK_DIR)
+    subprocess.run(cmd, check=True, cwd=NOTEBOOK_DIR, timeout=PAPERMILL_TIMEOUT_S)
     out_pdf = out_ipynb.with_suffix(".pdf")
     subprocess.run(
         ["jupyter", "nbconvert", "--to", "webpdf", "--no-input",
          "--output", str(out_pdf.with_suffix("")), str(out_ipynb)],
-        check=True, cwd=NOTEBOOK_DIR,
+        check=True, cwd=NOTEBOOK_DIR, timeout=NBCONVERT_TIMEOUT_S,
     )
     return out_pdf
 
@@ -120,10 +142,13 @@ def provenance(nb_rel: str, nb_sha: str, objects: list, results: list, start: st
 def process(bin_path: Path, notebook_path: Path, notebook_sha: str) -> None:
     stem = bin_path.stem.replace(" ", "-")
     out_ipynb = bin_path.parent / f"flight-analysis-{stem}.ipynb"
-    sidecar = bin_path.parent / "polisher.json"
+    # one sidecar per log, named like the log's outputs; the per-directory polisher.json that
+    # preceded it still counts as fresh for the one log it names, so nothing re-runs on the switch
+    sidecar = bin_path.parent / f"flight-analysis-{stem}.polisher.json"
+    legacy = bin_path.parent / "polisher.json"
 
     bin_sha = sha256_file(bin_path)
-    if is_fresh(sidecar, bin_sha, notebook_sha):
+    if is_fresh(sidecar, bin_path.name, bin_sha, notebook_sha) or is_fresh(legacy, bin_path.name, bin_sha, notebook_sha):
         print(f"  skip (fresh): {bin_path.name}")
         return
 
@@ -138,10 +163,21 @@ def process(bin_path: Path, notebook_path: Path, notebook_sha: str) -> None:
 
 # --- the per-flight set -------------------------------------------------------------------
 
+def dataflash_logs(root: Path) -> list:
+    """Every DataFlash log under root, by content; other *.bin are named and left alone."""
+    out = []
+    for p in sorted(root.rglob("*.bin")):
+        if is_dataflash(p):
+            out.append(p)
+        else:
+            print(f"  not a DataFlash log, skipped: {p.relative_to(FLIGHTS_DIR)}")
+    return out
+
+
 def flight_dirs() -> list:
-    """Every directory holding a .bin (at its root or under fc/) or a session bundle."""
+    """Every directory holding a DataFlash log (at its root or under fc/) or a session bundle."""
     dirs = set()
-    for p in FLIGHTS_DIR.rglob("*.bin"):
+    for p in dataflash_logs(FLIGHTS_DIR):
         dirs.add(p.parent.parent if p.parent.name == "fc" else p.parent)
     for p in FLIGHTS_DIR.rglob("*.tar.zst"):
         dirs.add(p.parent)
@@ -203,7 +239,7 @@ def derived_fresh(entry: dict, nb_sha: str, objects: list) -> bool:
 
 def process_flight(flight: Path, nb_shas: dict) -> None:
     sessions = extract_bundles(flight)
-    bins = sorted(flight.glob("*.bin")) + sorted((flight / "fc").glob("*.bin"))
+    bins = [b for b in sorted(flight.glob("*.bin")) + sorted((flight / "fc").glob("*.bin")) if is_dataflash(b)]
     if not bins:
         print(f"  no .bin in {flight.relative_to(FLIGHTS_DIR)}; the per-flight set needs one")
         return
@@ -295,7 +331,7 @@ def main() -> None:
         print(f"notebook: {rel} blob {nb_shas[rel]}", flush=True)
 
     errors = 0
-    for bin_path in sorted(FLIGHTS_DIR.rglob("*.bin")):
+    for bin_path in dataflash_logs(FLIGHTS_DIR):
         try:
             process(bin_path, NOTEBOOK_DIR / NOTEBOOK_REL, nb_shas[NOTEBOOK_REL])
         except Exception as exc:
