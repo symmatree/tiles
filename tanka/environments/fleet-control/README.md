@@ -59,7 +59,8 @@ so a freshly flashed card trusts it on first boot.
 Editing it changes the pod-template hash annotation, so Argo rolls the Deployment and the change
 lands on the next sync -- no manual step.
 
-Each node takes a `name`, a `role`, and an optional `host` (an address or a different hostname)
+Each node takes a `name`, a `role` (`coordinator`, `campod` or `rampod`; the service rejects any
+other), and an optional `host` (an address or a different hostname)
 defaulting to `name`. The `host` values are current DHCP leases and need updating when one
 moves; [#735](https://github.com/symmatree/tiles/issues/735) makes them reservations, after
 which the names resolve and `host` can come out. `campod-ne` and `campod-nw` are listed without
