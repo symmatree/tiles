@@ -125,6 +125,41 @@ local fleetControl = {
         + kSubject.withNamespace(config.namespace),
       ]),
 
+    // The exit handler every service-submitted workflow runs: say how it ended
+    // (coordinator#566). The service holds no record of a run, so the workflow announces
+    // its own ending, from a step that exists whether or not the service's pod does. The
+    // body is `notify-step.js` out of the service's image, so it versions with it; a
+    // notify that fails cannot fail the workflow (the step never exits non-zero on it).
+    //
+    // `subject` is what the notification is about: the node for a playbook run, the flight
+    // for a collect. The action comes off the label the service set at submit.
+    local notifyTemplate(subject) = {
+      name: 'notify',
+      container: {
+        image: config.image,
+        // Always, for the reason every step here gives: `:main` floats and a workflow
+        // pod has no tag watcher.
+        imagePullPolicy: 'Always',
+        command: [
+          'node',
+          '/app/dist/notify-step.js',
+          '{{workflow.name}}',
+          '{{workflow.labels.fleet-control.symmatree.com/action}}',
+          subject,
+          '{{workflow.status}}',
+          '{{workflow.failures}}',
+        ],
+        env: [
+          { name: 'FLEET_NOTIFY_URL', value: 'http://apprise.apprise.svc:8000/notify/apprise' },
+          { name: 'FLEET_NOTIFY_TAG', value: APP.cluster_name },
+        ],
+        resources: {
+          requests: { cpu: '20m', memory: '48Mi' },
+          limits: { memory: '128Mi' },
+        },
+      },
+    },
+
     // What the service submits a playbook run against: converge, full provision, reimage.
     // See README.md.
     playbookTemplate: {
@@ -134,6 +169,7 @@ local fleetControl = {
       spec: {
         serviceAccountName: fcObj.workflowServiceAccount.metadata.name,
         entrypoint: 'run',
+        onExit: 'notify',
 
         // No activeDeadlineSeconds, and the TTL is how far back the run record reaches.
         // Both are explained in README.md.
@@ -221,7 +257,7 @@ local fleetControl = {
               limits: { memory: '512Mi' },
             },
           },
-        }],
+        }, notifyTemplate('{{workflow.labels.fleet-control.symmatree.com/node}}')],
       },
     },
 
@@ -359,6 +395,7 @@ local fleetControl = {
       spec: {
         serviceAccountName: fcObj.workflowServiceAccount.metadata.name,
         entrypoint: 'collect',
+        onExit: 'notify',
         // As for the playbook template: no activeDeadlineSeconds, and the TTL is how far
         // back the record reaches. A transfer is slow by nature, and a deadline would fail
         // the long ones -- which are the ones carrying the most data.
@@ -467,6 +504,7 @@ local fleetControl = {
               },
             },
           },
+          notifyTemplate('{{workflow.parameters.flight}}'),
         ],
       },
     },
