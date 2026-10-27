@@ -35,9 +35,13 @@ local mavproxy = {
     nodeHostname: 'acebase',
     mavlinkUdpPort: 14550,
     tcpPort: 5760,
-    // A second fan-out, for tlog-split. Its own port because `tcpin` takes one client and
-    // Mission Planner has 5760.
+    // A second fan-out, for tlog-split: a `udpout` from mavproxy to the tlog-split Service.
+    // UDP, not a `tcpin`, because `tcpin` holds one client and never re-accepts until that
+    // client errors on a write -- see TLOG-SPLIT.md for the month that cost.
     splitPort: 5761,
+    splitService: 'tlog-split',
+    // spec.json's namespace, which jsonnet cannot read; the udpout target has to name it.
+    namespace: 'mavproxy',
     tcpHostname: APP.app_settings.tcp_hostname,
     ntripCaster: APP.app_settings.ntrip_caster,
     ntripMountpoint: APP.app_settings.ntrip_mountpoint,
@@ -80,7 +84,6 @@ local mavproxy = {
         + kContainer.withPortsMixin([
           kPort.newNamedUDP(config.mavlinkUdpPort, 'mavlink-udp'),
           kPort.newNamed(config.tcpPort, 'mavlink-tcp'),
-          kPort.newNamed(config.splitPort, 'mavlink-split'),
         ])
         + kContainer.withEnvMixin([
           kEnvVar.new('NTRIP_CASTER', config.ntripCaster),
@@ -92,7 +95,9 @@ local mavproxy = {
         + kContainer.withArgs([
           std.format('--master=udpin:0.0.0.0:%s', config.mavlinkUdpPort),
           std.format('--out=tcpin:0.0.0.0:%s', config.tcpPort),
-          std.format('--out=tcpin:0.0.0.0:%s', config.splitPort),
+          // The pod is hostNetwork with ClusterFirstWithHostNet, so the Service name
+          // resolves from it; pymavlink resolves the udpout target on every send.
+          std.format('--out=udpout:%s.%s.svc:%s', [config.splitService, config.namespace, config.splitPort]),
           std.format('--source-system=%s', config.sourceSystem),
           std.format('--source-component=%s', config.sourceComponent),
           '--default-modules=ntrip',
@@ -144,24 +149,25 @@ local mavproxy = {
     },
 
     // ---- tlog-split: one tlog per flight -------------------------------------------------
-    // mavproxy cannot rotate its own log (coordinator#192, and containers/tlog-split/README.md
-    // for why `--aircraft` is not the answer), so a second consumer writes per-flight files.
-    // It lives here rather than in its own environment because it is meaningless without this
-    // mavproxy and reads a port only this mavproxy opens.
+    // mavproxy cannot rotate its own log (coordinator#192, and TLOG-SPLIT.md for why
+    // `--aircraft` is not the answer), so a second consumer writes per-flight files. It lives
+    // here rather than in its own environment because it is meaningless without this mavproxy,
+    // which is what sends to it.
 
-    // mavproxy is hostNetwork, so a selector Service resolves to the node it runs on.
+    // Where mavproxy's udpout lands. tlog-split is the listener, so a restart on either side
+    // costs nothing: nobody holds a connection.
     splitService: {
       apiVersion: 'v1',
       kind: 'Service',
-      metadata: { name: 'mavproxy-split', labels: podLabels },
+      metadata: { name: config.splitService, labels: { name: config.splitService } },
       spec: {
         type: 'ClusterIP',
-        selector: podLabels,
+        selector: { name: config.splitService },
         ports: [{
           name: 'mavlink-split',
           port: config.splitPort,
           targetPort: config.splitPort,
-          protocol: 'TCP',
+          protocol: 'UDP',
         }],
       },
     },
@@ -192,12 +198,13 @@ local mavproxy = {
       + kConfigMap.withData({ 'split_tlog.py': importstr 'split_tlog.py' }),
 
     splitDeployment:
-      kDeployment.new('tlog-split', replicas=1, containers=[
+      kDeployment.new(config.splitService, replicas=1, containers=[
         kContainer.new('tlog-split', config.image)
         + kContainer.withImagePullPolicy('Always')
         + kContainer.withCommand(['/opt/venv/bin/python3', '-u', '/script/split_tlog.py'])
+        + kContainer.withPortsMixin([kPort.newNamedUDP(config.splitPort, 'mavlink-split')])
         + kContainer.withEnvMap({
-          TLOG_SPLIT_MASTER: std.format('mavproxy-split.mavproxy.svc:%s', config.splitPort),
+          TLOG_SPLIT_LISTEN: std.format('0.0.0.0:%s', config.splitPort),
           TLOG_SPLIT_OUT: '/mnt/ground-tlogs',
         })
         // Small: it parses frames and appends to a file. No buffering of a lead-in, which is
