@@ -32,8 +32,8 @@ outdir="$(cd "${outdir}" && pwd)"
 # declared set; a key with no mapping here fails the render rather than rendering a
 # placeholder.
 case "${cluster}" in
-tiles) env_tfvars=prod ;;
-tiles-test) env_tfvars=test ;;
+tiles) env_tfvars="prod" ;;
+tiles-test) env_tfvars="test" ;;
 *)
 	echo "unknown cluster ${cluster}: expected tiles or tiles-test" >&2
 	exit 2
@@ -72,7 +72,7 @@ while IFS= read -r key; do
 	[[ -z ${key} ]] && continue
 	case "${key}" in
 	cluster_name) value="${cluster}" ;;
-	targetRevision) [[ ${cluster} == tiles ]] && value=prod || value=test ;;
+	targetRevision) [[ ${cluster} == tiles ]] && value="prod" || value="test" ;;
 	vault_name) value=$(tfvar onepassword_vault_name) ;;
 	*) value=$(tfvar "${key}") ;;
 	esac
