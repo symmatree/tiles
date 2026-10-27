@@ -10,6 +10,10 @@ local snmpHexLabel(str) =
   _config+:: {
     bondCluster: 'bond',
 
+    // Edge feed absence: sources seen in the lookback are the expected set.
+    bondFeedLookback: '7d',
+    bondFeedAbsentFor: '15m',
+
     proxmoxNodeExporterJob: 'integrations/node_exporter',
     proxmoxHwmonCoreChip: 'platform_coretemp_0',
     proxmoxCoreTempThresholdCelsius: 90,
