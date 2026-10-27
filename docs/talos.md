@@ -31,7 +31,7 @@ Three versions are coupled, and only two of them are visible in tfvars:
 
 | What | Where | Current |
 |---|---|---|
-| Talos OS on the nodes | `talos_version` in [terraform.tfvars](../tf/nodes/terraform.tfvars) | 1.14.4 |
+| Talos OS on the nodes | `talos_version` in [terraform.tfvars](../tf/nodes/terraform.tfvars) | 1.14.5 |
 | Kubernetes | `kubernetes_version` in the same file | 1.37.1 |
 | The config shape and the `kubernetes_version` default | `siderolabs/talos` provider pin in [.terraform.lock.hcl](../tf/nodes/.terraform.lock.hcl) | 0.12.0 |
 
@@ -43,7 +43,7 @@ nodes run a Talos release whose config kinds the provider cannot generate or val
 
 `kubernetes_version` is pinned rather than defaulted because the provider's default follows
 its vendored machinery (1.37.0 for provider 0.12.0) while the Talos release itself pairs
-with a later patch (1.37.1 for Talos 1.14.4). Pinning gets the matched version and keeps a
+with a later patch (1.37.1 for Talos 1.14.5). Pinning gets the matched version and keeps a
 provider bump from moving Kubernetes as a side effect.
 
 ## talosctl
@@ -58,4 +58,4 @@ Bare-metal installers and ISO URLs use **metal** schematics: `metal_amd` (AMD) a
 
 - **VM replace:** Destroy targeted `proxmox_virtual_environment_vm` resources and `terraform apply` (see [README.md](../README.md#recreating-cluster)).
 - **Bare-metal rebuild:** Metal workers are not VMs and are not recreated by that flow. A re-apply of unchanged config is a no-op (no reboot), so a rebuild must run with `metal_apply_mode = reboot` or the node stays orphaned on the old etcd. See [bare-metal-nodes.md](bare-metal-nodes.md#rebuilds-metal-reapply--reboot).
-- **In-place OS upgrade:** Upstream procedure uses `talosctl upgrade` with the same installer image as in machine config; this repo usually drives version via Terraform and full VM refresh. See [Sidero upgrade docs](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/lifecycle-management/upgrading-talos).
+- **In-place OS upgrade:** `talosctl -n <node> upgrade --image <install image>`, one node at a time, through the latest patch of each intermediate minor; then `talos_version` is set to the version the nodes run. `--image` is required: talosctl's default is a generic metal installer, not the node's schematic. The install images are `vm_install_image`, `metal_amd_install_image` and `metal_intel_install_image` in [nodes.tf](../tf/modules/talos-cluster/nodes.tf). Kubernetes moves separately, with `talosctl upgrade-k8s --to <version>`, and then `kubernetes_version`. See [Sidero upgrade docs](https://docs.siderolabs.com/talos/v1.14/configure-your-talos-cluster/lifecycle-management/upgrading-talos).
