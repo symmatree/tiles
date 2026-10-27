@@ -245,10 +245,14 @@ Remaining, in order:
 
 2. Reserve `gnss-bridge.local.symmatree.com` for the board, since `settings.conf` resolves
    that name and `10.0.4.196` is currently a lease.
-3. **Export the receiver's config over USB, before touching it**, and commit the result:
-   `./receiver-config.py export --serial /dev/ttyACM0 > receiver-config.txt`. It is the only
+3. The receiver's config is exported in [`receiver-config.txt`](receiver-config.txt), taken
+   2026-10-27 through rtkbase's `:5015` relay (`receiver-config.py export --tcp`). It is the
    record of what is in that receiver's flash, and the revert path
-   ([#704](https://github.com/symmatree/tiles/issues/704)).
+   ([#704](https://github.com/symmatree/tiles/issues/704)). Flash holds 14 keys: RAWX, SFRBX,
+   NAV-PVT, NAV-SAT and NAV-SIG on UART1 and USB, `CFG_UART1_BAUDRATE=115200`, NMEA output off
+   on both ports, SBAS off. BBR is empty; `CFG_TMODE_MODE=0`, so the receiver is not in a
+   fixed-base mode and its own solution is free-running. Re-export before the apply if the
+   receiver has been touched since.
 4. Solder the headers, crimp the harness, connect it ([Wiring](#wiring)).
 5. `./receiver-config.py apply --serial /dev/ttyACM0` -- UART1 to 460800 and the message set,
    to RAM and Flash. Not BBR: the breakout has no battery backup. Nothing in the apply touches
