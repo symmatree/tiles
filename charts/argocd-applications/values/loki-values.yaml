@@ -52,6 +52,12 @@ monitoring:
 minio:
   enabled: false
 
+lokiCanary:
+  # Run on every node, tainted ones included (control plane, acebase, lancer), like the
+  # other node DaemonSets (#805).
+  tolerations:
+    - operator: Exists
+
 singleBinary:
   replicas: 1
   persistence:
