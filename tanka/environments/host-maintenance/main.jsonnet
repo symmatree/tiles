@@ -43,8 +43,7 @@ local subjects = [
   + kSubject.withNamespace(namespace),
 ];
 
-// Cordon and drain (kubectl drain), and the descheduler's rebalance. The descheduler's half
-// is its upstream ClusterRole without leader election, which a one-shot run does not use.
+// Cordon and drain (kubectl drain).
 local clusterRole =
   kClusterRole.new(name)
   + kClusterRole.withRules([
@@ -52,7 +51,7 @@ local clusterRole =
     + kPolicyRule.withResources(['nodes'])
     + kPolicyRule.withVerbs(['get', 'list', 'watch', 'patch']),
     kPolicyRule.withApiGroups([''])
-    + kPolicyRule.withResources(['pods', 'namespaces', 'persistentvolumeclaims'])
+    + kPolicyRule.withResources(['pods'])
     + kPolicyRule.withVerbs(['get', 'list', 'watch']),
     kPolicyRule.withApiGroups([''])
     + kPolicyRule.withResources(['pods/eviction'])
@@ -60,15 +59,6 @@ local clusterRole =
     kPolicyRule.withApiGroups(['apps'])
     + kPolicyRule.withResources(['daemonsets'])
     + kPolicyRule.withVerbs(['get']),
-    kPolicyRule.withApiGroups(['scheduling.k8s.io'])
-    + kPolicyRule.withResources(['priorityclasses'])
-    + kPolicyRule.withVerbs(['get', 'list', 'watch']),
-    kPolicyRule.withApiGroups(['policy'])
-    + kPolicyRule.withResources(['poddisruptionbudgets'])
-    + kPolicyRule.withVerbs(['get', 'list', 'watch']),
-    kPolicyRule.withApiGroups(['events.k8s.io'])
-    + kPolicyRule.withResources(['events'])
-    + kPolicyRule.withVerbs(['create', 'update']),
   ]);
 
 local clusterRoleBinding =
@@ -92,7 +82,6 @@ local workflowRoleBinding =
 
 local script = kConfigMap.new(name) + kConfigMap.withData({
   'host-maintenance.sh': importstr 'host-maintenance.sh',
-  'descheduler-policy.yaml': importstr 'descheduler-policy.yaml',
 });
 
 local sshKey = op.item.new(APP.app_settings.ssh_key_secret, 'vaults/' + APP.vault_name + '/items/' + APP.app_settings.ssh_key_secret);
@@ -189,7 +178,6 @@ local workflowTemplate = {
             { name: 'host-boot-id', value: '{{steps.update-reboot.outputs.parameters.host-boot-id}}' },
           ])],
           [call('release', 'release')],
-          [call('rebalance', 'rebalance')],
         ],
       },
       {
@@ -210,21 +198,6 @@ local workflowTemplate = {
       step('notify', inputs=['status', 'failures']) + {
         container+: {
           env+: [{ name: 'NOTIFY_URL', value: 'http://apprise.apprise.svc:8000/notify/apprise' }],
-        },
-      },
-      // One descheduler pass, so the nodes that just came back empty take a share of the
-      // pods the drain pushed elsewhere. Without --descheduling-interval it runs once.
-      {
-        name: 'rebalance',
-        container: {
-          image: 'registry.k8s.io/descheduler/descheduler:v0.37.0',
-          command: ['/bin/descheduler'],
-          args: ['--policy-config-file=/scripts/descheduler-policy.yaml', '--v=3'],
-          volumeMounts: [{ name: 'scripts', mountPath: '/scripts' }],
-          resources: {
-            requests: { cpu: '50m', memory: '64Mi' },
-            limits: { memory: '256Mi' },
-          },
         },
       },
     ],
