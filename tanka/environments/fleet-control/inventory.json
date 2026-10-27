@@ -5,6 +5,7 @@
     { "name": "campod-se", "role": "campod", "host": "10.0.5.237" },
     { "name": "campod-sw", "role": "campod", "host": "10.0.2.49" },
     { "name": "campod-ne", "role": "campod" },
-    { "name": "campod-nw", "role": "campod" }
+    { "name": "campod-nw", "role": "campod" },
+    { "name": "blackfly", "role": "rampod", "host": "10.0.2.198" }
   ]
 }
