@@ -153,7 +153,8 @@ Every one of these produced a clean-looking, confidently wrong result.
 - **The receiver's TMODE3 is not what rovers receive.** RTKBase passes
   `-p ${position}` and `-a ${antenna_info}` to `str2str` from `settings.conf`, so
   RTCM 1005/1006 carries the git-authoritative coordinate whatever the F9P
-  believes about itself (#704 is about that gap). A receiver-side survey-in would
+  believes about itself -- and the 2026-10-27 export (`firmware/gnss-bridge/receiver-config.txt`)
+  shows `CFG_TMODE_MODE=0`: the receiver runs no survey-in or fixed mode of its own. A receiver-side survey-in would
   change nothing served.
 - **`position` and `antenna_info` have to move together.** The deployed coordinate
   is the iono-free **phase centre** (the 2023 CSRS-PPP solve predates the
@@ -167,5 +168,5 @@ Every one of these produced a clean-looking, confidently wrong result.
 | | |
 | --- | --- |
 | [#698](https://github.com/symmatree/tiles/issues/698) | re-survey the base position -- open; OPUS attempt failed quality, CSRS-PPP next |
-| [#704](https://github.com/symmatree/tiles/issues/704) | receiver-side config unknown; `firmware/gnss-bridge/receiver-config.py` is the intended read-back path |
+| [#704](https://github.com/symmatree/tiles/issues/704) | receiver-side config -- exported 2026-10-27 to `firmware/gnss-bridge/receiver-config.txt`; TMODE disabled, RAWX/SFRBX persisted in Flash |
 | [coordinator#199](https://github.com/symmatree/coordinator/issues/199) | RTCM cut to GPS+Galileo for the ELRS uplink budget -- the revert is documented in `settings.conf` |
