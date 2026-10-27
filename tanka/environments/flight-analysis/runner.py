@@ -214,7 +214,10 @@ def extract_bundles(flight: Path) -> dict:
             continue
         print(f"  extract: {bundle.name} -> captures/{node}/{session}/", flush=True)
         (flight / "captures").mkdir(exist_ok=True)
-        subprocess.run(["tar", "--zstd", "-xf", str(bundle), "-C", str(flight / "captures")], check=True)
+        # The container runs as root, so tar would restore the archived uid/gid; the NAS export
+        # squashes to one uid and refuses the chown, and tar exits 2 after writing every file.
+        subprocess.run(["tar", "--zstd", "--no-same-owner", "--no-same-permissions", "-xf", str(bundle),
+                        "-C", str(flight / "captures")], check=True)
         if not sdir.is_dir():
             raise RuntimeError(f"{bundle.name} did not produce captures/{node}/{session}/")
         marker.write_text(sha + "\n")
