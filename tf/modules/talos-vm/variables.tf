@@ -9,6 +9,12 @@ variable "description" {
   default     = null
 }
 
+variable "on_boot" {
+  description = "Whether Proxmox starts the VM when its host boots"
+  type        = bool
+  default     = true
+}
+
 variable "name" {
   description = "Name of the VM"
   type        = string

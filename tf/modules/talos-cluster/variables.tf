@@ -173,6 +173,12 @@ variable "admin_user" {
   type        = string
 }
 
+variable "vm_on_boot" {
+  description = "Whether Proxmox starts this cluster's VMs when their host boots."
+  type        = bool
+  default     = true
+}
+
 variable "kubelet_eviction_memory_available" {
   description = "kubelet evictionHard `memory.available` threshold, applied to every node in the cluster. This is the free-memory margin the kubelet keeps so it evicts low-priority pods *before* the kernel OOM-killer fires (within-node OOM protection). null = leave kubelet defaults untouched (memory.available<100Mi). When set (e.g. \"512Mi\"), the nodefs/imagefs disk-eviction defaults are re-declared unchanged so the extraConfig merge does not drop disk-pressure eviction."
   type        = string

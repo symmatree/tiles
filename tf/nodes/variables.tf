@@ -119,6 +119,12 @@ variable "metal_apply_mode" {
   }
 }
 
+variable "vm_on_boot" {
+  description = "Whether Proxmox starts this cluster's VMs when their host boots. false on test, so a host reboot leaves a stopped test cluster stopped."
+  type        = bool
+  default     = true
+}
+
 variable "kubelet_eviction_memory_available" {
   description = "kubelet evictionHard `memory.available` threshold for every node in the cluster -- the free-memory margin the kubelet keeps so it evicts before the kernel OOM-killer fires. null leaves Talos/kubelet defaults (100Mi). Set on resource-tight clusters (prod) to widen the OOM safety margin; leave unset on test."
   type        = string

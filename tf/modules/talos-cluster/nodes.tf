@@ -61,6 +61,7 @@ module "talos-vm" {
   description          = each.value.type == "control" ? "Control" : "Worker"
   node_name            = each.value.proxmox_node_name
   vm_id                = each.value.vm_id
+  on_boot              = var.vm_on_boot
   num_cores            = each.value.cores
   ram_mb               = each.value.ram_mb
   mac_address          = each.value.mac_address

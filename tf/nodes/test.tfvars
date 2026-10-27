@@ -3,6 +3,8 @@
 cluster_name = "tiles-test"
 cluster_code = "x"
 
+vm_on_boot = false
+
 control_plane_vip = "10.0.192.10"
 external_ip_cidr  = "10.0.193.0/24"
 service_cidr      = "10.0.200.0/21"

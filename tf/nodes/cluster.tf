@@ -51,6 +51,7 @@ module "cluster" {
   metal_apply_mode        = var.metal_apply_mode
 
   kubelet_eviction_memory_available = var.kubelet_eviction_memory_available
+  vm_on_boot                        = var.vm_on_boot
   nodes_to_iso_ids                  = local.nodes_to_iso_ids
   main_project_id                   = local.main_project_id
   kms_project_id                    = local.kms_project_id
