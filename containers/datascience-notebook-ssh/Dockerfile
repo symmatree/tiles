@@ -23,6 +23,7 @@ RUN apt-get update \
     ca-certificates \
     git \
     openssh-server \
+    zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # Dev toolchain comes from the single source of truth (dotfiles-symm), fetched

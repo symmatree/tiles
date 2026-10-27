@@ -1,42 +1,73 @@
 # flight-analysis: nightly notebook CronJob
 
-Nightly Kubernetes CronJob that runs [`docs/rekon10/flight-analysis.ipynb`](https://github.com/symmatree/coordinator/blob/main/docs/rekon10/flight-analysis.ipynb) against every ArduPilot `.bin` flight log on the raconteur NAS, writing a rendered `.ipynb`, `.pdf`, and a `polisher.json` provenance sidecar alongside each log.
+Nightly Kubernetes CronJob that runs the per-flight notebook set from
+[`coordinator/analysis/`](https://github.com/symmatree/coordinator/tree/main/analysis) against every
+flight on the raconteur NAS. Which notebooks make up the set, and what each reads and writes, is
+`coordinator/analysis/README.md` (*What runs on every flight*); this page is the mechanics.
 
 **Schedule:** `0 4 * * *` (04:00 UTC daily). `ConcurrencyPolicy: Forbid` -- overlapping runs are dropped.
 
-## Output layout
+## What one run does
 
-For each `.bin` file found anywhere under `/volume2/datasets/flights`:
+1. For every `.bin` under `/volume2/datasets/flights`: `analysis/flight-analysis.ipynb`, rendered
+   `.ipynb` and `.pdf` beside the log, `polisher.json` in that directory. Unchanged from the
+   original runner.
+2. For every flight directory (one holding a `.bin`, at its root or under `fc/`, or a session
+   bundle):
+   - **extract** each `<node>_<session>.tar.zst` at the flight root into `captures/`. The tar
+     paths are `<node>/<session>/...`, so the result is the canonical `captures/<node>/<session>/`
+     tree. A `.bundle-sha256` marker in the session directory (the sha from
+     `collected/<node>_<session>.json`, or computed) makes this idempotent; the bundle stays.
+   - **`analysis/time-sync.ipynb`** once -> `derived/time-sync.{ipynb,pdf,json}`.
+   - **per campod session**, `analysis/vibration-spectrogram.ipynb` when the session has
+     `accel-*.jsonl` and `analysis/image-sharpness-vs-motion.ipynb` when it has stills, each on
+     the `.bin` that `derived/time-sync.json` (`pod_session_fc_log`) pairs the session with ->
+     `derived/<notebook>-<pod>.{ipynb,pdf}` plus whatever the notebook writes itself. A session
+     time-sync could not pair is skipped and says so in the log.
+
+## Output layout
 
 ```
 <flight-dir>/
-  2026-06-10 20-44-03.bin           -- source (read-only)
-  flight-analysis-2026-06-10-20-44-03.ipynb
-  flight-analysis-2026-06-10-20-44-03.pdf
-  polisher.json                     -- per-directory provenance sidecar
+  fc-log-22.bin                      -- source (read-only)
+  campod-sw_<session>.tar.zst        -- source, as collected
+  collected/campod-sw_<session>.json -- the collection index (bytes, sha256)
+  flight-analysis-fc-log-22.ipynb
+  flight-analysis-fc-log-22.pdf
+  polisher.json                      -- provenance of the flight-analysis run
+  captures/<node>/<session>/         -- the bundle, unpacked; .bundle-sha256 inside
+  derived/
+    time-sync.{ipynb,pdf,json}, time-sync-*.png
+    vibration-spectrogram-<pod>.{ipynb,pdf,json}, vibration-*-<pod>.png
+    image-sharpness-vs-motion-<pod>.{ipynb,pdf,json}, image-*.png
+    polisher.json                    -- one entry per derived product
 ```
 
-`polisher.json` uses RO-Crate-compatible field names (`instrument`, `object`, `result`, `startTime`, `endTime`) and records the notebook git SHA, `.bin` sha256, image digest, and output file hashes.
+Both `polisher.json` files use RO-Crate-compatible field names (`instrument`, `object`, `result`,
+`startTime`, `endTime`): the notebook's git **blob** sha, the sha256 of every input, the image
+digest, and output file hashes. `derived/polisher.json` is a map keyed by product
+(`time-sync`, `vibration-spectrogram-campod-sw`, ...).
 
 ## Freshness / incremental runs
 
-A log is **skipped** if `polisher.json` already exists in its directory with:
-- `instrument.sha` matching the current notebook's git **blob** hash
-- `object[0].sha256` matching the `.bin` file's sha256
+A product is **skipped** when its provenance entry already records the current notebook blob sha
+and the same input shas: the `.bin` for flight-analysis; every `.bin` and every session bundle for
+time-sync; the paired `.bin` and the session bundle for a per-pod notebook.
 
 This means:
-- New `.bin` files are always processed.
-- If the notebook's content changes, **all** logs re-run on the next nightly job. Unrelated
-  commits to `coordinator` do not: `instrument.sha` is the notebook's blob hash, not the
-  repo HEAD, so an active repo does not invalidate the whole cache on every push.
-- To force reprocessing of a specific directory: delete its `polisher.json`.
+- New `.bin` files and new bundles are always processed.
+- If a notebook's content changes, every product it made re-runs on the next nightly. Unrelated
+  commits to `coordinator` do not: the sha is the notebook's blob hash, not the repo HEAD.
+- To force reprocessing: delete the flight's `polisher.json` (flight-analysis) or the entry in
+  `derived/polisher.json` (a derived product). Deleting `captures/<node>/<session>/.bundle-sha256`
+  re-extracts that bundle.
 
 ## Architecture
 
 | Component | Detail |
 |-----------|--------|
-| Image | [`containers/datascience-notebook-ssh/`](../../../containers/datascience-notebook-ssh/) -- papermill, playwright/Chromium, LaTeX, folium |
-| Notebook source | Public `coordinator` repo cloned fresh each run into an emptyDir (`/workspace/notebook-repo`). Repo, path, and dir are overridable via `NOTEBOOK_REPO` / `NOTEBOOK_REL` / `NOTEBOOK_DIR`. |
+| Image | [`containers/datascience-notebook-ssh/`](../../../containers/datascience-notebook-ssh/) -- papermill, playwright/Chromium, LaTeX, folium, zstd |
+| Notebook source | Public `coordinator` repo cloned fresh each run into an emptyDir (`/workspace/notebook-repo`); papermill runs with that as cwd so notebooks find `analysis/` modules. Repo, the FC notebook's path, and dir are overridable via `NOTEBOOK_REPO` / `NOTEBOOK_REL` (default `analysis/flight-analysis.ipynb`) / `NOTEBOOK_DIR`; the other notebooks' paths are in `runner.py`. |
 | NFS mount | `raconteur.ad.local.symmatree.com:/volume2/datasets/flights` at `/mnt/flights` (ReadWriteMany, Retain PV) |
 | Runner script | [`runner.py`](runner.py) -- embedded in a ConfigMap via `importstr` in [`main.jsonnet`](main.jsonnet) |
 | Namespace | `flight-analysis` |
@@ -52,11 +83,11 @@ kubectl create job --from=cronjob/flight-analysis flight-analysis-manual-$(date 
 kubectl logs -n flight-analysis -l job-name=<name> -c runner -f
 ```
 
-**Check what will run vs. skip** before triggering: look for directories that have a `.bin` but no `polisher.json`, or whose `polisher.json` has a stale notebook SHA.
+**Check what will run vs. skip** before triggering: look for directories that have a `.bin` but no `polisher.json`, bundles with no `captures/<node>/<session>/.bundle-sha256`, or provenance entries with a stale notebook sha.
 
 **Force full reprocess:** delete all `polisher.json` files on the NAS.
 
-**If the notebook changes:** just wait for the next nightly run -- freshness check will detect the new SHA automatically.
+**If a notebook changes:** just wait for the next nightly run -- the freshness check detects the new sha.
 
 ## Files
 
