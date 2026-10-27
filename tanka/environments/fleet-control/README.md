@@ -60,11 +60,9 @@ Editing it changes the pod-template hash annotation, so Argo rolls the Deploymen
 lands on the next sync -- no manual step.
 
 Each node takes a `name`, a `role` (`coordinator`, `campod` or `rampod`; the service rejects any
-other), and an optional `host` (an address or a different hostname)
-defaulting to `name`. The `host` values are current DHCP leases and need updating when one
-moves; [#735](https://github.com/symmatree/tiles/issues/735) makes them reservations, after
-which the names resolve and `host` can come out. `campod-ne` and `campod-nw` are listed without
-one because they have not been flashed.
+other), and an optional `host` defaulting to `name`. Every node gives `host` as its full name
+under `local.symmatree.com`, which DNS keeps pointed at the device's current DHCP lease, so a
+lease moving needs no roster edit. A bare name would depend on the pod's DNS search path.
 
 ## Volumes
 
