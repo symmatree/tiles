@@ -1,0 +1,42 @@
+{{- if eq .Values.cluster_name "tiles" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: host-maintenance
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    repoURL: https://github.com/symmatree/tiles.git
+    targetRevision: '{{ required ".Values.targetRevision is required" .Values.targetRevision }}'
+    path: tanka
+    plugin:
+      env:
+        - name: TK_ENV
+          value: host-maintenance
+      parameters:
+        - name: cluster_name
+          string: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+        - name: vault_name
+          string: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
+        - name: app_settings
+          map:
+            image: 'ghcr.io/symmatree/tiles/host-maintenance:main'
+            # Created by terraform, tf/nodes/host-maintenance-ssh-key.tf, which also puts
+            # its public half on every Proxmox host.
+            ssh_key_secret: 'host-maintenance-ssh-key'
+            # Created by terraform, tf/modules/talos-cluster/main.tf.
+            talosconfig_secret: '{{ .Values.cluster_name }}-talosconfig'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: host-maintenance
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/warn: baseline
+{{- end }}
