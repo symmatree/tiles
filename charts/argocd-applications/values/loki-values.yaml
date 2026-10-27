@@ -46,6 +46,27 @@ monitoring:
     # other mixins -- so LokiRequestErrors/Latency/Panics/compaction alerts
     # finally exist here rather than only being cited from the upstream mixin. #655
     enabled: true
+    # Canary coverage (#805). The DaemonSet's desired count is the node list: with the
+    # toleration below it is every node. Pods that are not scheduled or not available are
+    # already covered by KubeDaemonSetNotScheduled / KubeDaemonSetRolloutStuck.
+    additionalGroups:
+      - name: loki-canary-coverage
+        rules:
+          - alert: LokiCanaryNotReporting
+            expr: |
+              (count(rate(loki_canary_entries_total[5m]) > 0) or on() vector(0))
+                < on() max(kube_daemonset_status_desired_number_scheduled{namespace="loki", daemonset="loki-canary"})
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: Fewer loki-canary pods are writing entries than the DaemonSet schedules.
+          - alert: LokiCanaryMissingEntries
+            expr: sum by (pod) (increase(loki_canary_missing_entries_total[15m])) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.pod }} wrote entries that did not come back from Loki."
   selfMonitoring:
     enabled: false
 
