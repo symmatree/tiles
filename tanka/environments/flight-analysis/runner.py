@@ -240,9 +240,12 @@ def derived_fresh(entry: dict, nb_sha: str, objects: list) -> bool:
 def process_flight(flight: Path, nb_shas: dict) -> None:
     sessions = extract_bundles(flight)
     bins = [b for b in sorted(flight.glob("*.bin")) + sorted((flight / "fc").glob("*.bin")) if is_dataflash(b)]
-    if not bins:
-        print(f"  no .bin in {flight.relative_to(FLIGHTS_DIR)}; the per-flight set needs one")
+    if not bins and not sessions:
         return
+    if not bins:
+        # a bench cycle: sessions and no FC log. time-sync still measures the pods' and the
+        # coordinator's own records; the per-pod notebooks need a .bin and are skipped below.
+        print(f"  no .bin in {flight.relative_to(FLIGHTS_DIR)}: time-sync only")
     derived = flight / "derived"
     derived.mkdir(exist_ok=True)
     sidecar = derived / "polisher.json"
@@ -269,7 +272,7 @@ def process_flight(flight: Path, nb_shas: dict) -> None:
     # 2. per campod session, on the .bin time-sync paired it with
     ts = json.loads((derived / "time-sync.json").read_text()) if (derived / "time-sync.json").exists() else {}
     pairing = ts.get("pod_session_fc_log", {})
-    for sess, bsha in sorted(sessions.items()):
+    for sess, bsha in sorted(sessions.items()) if bins else []:
         node, _, session = sess.partition("/")
         if not node.startswith("campod"):
             continue

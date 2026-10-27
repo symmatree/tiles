@@ -24,7 +24,9 @@ flight on the raconteur NAS. Which notebooks make up the set, and what each read
    - **per campod session**, `analysis/vibration-spectrogram.ipynb` when the session has
      `accel-*.jsonl` and `analysis/image-sharpness-vs-motion.ipynb` when it has stills, each on
      the `.bin` that `derived/time-sync.json` (`pod_session_fc_log`) pairs the session with ->
-     `derived/<notebook>-<pod>.{ipynb,pdf}` plus whatever the notebook writes itself. A session
+     `derived/<notebook>-<pod>.{ipynb,pdf}` plus whatever the notebook writes itself. A
+     directory with bundles and no DataFlash log (a bench cycle) gets the extraction and
+     `time-sync` only, since the per-pod notebooks need a `.bin`. A session
      time-sync could not pair is skipped and says so in the log.
 
 ## Output layout
