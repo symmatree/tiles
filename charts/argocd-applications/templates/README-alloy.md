@@ -4,8 +4,10 @@ Grafana Alloy deployment using the [k8s-monitoring](https://github.com/grafana/k
 
 ## Configuration
 
-- **Application**: [`application.yaml`](application.yaml)
-- **Values**: [`values.yaml`](values.yaml)
+- **Application**: [`alloy-application.yaml`](alloy-application.yaml) -- cluster-templated keys
+  (`destinations`, `extraObjects`, the singleton's Mimir components)
+- **Values**: [`values/alloy-values.yaml`](../values/alloy-values.yaml) (static), plus
+  `values/alloy-<cluster>-values.yaml` (resources)
 - **k8s-monitoring Documentation**: <https://github.com/grafana/k8s-monitoring-helm>
 
 ## Architecture
@@ -15,8 +17,9 @@ This deployment runs multiple Alloy instances:
 - **alloy-metrics**: Scrapes cluster and application metrics, includes embedded blackbox exporter
 - **alloy-singleton**: Handles PrometheusRules synchronization to Mimir ruler
 - **alloy-logs**: Collects pod logs from `/var/log/pods`
+- **alloy-receiver**: OTLP receiver (gRPC 4317 / HTTP 4318) for the edge sources
 
-All instances run with clustering enabled for high availability.
+alloy-metrics runs the `clustered` preset: its scrape work is sharded across its replicas.
 
 ## Key Features
 
@@ -44,6 +47,33 @@ checksum is on the pod so a module edit actually rolls it). The per-device
 `hubitat` / `raconteur` / `morpheus` here, and `backpack-mavlink` in the
 `mavproxy` namespace (module `backpack`, see
 [`tanka/environments/mavproxy/README.md`](../../../tanka/environments/mavproxy/README.md)).
+
+### Static scrape targets
+
+A LAN host that exposes Prometheus metrics itself has no Service to discover, so it
+is a `prometheus.scrape` with a static target in the alloy-metrics collector's
+`extraConfig` ([`values/alloy-values.yaml`](../values/alloy-values.yaml)). One such
+target today: Home Assistant's `/api/prometheus` (`job="integrations/homeassistant"`,
+`instance="homeassistant"`), with a `prometheus.relabel` in front of the destination
+that drops the per-entity bookkeeping series and the UniFi per-client throughput
+(6,579 series per scrape down to ~3,000; the counts and reasoning are in the values
+file). ha-config's `prometheus:` block is what it scrapes; filtering at that end
+(`filter.exclude_entity_globs`) would shrink the 840 KB scrape body too, but lives in
+the other repo.
+
+Two things any further static scrape in alloy-metrics has to carry:
+
+- **`clustering { enabled = true }`** in the `prometheus.scrape`. The collector is the
+  `clustered` preset, and a scrape without that block is not sharded: every replica
+  scrapes the target, and the destination receives each sample once per replica.
+- **`forward_to = [prometheus.remote_write.localmimir.receiver]`** (directly or via a
+  relabel). The component name is derived from the `destinations` key by the chart's
+  `helper.alloy_name` (lowercased, `-` and space become `_`), so renaming the
+  destination renames the receiver. That destination adds the `cluster` external
+  label; the scrape should not set one.
+
+The values file is shared by both clusters, so a static target there is scraped from
+each cluster into its own tenant, the same as the `Probe` CRs above.
 
 ### Log Collection
 

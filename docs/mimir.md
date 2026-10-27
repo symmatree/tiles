@@ -36,6 +36,14 @@ Tenant is selected by the **`X-Scope-OrgID`** header.
 - Edge sources (Synology, Proxmox) ship OTLP with `X-Scope-OrgID: tiles` too; their
   data is distinguished by the **`cluster="bond"`** label, not by tenant. See
   [`synology-monitoring.md`](synology-monitoring.md) and [`proxmox-monitoring.md`](proxmox-monitoring.md).
+- **Home Assistant** (`ha_*`, `job="integrations/homeassistant"`) is a static scrape
+  by the cluster's alloy-metrics collector, so it arrives in the cluster's own tenant
+  with that cluster's `cluster` label. About 3,000 series after Alloy-side drops
+  (measured 2026-10-27 against ~97k active series in `tiles`); the drop rules and
+  the per-family breakdown are in
+  [`alloy-values.yaml`](../charts/argocd-applications/values/alloy-values.yaml), and
+  the pattern is described in
+  [`README-alloy.md`](../charts/argocd-applications/templates/README-alloy.md).
 
 There is currently **one active tenant per cluster** (`tiles`, `tiles-test`). Edge
 data is not yet isolated into its own tenant; that's a known follow-up (edge
