@@ -169,6 +169,19 @@ There is no workflow archive ([#831](https://github.com/symmatree/tiles/pull/831
 `Workflow` object *is* the run record and this is how far back the API can answer "what ran".
 The log outlives it either way: Alloy ships the step's stdout to Loki.
 
+### `onExit: notify` -- the workflow announces its own ending
+
+The playbook and collect templates run a `notify` step on exit, whatever happened:
+`notify-step.js` out of the service's image, posting to Apprise with the workflow's name, the
+action and node (or flight) it was submitted for, and its phase and failures. This used to be
+the service's run registry's job ([coordinator#566](https://github.com/symmatree/coordinator/issues/566));
+since the service keeps no record of a run, the announcement has to come from something that
+outlives its pod, and the workflow is that thing. A notify that cannot reach Apprise logs and
+exits 0, so it cannot fail the workflow it reports on.
+
+**The step's argv is an interface with the image**, like `run-playbook.sh`'s and
+`offload-step.js`'s: a change to it lands coordinator first, then here.
+
 ## Collecting a flight
 
 [coordinator#566](https://github.com/symmatree/coordinator/issues/566). `fleet-control-collect`
