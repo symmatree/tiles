@@ -33,9 +33,6 @@ stops the run:
 4. **wait-back** -- Proxmox host: its boot ID changes and the PVE cluster is quorate again.
    Then each target node has a new boot ID and is Ready, and etcd is healthy. 30m per wait.
 5. **release** -- uncordons the nodes this run marked.
-6. **rebalance** -- one descheduler pass
-   ([`descheduler-policy.yaml`](descheduler-policy.yaml), `LowNodeUtilization` by requests)
-   so the nodes that came back empty take a share of the pods the drain moved.
 
 On exit, whatever happened: **release** again, then **notify** posts the outcome to Apprise.
 
@@ -46,8 +43,7 @@ On exit, whatever happened: **release** again, then **notify** posts the outcome
 | root SSH to the Proxmox hosts | `host-maintenance-ssh-key` | `tf/nodes/host-maintenance-ssh-key.tf` creates it and installs the public half on every host |
 | Talos API | `tiles-talosconfig` | `tf/modules/talos-cluster/main.tf`; the cluster's admin talosconfig |
 
-Kubernetes access is the `host-maintenance` ServiceAccount: cordon, drain and the
-descheduler's evictions.
+Kubernetes access is the `host-maintenance` ServiceAccount: cordon and drain.
 
 ## Image
 
