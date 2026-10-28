@@ -34,7 +34,7 @@ variable "talos_version" {
 }
 
 variable "kubernetes_version" {
-  description = "Kubernetes version, matched to the Talos release in talos_version"
+  description = "Kubernetes version the cluster runs"
   type        = string
 }
 
