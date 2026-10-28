@@ -2,13 +2,13 @@
 
 This document describes how **bare-metal** Talos workers fit into the Tiles Terraform layout. **Source of truth:** [tf/nodes/talos-iso.tf](../tf/nodes/talos-iso.tf), [tf/nodes/cluster.tf](../tf/nodes/cluster.tf), [tf/modules/talos-cluster/nodes.tf](../tf/modules/talos-cluster/nodes.tf), and [tf/modules/talos-metal/main.tf](../tf/modules/talos-metal/main.tf). Do not copy Image Factory schematic IDs from docs; they change whenever `talos_version` or schematic YAML changes. Use `terraform output` or the Terraform plan for current values.
 
-Tiles pins `talos_version` in [tf/nodes/terraform.tfvars](../tf/nodes/terraform.tfvars) (for example the **1.13** release line). Outbound links to Sidero Labs docs use **v1.13** where a versioned URL exists.
+Tiles pins `talos_version` in [tf/nodes/terraform.tfvars](../tf/nodes/terraform.tfvars). Outbound links to Sidero Labs docs use **v1.14** where a versioned URL exists.
 
 ## What Terraform implements
 
 ### Metal schematics (AMD vs Intel)
 
-Bare-metal workers use one of two Image Factory schematics in [tf/nodes/talos-iso.tf](../tf/nodes/talos-iso.tf). Both use the **metal** platform variant and share kernel args `net.ifnames=0` and `-talos.halt_if_installed`. The leading `-` follows Talos kernel syntax for **dropping** a parameter: it clears `talos.halt_if_installed` so the ISO can hand off to an existing disk install after the boot timeout instead of stopping for "already installed" ([kernel reference](https://docs.siderolabs.com/talos/v1.13/reference/kernel), [issue #10090](https://github.com/siderolabs/talos/issues/10090)).
+Bare-metal workers use one of two Image Factory schematics in [tf/nodes/talos-iso.tf](../tf/nodes/talos-iso.tf). Both use the **metal** platform variant and share kernel args `net.ifnames=0` and `-talos.halt_if_installed`. The leading `-` follows Talos kernel syntax for **dropping** a parameter: it clears `talos.halt_if_installed` so the ISO can hand off to an existing disk install after the boot timeout instead of stopping for "already installed" ([kernel reference](https://docs.siderolabs.com/talos/v1.14/reference/kernel), [issue #10090](https://github.com/siderolabs/talos/issues/10090)).
 
 | CPU class | Tfvars map | Schematic resource | Extensions |
 |-----------|------------|-------------------|------------|
@@ -28,7 +28,7 @@ Proxmox **VMs** use **`talos_image_factory_schematic.vm`** in the same file: **n
 
 ### From schematic to machine config
 
-[tf/nodes/cluster.tf](../tf/nodes/cluster.tf) passes VM and metal schematic IDs from `talos-iso.tf` into **`module.cluster`**. [tf/modules/talos-cluster/nodes.tf](../tf/modules/talos-cluster/nodes.tf) turns those IDs into Image Factory **installer** URLs: VMs use `factory.talos.dev/installer/...`; metal workers use **`factory.talos.dev/metal-installer/...`** ([Image Factory](https://docs.siderolabs.com/talos/v1.13/learn-more/image-factory), [talos.md](talos.md) for VM URLs).
+[tf/nodes/cluster.tf](../tf/nodes/cluster.tf) passes VM and metal schematic IDs from `talos-iso.tf` into **`module.cluster`**. [tf/modules/talos-cluster/nodes.tf](../tf/modules/talos-cluster/nodes.tf) turns those IDs into Image Factory **installer** URLs: VMs use `factory.talos.dev/installer/...`; metal workers use **`factory.talos.dev/metal-installer/...`** ([Image Factory](https://docs.siderolabs.com/talos/v1.14/learn-more/image-factory), [talos.md](talos.md) for VM URLs).
 
 `module.talos-amd-metal` is keyed by `metal_amd_nodes`; `module.talos-intel-metal` by `metal_intel_nodes`. Each node gets the install patch for its schematic.
 
@@ -41,7 +41,7 @@ For **every** node (VM or metal), the same patch stack applies the shared [talos
 1. Registers the MAC in UniFi (fixed IP, local DNS name).
 2. Runs `talos_machine_configuration_apply` against the node IP.
 
-The host must already be running Talos (maintenance mode from the Talos metal ISO on USB, or already installed) so the Talos machine API is reachable on the node IP (default TCP **50000**). Booting from that ISO does not install to disk until machine configuration is applied; see the upstream [bare-metal ISO](https://docs.siderolabs.com/talos/v1.13/platform-specific-installations/bare-metal-platforms/iso) guide.
+The host must already be running Talos (maintenance mode from the Talos metal ISO on USB, or already installed) so the Talos machine API is reachable on the node IP (default TCP **50000**). Booting from that ISO does not install to disk until machine configuration is applied; see the upstream [bare-metal ISO](https://docs.siderolabs.com/talos/v1.14/platform-specific-installations/bare-metal-platforms/iso) guide.
 
 ### When bare-metal resources run
 
@@ -49,7 +49,7 @@ Workspace tfvars (`test.tfvars`, `prod.tfvars`, etc.) set `metal_amd_nodes` and/
 
 ## Operations
 
-Use the talosconfig for the right cluster ([secrets.md](secrets.md#talos-client-configuration-talosconfig)). For `talosctl reset` flags, see [Resetting a machine](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/lifecycle-management/resetting-a-machine/) (Talos v1.13).
+Use the talosconfig for the right cluster ([secrets.md](secrets.md#talos-client-configuration-talosconfig)). For `talosctl reset` flags, see [Resetting a machine](https://docs.siderolabs.com/talos/v1.14/configure-your-talos-cluster/lifecycle-management/resetting-a-machine/) (Talos v1.13).
 
 ### 1. Add a bare-metal worker to the cluster
 
@@ -124,12 +124,12 @@ This is an **in-place update, not a replacement** -- `talos_machine_configuratio
 
 ## ISO and installer URL patterns
 
-Replace placeholders from Terraform outputs or plan. Generic Talos bare-metal context: [ISO](https://docs.siderolabs.com/talos/v1.13/platform-specific-installations/bare-metal-platforms/iso), [Image Factory](https://docs.siderolabs.com/talos/v1.13/learn-more/image-factory).
+Replace placeholders from Terraform outputs or plan. Generic Talos bare-metal context: [ISO](https://docs.siderolabs.com/talos/v1.14/platform-specific-installations/bare-metal-platforms/iso), [Image Factory](https://docs.siderolabs.com/talos/v1.14/learn-more/image-factory).
 
 - **Metal ISO:** `https://factory.talos.dev/image/<SCHEMATIC>/v<TALOS_VERSION>/metal-amd64.iso`
 - **Installer image (machine config):** `factory.talos.dev/metal-installer/<SCHEMATIC>:v<TALOS_VERSION>`
 
-`TALOS_VERSION` in URLs uses the `v` prefix (e.g. `v1.13.0`); `terraform.tfvars` uses the same string without `v` (e.g. `1.13.0`).
+`TALOS_VERSION` in URLs uses the `v` prefix (e.g. `v1.14.5`); `terraform.tfvars` uses the same string without `v` (e.g. `1.14.5`).
 
 ## Full-cluster rebuilds and VMs
 

@@ -48,5 +48,5 @@ Bare-metal Talos nodes (if present for a workspace) follow [`tf/modules/talos-cl
 
 ## External references
 
-- Talos [Layer2VIPConfig](https://docs.siderolabs.com/talos/v1.13/reference/configuration/network/layer2vipconfig)
+- Talos [Layer2VIPConfig](https://docs.siderolabs.com/talos/v1.14/reference/configuration/network/layer2vipconfig)
 - Cilium [Kubernetes installation (Helm)](https://docs.cilium.io/en/stable/installation/k8s-install-helm/) (Talos-oriented notes there)
