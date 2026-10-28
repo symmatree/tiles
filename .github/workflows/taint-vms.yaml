@@ -1,7 +1,7 @@
 name: "taint-vms"
 run-name: "Taint VMs test=${{ inputs.taint_test }} prod=${{ inputs.taint_prod }} by @${{ github.actor }}"
-# Stages a cluster rebuild, applied by nodes-plan-apply (with
-# metal_apply_mode=reboot). Two verbs, by one rule:
+# Stages a cluster rebuild, applied by nodes-plan-apply; the bare-metal nodes
+# are then rebooted with talosctl. Two verbs, by one rule:
 #
 #   taint     -- something real that Terraform must delete and build again: the
 #                VMs, their ISOs and schematics, and the bare-metal config apply
@@ -96,7 +96,7 @@ jobs:
           terraform state rm 'module.cluster.talos_machine_bootstrap.this'
 
           # Metal nodes: config re-applies byte-identical, so the apply is a no-op
-          # under apply_mode="auto" and the node never rejoins the new etcd.
+          # under apply_mode="auto"; the node is rebooted afterwards to rejoin.
           # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
           while IFS= read -r addr; do
             [ -n "$addr" ] && terraform taint "$addr"
@@ -133,7 +133,7 @@ jobs:
           terraform state rm 'module.cluster.talos_machine_bootstrap.this'
 
           # Metal nodes: config re-applies byte-identical, so the apply is a no-op
-          # under apply_mode="auto" and the node never rejoins the new etcd.
+          # under apply_mode="auto"; the node is rebooted afterwards to rejoin.
           # docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
           while IFS= read -r addr; do
             [ -n "$addr" ] && terraform taint "$addr"
@@ -175,6 +175,6 @@ jobs:
             fi
             echo ""
             echo "**Next steps:**"
-            echo "- Run **nodes-plan-apply** with **apply** for the workspace you tainted, and set **\`metal_apply_mode = reboot\`** so re-applied bare-metal workers reboot and rejoin the freshly bootstrapped etcd (a plain re-apply is a no-op and leaves them orphaned)."
+            echo "- Run **nodes-plan-apply** with **apply** for the workspace you tainted, then reboot each bare-metal worker (\`talosctl -n <node> reboot\`) so it rejoins the freshly bootstrapped etcd (the re-apply is a no-op and leaves them orphaned)."
             echo "- See [docs/bare-metal-nodes.md](https://github.com/symmatree/tiles/blob/main/docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot) for the full rebuild runbook."
           } >> "$GITHUB_STEP_SUMMARY"
