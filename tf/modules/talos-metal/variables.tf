@@ -54,19 +54,15 @@ variable "config_patches" {
   default     = []
 }
 
-# Apply mode for talos_machine_configuration_apply. Default "auto" reboots only
-# when a changed field requires it -- and is a no-op (no reboot) when the config
-# is byte-identical, which is what leaves metal workers orphaned after a cluster
-# re-bootstrap. Set to "reboot" (via metal_apply_mode) during a rebuild so a
-# re-applied metal node reboots and rejoins the new etcd. See
-# docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot.
+# Apply mode for talos_machine_configuration_apply. Talos 1.14 accepts only
+# "auto" and "no_reboot". docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
 variable "apply_mode" {
-  description = "talosctl apply-config mode for the metal node: auto | no_reboot | reboot | staged. Defaults to \"reboot\" so a config change fully applies (and a rebuild rejoins the new etcd); the resource only re-runs on an actual config change, so this is not a reboot-every-apply."
+  description = "talosctl apply-config mode for the metal node: auto | no_reboot"
   type        = string
-  default     = "reboot"
+  default     = "auto"
 
   validation {
-    condition     = contains(["auto", "no_reboot", "reboot", "staged"], var.apply_mode)
-    error_message = "apply_mode must be one of: auto, no_reboot, reboot, staged."
+    condition     = contains(["auto", "no_reboot"], var.apply_mode)
+    error_message = "apply_mode must be one of: auto, no_reboot."
   }
 }

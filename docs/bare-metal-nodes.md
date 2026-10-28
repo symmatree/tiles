@@ -94,7 +94,7 @@ Terraform only removes the **UniFi client** and the **`talos_machine_configurati
 1. **Change `ip_address`** in that node's `metal_amd_nodes` / `metal_intel_nodes` entry and apply. The UniFi reservation and DNS move to the new address.
 2. **The same apply then fails** reaching the node at the new address -- the machine still holds the old lease. `Error applying configuration ... dial tcp <new-ip>:50000: connect: no route to host`.
 3. **Reboot the node by hand** -- `talosctl --talosconfig ~/.talos/<cluster>.yaml -n <OLD_IP> reboot`. It re-DHCPs onto the new reservation.
-4. **Re-run the apply.** It reaches the node and settles. `apply_mode` defaults to `reboot`, so the node reboots once more here.
+4. **Re-run the apply.** It reaches the node and settles.
 
 Rebooting first does not avoid step 2: the node just renews onto the old address until the reservation has moved.
 
@@ -137,26 +137,24 @@ The [Recreating cluster](../README.md#recreating-cluster) flow taints the Proxmo
 
 ### Rebuilds: metal reapply + reboot
 
-**The trap.** A metal worker's machine config is derived from `talos_machine_secrets`, which a bootstrap recreate does **not** change. Re-applying it therefore produces byte-identical config, and `talos_machine_configuration_apply` under `apply_mode = "auto"` is a **no-op -- no reboot** (this is exactly why `apply_mode` now **defaults to `reboot`**; see below). The node keeps its old in-memory etcd/kubelet identity, its Node object was wiped with the old etcd, and the long-running kubelet loops `nodes "<name>" not found`; `NodeRestriction` then denies every pod pinned there. (Observed 2026-06-30 -> 07-01: `acebase` -- the GNSS base -- sat orphaned ~35h, so `ntrip/rtkbase` + `mavproxy` were `Pending` and **RTK was down**. See [tiles#547](https://github.com/symmatree/tiles/issues/547).)
+**The trap.** A metal worker's machine config is derived from `talos_machine_secrets`, which a bootstrap recreate does **not** change. Re-applying it therefore produces byte-identical config, and `talos_machine_configuration_apply` under `apply_mode = "auto"` is a **no-op -- no reboot**. The node keeps its old in-memory etcd/kubelet identity, its Node object was wiped with the old etcd, and the long-running kubelet loops `nodes "<name>" not found`; `NodeRestriction` then denies every pod pinned there. (Observed 2026-06-30 -> 07-01: `acebase` -- the GNSS base -- sat orphaned ~35h, so `ntrip/rtkbase` + `mavproxy` were `Pending` and **RTK was down**. See [tiles#547](https://github.com/symmatree/tiles/issues/547).)
 
-A config *apply* is not a *reset*. PKI is preserved across the recreate (both apid mTLS and the kubelet client cert still authenticate), so the node needs neither new certs nor a reinstall -- it only needs to **reboot** (or at minimum `talosctl -n <NODE_IP> service kubelet restart`) to rejoin. Since `auto` won't reboot on unchanged config, we force it.
+A config *apply* is not a *reset*. PKI is preserved across the recreate (both apid mTLS and the kubelet client cert still authenticate), so the node needs neither new certs nor a reinstall -- it only needs to **reboot** (or at minimum `talosctl -n <NODE_IP> service kubelet restart`) to rejoin. Since `auto` won't reboot on unchanged config, the reboot is a separate step.
 
-**The mechanism -- two knobs, both required:**
+**The mechanism:**
 
 1. **[`taint-vms`](../.github/workflows/taint-vms.yaml)** taints each metal `talos_machine_configuration_apply` (derived from state, so it tracks `metal_{amd,intel}_nodes` automatically) so the apply re-runs on the next Terraform apply.
-2. **[`nodes-plan-apply`](../.github/workflows/nodes-plan-apply.yaml)** takes a **`metal_apply_mode`** input, threaded via `TF_VAR_metal_apply_mode` into the metal module's `apply_mode`. It **defaults to `reboot`**, which a rebuild requires: the re-applied node reboots and rejoins the new etcd. The metal modules `depends_on` `talos_machine_bootstrap`, so the reboot lands **after** the new etcd exists.
+2. **[`nodes-plan-apply`](../.github/workflows/nodes-plan-apply.yaml)** re-applies it. `metal_apply_mode` (threaded via `TF_VAR_metal_apply_mode` into the metal module's `apply_mode`) is `auto` or `no_reboot`, the only modes Talos 1.14 accepts (`the REBOOT mode is not supported, please use AUTO or NO_REBOOT modes instead`), so the unchanged config applies without a reboot.
+3. **`talosctl -n <NODE_IP> reboot`** on each metal worker, after the apply, so it rejoins the new etcd. The metal modules `depends_on` `talos_machine_bootstrap`, so the new etcd exists by then.
 
-`metal_apply_mode` now **defaults to `reboot`** for every apply (PR / push / daily schedule / dispatch). This is **not** a reboot-every-apply: the metal `talos_machine_configuration_apply` has no `replace_triggered_by` and stable inputs, so Terraform only re-runs it -- and only reboots -- when the metal config **actually changes** (or on a `taint-vms` rebuild). Rebooting on a real change guarantees the config fully applies (Talos `auto` reboots only when it judges a changed field requires it, which is unreliable -- it can hold state until reboot) and lets a rebuilt node rejoin the new etcd. Override to `auto` / `no_reboot` / `staged` only when you deliberately want a live-only apply.
-
-> **apply-config modes** ([Talos v1.13](https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed; `reboot` always reboots to apply; `staged` applies on next reboot. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#4-wipe-and-reinstall-talos-on-the-same-machine).
->
-> Why `reboot` works on unchanged config: in v1.13 machined's `ApplyConfiguration` REBOOT case persists the config and **unconditionally** sequences a reboot -- there is no config-diff short-circuit ([v1alpha1_server.go](https://github.com/siderolabs/talos/blob/v1.13.0/internal/app/machined/internal/server/v1alpha1/v1alpha1_server.go)). **Forward-compat:** the deprecated `REBOOT` gRPC mode is slated for removal on Talos `main` ("use AUTO or NO_REBOOT"), so **re-verify this mechanism when bumping `talos_version`** past 1.13.
+> **apply-config modes** ([Talos v1.14](https://docs.siderolabs.com/talos/v1.14/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#4-wipe-and-reinstall-talos-on-the-same-machine).
 
 **Rebuild runbook**
 
 1. Run **`taint-vms`** for the workspace (taints VMs, `talos_machine_bootstrap`, and metal config-apply).
-2. Run **`nodes-plan-apply`** with **apply** for that workspace (**`metal_apply_mode`** defaults to **`reboot`**, which the rebuild needs).
-3. Verify: `talosctl -n <NODE_IP> get members` and `kubectl get nodes` show the metal node; any pinned pods (e.g. `ntrip`, `mavproxy`) return to `Running`.
+2. Run **`nodes-plan-apply`** with **apply** for that workspace.
+3. Reboot each metal worker: `talosctl --talosconfig ~/.talos/<cluster>.yaml -n <NODE_IP> reboot`.
+4. Verify: `talosctl -n <NODE_IP> get members` and `kubectl get nodes` show the metal node; any pinned pods (e.g. `ntrip`, `mavproxy`) return to `Running`.
 
 ## Physical siting and what it does to the temperature record
 
