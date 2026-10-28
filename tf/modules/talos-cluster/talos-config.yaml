@@ -10,10 +10,6 @@ machine:
   features:
     # No document equivalent in 1.14; still a v1alpha1 feature flag.
     diskQuotaSupport: true
-  install:
-    # wipe: true
-    # extraKernelArgs are set in the schematic customization, not here
-    # Setting them here conflicts with grubUseUKICmdline when using schematics
 ---
 # Cilium is the CNI. In the multi-document config there is no `cni: none` to set:
 # CNIName is derived from whether a KubeFlannelCNIConfig document exists, and the
@@ -21,27 +17,6 @@ machine:
 apiVersion: v1alpha1
 kind: KubeFlannelCNIConfig
 $patch: delete
----
-# Cilium replaces kube-proxy.
-apiVersion: v1alpha1
-kind: KubeProxyConfig
-enabled: false
----
-# Listen on more than localhost so Alloy can scrape these.
-apiVersion: v1alpha1
-kind: KubeAPIServerConfig
-extraArgs:
-  bind-address: 0.0.0.0
----
-apiVersion: v1alpha1
-kind: KubeControllerManagerConfig
-extraArgs:
-  bind-address: 0.0.0.0
----
-apiVersion: v1alpha1
-kind: KubeSchedulerConfig
-extraArgs:
-  bind-address: 0.0.0.0
 ---
 apiVersion: v1alpha1
 kind: SysctlConfig

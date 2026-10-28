@@ -4,7 +4,9 @@
 # it's still in maintenance with the Windows GPT intact. Pin the install disk
 # to the only disk it has, and wipe it (defaults true, set explicitly so it's
 # clear this overwrites Windows). See docs/bare-metal-nodes.md.
-machine:
-  install:
-    disk: /dev/nvme0n1
-    wipe: true
+apiVersion: v1alpha1
+kind: UnattendedInstallConfig
+provisioning:
+  diskSelector:
+    match: disk.dev_path == "/dev/nvme0n1"
+  wipe: true
