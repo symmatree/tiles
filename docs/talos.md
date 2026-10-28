@@ -32,7 +32,7 @@ Three versions are coupled, and only two of them are visible in tfvars:
 | What | Where | Current |
 |---|---|---|
 | Talos OS on the nodes | `talos_version` in [terraform.tfvars](../tf/nodes/terraform.tfvars) | 1.14.5 |
-| Kubernetes | `kubernetes_version` in the same file | 1.37.1 |
+| Kubernetes | `kubernetes_version` in the same file | 1.36.0 |
 | The config shape and the `kubernetes_version` default | `siderolabs/talos` provider pin in [.terraform.lock.hcl](../tf/nodes/.terraform.lock.hcl) | 0.12.0 |
 
 The Talos **Terraform provider** vendors its own copy of Talos `pkg/machinery`, and that
@@ -42,9 +42,9 @@ copy -- not `talos_version` -- decides which config document kinds parse and wha
 nodes run a Talos release whose config kinds the provider cannot generate or validate.
 
 `kubernetes_version` is pinned rather than defaulted because the provider's default follows
-its vendored machinery (1.37.0 for provider 0.12.0) while the Talos release itself pairs
-with a later patch (1.37.1 for Talos 1.14.5). Pinning gets the matched version and keeps a
-provider bump from moving Kubernetes as a side effect.
+its vendored machinery (1.37.0 for provider 0.12.0), not the version the cluster runs.
+Pinning keeps a provider bump from moving Kubernetes as a side effect; Kubernetes moves
+with `talosctl upgrade-k8s` and then a `kubernetes_version` change.
 
 ## talosctl
 

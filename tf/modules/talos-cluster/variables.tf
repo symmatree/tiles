@@ -179,11 +179,10 @@ variable "kubelet_eviction_memory_available" {
   default     = null
 }
 
-# Kubernetes version, matched to var.talos_version. Talos 1.14.5's own
-# DefaultKubernetesVersion is 1.37.1; the Talos Terraform provider would
-# otherwise supply its bundled machinery's default (1.37.0 for provider 0.12.0),
-# which is a patch behind. See docs/talos.md.
+# Kubernetes version the cluster runs. The Talos Terraform provider would
+# otherwise supply its bundled machinery's default (1.37.0 for provider 0.12.0).
+# See docs/talos.md.
 variable "kubernetes_version" {
-  description = "Kubernetes version, matched to the Talos release in talos_version"
+  description = "Kubernetes version the cluster runs"
   type        = string
 }
