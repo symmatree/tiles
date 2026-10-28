@@ -95,28 +95,35 @@ otelcol.processor.attributes "main" {
 // We collect from:
 // - /var/log/messages: Traditional syslog (all system messages)
 // - /var/log/synolog/*.log: Synology's custom application logs
+// cluster is a Loki label here, not only the attribute added below: the receiver
+// indexes collection-time labels, and its cluster external label does not
+// override an entry's own label (#305).
 loki.source.file "syslog" {
   targets = [
     {
       __path__ = "/host/var/log/messages",
       job      = "synology-syslog",
       host     = "raconteur",
+      cluster  = "bond",
     },
     {
       __path__ = "/host/var/log/synolog/*.log",
       job      = "synology-synolog",
       host     = "raconteur",
+      cluster  = "bond",
     },
     // Additional common log locations
     {
       __path__ = "/host/var/log/auth.log",
       job      = "synology-auth",
       host     = "raconteur",
+      cluster  = "bond",
     },
     {
       __path__ = "/host/var/log/daemon.log",
       job      = "synology-daemon",
       host     = "raconteur",
+      cluster  = "bond",
     },
   ]
   forward_to = [otelcol.receiver.loki.main.receiver]
