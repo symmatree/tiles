@@ -6,6 +6,6 @@
     { "name": "campod-sw", "role": "campod", "host": "campod-sw.local.symmatree.com" },
     { "name": "campod-ne", "role": "campod", "host": "campod-ne.local.symmatree.com" },
     { "name": "campod-nw", "role": "campod", "host": "campod-nw.local.symmatree.com" },
-    { "name": "blackfly", "role": "rampod", "host": "blackfly.local.symmatree.com" }
+    { "name": "blackfly", "role": "blackfly", "host": "blackfly.local.symmatree.com" }
   ]
 }
