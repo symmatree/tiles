@@ -3,19 +3,17 @@
 locals {
   config_path               = "${path.module}/talos-config.yaml"
   base_config_yaml          = file(local.config_path)
+  controlplane_config_yaml  = file("${path.module}/talos-config-controlplane.yaml")
   vm_install_image          = "factory.talos.dev/installer/${var.talos_vm_schematic}:v${var.talos_version}"
   metal_amd_install_image   = "factory.talos.dev/metal-installer/${var.talos_metal_amd_schematic}:v${var.talos_version}"
   metal_intel_install_image = "factory.talos.dev/metal-installer/${var.talos_metal_intel_schematic}:v${var.talos_version}"
 
+  # The cluster name comes from the talos_machine_configuration data sources.
   common_patch_yaml = yamlencode({
-    "version" = "v1alpha1"
-    "cluster" = {
-      "clusterName" = var.cluster_name
-      "network" = {
-        "podSubnets"     = [var.pod_cidr]
-        "serviceSubnets" = [var.service_cidr]
-      }
-    }
+    apiVersion     = "v1alpha1"
+    kind           = "KubeNetworkConfig"
+    podSubnets     = [var.pod_cidr]
+    serviceSubnets = [var.service_cidr]
   })
 
   # See: https://docs.siderolabs.com/talos/v1.12/reference/configuration/network/layer2vipconfig
@@ -80,11 +78,11 @@ module "talos-vm" {
     [local.common_patch_yaml],
     local.eviction_patches,
     [yamlencode({
-      "machine" = {
-        "install" = { "image" = local.vm_install_image }
-      }
+      apiVersion = "v1alpha1"
+      kind       = "UnattendedInstallConfig"
+      installer  = { image = local.vm_install_image }
     })],
-    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
+    each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
       "apiVersion" = "v1alpha1"
       "kind"       = "KubeNodeConfig"
@@ -113,11 +111,11 @@ module "talos-amd-metal" {
     [local.common_patch_yaml],
     local.eviction_patches,
     [yamlencode({
-      "machine" = {
-        "install" = { "image" = local.metal_amd_install_image }
-      }
+      apiVersion = "v1alpha1"
+      kind       = "UnattendedInstallConfig"
+      installer  = { image = local.metal_amd_install_image }
     })],
-    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
+    each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
       "apiVersion" = "v1alpha1"
       "kind"       = "KubeNodeConfig"
@@ -153,11 +151,11 @@ module "talos-intel-metal" {
     [local.common_patch_yaml],
     local.eviction_patches,
     [yamlencode({
-      "machine" = {
-        "install" = { "image" = local.metal_intel_install_image }
-      }
+      apiVersion = "v1alpha1"
+      kind       = "UnattendedInstallConfig"
+      installer  = { image = local.metal_intel_install_image }
     })],
-    each.value.type == "control" ? [local.layer2_vip_patch_yaml] : [],
+    each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
       "apiVersion" = "v1alpha1"
       "kind"       = "KubeNodeConfig"

@@ -1,0 +1,23 @@
+# Control-plane-only documents, applied after talos-config.yaml on nodes with
+# type = "control". Talos rejects these kinds on workers.
+#
+# Cilium replaces kube-proxy.
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+enabled: false
+---
+# Listen on more than localhost so Alloy can scrape these.
+apiVersion: v1alpha1
+kind: KubeAPIServerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+apiVersion: v1alpha1
+kind: KubeControllerManagerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+apiVersion: v1alpha1
+kind: KubeSchedulerConfig
+extraArgs:
+  bind-address: 0.0.0.0
