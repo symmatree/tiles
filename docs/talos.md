@@ -32,7 +32,7 @@ Three versions are coupled, and only two of them are visible in tfvars:
 | What | Where | Current |
 |---|---|---|
 | Talos OS on the nodes | `talos_version` in [terraform.tfvars](../tf/nodes/terraform.tfvars) | 1.14.5 |
-| Kubernetes | `kubernetes_version` in the same file | 1.36.0 |
+| Kubernetes | `kubernetes_version` in the same file | 1.37.2 |
 | The config shape and the `kubernetes_version` default | `siderolabs/talos` provider pin in [.terraform.lock.hcl](../tf/nodes/.terraform.lock.hcl) | 0.12.0 |
 
 The Talos **Terraform provider** vendors its own copy of Talos `pkg/machinery`, and that
