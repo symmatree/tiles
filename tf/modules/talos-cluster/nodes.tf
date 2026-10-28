@@ -8,6 +8,12 @@ locals {
   metal_amd_install_image   = "factory.talos.dev/metal-installer/${var.talos_metal_amd_schematic}:v${var.talos_version}"
   metal_intel_install_image = "factory.talos.dev/metal-installer/${var.talos_metal_intel_schematic}:v${var.talos_version}"
 
+  # Talos requires a disk selector in UnattendedInstallConfig. It lives in the same
+  # patch as the install image because machinery before 1.14.5 (provider 0.12.0
+  # bundles 1.14.0) clears a CEL expression that a later patch omits
+  # (siderolabs/talos 03075319b). lancer's own patch, applied after, overrides it.
+  install_disk_selector = { diskSelector = { match = "disk.dev_path == \"/dev/sda\"" } }
+
   # The cluster name comes from the talos_machine_configuration data sources.
   common_patch_yaml = yamlencode({
     apiVersion     = "v1alpha1"
@@ -78,9 +84,10 @@ module "talos-vm" {
     [local.common_patch_yaml],
     local.eviction_patches,
     [yamlencode({
-      apiVersion = "v1alpha1"
-      kind       = "UnattendedInstallConfig"
-      installer  = { image = local.vm_install_image }
+      apiVersion   = "v1alpha1"
+      kind         = "UnattendedInstallConfig"
+      installer    = { image = local.vm_install_image }
+      provisioning = local.install_disk_selector
     })],
     each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
@@ -111,9 +118,10 @@ module "talos-amd-metal" {
     [local.common_patch_yaml],
     local.eviction_patches,
     [yamlencode({
-      apiVersion = "v1alpha1"
-      kind       = "UnattendedInstallConfig"
-      installer  = { image = local.metal_amd_install_image }
+      apiVersion   = "v1alpha1"
+      kind         = "UnattendedInstallConfig"
+      installer    = { image = local.metal_amd_install_image }
+      provisioning = local.install_disk_selector
     })],
     each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
@@ -151,9 +159,10 @@ module "talos-intel-metal" {
     [local.common_patch_yaml],
     local.eviction_patches,
     [yamlencode({
-      apiVersion = "v1alpha1"
-      kind       = "UnattendedInstallConfig"
-      installer  = { image = local.metal_intel_install_image }
+      apiVersion   = "v1alpha1"
+      kind         = "UnattendedInstallConfig"
+      installer    = { image = local.metal_intel_install_image }
+      provisioning = local.install_disk_selector
     })],
     each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({
