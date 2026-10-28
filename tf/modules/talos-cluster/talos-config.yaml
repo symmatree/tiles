@@ -11,6 +11,14 @@ machine:
     # No document equivalent in 1.14; still a v1alpha1 feature flag.
     diskQuotaSupport: true
 ---
+# Talos requires a disk selector in UnattendedInstallConfig. Every node but lancer
+# installs to /dev/sda; lancer overrides this in tf/nodes/patches/lancer-install-disk.yaml.
+apiVersion: v1alpha1
+kind: UnattendedInstallConfig
+provisioning:
+  diskSelector:
+    match: disk.dev_path == "/dev/sda"
+---
 # Cilium is the CNI. In the multi-document config there is no `cni: none` to set:
 # CNIName is derived from whether a KubeFlannelCNIConfig document exists, and the
 # generated config ships one. Deleting it is how "no Talos-managed CNI" is expressed.
