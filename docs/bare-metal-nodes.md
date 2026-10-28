@@ -65,7 +65,7 @@ You may run `terraform apply` once before the machine is booted: UniFi objects a
 
 ### Install disk (machine with an existing OS)
 
-The shared config sets no install disk (`UnattendedInstallConfig` `provisioning.diskSelector`) of its own. That works on an empty or spare disk (AceBase installed onto an empty SATA SSD). It does **not** work when the node's **only** disk already holds another OS: Talos won't clobber the occupied disk, so the config is accepted but the install never runs and the node **silently stays in maintenance mode** (Lancer shipped with Windows on its sole NVMe and did exactly this). Add a per-node patch pinning the disk and wiping it -- see [tf/nodes/patches/lancer-install-disk.yaml](../tf/nodes/patches/lancer-install-disk.yaml):
+The shared config selects `/dev/sda` (`UnattendedInstallConfig` `provisioning.diskSelector` in [talos-config.yaml](../tf/modules/talos-cluster/talos-config.yaml)). That works on an empty or spare disk (AceBase installed onto an empty SATA SSD). It does **not** work when the node's **only** disk already holds another OS: Talos won't clobber the occupied disk, so the config is accepted but the install never runs and the node **silently stays in maintenance mode** (Lancer shipped with Windows on its sole NVMe and did exactly this). Add a per-node patch pinning the disk and wiping it -- see [tf/nodes/patches/lancer-install-disk.yaml](../tf/nodes/patches/lancer-install-disk.yaml):
 
 ```yaml
 apiVersion: v1alpha1
