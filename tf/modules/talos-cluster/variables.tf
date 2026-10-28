@@ -50,17 +50,6 @@ variable "metal_intel_nodes" {
   default = {}
 }
 
-variable "metal_apply_mode" {
-  description = "talosctl apply-config mode for bare-metal nodes (auto | no_reboot); Talos 1.14 accepts only these. See docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot."
-  type        = string
-  default     = "auto"
-
-  validation {
-    condition     = contains(["auto", "no_reboot"], var.metal_apply_mode)
-    error_message = "metal_apply_mode must be one of: auto, no_reboot."
-  }
-}
-
 variable "cluster_name" {
   description = "Talos cluster name"
   type        = string
