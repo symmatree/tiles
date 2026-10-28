@@ -64,7 +64,6 @@ jobs:
         id: wireguard
         with:
           wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
-          conf_dir: "$HOME"
 
       - name: Setup kubeconfig
         run: |
@@ -99,5 +98,5 @@ jobs:
             exit 0
           fi
           echo "Disconnecting Wireguard..."
-          time sudo wg-quick down "$HOME/wg0.conf" || true
+          time sudo wg-quick down wg0 || true
           echo "Disconnected"
