@@ -144,7 +144,7 @@ A config *apply* is not a *reset*. PKI is preserved across the recreate (both ap
 **The mechanism:**
 
 1. **[`taint-vms`](../.github/workflows/taint-vms.yaml)** taints each metal `talos_machine_configuration_apply` (derived from state, so it tracks `metal_{amd,intel}_nodes` automatically) so the apply re-runs on the next Terraform apply.
-2. **[`nodes-plan-apply`](../.github/workflows/nodes-plan-apply.yaml)** re-applies it. `metal_apply_mode` (threaded via `TF_VAR_metal_apply_mode` into the metal module's `apply_mode`) is `auto` or `no_reboot`, the only modes Talos 1.14 accepts (`the REBOOT mode is not supported, please use AUTO or NO_REBOOT modes instead`), so the unchanged config applies without a reboot.
+2. **[`nodes-plan-apply`](../.github/workflows/nodes-plan-apply.yaml)** re-applies it in the default `auto` mode, so the unchanged config applies without a reboot. Talos 1.14 does not accept a forced-reboot apply (`the REBOOT mode is not supported, please use AUTO or NO_REBOOT modes instead`).
 3. **`talosctl -n <NODE_IP> reboot`** on each metal worker, after the apply, so it rejoins the new etcd. The metal modules `depends_on` `talos_machine_bootstrap`, so the new etcd exists by then.
 
 > **apply-config modes** ([Talos v1.14](https://docs.siderolabs.com/talos/v1.14/configure-your-talos-cluster/system-configuration/editing-machine-configuration)): `auto` reboots only if a changed field requires it; `no_reboot` fails if a reboot would be needed. Changes Terraform apply cannot make at all (install disk, disk encryption, wiping state) need a **reset**, not an apply -- see [Wipe and reinstall](#4-wipe-and-reinstall-talos-on-the-same-machine).

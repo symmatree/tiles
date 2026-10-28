@@ -108,19 +108,6 @@ variable "metal_intel_nodes" {
   }))
 }
 
-# Talos 1.14 accepts only "auto" and "no_reboot". A rebuild's metal nodes are
-# rebooted separately; see docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot.
-variable "metal_apply_mode" {
-  description = "talosctl apply-config mode for bare-metal nodes (auto | no_reboot)"
-  type        = string
-  default     = "auto"
-
-  validation {
-    condition     = contains(["auto", "no_reboot"], var.metal_apply_mode)
-    error_message = "metal_apply_mode must be one of: auto, no_reboot."
-  }
-}
-
 variable "kubelet_eviction_memory_available" {
   description = "kubelet evictionHard `memory.available` threshold for every node in the cluster -- the free-memory margin the kubelet keeps so it evicts before the kernel OOM-killer fires. null leaves Talos/kubelet defaults (100Mi). Set on resource-tight clusters (prod) to widen the OOM safety margin; leave unset on test."
   type        = string

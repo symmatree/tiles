@@ -53,16 +53,3 @@ variable "config_patches" {
   type        = list(string)
   default     = []
 }
-
-# Apply mode for talos_machine_configuration_apply. Talos 1.14 accepts only
-# "auto" and "no_reboot". docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot
-variable "apply_mode" {
-  description = "talosctl apply-config mode for the metal node: auto | no_reboot"
-  type        = string
-  default     = "auto"
-
-  validation {
-    condition     = contains(["auto", "no_reboot"], var.apply_mode)
-    error_message = "apply_mode must be one of: auto, no_reboot."
-  }
-}
