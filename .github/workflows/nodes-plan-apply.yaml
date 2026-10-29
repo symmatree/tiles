@@ -126,7 +126,7 @@ jobs:
           echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
       - uses: "hashicorp/setup-terraform@v4"
         with:
-          terraform_version: "v1.17.0"
+          terraform_version: "v1.17.1"
 
       # 1Password SA quota metering (#561). `op service-account ratelimit` is
       # NOT billed against the read_write pool (it returns even when the pool is
