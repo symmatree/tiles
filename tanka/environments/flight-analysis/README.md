@@ -21,12 +21,17 @@ flight on the raconteur NAS. Which notebooks make up the set, and what each read
      tree. A `.bundle-sha256` marker in the session directory (the sha from
      `collected/<node>_<session>.json`, or computed) makes this idempotent; the bundle stays.
    - **`analysis/time-sync.ipynb`** once -> `derived/time-sync.{ipynb,pdf,json}`.
+   - **`analysis/vehicle-health.ipynb`** once -> `derived/vehicle-health.{ipynb,pdf,json}`, on
+     every `.bin` and every session; a bench cycle gets it too.
+   - **per `.bin`**, `analysis/link-map.ipynb` -> `derived/link-map-<log>.{ipynb,pdf,html,png,json}`,
+     fresh while the log, the coordinator's sessions and `ground/backpack-metrics-*.json` are
+     unchanged.
    - **per campod session**, `analysis/vibration-spectrogram.ipynb` when the session has
      `accel-*.jsonl` and `analysis/image-sharpness-vs-motion.ipynb` when it has stills, each on
      the `.bin` that `derived/time-sync.json` (`pod_session_fc_log`) pairs the session with ->
      `derived/<notebook>-<pod>.{ipynb,pdf}` plus whatever the notebook writes itself. A
-     directory with bundles and no DataFlash log (a bench cycle) gets the extraction and
-     `time-sync` only, since the per-pod notebooks need a `.bin`. A session
+     directory with bundles and no DataFlash log (a bench cycle) gets the extraction,
+     `time-sync` and `vehicle-health` only, since link-map and the per-pod notebooks need a `.bin`. A session
      time-sync could not pair is skipped and says so in the log.
 
 ## Output layout
@@ -42,6 +47,8 @@ flight on the raconteur NAS. Which notebooks make up the set, and what each read
   captures/<node>/<session>/         -- the bundle, unpacked; .bundle-sha256 inside
   derived/
     time-sync.{ipynb,pdf,json}, time-sync-*.png
+    vehicle-health.{ipynb,pdf,json}, vehicle-health-*.png
+    link-map-<log>.{ipynb,pdf,html,png,json}, link-map-<log>-time.png
     vibration-spectrogram-<pod>.{ipynb,pdf,json}, vibration-*-<pod>.png
     image-sharpness-vs-motion-<pod>.{ipynb,pdf,json}, image-*.png
     polisher.json                    -- one entry per derived product
