@@ -251,8 +251,9 @@ def process_flight(flight: Path, nb_shas: dict) -> None:
         return
     if not bins:
         # a bench cycle: sessions and no FC log. time-sync still measures the pods' and the
-        # coordinator's own records; the per-pod notebooks need a .bin and are skipped below.
-        print(f"  no .bin in {flight.relative_to(FLIGHTS_DIR)}: time-sync only")
+        # coordinator's own records and vehicle-health their self-reports; link-map and the
+        # per-pod notebooks need a .bin and are skipped below.
+        print(f"  no .bin in {flight.relative_to(FLIGHTS_DIR)}: time-sync and vehicle-health only")
     derived = flight / "derived"
     derived.mkdir(exist_ok=True)
     sidecar = derived / "polisher.json"
