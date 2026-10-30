@@ -6,10 +6,10 @@ metadata:
   name: external-dns
   namespace: external-dns
   labels:
-    helm.sh/chart: external-dns-1.20.0
+    helm.sh/chart: external-dns-1.23.0
     app.kubernetes.io/name: external-dns
     app.kubernetes.io/instance: external-dns
-    app.kubernetes.io/version: "0.20.0"
+    app.kubernetes.io/version: "0.23.0"
     app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
 
@@ -20,10 +20,10 @@ kind: ClusterRole
 metadata:
   name: external-dns
   labels:
-    helm.sh/chart: external-dns-1.20.0
+    helm.sh/chart: external-dns-1.23.0
     app.kubernetes.io/name: external-dns
     app.kubernetes.io/instance: external-dns
-    app.kubernetes.io/version: "0.20.0"
+    app.kubernetes.io/version: "0.23.0"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups: [""]
@@ -49,10 +49,10 @@ kind: ClusterRoleBinding
 metadata:
   name: external-dns-viewer
   labels:
-    helm.sh/chart: external-dns-1.20.0
+    helm.sh/chart: external-dns-1.23.0
     app.kubernetes.io/name: external-dns
     app.kubernetes.io/instance: external-dns
-    app.kubernetes.io/version: "0.20.0"
+    app.kubernetes.io/version: "0.23.0"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -71,10 +71,10 @@ metadata:
   name: external-dns
   namespace: external-dns
   labels:
-    helm.sh/chart: external-dns-1.20.0
+    helm.sh/chart: external-dns-1.23.0
     app.kubernetes.io/name: external-dns
     app.kubernetes.io/instance: external-dns
-    app.kubernetes.io/version: "0.20.0"
+    app.kubernetes.io/version: "0.23.0"
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
@@ -95,10 +95,10 @@ metadata:
   name: external-dns
   namespace: external-dns
   labels:
-    helm.sh/chart: external-dns-1.20.0
+    helm.sh/chart: external-dns-1.23.0
     app.kubernetes.io/name: external-dns
     app.kubernetes.io/instance: external-dns
-    app.kubernetes.io/version: "0.20.0"
+    app.kubernetes.io/version: "0.23.0"
     app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
@@ -133,7 +133,7 @@ spec:
             runAsGroup: 65532
             runAsNonRoot: true
             runAsUser: 65532
-          image: registry.k8s.io/external-dns/external-dns:v0.20.0
+          image: registry.k8s.io/external-dns/external-dns:v0.23.0
           imagePullPolicy: IfNotPresent
           env:
             - name: GOOGLE_APPLICATION_CREDENTIALS
@@ -150,8 +150,8 @@ spec:
             - --domain-filter=placeholder-cluster-name.symmatree.com
             - --domain-filter=0.10.in-addr.arpa
             - --provider=google
-            - --google-project=placeholder-project-id
-            - --regex-domain-exclusion=^_acme-challenge\.
+            - "--google-project=placeholder-project-id"
+            - "--regex-domain-exclusion=^_acme-challenge\\."
           ports:
             - name: http
               protocol: TCP
@@ -212,10 +212,10 @@ metadata:
   name: external-dns
   namespace: external-dns
   labels:
-    helm.sh/chart: external-dns-1.20.0
+    helm.sh/chart: external-dns-1.23.0
     app.kubernetes.io/name: external-dns
     app.kubernetes.io/instance: external-dns
-    app.kubernetes.io/version: "0.20.0"
+    app.kubernetes.io/version: "0.23.0"
     app.kubernetes.io/managed-by: Helm
 spec:
   jobLabel: app.kubernetes.io/instance
