@@ -9,8 +9,10 @@ Per flight directory, after that:
   1. extract every <node>_<session>.tar.zst at the flight root into captures/ -- the tar paths
      are <node>/<session>/..., so the result is the canonical captures/<node>/<session>/ tree;
      a .bundle-sha256 marker in the session dir makes it idempotent;
-  2. analysis/time-sync.ipynb once -> derived/time-sync.{ipynb,pdf,json};
-  3. per campod session, analysis/vibration-spectrogram.ipynb (when the session has
+  2. analysis/time-sync.ipynb once -> derived/time-sync.{ipynb,pdf,json}, and
+     analysis/vehicle-health.ipynb once -> derived/vehicle-health.{ipynb,pdf,json};
+  3. per .bin, analysis/link-map.ipynb -> derived/link-map-<log>.{ipynb,pdf,html,png,json};
+  4. per campod session, analysis/vibration-spectrogram.ipynb (when the session has
      accel-*.jsonl) and analysis/image-sharpness-vs-motion.ipynb (when it has stills), on the
      .bin that time-sync.json names for that session -> derived/<notebook>-<pod>.{ipynb,pdf};
   each with its own entry in derived/polisher.json, skipped when the notebook blob and every
@@ -45,6 +47,8 @@ NOTEBOOK_DIR = Path(os.environ.get("NOTEBOOK_DIR", "/workspace/notebook-repo"))
 IMAGE_DIGEST = os.environ.get("IMAGE_DIGEST", "unknown")
 
 TIME_SYNC_NB = "analysis/time-sync.ipynb"
+VEHICLE_HEALTH_NB = "analysis/vehicle-health.ipynb"
+LINK_MAP_NB = "analysis/link-map.ipynb"
 # (notebook, what a campod session must contain for it to apply)
 POD_NBS = [
     ("analysis/vibration-spectrogram.ipynb", "accel-*.jsonl"),
@@ -247,8 +251,9 @@ def process_flight(flight: Path, nb_shas: dict) -> None:
         return
     if not bins:
         # a bench cycle: sessions and no FC log. time-sync still measures the pods' and the
-        # coordinator's own records; the per-pod notebooks need a .bin and are skipped below.
-        print(f"  no .bin in {flight.relative_to(FLIGHTS_DIR)}: time-sync only")
+        # coordinator's own records and vehicle-health their self-reports; link-map and the
+        # per-pod notebooks need a .bin and are skipped below.
+        print(f"  no .bin in {flight.relative_to(FLIGHTS_DIR)}: time-sync and vehicle-health only")
     derived = flight / "derived"
     derived.mkdir(exist_ok=True)
     sidecar = derived / "polisher.json"
@@ -272,7 +277,40 @@ def process_flight(flight: Path, nb_shas: dict) -> None:
         prov[key] = provenance(TIME_SYNC_NB, nb_shas[TIME_SYNC_NB], objs, [out, pdf, derived / "time-sync.json"], start)
         save()
 
-    # 2. per campod session, on the .bin time-sync paired it with
+    # vehicle-health, once per flight: every .bin, every session; a bench cycle too
+    key = "vehicle-health"
+    if derived_fresh(prov.get(key), nb_shas[VEHICLE_HEALTH_NB], objs):
+        print(f"  skip (fresh): {key}")
+    else:
+        print(f"  run: {key}", flush=True)
+        start = datetime.now(timezone.utc).isoformat()
+        out = derived / "vehicle-health.ipynb"
+        pdf = run_notebook(NOTEBOOK_DIR / VEHICLE_HEALTH_NB, out, {"flight_dir": str(flight)})
+        prov[key] = provenance(VEHICLE_HEALTH_NB, nb_shas[VEHICLE_HEALTH_NB], objs,
+                               [out, pdf, derived / "vehicle-health.json"], start)
+        save()
+
+    # link-map, per .bin: the log, the coordinator's sessions (collectd wlan0) and the ground
+    # backpack metrics, all of which it places on that log's track
+    ground = [{"name": f"ground/{g.name}", "sha256": sha256_file(g)}
+              for g in sorted((flight / "ground").glob("backpack-metrics-*.json"))]
+    coord = [o for o in sess_objs if o["name"].startswith("captures/coordinator/")]
+    for b, bin_obj in zip(bins, bin_objs):
+        stem = b.stem.replace(" ", "-")
+        key = f"link-map-{stem}"
+        lobjs = [bin_obj] + coord + ground
+        if derived_fresh(prov.get(key), nb_shas[LINK_MAP_NB], lobjs):
+            print(f"  skip (fresh): {key}")
+            continue
+        print(f"  run: {key}", flush=True)
+        start = datetime.now(timezone.utc).isoformat()
+        out = derived / f"{key}.ipynb"
+        pdf = run_notebook(NOTEBOOK_DIR / LINK_MAP_NB, out, {"input_file": str(b), "flight_dir": str(flight)})
+        prov[key] = provenance(LINK_MAP_NB, nb_shas[LINK_MAP_NB], lobjs,
+                               [out, pdf] + [derived / f"{key}{s}" for s in (".html", ".png", ".json")], start)
+        save()
+
+    # per campod session, on the .bin time-sync paired it with
     ts = json.loads((derived / "time-sync.json").read_text()) if (derived / "time-sync.json").exists() else {}
     pairing = ts.get("pod_session_fc_log", {})
     for sess, bsha in sorted(sessions.items()) if bins else []:
@@ -329,7 +367,7 @@ def main() -> None:
     clone_or_update_notebook_repo()
 
     nb_shas = {}
-    for rel in [NOTEBOOK_REL, TIME_SYNC_NB] + [nb for nb, _ in POD_NBS]:
+    for rel in [NOTEBOOK_REL, TIME_SYNC_NB, VEHICLE_HEALTH_NB, LINK_MAP_NB] + [nb for nb, _ in POD_NBS]:
         if not (NOTEBOOK_DIR / rel).exists():
             print(f"notebook not found: {rel} in {NOTEBOOK_REPO}", file=sys.stderr)
             sys.exit(1)

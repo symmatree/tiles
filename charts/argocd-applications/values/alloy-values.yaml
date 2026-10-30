@@ -30,6 +30,50 @@ collectors:
         config = "{ modules: { http_2xx: { prober: http, timeout: 5s } } }"
       }
 
+      // etcd (#568). Talos runs etcd as a system service, not a pod, so the
+      // chart's etcd integration (pod discovery) finds nothing; control-plane
+      // nodes are discovered instead and scraped on the metrics port set by
+      // talos-config-controlplane.yaml. The job matches the integration's name.
+      discovery.kubernetes "etcd_nodes" {
+        role = "node"
+      }
+      discovery.relabel "etcd" {
+        targets = discovery.kubernetes.etcd_nodes.targets
+        rule {
+          source_labels = ["__meta_kubernetes_node_labelpresent_node_role_kubernetes_io_control_plane"]
+          regex         = "true"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_node_address_InternalIP"]
+          replacement   = "$1:2381"
+          target_label  = "__address__"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_node_name"]
+          target_label  = "instance"
+        }
+      }
+      prometheus.scrape "etcd" {
+        targets    = discovery.relabel.etcd.output
+        job_name   = "integrations/etcd"
+        forward_to = [prometheus.relabel.etcd.receiver]
+        clustering {
+          enabled = true
+        }
+      }
+      prometheus.relabel "etcd" {
+        forward_to = [prometheus.remote_write.localmimir.receiver]
+        // WAL fsync and backend commit latency (disk contention), and leader
+        // presence and changes (the availability symptom). ~100 series for three
+        // members.
+        rule {
+          source_labels = ["__name__"]
+          regex         = "etcd_disk_wal_fsync_duration_seconds_(bucket|sum|count)|etcd_disk_backend_commit_duration_seconds_(bucket|sum|count)|etcd_server_leader_changes_seen_total|etcd_server_has_leader"
+          action        = "keep"
+        }
+      }
+
       // Home Assistant's own exporter: the `prometheus:` block in ha-config's
       // configuration.yaml (namespace `ha`, requires_auth false). The appliance is
       // a LAN host rather than a workload, so there is no ServiceMonitor to
