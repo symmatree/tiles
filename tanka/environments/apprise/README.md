@@ -15,7 +15,7 @@ Apprise is deployed using Tanka/Jsonnet as a single instance with:
 
 - **Apprise API**: Main notification service container
 - **Nginx**: Reverse proxy with authentication
-- **PVCs**: Two persistent volumes for configuration and attachments
+- **Volumes**: `/config` and `/attach` are emptyDir; the notification config is mounted from the `apprise-config` 1Password item
 - **Ingress**: External access with TLS via cert-manager
 
 ### Notification Routing

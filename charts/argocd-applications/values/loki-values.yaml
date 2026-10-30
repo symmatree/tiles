@@ -81,10 +81,12 @@ lokiCanary:
 
 singleBinary:
   replicas: 1
+  # emptyDir for the WAL, not local-path: a local-path PV pins the pod to one
+  # node (#766). Chunks and rules are on loki-loki-data (NFS). With persistence
+  # off the chart mounts nothing at /var/loki and the root filesystem is
+  # read-only, so the emptyDir is mounted below.
   persistence:
-    enabled: true
-    storageClassName: local-path
-    enableStatefulSetAutoDeletePVC: true
+    enabled: false
   extraArgs:
     - -config.expand-env=true
     - -log-config-reverse-order
@@ -92,9 +94,13 @@ singleBinary:
     - name: loki-shared-storage
       persistentVolumeClaim:
         claimName: loki-loki-data
+    - name: storage
+      emptyDir: {}
   extraVolumeMounts:
     - name: loki-shared-storage
       mountPath: /mnt/loki-nfs
+    - name: storage
+      mountPath: /var/loki
 
 gateway:
   enabled: false
