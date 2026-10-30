@@ -19,7 +19,6 @@ local apprise = {
   local kPort = k.core.v1.containerPort,
   local kConfigMap = k.core.v1.configMap,
   local kVolumeMount = k.core.v1.volumeMount,
-  local kPersistentVolumeClaim = k.core.v1.persistentVolumeClaim,
   local kEnvFromSource = k.core.v1.envFromSource,
 
   local defaults = {
@@ -46,9 +45,6 @@ local apprise = {
     // (field config.yml), mounted read-only at /config/apprise.yml so /notify/apprise
     // uses it. Off local-path so a node rebuild can't silently empty it (issue #635).
     configSecret: op.item.new(config.configSecret, 'vaults/' + APP.vault_name + '/items/' + config.configSecret),
-    attachPvc: kPersistentVolumeClaim.new(std.format('%s-attach', config.name))
-               + kPersistentVolumeClaim.spec.withAccessModes(['ReadWriteOnce'])
-               + kPersistentVolumeClaim.spec.resources.withRequestsMixin({ storage: '10Gi' }),
     nginxConfig: kConfigMap.new(std.format('%s-nginx', config.name))
                  + kConfigMap.withData({
                    'location-override.conf': |||
@@ -107,7 +103,8 @@ local apprise = {
         420,
         kVolumeMount.withSubPath('config.yml') + kVolumeMount.withReadOnly(true)
       )
-      + k_util.pvcVolumeMount(appriseObj.attachPvc.metadata.name, '/attach')
+      // Attachment staging is scratch; emptyDir so the pod is not pinned to a node (#766).
+      + k_util.emptyVolumeMount('attach', '/attach')
       + k_util.configMapVolumeMount(
         appriseObj.nginxConfig,
         '/etc/nginx/.htpasswd',

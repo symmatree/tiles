@@ -81,10 +81,10 @@ lokiCanary:
 
 singleBinary:
   replicas: 1
+  # emptyDir for the WAL, not local-path: a local-path PV pins the pod to one
+  # node (#766). Chunks and rules are on loki-loki-data (NFS).
   persistence:
-    enabled: true
-    storageClassName: local-path
-    enableStatefulSetAutoDeletePVC: true
+    enabled: false
   extraArgs:
     - -config.expand-env=true
     - -log-config-reverse-order
