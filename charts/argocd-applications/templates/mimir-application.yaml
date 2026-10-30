@@ -6,7 +6,7 @@ spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "6.0.5"
+      targetRevision: "6.2.2"
       chart: mimir-distributed
       helm:
         valueFiles:
