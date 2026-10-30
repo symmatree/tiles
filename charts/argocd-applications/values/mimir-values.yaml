@@ -91,6 +91,10 @@ metaMonitoring:
     mimirAlerts: true
 
 alertmanager:
+  # emptyDir, not local-path: a local-path PV pins the pod to one node (#766). Mimir keeps
+  # alertmanager state in alertmanager_storage on NFS.
+  persistentVolume:
+    enabled: false
   resources:
     requests:
       cpu: 10m
@@ -115,12 +119,19 @@ alertmanager:
           value: apprise
 
 compactor:
+  # emptyDir, not local-path: a local-path PV pins the pod to one node (#766).
+  persistentVolume:
+    enabled: false
   terminationGracePeriodSeconds: 60
   resources:
     requests:
       memory: 50Mi
 
 ingester:
+  # emptyDir, not local-path: a local-path PV pins the pod to one node (#766). With ingest
+  # storage an ingester replays from Kafka on restart.
+  persistentVolume:
+    enabled: false
   terminationGracePeriodSeconds: 60
   replicas: 2
   zoneAwareReplication:
@@ -201,6 +212,10 @@ ruler:
       cpu: 100m
 
 store_gateway:
+  # emptyDir, not local-path: a local-path PV pins the pod to one node (#766). Its
+  # local state is rebuilt from the blocks on NFS.
+  persistentVolume:
+    enabled: false
   zoneAwareReplication:
     enabled: false
 
