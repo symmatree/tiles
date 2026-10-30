@@ -11,8 +11,12 @@ an Actions runner, authenticated as a GitHub App owned by this account.
 - [`.github/workflows/renovate.yaml`](../.github/workflows/renovate.yaml) -- runs the
   CLI nightly (1000 UTC) and on `workflow_dispatch`. Global settings (target
   repository, no onboarding PR, config required) are `RENOVATE_*` environment
-  variables on the run step. The CLI version is pinned in that file and bumped by
-  Renovate itself through the `custom.regex` manager in `renovate.json5`.
+  variables on the run step. The CLI version is pinned in that file
+  (`RENOVATE_VERSION`) and bumped by Renovate itself through the `custom.regex`
+  manager in `renovate.json5`. Renovate exits unless the Node it runs on satisfies its
+  `engines.node`, so the workflow reads that range for the pinned version with
+  `npm view` and gives it to `setup-node`; Node moves to a new major when a Renovate
+  release declares support for it.
 - The GitHub App and its 1Password item, below.
 
 The CLI runs on the runner rather than in Renovate's container image (as
@@ -71,7 +75,7 @@ PR workflows (a `GITHUB_TOKEN` push would not).
 
 ## Running locally
 
-Renovate needs Node 24. Against a working tree, with no writes anywhere:
+Renovate needs a Node matching `npm view renovate engines.node`. Against a working tree, with no writes anywhere:
 
 ```bash
 git add -A   # the local platform only sees tracked files, renovate.json5 included

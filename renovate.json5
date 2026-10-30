@@ -9,7 +9,7 @@
       customType: "regex",
       managerFilePatterns: ["/^\\.github/workflows/renovate\\.yaml$/"],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+npx --yes \\S+@(?<currentValue>\\S+)",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+RENOVATE_VERSION: \"(?<currentValue>[^\"]+)\"",
       ],
     },
   ],

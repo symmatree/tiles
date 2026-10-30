@@ -12,6 +12,9 @@ permissions: {}
 jobs:
   renovate:
     runs-on: "ubuntu-latest"
+    env:
+      # renovate: datasource=npm depName=renovate
+      RENOVATE_VERSION: "44.198.2"
     steps:
       - name: Load secrets
         id: load_secrets
@@ -28,9 +31,17 @@ jobs:
           client-id: ${{ steps.load_secrets.outputs.APP_CLIENT_ID }}
           private-key: ${{ steps.load_secrets.outputs.APP_PRIVATE_KEY }}
 
+      # The Node range the pinned Renovate version declares in engines.node; Renovate
+      # exits on any other Node.
+      - name: Renovate's Node range
+        id: node_range
+        shell: bash
+        run: |
+          echo "range=$(npm view "renovate@${RENOVATE_VERSION}" engines.node)" | tee -a "$GITHUB_OUTPUT"
+
       - uses: actions/setup-node@v7
         with:
-          node-version: "26"
+          node-version: ${{ steps.node_range.outputs.range }}
 
       - name: Run Renovate
         shell: bash
@@ -41,5 +52,4 @@ jobs:
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: "required"
         run: |
-          # renovate: datasource=npm depName=renovate
-          npx --yes renovate@44.198.2
+          npx --yes "renovate@${RENOVATE_VERSION}"
