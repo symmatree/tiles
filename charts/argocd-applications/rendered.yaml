@@ -8,7 +8,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "4.3.2"
+      targetRevision: "4.6.0"
       chart: k8s-monitoring
       helm:
         valueFiles:
@@ -956,7 +956,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "10.4.2"
+      targetRevision: "10.5.15"
       chart: grafana
       helm:
         valueFiles:
@@ -1152,7 +1152,7 @@ spec:
   source:
     chart: local-path-provisioner
     repoURL: https://charts.containeroo.ch
-    targetRevision: "0.0.32"
+    targetRevision: "0.0.38"
     helm:
       valuesObject:
         storageClass:
@@ -1186,7 +1186,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: "https://grafana.github.io/helm-charts"
-      targetRevision: "6.49.0"
+      targetRevision: "6.55.0"
       chart: loki
       helm:
         valueFiles:
@@ -1269,7 +1269,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "6.0.5"
+      targetRevision: "6.2.2"
       chart: mimir-distributed
       helm:
         valueFiles:
@@ -1389,7 +1389,7 @@ spec:
   project: 'placeholder'
   source:
     repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
-    targetRevision: "4.12.1"
+    targetRevision: "4.13.6"
     chart: csi-driver-nfs
     helm:
       valuesObject:
