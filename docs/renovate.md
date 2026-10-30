@@ -38,10 +38,28 @@ a box there makes the next run act on it.
 
 ## Enabled ecosystems
 
-`enabledManagers` in `renovate.json5` is the list. Currently `github-actions` (action
-versions, plus tool versions set through `setup-*` inputs such as
-`terraform_version`, `go-version` and `version` for helm) and `custom.regex` (the CLI
-pin above).
+`enabledManagers` in `renovate.json5` is the list. Currently:
+
+- `github-actions` -- action versions, plus tool versions set through `setup-*` inputs
+  such as `terraform_version`, `go-version` and `version` for helm.
+- `custom.regex` -- the CLI pin above.
+- `helmv3` -- dependencies in `charts/*/Chart.yaml`. Renovate updates `Chart.lock`
+  with the helm installed by `.github/actions/helm-setup`.
+- `argocd` -- external charts referenced by the Applications in
+  `charts/argocd-applications/templates/`.
+
+For both chart managers a `postUpgradeTasks` entry fetches every chart's dependencies
+(`ci-tools/helm-add-repos.sh`, `ci-tools/helm-update-all.sh`) and runs `./build.sh`,
+committing the regenerated `charts/*/rendered.yaml`. The commands are allowed by
+`RENOVATE_ALLOWED_COMMANDS` in the workflow.
+
+`charts/argocd` and `charts/cilium` are installed by Terraform (`tf/nodes`) from their
+local paths, and `helm_release` upgrades only when the chart version changes, so
+Renovate bumps those two charts' patch version (`bumpVersion`) with each dependency
+update.
+
+Not covered yet: `helm_release` charts in `tf/nodes/k8s-bootstrap.tf`, image tags in
+values files.
 
 To add one, add its manager to `enabledManagers`, then run Renovate locally against
 a checkout (below) to see what it would open before merging.
