@@ -42,4 +42,4 @@ jobs:
           RENOVATE_REQUIRE_CONFIG: "required"
         run: |
           # renovate: datasource=npm depName=renovate
-          npx --yes renovate@44.196.1
+          npx --yes renovate@44.198.2
