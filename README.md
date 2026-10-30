@@ -37,12 +37,13 @@ Each cluster uses `/18` allocation (64 /24s). Pods use `/20` with `node-cidr-mas
 
 ## Recreating cluster
 
-Use this when you want **new Proxmox VMs** (fresh disks / reinstall Talos), for example after a major Talos pin change. Workspaces are **`test`** and **`prod`**; pick one and stay consistent through the apply. This flow uses GitHub Actions (service account, VPN, secrets) end to end.
+Use this when you want **new Proxmox VMs** (fresh disks / reinstall Talos). For a Talos version change on a running cluster, see [Upgrading Talos](docs/talos.md#upgrading-talos). Workspaces are **`test`** and **`prod`**; pick one and stay consistent through the apply. This flow uses GitHub Actions (service account, VPN, secrets) end to end.
 
 1. Run **[`taint-vms`](.github/workflows/taint-vms.yaml)** in Actions. Enable **taint test** and/or **taint prod** (each taints the Talos VM resources for that workspace, **`talos_machine_bootstrap`** so bootstrap runs again after disks are new, and each bare-metal **`talos_machine_configuration_apply`** so metal workers re-apply).
-2. Run **`nodes-plan-apply`** with **apply** for the workspace you tainted (**`metal_apply_mode`** defaults to **`reboot`**, which the rebuild needs): a push to **`main`** applies **test** by default; use **`workflow_dispatch`** with apply and **prod** for production.
+2. Run **`nodes-plan-apply`** with **apply** for the workspace you tainted: a push to **`main`** applies **test** by default; use **`workflow_dispatch`** with apply and **prod** for production.
+3. Reboot each bare-metal worker: `talosctl --talosconfig ~/.talos/<cluster>.yaml -n <NODE_IP> reboot`.
 
-After apply, Terraform recreates the VMs, applies machine config, and bootstraps the cluster. **Bare-metal workers rejoin the new etcd via `metal_apply_mode = reboot`** (now the default) -- a plain `auto` re-apply is a no-op and leaves them orphaned. See [docs/bare-metal-nodes.md](docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot).
+After apply, Terraform recreates the VMs, applies machine config, and bootstraps the cluster. **Bare-metal workers rejoin the new etcd only after the reboot in step 3** -- their re-apply is unchanged config, a no-op in `auto` mode, which leaves them orphaned. See [docs/bare-metal-nodes.md](docs/bare-metal-nodes.md#rebuilds-metal-reapply--reboot).
 
 See `docs/environment-strategy.md` for workspace behavior.
 

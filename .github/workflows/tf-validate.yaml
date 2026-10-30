@@ -22,7 +22,7 @@ jobs:
       - uses: "actions/checkout@v7"
       - uses: "hashicorp/setup-terraform@v4"
         with:
-          terraform_version: "v1.17.0"
+          terraform_version: "v1.17.1"
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive tf/

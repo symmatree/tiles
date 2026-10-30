@@ -126,7 +126,7 @@ jobs:
           echo "DATESTAMP=${datestamp}" | tee -a "$GITHUB_OUTPUT"
       - uses: "hashicorp/setup-terraform@v4"
         with:
-          terraform_version: "v1.17.0"
+          terraform_version: "v1.17.1"
 
       # 1Password SA quota metering (#561). `op service-account ratelimit` is
       # NOT billed against the read_write pool (it returns even when the pool is
@@ -223,7 +223,6 @@ jobs:
         if: steps.scope.outputs.run_terraform == 'true'
         with:
           wg_config: ${{ steps.load_secrets.outputs.TILES_VPN_CONFIG }}
-          conf_dir: "$HOME"
 
       - name: Terraform plan and apply - test
         id: tf-test
@@ -348,7 +347,7 @@ jobs:
             exit 0
           fi
           echo "Disconnecting Wireguard..."
-          time sudo wg-quick down "$HOME/wg0.conf" || true
+          time sudo wg-quick down wg0 || true
           echo "Disconnected"
 
       - name: Determine outcome message

@@ -55,11 +55,13 @@ Tanka -- gets rendered before and after and the whole diff accounted for. See
 not "untestable". A question about how a *construct* behaves usually reproduces
 offline. `talos_machine_secrets` plus `data.talos_machine_configuration` is local
 crypto and rendering only, so a throwaway directory with one pinned provider
-version answers "does this provider accept this config document" exactly, with no
-cluster and no 1Password. The same directory answers it for a second provider
-version, which is how a version-pairing question gets settled instead of hedged.
-Image Factory schematic IDs reproduce the same way: POST the schematic YAML and
-compare the returned ID against one already in a plan, then trust the rest.
+version answers "does this provider *render* this config document", with no
+cluster and no 1Password. It does not answer whether a node *accepts* it: nodes
+validate on apply, and the 1.14 config that rendered cleanly offline was rejected
+by every node three times over (see [talos.md](talos.md#machine-config-across-a-provider-minor)).
+When the ground truth is the node's behaviour, the apply is the test; do not
+build a simulation of it. Image Factory schematic IDs do reproduce exactly: POST
+the schematic YAML and compare the returned ID against one already in a plan.
 
 **Answer the question that was asked.** The expensive failure is not being wrong,
 it is spending the operator's attention on a question he did not ask -- mechanics
@@ -113,6 +115,12 @@ done is a comment saying so, not a retitle around the survivor.
 | The Talos **Terraform provider** vendors its own `pkg/machinery` | That copy, not `talos_version`, fixes which config document kinds parse and what `kubernetes_version` defaults to. See [talos.md](talos.md) |
 | A Loki query on an unindexed label scans zero bytes and returns nothing | Identical to "logged nothing". `pod` is structured metadata: ``{ns="x"} \| pod=`y` `` works, `{ns="x", pod="y"}` silently does not. See [notebooks.md](notebooks.md) |
 | `tf/nodes` applies **prod** on push to `main` | PR runs are plan-only (`refresh: false`). A merge is a production apply, so sequence live work before the merge, not after |
+| A VM's in-place `talosctl upgrade` | The VMs boot from the CD-ROM first, so a host cold boot (host-maintenance, Mon-Fri 01:00 America/New_York) puts them back on the attached ISO's version until `talos_version` is applied. See [talos.md](talos.md#upgrading-talos) |
+| `talosctl upgrade` drains with `Force` | Pods with no controller are deleted, including JupyterHub singleuser servers -- and this session, when the node is lancer |
+| A drain fails on `pod-eviction-mimir.grafana.com` | `mimir-rollout-operator` serves that webhook and was itself evicted; re-run once it is `Running` elsewhere |
+| A control-plane node is rebooting and the API times out | Expected until it is back. Calls to the control plane in that window fail and add load; start one passive watcher and wait |
+| An etcd member is listed but its applied index has stopped | It does not count for quorum in practice; upgrading another control-plane node then loses quorum |
+| A chained `[ a ] && [ b ]` under `set -e` | Does not stop the script when `a` fails; write stop conditions as `if ...; then exit 1; fi` |
 | A new `app_of_apps_values` key reaches the Helm release but not the root Application | `charts/argocd-applications-installer/templates/application.yaml` lists the propagated keys by hand; add the key there too, and bump that chart's `version` -- `helm_release` diffs on its arguments, so a template-only edit plans as no changes. Terraform shows no diff for the missing key either and `build.sh` renders children from `values.yaml`, so only the live root app fails (`.Values.X is required` in its ComparisonError) |
 
 ## Reading list
@@ -203,3 +211,6 @@ write-ups carry method, not just outcome:
 - **Running investigations**: the facts KB under `~/facts/fables/Tiles/`.
 - **The cluster**: `kubectl --context admin@tiles` (prod) and `admin@tiles-test`;
   `talosctl` with `~/.talos/tiles.yaml`.
+- **The Proxmox hosts**: `ssh root@<host IP>` (the hosts are in `~/.ssh/known_hosts`
+  by IP, not name; this pod's key is not authorised, the root password is in
+  `~/proxmox.txt`). `qm config <vmid>` for a VM's boot order and CD-ROM.

@@ -113,9 +113,11 @@ loki.source.journal "host" {
   path          = "/host/var/log/journal"
   max_age       = "12h"
   relabel_rules = loki.relabel.journal.rules
+  // cluster as a Loki label so the receiver indexes it; see alloy-synology.alloy (#305).
   labels        = {
-    job  = "proxmox-journal",
-    host = "${hostname}",
+    job     = "proxmox-journal",
+    host    = "${hostname}",
+    cluster = "bond",
   }
   forward_to = [otelcol.receiver.loki.main.receiver]
 }
