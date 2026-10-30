@@ -15,6 +15,8 @@ jobs:
     env:
       # renovate: datasource=npm depName=renovate
       RENOVATE_VERSION: "44.198.3"
+    permissions:
+      contents: read # actions/checkout, for the local helm-setup action
     steps:
       - name: Load secrets
         id: load_secrets
@@ -39,6 +41,12 @@ jobs:
         run: |
           echo "range=$(npm view "renovate@${RENOVATE_VERSION}" engines.node)" | tee -a "$GITHUB_OUTPUT"
 
+      # helm for Chart.lock updates and build.sh in postUpgradeTasks, at CI's version.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/helm-setup
+
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.node_range.outputs.range }}
@@ -51,5 +59,6 @@ jobs:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: "required"
+          RENOVATE_ALLOWED_COMMANDS: '["^ci-tools/helm-add-repos\\.sh$", "^ci-tools/helm-update-all\\.sh$", "^\\./build\\.sh$"]'
         run: |
           npx --yes "renovate@${RENOVATE_VERSION}"
