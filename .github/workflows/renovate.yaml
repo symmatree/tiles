@@ -14,7 +14,7 @@ jobs:
     runs-on: "ubuntu-latest"
     env:
       # renovate: datasource=npm depName=renovate
-      RENOVATE_VERSION: "44.198.2"
+      RENOVATE_VERSION: "44.198.3"
     steps:
       - name: Load secrets
         id: load_secrets
