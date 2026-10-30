@@ -43,7 +43,7 @@ jobs:
 
       - name: Build Image
         id: build_image
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
@@ -62,7 +62,7 @@ jobs:
         run: buildah images | grep '${{ env.IMAGE_NAME }}'
 
       - name: Push To GHCR
-        uses: redhat-actions/push-to-registry@v2
+        uses: redhat-actions/push-to-registry@v3
         id: push
         with:
           image: ${{ steps.build_image.outputs.image }}

@@ -48,7 +48,7 @@ jobs:
       # Build image using Buildah action
       - name: Build Image
         id: build_image
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
@@ -85,7 +85,7 @@ jobs:
           buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.Docker.config.Labels."org.opencontainers.image.title"'
           buildah inspect ${{ steps.build_image.outputs.image-with-tag }} | jq '.Docker.config.Labels."org.opencontainers.image.description"'
       - name: Push To GHCR
-        uses: redhat-actions/push-to-registry@v2
+        uses: redhat-actions/push-to-registry@v3
         id: push
         with:
           image: ${{ steps.build_image.outputs.image }}
