@@ -91,13 +91,13 @@ kind: ServiceAccount
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.7.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: jupyterhub
-    app.kubernetes.io/version: "7.6.0"
+    app.kubernetes.io/version: "7.15.5"
   name: jupyterhub-oauth2-proxy
   namespace: jupyterhub
 automountServiceAccountToken: true
@@ -885,13 +885,13 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.7.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: jupyterhub
-    app.kubernetes.io/version: "7.6.0"
+    app.kubernetes.io/version: "7.15.5"
   name: jupyterhub-oauth2-proxy-accesslist
   namespace: jupyterhub
 data:
@@ -904,17 +904,19 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.7.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: jupyterhub
-    app.kubernetes.io/version: "7.6.0"
+    app.kubernetes.io/version: "7.15.5"
   name: jupyterhub-oauth2-proxy
   namespace: jupyterhub
 data:
-  oauth2_proxy.cfg: "upstreams = [ \"file:///dev/null\" ]"
+  oauth2_proxy.cfg: |
+
+    upstreams = [ "file:///dev/null" ]
 
 ---
 # Source: jupyterhub/templates/datasets-nfs.yaml
@@ -1415,13 +1417,13 @@ kind: Service
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.7.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: jupyterhub
-    app.kubernetes.io/version: "7.6.0"
+    app.kubernetes.io/version: "7.15.5"
   name: jupyterhub-oauth2-proxy
   namespace: jupyterhub
 spec:
@@ -1844,13 +1846,13 @@ kind: Deployment
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.7.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: jupyterhub
-    app.kubernetes.io/version: "7.6.0"
+    app.kubernetes.io/version: "7.15.5"
   name: jupyterhub-oauth2-proxy
   namespace: jupyterhub
 spec:
@@ -1864,21 +1866,22 @@ spec:
     metadata:
       annotations:
         checksum/config: 9c1ecd9f0889c5271728298190b5b9b1104baac2492387267c860173bb7765e8
-        checksum/config-emails: ae181ceae6ad2bb1817b1f18536845892db2836225149263e42a8e57fb1eb8b8
-        checksum/secret: 8fa6fdae65861caa2986544b8860a5205be1937328c8ec2bad6bad076b9e2425
+        checksum/config-emails: cc9c92b957097c2a0d740975566f60bf6d98eee66b6db2a26f1cd21cee893600
+        checksum/secret: 9eb46bbdefd5cf844a2c4965b1241a7177addaa7c07789e7873ccda6b0104111
         checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
       labels:
         app: oauth2-proxy        
-        helm.sh/chart: oauth2-proxy-7.7.0
+        helm.sh/chart: oauth2-proxy-10.7.1
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: authentication-proxy
         app.kubernetes.io/part-of: oauth2-proxy
         app.kubernetes.io/name: oauth2-proxy
         app.kubernetes.io/instance: jupyterhub
-        app.kubernetes.io/version: "7.6.0"
+        app.kubernetes.io/version: "7.15.5"
     spec:
       serviceAccountName: jupyterhub-oauth2-proxy
+      enableServiceLinks: true
       automountServiceAccountToken: true
       containers:
       - name: oauth2-proxy
@@ -1968,8 +1971,6 @@ spec:
           - key: restricted_user_access
             path: jupyterhub-oauth2-proxy-accesslist
         name: configaccesslist
-      tolerations:
-        []
 
 ---
 # Source: jupyterhub/charts/jupyterhub/templates/scheduling/user-placeholder/statefulset.yaml
@@ -2052,13 +2053,13 @@ kind: Ingress
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.7.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: jupyterhub
-    app.kubernetes.io/version: "7.6.0"
+    app.kubernetes.io/version: "7.15.5"
   name: jupyterhub-oauth2-proxy
   namespace: jupyterhub
   annotations:
