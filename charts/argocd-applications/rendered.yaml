@@ -1537,7 +1537,7 @@ spec:
   project: 'placeholder'
   source:
     repoURL: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
-    targetRevision: "v1.15.1"
+    targetRevision: "2.0.3"
     chart: postgres-operator
     helm:
       valuesObject:
