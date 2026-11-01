@@ -5,16 +5,14 @@ metadata:
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   sources:
-    - repoURL: "https://grafana.github.io/helm-charts"
-      targetRevision: "6.55.0"
+    - repoURL: "https://grafana-community.github.io/helm-charts"
+      targetRevision: "20.2.1"
       chart: loki
       helm:
         valueFiles:
           - $values/charts/argocd-applications/values/loki-values.yaml
           - $values/charts/argocd-applications/values/loki-{{ required ".Values.cluster_name is required" .Values.cluster_name }}-values.yaml
         valuesObject:
-          vault_name: '{{ required ".Values.vault_name is required" .Values.vault_name }}'
-          cluster_name: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
           extraObjects:
             - apiVersion: v1
               kind: PersistentVolumeClaim

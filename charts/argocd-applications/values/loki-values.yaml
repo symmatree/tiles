@@ -39,39 +39,46 @@ monitoring:
     enabled: false
   serviceMonitor:
     enabled: true
+  # The Loki mixin's recording rules and alerts, as PrometheusRules. Alloy's
+  # cluster-wide mimir.rules.kubernetes loads them into the Mimir ruler, same path
+  # as the other mixins (#655).
   rules:
-    # Deploy the Loki mixin PrometheusRules (alerting rules included by chart
-    # default: monitoring.rules.alerting=true). Alloy's cluster-wide
-    # mimir.rules.kubernetes loads them into the Mimir ruler, same path as the
-    # other mixins -- so LokiRequestErrors/Latency/Panics/compaction alerts
-    # finally exist here rather than only being cited from the upstream mixin. #655
     enabled: true
+  alerts:
+    enabled: true
+  additionalPrometheusRules:
     # Canary coverage (#805). The DaemonSet's desired count is the node list: with the
     # toleration below it is every node. Pods that are not scheduled or not available are
     # already covered by KubeDaemonSetNotScheduled / KubeDaemonSetRolloutStuck.
-    additionalGroups:
-      - name: loki-canary-coverage
-        rules:
-          - alert: LokiCanaryNotReporting
-            expr: |
-              (count(rate(loki_canary_entries_total[5m]) > 0) or on() vector(0))
-                < on() max(kube_daemonset_status_desired_number_scheduled{namespace="loki", daemonset="loki-canary"})
-            for: 15m
-            labels:
-              severity: warning
-            annotations:
-              summary: Fewer loki-canary pods are writing entries than the DaemonSet schedules.
-          - alert: LokiCanaryMissingEntries
-            expr: sum by (pod) (increase(loki_canary_missing_entries_total[15m])) > 0
-            labels:
-              severity: warning
-            annotations:
-              summary: "{{ $labels.pod }} wrote entries that did not come back from Loki."
-  selfMonitoring:
-    enabled: false
-
-minio:
-  enabled: false
+    canary-coverage:
+      groups:
+        - name: loki-canary-coverage
+          rules:
+            - alert: LokiCanaryNotReporting
+              expr: |
+                (count(rate(loki_canary_entries_total[5m]) > 0) or on() vector(0))
+                  < on() max(kube_daemonset_status_desired_number_scheduled{namespace="loki", daemonset="loki-canary"})
+              for: 15m
+              labels:
+                severity: warning
+              annotations:
+                summary: Fewer loki-canary pods are writing entries than the DaemonSet schedules.
+            - alert: LokiCanaryMissingEntries
+              expr: sum by (pod) (increase(loki_canary_missing_entries_total[15m])) > 0
+              labels:
+                severity: warning
+              annotations:
+                summary: "{{ $labels.pod }} wrote entries that did not come back from Loki."
+            # From the grafana/loki chart's alerts through 6.55.0; the community chart's
+            # mixin does not carry it.
+            - alert: LokiCanaryLatency
+              expr: |
+                histogram_quantile(0.99, sum(rate(loki_canary_response_latency_seconds_bucket[5m])) by (le, namespace, job)) > 5
+              for: 15m
+              labels:
+                severity: warning
+              annotations:
+                message: "{{ $labels.job }} is experiencing {{ printf \"%.2f\" $value }}s 99th percentile latency."
 
 lokiCanary:
   # Run on every node, tainted ones included (control plane, acebase, lancer), like the
@@ -83,8 +90,7 @@ singleBinary:
   replicas: 1
   # emptyDir for the WAL, not local-path: a local-path PV pins the pod to one
   # node (#766). Chunks and rules are on loki-loki-data (NFS). With persistence
-  # off the chart mounts nothing at /var/loki and the root filesystem is
-  # read-only, so the emptyDir is mounted below.
+  # off the chart mounts an emptyDir named storage at /var/loki.
   persistence:
     enabled: false
   extraArgs:
@@ -94,13 +100,9 @@ singleBinary:
     - name: loki-shared-storage
       persistentVolumeClaim:
         claimName: loki-loki-data
-    - name: storage
-      emptyDir: {}
   extraVolumeMounts:
     - name: loki-shared-storage
       mountPath: /mnt/loki-nfs
-    - name: storage
-      mountPath: /var/loki
 
 gateway:
   enabled: false
@@ -139,9 +141,6 @@ compactor:
   replicas: 0
 
 indexGateway:
-  replicas: 0
-
-bloomCompactor:
   replicas: 0
 
 bloomGateway:

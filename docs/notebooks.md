@@ -180,10 +180,9 @@ with real variance), not a dump of everything the exporter emits.
   cross-check on the usage notebook's longer one; when they disagree, that is the
   signal, not noise.
 - **Mixin thresholds when the mixin is deployed; upstream mixin (cited) when it
-  is not.** Mimir's mixin alerts run in-cluster; Loki's do not
-  (`monitoring.rules.enabled: false`), so the loki notebooks source thresholds
-  from the *upstream* loki-mixin and cite each one inline. Either way, a findings
-  threshold that cannot name its source is invented -- fix that before shipping.
+  is not.** Mimir's and Loki's mixin alerts both run in-cluster (Loki's through
+  the chart's `monitoring.rules` / `monitoring.alerts`). A findings threshold that
+  cannot name its source is invented -- fix that before shipping.
 - **If you are using a notebook to debug, improve it in the same session.** This is the
   whole point of the form: a notebook moves knowledge out of one agent's transcript, so
   the queries, thresholds and cross-checks that turned out to matter during an
@@ -232,9 +231,9 @@ with real variance), not a dump of everything the exporter emits.
   `{...} | detected_level=~"error|warn"`.
 - Loki self-metrics (`loki_*`) are scraped **into Mimir** via serviceMonitor;
   query them through `mimir-gateway.mimir.svc`, not Loki. Loki's own HTTP API is
-  used only for its logs (LogQL). Loki's mixin **rules are not deployed**
-  (`monitoring.rules.enabled: false`); thresholds come from the upstream
-  loki-mixin (see the authoring rule above).
+  used only for its logs (LogQL). Loki's mixin recording rules and alerts are
+  deployed by the chart (`monitoring.rules`, `monitoring.alerts`) and evaluated
+  in the Mimir ruler.
 - Loki gotchas the notebooks bake around: (a) `loki-canary` (a DaemonSet) writes
   and reads back a known line per node -- `loki_canary_missing_entries_total` /
   `_mismatched_entries_total` are the sharpest end-to-end "logs actually flow"
