@@ -198,6 +198,11 @@ variable "deploy_synology_alloy" {
   type        = bool
 }
 
+variable "deploy_synology_versitygw" {
+  description = "Whether to deploy the versitygw S3 endpoint on the Synology NAS (Raconteur). Enable in prod.tfvars only."
+  type        = bool
+}
+
 variable "deploy_proxmox_alloy" {
   description = "Whether to deploy Alloy LXC containers on Proxmox nodes (one per node). When true, collects host metrics/logs and forwards OTLP to the prod cluster. Enable in prod.tfvars only."
   type        = bool

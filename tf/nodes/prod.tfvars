@@ -90,9 +90,10 @@ virtual_machines = {
     taint             = ""
   }
 }
-alloy_vm_base_id      = 400
-deploy_synology_alloy = true
-deploy_proxmox_alloy  = true
+alloy_vm_base_id          = 400
+deploy_synology_alloy     = true
+deploy_synology_versitygw = true
+deploy_proxmox_alloy      = true
 
 # Bare-metal workers (see docs/bare-metal-nodes.md)
 # MAC/IP from facts fables/Tiles/Lancer.md (GMKtec EVO X2, Ryzen AI Max+ 395,
