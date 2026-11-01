@@ -163,10 +163,22 @@ jobs:
           UNIFI_USERNAME: "op://tiles-secrets/morpheus-terraform/username"
           UNIFI_PASSWORD: "op://tiles-secrets/morpheus-terraform/password"
           PROXMOX_ROOT_PASSWORD: "op://tiles-secrets/proxmox-root/password"
-          # Not consumed by any step: loading it is what makes the runner mask the
-          # current versitygw root secret, which the Synology provider can print
-          # (it renders compose content without marking it sensitive).
-          VERSITYGW_ROOT_SECRET: "op://tiles-secrets/versitygw-root/password"
+
+      # The Synology provider renders compose content without marking it sensitive,
+      # so it can print the versitygw root secret; registering the value masks it in
+      # this job's log. Terraform creates the item, so a from-scratch run has none.
+      - name: Mask the versitygw root secret
+        if: steps.scope.outputs.run_terraform == 'true'
+        shell: bash
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.ONEPASSWORD_SA_TOKEN }}
+        run: |
+          set -euo pipefail
+          if op item list --vault tiles-secrets --format json | jq -e 'any(.[]; .title == "versitygw-root")' >/dev/null; then
+            echo "::add-mask::$(op read 'op://tiles-secrets/versitygw-root/password')"
+          else
+            echo "versitygw-root does not exist yet; nothing to mask"
+          fi
 
       - name: Authenticate to Google Cloud
         if: steps.scope.outputs.run_terraform == 'true'
