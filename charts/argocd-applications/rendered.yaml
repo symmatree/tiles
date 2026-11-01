@@ -1258,7 +1258,7 @@ spec:
         pod-security.kubernetes.io/warn: baseline
 
 ---
-# Source: argocd-applications/templates/mimir-application.yaml
+# Source: argocd-applications/templates/mimir-application.helm.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
