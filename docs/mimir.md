@@ -1,7 +1,7 @@
 # Mimir (metrics backend)
 
 Prometheus-compatible metrics are stored in **Grafana Mimir** (mimir-distributed chart,
-deployed by Argo CD via [`charts/argocd-applications/templates/mimir-application.yaml`](../charts/argocd-applications/templates/mimir-application.yaml)).
+deployed by Argo CD via [`charts/argocd-applications/templates/mimir-application.helm.yaml`](../charts/argocd-applications/templates/mimir-application.helm.yaml)).
 Static values are in [`charts/argocd-applications/values/mimir-values.yaml`](../charts/argocd-applications/values/mimir-values.yaml);
 per-cluster overrides in `mimir-<cluster>-values.yaml`.
 

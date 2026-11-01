@@ -21,7 +21,7 @@ External chart (`mimir-distributed` from Grafana). Values are split across:
 | [`values/mimir-values.yaml`](../values/mimir-values.yaml) | Static chart values (structured config, caches, sidecar, affinity, etc.) |
 | [`values/mimir-tiles-test-values.yaml`](../values/mimir-tiles-test-values.yaml) | Resource requests/limits for `tiles-test` |
 | [`values/mimir-tiles-values.yaml`](../values/mimir-tiles-values.yaml) | Resource requests/limits for `tiles` (prod; same as legacy monolith until tuned) |
-| [`mimir-application.yaml`](mimir-application.yaml) `valuesObject` | Cluster-templated keys only (gateway ingress, `extraObjects`, datasource org headers) |
+| [`mimir-application.helm.yaml`](mimir-application.helm.yaml) `valuesObject` | Cluster-templated keys only (gateway ingress, `extraObjects`, datasource org headers) |
 
 The Application uses [multi-source](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/#helm-value-files-from-external-git-repository): Grafana chart + tiles git `ref: values` so `valueFiles` can use `$values/charts/argocd-applications/values/...`. Merge order: chart defaults &lt; `valueFiles` (base then `mimir-<cluster_name>-values.yaml`) &lt; `valuesObject`. Do not split `extraObjects` across `valueFiles` and `valuesObject`: Helm replaces whole arrays; `valuesObject` wins.
 

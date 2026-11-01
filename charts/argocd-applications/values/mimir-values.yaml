@@ -1,5 +1,5 @@
 # Static Mimir values (mimir-distributed chart). Per-cluster resources in mimir-<cluster_name>-values.yaml.
-# Templated keys (gateway ingress, extraObjects, datasource org header) in mimir-application.yaml valuesObject.
+# Templated keys (gateway ingress, extraObjects, datasource org header) in mimir-application.helm.yaml valuesObject.
 
 global:
   podLabels: {}

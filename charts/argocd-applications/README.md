@@ -168,7 +168,7 @@ Some Application resources are defined directly in `templates/`:
 - `alloy-application.yaml`
 - `grafana-application.yaml`
 - `loki-application.yaml`
-- `mimir-application.yaml`
+- `mimir-application.helm.yaml`
 - Mixin applications (argocd-mixin, cilium-mixin, etc.)
 - Tanka-based applications (apprise, odm)
 
