@@ -163,10 +163,6 @@ jupyterhub:
 # security boundary (allowlist as sole gate, no email_domains, trusted-proxy-ip)
 # is identical to the already-WAN-live ArgoCD gate; a broken proxy fails closed.
 oauth2-proxy:
-  # Chart 7.7.0 defaults to the older v7.6.0; pin the current patched release
-  # since this becomes internet-facing (see ArgoCD #602 image-bump rationale).
-  image:
-    tag: v7.15.3
   # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
   # (OnePasswordItem 'jupyterhub-oauth2-proxy'). Vault-item field labels must be
   # exactly client-id / client-secret / cookie-secret (the chart's existingSecret

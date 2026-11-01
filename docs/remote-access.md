@@ -239,7 +239,7 @@ a debugging session on Argo CD (refs #593-#604); they are baked into both
 | `email_domains` in configFile (#603) | Override the chart default to drop the `[ "*" ]` | Same allowAll wildcard, hiding in the config file instead of a flag. Dropping only the flag is not enough. |
 | Trusted proxies (#604) | `--trusted-proxy-ip=10.0.144.0/20` (pod CIDR) | With `--reverse-proxy` and no restriction, `X-Forwarded-*` is trusted from `0.0.0.0/0`. The Cilium ingress Envoy SNATs into the pod CIDR, so trusting *that* covers every legitimate ingress source and excludes external clients. Node IPs are heterogeneous, so the pod CIDR -- not node subnets -- is the boundary. |
 | Cookie secret encoding | `openssl rand -base64 32 \| tr -- '+/' '-_'` (URL-safe) | oauth2-proxy decodes the cookie secret with `base64.RawURLEncoding`; standard-base64 `+`/`/` fails to decode and it falls back to the raw 44-byte string -> not a valid AES key length -> the pod fails to start. |
-| Image pin | Pin a current patched tag (e.g. `v7.15.3`), not the chart default | This is the internet-facing auth gate; track upstream security fixes rather than riding an older chart-default image. |
+| Image version | Leave `image.tag` unset; the chart's `appVersion` picks the image, and Renovate (`docs/renovate.md`) opens the chart bumps | This is the internet-facing auth gate, so it tracks upstream security fixes. A `tag` override stays at its value when a newer chart moves the default past it. |
 
 ## App-of-apps propagation gotcha
 
