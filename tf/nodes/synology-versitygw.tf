@@ -1,6 +1,6 @@
 # versitygw: an S3 endpoint served from Raconteur, storing objects as plain files
-# on the NAS's own btrfs volume (not over NFS). Trial deployment against an empty
-# directory; Mimir is not pointed at it yet.
+# on the NAS's own btrfs volume (not over NFS). Mimir's object storage: each
+# top-level directory of mimir-data (blocks, ruler, alertmanager) is a bucket.
 #
 # TLS terminates in versitygw with the Let's Encrypt certificate that
 # charts/static-certs issues for raconteur.ad.local.symmatree.com, read here from
@@ -38,12 +38,6 @@ resource "onepassword_item" "versitygw_root" {
   password = random_password.versitygw_root[0].result
 }
 
-# Object data; each top-level directory is a bucket.
-resource "synology_filestation_folder" "versitygw_trial" {
-  count = var.deploy_synology_versitygw ? 1 : 0
-  path  = "/tiles/s3-trial"
-}
-
 # Internal IAM accounts, kept outside the data root so they are not a bucket.
 resource "synology_filestation_folder" "versitygw_iam" {
   count = var.deploy_synology_versitygw ? 1 : 0
@@ -57,7 +51,7 @@ resource "synology_container_project" "versitygw" {
 
   # Paths are written out (not the folders' real_path, which is unknown at plan
   # time) so the rendered compose content is fully known when planned.
-  depends_on = [synology_filestation_folder.versitygw_trial, synology_filestation_folder.versitygw_iam]
+  depends_on = [synology_filestation_folder.versitygw_iam]
 
   # An in-place update rewrites the project but leaves the running container on
   # its old environment and secrets, so a new root secret only takes effect on
@@ -100,7 +94,7 @@ resource "synology_container_project" "versitygw" {
       volumes = [
         {
           type   = "bind"
-          source = "${var.cluster_nfs_path}/s3-trial"
+          source = "${var.cluster_nfs_path}/mimir-data"
           target = "/data"
         },
         {

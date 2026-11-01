@@ -1,5 +1,45 @@
 # Resource overrides for tiles (prod). Same as pre-split monolithic valuesObject; tune here when raising prod requests/limits.
 
+# Object storage on the versitygw S3 endpoint on Raconteur (tf/nodes/synology-versitygw.tf),
+# which serves /volume2/tiles/mimir-data from the NAS's own disk. Mimir 3.2's filesystem
+# backend cannot write over NFS: it sets a user.thanos.objstore.sha256sum xattr, and the
+# NAS exports NFS 4.1, which has no user xattrs.
+global:
+  extraEnv:
+    - name: S3_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: versitygw-root
+          key: username
+    - name: S3_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: versitygw-root
+          key: password
+mimir:
+  structuredConfig:
+    common:
+      storage:
+        backend: s3
+        s3:
+          endpoint: raconteur.ad.local.symmatree.com:7070
+          region: us-east-1
+          bucket_lookup_type: path
+          access_key_id: ${S3_ACCESS_KEY_ID}
+          secret_access_key: ${S3_SECRET_ACCESS_KEY}
+    blocks_storage:
+      backend: s3
+      s3:
+        bucket_name: blocks
+    ruler_storage:
+      backend: s3
+      s3:
+        bucket_name: ruler
+    alertmanager_storage:
+      backend: s3
+      s3:
+        bucket_name: alertmanager
+
 ingester:
   resources:
     requests:

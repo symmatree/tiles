@@ -122,7 +122,7 @@ Unless noted, **Application** below is always that template path (even when the 
 ### Mimir
 
 - **Terraform**: N/A (no `mimir.tf` under [`tf/modules/k8s-cluster/`](https://github.com/symmatree/tiles/tree/main/tf/modules/k8s-cluster); [`charts/mimir/`](https://github.com/symmatree/tiles/tree/main/charts/mimir) holds webhook assets only, not an Argo `application.yaml`)
-- **Application**: [`charts/argocd-applications/templates/mimir-application.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/mimir-application.yaml)
+- **Application**: [`charts/argocd-applications/templates/mimir-application.helm.yaml`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/mimir-application.helm.yaml)
 - **README**: [`charts/argocd-applications/templates/README-mimir.md`](https://github.com/symmatree/tiles/blob/main/charts/argocd-applications/templates/README-mimir.md)
 - **Description**: Prometheus-compatible metrics backend (GCS-backed in template).
 

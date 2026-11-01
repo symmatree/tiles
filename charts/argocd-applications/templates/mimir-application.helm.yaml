@@ -26,6 +26,18 @@ spec:
                     - 'mimir.{{ required ".Values.cluster_name is required" .Values.cluster_name }}.symmatree.com'
           # NFS storage architecture: see docs/nfs-storage-architecture.md
           extraObjects:
+            {{- if eq .Values.cluster_name "tiles" }}
+            # Credentials for the versitygw S3 endpoint on Raconteur
+            # (tf/nodes/synology-versitygw.tf), read by mimir-tiles-values.yaml.
+            - apiVersion: onepassword.com/v1
+              kind: OnePasswordItem
+              metadata:
+                namespace: "mimir"
+                name: versitygw-root
+              type: Opaque
+              spec:
+                itemPath: "vaults/{{.Values.vault_name}}/items/versitygw-root"
+            {{- end }}
             - apiVersion: v1
               kind: PersistentVolumeClaim
               metadata:
