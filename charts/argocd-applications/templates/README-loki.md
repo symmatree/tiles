@@ -93,8 +93,8 @@ N/A - Loki does not have Terraform-managed resources. Storage was previously man
 ## Application Manifest
 
 - **Application**: [`loki-application.yaml`](loki-application.yaml)
-- **Helm Chart**: [loki](https://grafana.github.io/helm-charts) from Grafana
-- **Chart Version**: `6.49.0`
+- **Helm Chart**: [loki](https://github.com/grafana-community/helm-charts/tree/main/charts/loki) from grafana-community (the open-source Loki chart; `grafana/helm-charts` carries it for Grafana Enterprise Logs only from 7.0.0)
+- **Chart Version**: `targetRevision` in the Application
 - **Namespace**: `loki`
 - **Sync Policy**: Automated with prune and self-heal enabled
 - **Sync Options**:
@@ -127,7 +127,7 @@ Loki is accessed via Grafana's Explore feature. There is no external ingress for
 
 ### Alerts
 
-- **Loki Rules**: Disabled in Helm chart (alerts managed by other components)
+- **Loki Rules**: The chart's loki-mixin recording rules and alerts (`monitoring.rules`, `monitoring.alerts`) plus the canary rules in `monitoring.additionalPrometheusRules`, as PrometheusRules loaded into the Mimir ruler by Alloy
 - **Ruler API**: Enabled - Can be used to manage log alerting rules
 
 ### Logs

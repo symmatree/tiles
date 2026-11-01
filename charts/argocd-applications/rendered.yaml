@@ -1185,16 +1185,14 @@ metadata:
 spec:
   project: 'placeholder'
   sources:
-    - repoURL: "https://grafana.github.io/helm-charts"
-      targetRevision: "6.55.0"
+    - repoURL: "https://grafana-community.github.io/helm-charts"
+      targetRevision: "20.2.1"
       chart: loki
       helm:
         valueFiles:
           - $values/charts/argocd-applications/values/loki-values.yaml
           - $values/charts/argocd-applications/values/loki-placeholder-values.yaml
         valuesObject:
-          vault_name: 'placeholder'
-          cluster_name: 'placeholder'
           extraObjects:
             - apiVersion: v1
               kind: PersistentVolumeClaim
