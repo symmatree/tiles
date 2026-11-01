@@ -24,7 +24,7 @@ resource "random_password" "versitygw_root" {
   special = false
   # Bumped to rotate the root secret.
   keepers = {
-    generation = 3
+    generation = 4
   }
 }
 
