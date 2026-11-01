@@ -24,7 +24,7 @@ resource "random_password" "versitygw_root" {
   special = false
   # Bumped to rotate the root secret.
   keepers = {
-    generation = 2
+    generation = 3
   }
 }
 
@@ -58,6 +58,13 @@ resource "synology_container_project" "versitygw" {
   # Paths are written out (not the folders' real_path, which is unknown at plan
   # time) so the rendered compose content is fully known when planned.
   depends_on = [synology_filestation_folder.versitygw_trial, synology_filestation_folder.versitygw_iam]
+
+  # An in-place update rewrites the project but leaves the running container on
+  # its old environment and secrets, so a new root secret only takes effect on
+  # replacement.
+  lifecycle {
+    replace_triggered_by = [random_password.versitygw_root]
+  }
 
   services = {
     versitygw = {
