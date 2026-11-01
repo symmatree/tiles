@@ -163,6 +163,10 @@ jobs:
           UNIFI_USERNAME: "op://tiles-secrets/morpheus-terraform/username"
           UNIFI_PASSWORD: "op://tiles-secrets/morpheus-terraform/password"
           PROXMOX_ROOT_PASSWORD: "op://tiles-secrets/proxmox-root/password"
+          # Not consumed by any step: loading it is what makes the runner mask the
+          # current versitygw root secret, which the Synology provider can print
+          # (it renders compose content without marking it sensitive).
+          VERSITYGW_ROOT_SECRET: "op://tiles-secrets/versitygw-root/password"
 
       - name: Authenticate to Google Cloud
         if: steps.scope.outputs.run_terraform == 'true'
