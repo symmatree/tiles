@@ -22,6 +22,10 @@ resource "random_password" "versitygw_root" {
   count   = var.deploy_synology_versitygw ? 1 : 0
   length  = 40
   special = false
+  # Bumped to rotate the root secret.
+  keepers = {
+    generation = 2
+  }
 }
 
 resource "onepassword_item" "versitygw_root" {
@@ -51,9 +55,23 @@ resource "synology_container_project" "versitygw" {
   name  = "versitygw"
   run   = true
 
+  # Paths are written out (not the folders' real_path, which is unknown at plan
+  # time) so the rendered compose content is fully known when planned.
+  depends_on = [synology_filestation_folder.versitygw_trial, synology_filestation_folder.versitygw_iam]
+
   services = {
     versitygw = {
       image = "versity/versitygw:v1.10.0"
+
+      # The root secret is a compose secret, not an environment value: the provider
+      # renders services into the project's compose content, which is not marked
+      # sensitive and is printed in full when an apply fails.
+      entrypoint = [
+        "/bin/sh", "-c",
+        # $$ is compose's escape for a literal $.
+        "export ROOT_SECRET_ACCESS_KEY=\"$$(cat /run/secrets/root_secret)\"; exec /usr/local/bin/versitygw \"$$@\"",
+        "versitygw",
+      ]
 
       command = [
         "--port", ":7070",
@@ -64,19 +82,23 @@ resource "synology_container_project" "versitygw" {
       ]
 
       environment = {
-        ROOT_ACCESS_KEY_ID     = onepassword_item.versitygw_root[0].username
-        ROOT_SECRET_ACCESS_KEY = random_password.versitygw_root[0].result
+        ROOT_ACCESS_KEY_ID = "versitygw-root"
       }
+
+      secrets = [{
+        source = "root_secret"
+        target = "/run/secrets/root_secret"
+      }]
 
       volumes = [
         {
           type   = "bind"
-          source = synology_filestation_folder.versitygw_trial[0].real_path
+          source = "${var.cluster_nfs_path}/s3-trial"
           target = "/data"
         },
         {
           type   = "bind"
-          source = synology_filestation_folder.versitygw_iam[0].real_path
+          source = "${var.cluster_nfs_path}/versitygw-iam"
           target = "/iam"
         },
       ]
@@ -99,6 +121,13 @@ resource "synology_container_project" "versitygw" {
 
       mem_limit = "512M"
       restart   = "unless-stopped"
+    }
+  }
+
+  secrets = {
+    root_secret = {
+      name    = "root_secret"
+      content = random_password.versitygw_root[0].result
     }
   }
 
