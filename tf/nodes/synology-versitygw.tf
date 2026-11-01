@@ -44,6 +44,79 @@ resource "synology_filestation_folder" "versitygw_iam" {
   path  = "/tiles/versitygw-iam"
 }
 
+locals {
+  versitygw_service = {
+    image = "versity/versitygw:v1.10.0"
+
+    # The root secret is a compose secret, not an environment value: the provider
+    # renders services into the project's compose content, which is not marked
+    # sensitive and is printed in full when an apply fails.
+    entrypoint = [
+      "/bin/sh", "-c",
+      # $$ is compose's escape for a literal $.
+      "export ROOT_SECRET_ACCESS_KEY=\"$$(cat /run/secrets/root_secret)\"; exec /usr/local/bin/versitygw \"$$@\"",
+      "versitygw",
+    ]
+
+    command = [
+      "--port", ":7070",
+      "--cert", "/certs/tls.crt",
+      "--key", "/certs/tls.key",
+      "--iam-dir", "/iam",
+      "posix", "/data",
+    ]
+
+    environment = {
+      ROOT_ACCESS_KEY_ID = "versitygw-root"
+    }
+
+    secrets = [{
+      source = "root_secret"
+      target = "/run/secrets/root_secret"
+    }]
+
+    volumes = [
+      {
+        type   = "bind"
+        source = "${var.cluster_nfs_path}/mimir-data"
+        target = "/data"
+      },
+      {
+        type   = "bind"
+        source = "${var.cluster_nfs_path}/versitygw-iam"
+        target = "/iam"
+      },
+    ]
+
+    configs = [
+      {
+        source = "tls_crt"
+        target = "/certs/tls.crt"
+      },
+      {
+        source = "tls_key"
+        target = "/certs/tls.key"
+      },
+    ]
+
+    ports = [{
+      target    = 7070
+      published = "7070"
+    }]
+
+    mem_limit = "512M"
+    restart   = "unless-stopped"
+  }
+}
+
+resource "terraform_data" "versitygw_spec" {
+  count = var.deploy_synology_versitygw ? 1 : 0
+  input = {
+    service = local.versitygw_service
+    tls_crt = sha256(data.kubernetes_secret_v1.raconteur_cert[0].data["tls.crt"])
+  }
+}
+
 resource "synology_container_project" "versitygw" {
   count = var.deploy_synology_versitygw ? 1 : 0
   name  = "versitygw"
@@ -53,76 +126,15 @@ resource "synology_container_project" "versitygw" {
   # time) so the rendered compose content is fully known when planned.
   depends_on = [synology_filestation_folder.versitygw_iam]
 
-  # An in-place update rewrites the project but leaves the running container on
-  # its old environment and secrets, so a new root secret only takes effect on
-  # replacement.
+  # An in-place update rewrites the project but leaves the running container as it
+  # was, so any change to the service, the root secret or the certificate only takes
+  # effect on replacement.
   lifecycle {
-    replace_triggered_by = [random_password.versitygw_root]
+    replace_triggered_by = [random_password.versitygw_root, terraform_data.versitygw_spec]
   }
 
   services = {
-    versitygw = {
-      image = "versity/versitygw:v1.10.0"
-
-      # The root secret is a compose secret, not an environment value: the provider
-      # renders services into the project's compose content, which is not marked
-      # sensitive and is printed in full when an apply fails.
-      entrypoint = [
-        "/bin/sh", "-c",
-        # $$ is compose's escape for a literal $.
-        "export ROOT_SECRET_ACCESS_KEY=\"$$(cat /run/secrets/root_secret)\"; exec /usr/local/bin/versitygw \"$$@\"",
-        "versitygw",
-      ]
-
-      command = [
-        "--port", ":7070",
-        "--cert", "/certs/tls.crt",
-        "--key", "/certs/tls.key",
-        "--iam-dir", "/iam",
-        "posix", "/data",
-      ]
-
-      environment = {
-        ROOT_ACCESS_KEY_ID = "versitygw-root"
-      }
-
-      secrets = [{
-        source = "root_secret"
-        target = "/run/secrets/root_secret"
-      }]
-
-      volumes = [
-        {
-          type   = "bind"
-          source = "${var.cluster_nfs_path}/mimir-data"
-          target = "/data"
-        },
-        {
-          type   = "bind"
-          source = "${var.cluster_nfs_path}/versitygw-iam"
-          target = "/iam"
-        },
-      ]
-
-      configs = [
-        {
-          source = "tls_crt"
-          target = "/certs/tls.crt"
-        },
-        {
-          source = "tls_key"
-          target = "/certs/tls.key"
-        },
-      ]
-
-      ports = [{
-        target    = 7070
-        published = "7070"
-      }]
-
-      mem_limit = "512M"
-      restart   = "unless-stopped"
-    }
+    versitygw = local.versitygw_service
   }
 
   secrets = {
