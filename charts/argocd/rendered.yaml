@@ -266,13 +266,13 @@ kind: ServiceAccount
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.18.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: argocd
-    app.kubernetes.io/version: "7.11.0"
+    app.kubernetes.io/version: "7.15.5"
   name: argocd-oauth2-proxy
   namespace: argocd
 automountServiceAccountToken: true
@@ -626,13 +626,13 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.18.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: argocd
-    app.kubernetes.io/version: "7.11.0"
+    app.kubernetes.io/version: "7.15.5"
   name: argocd-oauth2-proxy-accesslist
   namespace: argocd
 data:
@@ -645,17 +645,19 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.18.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: argocd
-    app.kubernetes.io/version: "7.11.0"
+    app.kubernetes.io/version: "7.15.5"
   name: argocd-oauth2-proxy
   namespace: argocd
 data:
-  oauth2_proxy.cfg: "upstreams = [ \"file:///dev/null\" ]"
+  oauth2_proxy.cfg: |
+
+    upstreams = [ "file:///dev/null" ]
 
 ---
 # Source: argocd/templates/tanka.yaml
@@ -1462,13 +1464,13 @@ kind: Service
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.18.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: argocd
-    app.kubernetes.io/version: "7.11.0"
+    app.kubernetes.io/version: "7.15.5"
   name: argocd-oauth2-proxy
   namespace: argocd
 spec:
@@ -2985,13 +2987,13 @@ kind: Deployment
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.18.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: argocd
-    app.kubernetes.io/version: "7.11.0"
+    app.kubernetes.io/version: "7.15.5"
   name: argocd-oauth2-proxy
   namespace: argocd
 spec:
@@ -3005,19 +3007,19 @@ spec:
     metadata:
       annotations:
         checksum/config: 9c1ecd9f0889c5271728298190b5b9b1104baac2492387267c860173bb7765e8
-        checksum/config-emails: d546520cf9338a5f9e46b108d2fa81895ffafe58195afe4ea1b8e4b821323993
-        checksum/secret: 8fa6fdae65861caa2986544b8860a5205be1937328c8ec2bad6bad076b9e2425
+        checksum/config-emails: 25a191db470f1361aea421c3bff12c58fe1320e9553c5767af313b18a1c4f998
+        checksum/secret: 9eb46bbdefd5cf844a2c4965b1241a7177addaa7c07789e7873ccda6b0104111
         checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
       labels:
         app: oauth2-proxy        
-        helm.sh/chart: oauth2-proxy-7.18.0
+        helm.sh/chart: oauth2-proxy-10.7.1
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: authentication-proxy
         app.kubernetes.io/part-of: oauth2-proxy
         app.kubernetes.io/name: oauth2-proxy
         app.kubernetes.io/instance: argocd
-        app.kubernetes.io/version: "7.11.0"
+        app.kubernetes.io/version: "7.15.5"
     spec:
       serviceAccountName: argocd-oauth2-proxy
       enableServiceLinks: true
@@ -3531,13 +3533,13 @@ kind: Ingress
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-7.18.0
+    helm.sh/chart: oauth2-proxy-10.7.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
     app.kubernetes.io/name: oauth2-proxy
     app.kubernetes.io/instance: argocd
-    app.kubernetes.io/version: "7.11.0"
+    app.kubernetes.io/version: "7.15.5"
   name: argocd-oauth2-proxy
   namespace: argocd
   annotations:
