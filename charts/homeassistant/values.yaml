@@ -22,10 +22,6 @@ homeassistant_tls_port: placeholder
 # gates; the rules are the #593-#604 hardening set documented in
 # docs/remote-access.md. A broken proxy fails closed.
 oauth2-proxy:
-  # Chart 7.7.0 defaults to the older v7.6.0; pin the current patched release
-  # since this is internet-facing (same rationale as the other two gates).
-  image:
-    tag: v7.15.3
   # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
   # (OnePasswordItem 'homeassistant-oauth2-proxy'). Vault-item field labels must
   # be exactly client-id / client-secret / cookie-secret (the chart's
