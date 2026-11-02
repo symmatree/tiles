@@ -110,6 +110,12 @@ Tools: helm (the CI-pinned version, see
 `yq` (mikefarah), `tk` and `jb`. CI pins `tk` to the version the CMP runs
 (`charts/argocd/templates/tanka.yaml`) so the render is the one Argo CD produces.
 
+`yq` means mikefarah's, and the distinction is not cosmetic: a Python package of
+the same name wraps `jq`, is what `apt install yq` and several distributions
+provide, and cannot run the expressions here. `scripts/render-apps.sh` checks the
+flavour and exits 2 if it is wrong, because the failure is otherwise invisible --
+the app list comes out empty, no child renders, and the diff is clean.
+
 ## Relation to `rendered.yaml`
 
 `build.sh` renders each local chart alone with placeholder values and commits the
