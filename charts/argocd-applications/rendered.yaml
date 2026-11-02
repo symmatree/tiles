@@ -251,7 +251,7 @@ spec:
                 namespace: "alloy"
                 annotations:
                   cert-manager.io/cluster-issuer: real-cert
-                  external-dns.alpha.kubernetes.io/hostname: 'otlp.placeholder.symmatree.com'
+                  external-dns.kubernetes.io/hostname: 'otlp.placeholder.symmatree.com'
               spec:
                 ingressClassName: cilium
                 tls:

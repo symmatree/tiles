@@ -113,7 +113,7 @@ oauth2-proxy:
       # ...and publish as a CNAME to the UniFi dynamic-DNS record (WAN IP)
       # instead of the internal ingress IP. Paired with the UniFi 443
       # port-forward (tf/nodes/port-forwards.tf) -- this is the exposure switch.
-      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+      external-dns.kubernetes.io/target: lhitw.symmatree.com
     hosts:
       - homeassistant.placeholder.symmatree.com
     tls:

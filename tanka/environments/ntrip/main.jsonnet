@@ -173,7 +173,7 @@ local ntrip = {
       metadata: {
         name: 'ntrip-caster',
         annotations: {
-          'external-dns.alpha.kubernetes.io/hostname': config.ntripHostname,
+          'external-dns.kubernetes.io/hostname': config.ntripHostname,
         },
         labels: podLabels,
       },

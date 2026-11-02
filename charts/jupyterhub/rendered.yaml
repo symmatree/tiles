@@ -1490,7 +1490,7 @@ metadata:
   name: ssh-service
   namespace: "jupyterhub"
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: "notebook-ssh.placeholder.symmatree.com"
+    external-dns.kubernetes.io/hostname: "notebook-ssh.placeholder.symmatree.com"
 spec:
   type: LoadBalancer
   selector:
@@ -2103,7 +2103,7 @@ metadata:
   namespace: jupyterhub
   annotations:
     cert-manager.io/cluster-issuer: real-cert
-    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    external-dns.kubernetes.io/target: lhitw.symmatree.com
     ingress.cilium.io/loadbalancer-mode: shared
 spec:
   ingressClassName: "cilium"

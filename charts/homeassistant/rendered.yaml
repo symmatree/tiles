@@ -102,10 +102,10 @@ metadata:
     tiles.symmatree.com/static-lb: "true"
   annotations:
     lbipam.cilium.io/ips: "placeholder"
-    external-dns.alpha.kubernetes.io/hostname: "homeassistant-tls.placeholder.symmatree.com"
+    external-dns.kubernetes.io/hostname: "homeassistant-tls.placeholder.symmatree.com"
     # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
     # app resolves the same name to the same place on any network.
-    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    external-dns.kubernetes.io/target: lhitw.symmatree.com
 spec:
   type: LoadBalancer
   selector:
@@ -405,7 +405,7 @@ metadata:
   namespace: homeassistant
   annotations:
     cert-manager.io/cluster-issuer: real-cert
-    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    external-dns.kubernetes.io/target: lhitw.symmatree.com
     ingress.cilium.io/loadbalancer-mode: shared
 spec:
   ingressClassName: "cilium"

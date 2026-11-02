@@ -219,7 +219,7 @@ oauth2-proxy:
       # of the internal ingress IP, so the host resolves for external clients and
       # tracks the dynamic address. Paired with the UniFi 443 port-forward
       # (tf/nodes/port-forwards.tf) -- this is the exposure switch, same as ArgoCD.
-      external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+      external-dns.kubernetes.io/target: lhitw.symmatree.com
     hosts:
       - notebook.placeholder.symmatree.com
     tls:
