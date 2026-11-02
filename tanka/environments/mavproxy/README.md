@@ -1,6 +1,10 @@
 # MAVProxy ground proxy (prod acebase)
 
-Always-on MAVLink hub on bare-metal node **acebase**: ELRS backpack UDP in, NTRIP RTCM to the drone, TCP out for Mission Planner.
+Two always-on MAVLink proxies on bare-metal node **acebase**, one per radio link to the drone:
+
+- **`mavproxy-mlrs`** -- the mLRS link: a RadioMaster Ranger on USB-C (`/dev/mlrs`) to the RP4TD on
+  the FC's SERIAL7. It carries the **NTRIP RTCM** up and the telemetry down, and logs it.
+- **`mavproxy`** -- the ELRS backpack link (UDP in). **Logging only** since 2026-11-02: no NTRIP.
 
 Prod only (`cluster_name: tiles`); co-located with [ntrip](../ntrip/README.md) on site LAN.
 
@@ -9,7 +13,8 @@ Prod only (`cluster_name: tiles`); co-located with [ntrip](../ntrip/README.md) o
 | Service | Address | Notes |
 |---------|---------|-------|
 | MAVLink UDP (from Boxer backpack) | acebase host `:14550/udp` | `hostNetwork`; receives subnet broadcast |
-| Mission Planner TCP | `mavproxy.tiles.symmatree.com:5760` | LoadBalancer + external-dns |
+| Mission Planner TCP, ELRS link | `mavproxy.tiles.symmatree.com:5760` | LoadBalancer + external-dns |
+| Mission Planner TCP, mLRS link | `mavproxy-mlrs.tiles.symmatree.com:5770` | LoadBalancer + external-dns |
 | NTRIP corrections source | `ntrip.tiles.symmatree.com:2101/ATTIC` | Same caster as [ntrip](../ntrip/README.md) |
 
 Both hostnames resolve to private **10.x** addresses on site LAN. Mission Planner: **TCP**, system ID **254**.
@@ -21,7 +26,15 @@ Both hostnames resolve to private **10.x** addresses on site LAN. Mission Planne
 - **Tanka:** [`main.jsonnet`](main.jsonnet)
 - **Argo CD:** [`application.helm.yaml`](application.helm.yaml) (prod only)
 
-Pod uses **hostNetwork** on acebase (privileged namespace, `dedicated=gnss` toleration) so ELRS backpack UDP broadcast on `:14550` reaches the proxy. MAVProxy runs with **`--daemon`** and **`--nowait`** as GCS **sysid 255**. NTRIP is configured via **`$HOME/.mavproxy/mavinit.scr`** written by the container entrypoint. No **liveness** probe -- k8s must not restart this hub. Readiness is **`kill -0 1`** only (never TCP `:5760`; `tcpin` accepts one Mission Planner client).
+The ELRS pod uses **hostNetwork** on acebase (privileged namespace, `dedicated=gnss` toleration) so ELRS backpack UDP broadcast on `:14550` reaches the proxy. MAVProxy runs with **`--daemon`** and **`--nowait`** as GCS **sysid 255**. NTRIP is configured via **`$HOME/.mavproxy/mavinit.scr`** written by the container entrypoint. No **liveness** probe -- k8s must not restart this hub.
+
+The mLRS pod is an ordinary pod pinned to acebase (same toleration), **privileged** for the host
+device node like the ntrip pod's `/dev/gnss`. `/dev/mlrs` is a udev symlink from
+[`tf/nodes/patches/acebase-gnss.yaml`](../../../tf/nodes/patches/acebase-gnss.yaml) on the
+Ranger's CP2102 (`10c4:ea60`, `cp210x`), 115200 baud to match the module's `Tx Ser Baudrate`.
+It runs `--streamrate=-1` (sends no `REQUEST_DATA_STREAM`; the FC pins MAV4's rates). Its
+tlog-split instance (`tlog-split-mlrs`, UDP 5762) writes to `ground-tlogs/mlrs/`, because both
+links cut at the same disarm and would otherwise produce identically named files. Readiness is **`kill -0 1`** only (never TCP `:5760`; `tcpin` accepts one Mission Planner client).
 
 
 ## Backpack link health (`backpack-mavlink` Probe)

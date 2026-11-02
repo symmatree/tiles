@@ -27,6 +27,7 @@ spec:
             datasets_nfs_path: '{{ required ".Values.datasets_nfs_path is required" .Values.datasets_nfs_path }}'
             backpack_mavlink_url: http://10.0.6.120/mavlink
             tcp_hostname: mavproxy.tiles.symmatree.com
+            mlrs_tcp_hostname: mavproxy-mlrs.tiles.symmatree.com
             ntrip_caster: ntrip.tiles.symmatree.com
             ntrip_mountpoint: ATTIC
             ntrip_caster_auth: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}-ntrip-caster-auth'

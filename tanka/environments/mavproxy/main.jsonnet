@@ -50,6 +50,18 @@ local mavproxy = {
     sourceSystem: 255,
     sourceComponent: 190,
 
+    // The mLRS link: a RadioMaster Ranger on mLRS, USB-C into acebase, to the RP4TD on the FC's
+    // SERIAL7 (coordinator ardupilot/inputs/mlrs-link.param). This instance carries the RTCM;
+    // the backpack instance above only logs. /dev/mlrs is the udev symlink from
+    // tf/nodes/patches/acebase-gnss.yaml; 115200 is the module's "Tx Ser Baudrate".
+    mlrsName: 'mavproxy-mlrs',
+    mlrsDevice: '/dev/mlrs',
+    mlrsBaud: 115200,
+    mlrsTcpPort: 5770,
+    mlrsTcpHostname: APP.app_settings.mlrs_tcp_hostname,
+    mlrsSplitService: 'tlog-split-mlrs',
+    mlrsSplitPort: 5762,
+
     // Shared json_exporter prober, deployed with the Alloy app in the alloy
     // namespace (charts/argocd-applications/templates/alloy-application.yaml).
     jsonExporterProber: 'json-exporter.alloy.svc:7979',
@@ -68,6 +80,13 @@ local mavproxy = {
 
     local podLabels = { app: config.name },
     local ntripSecretName = mavproxyObj.ntripSecret.metadata.name,
+    local ntripEnv = [
+      kEnvVar.new('NTRIP_CASTER', config.ntripCaster),
+      kEnvVar.new('NTRIP_PORT', std.toString(config.ntripPort)),
+      kEnvVar.new('NTRIP_MOUNTPOINT', config.ntripMountpoint),
+      kEnvVar.fromSecretRef('NTRIP_USERNAME', ntripSecretName, 'username'),
+      kEnvVar.fromSecretRef('NTRIP_PASSWORD', ntripSecretName, 'password'),
+    ],
 
     local execProbe(probe) =
       probe.withInitialDelaySeconds(10)
@@ -85,13 +104,9 @@ local mavproxy = {
           kPort.newNamedUDP(config.mavlinkUdpPort, 'mavlink-udp'),
           kPort.newNamed(config.tcpPort, 'mavlink-tcp'),
         ])
-        + kContainer.withEnvMixin([
-          kEnvVar.new('NTRIP_CASTER', config.ntripCaster),
-          kEnvVar.new('NTRIP_PORT', std.toString(config.ntripPort)),
-          kEnvVar.new('NTRIP_MOUNTPOINT', config.ntripMountpoint),
-          kEnvVar.fromSecretRef('NTRIP_USERNAME', ntripSecretName, 'username'),
-          kEnvVar.fromSecretRef('NTRIP_PASSWORD', ntripSecretName, 'password'),
-        ])
+        // No NTRIP env: this instance only logs the ELRS link. Without NTRIP_CASTER the
+        // entrypoint writes no mavinit.scr, so the ntrip module below loads and is never
+        // started -- RTCM goes up the mLRS link from the mlrs instance instead.
         + kContainer.withArgs([
           std.format('--master=udpin:0.0.0.0:%s', config.mavlinkUdpPort),
           std.format('--out=tcpin:0.0.0.0:%s', config.tcpPort),
@@ -156,21 +171,22 @@ local mavproxy = {
 
     // Where mavproxy's udpout lands. tlog-split is the listener, so a restart on either side
     // costs nothing: nobody holds a connection.
-    splitService: {
+    local splitServiceFor(name, port) = {
       apiVersion: 'v1',
       kind: 'Service',
-      metadata: { name: config.splitService, labels: { name: config.splitService } },
+      metadata: { name: name, labels: { name: name } },
       spec: {
         type: 'ClusterIP',
-        selector: { name: config.splitService },
+        selector: { name: name },
         ports: [{
           name: 'mavlink-split',
-          port: config.splitPort,
-          targetPort: config.splitPort,
+          port: port,
+          targetPort: port,
           protocol: 'UDP',
         }],
       },
     },
+    splitService: splitServiceFor(config.splitService, config.splitPort),
 
     // Straight to the NAS, so a flight's ground-side record does not live or die with a pod.
     // Static PV for the same reason flight-analysis and fleet-control use one: `datasets` is a
@@ -197,15 +213,15 @@ local mavproxy = {
       kConfigMap.new('tlog-split')
       + kConfigMap.withData({ 'split_tlog.py': importstr 'split_tlog.py' }),
 
-    splitDeployment:
-      kDeployment.new(config.splitService, replicas=1, containers=[
+    local splitDeploymentFor(name, port, outDir) =
+      kDeployment.new(name, replicas=1, containers=[
         kContainer.new('tlog-split', config.image)
         + kContainer.withImagePullPolicy('Always')
         + kContainer.withCommand(['/opt/venv/bin/python3', '-u', '/script/split_tlog.py'])
-        + kContainer.withPortsMixin([kPort.newNamedUDP(config.splitPort, 'mavlink-split')])
+        + kContainer.withPortsMixin([kPort.newNamedUDP(port, 'mavlink-split')])
         + kContainer.withEnvMap({
-          TLOG_SPLIT_LISTEN: std.format('0.0.0.0:%s', config.splitPort),
-          TLOG_SPLIT_OUT: '/mnt/ground-tlogs',
+          TLOG_SPLIT_LISTEN: std.format('0.0.0.0:%s', port),
+          TLOG_SPLIT_OUT: outDir,
         })
         // Small: it parses frames and appends to a file. No buffering of a lead-in, which is
         // what cutting at disarm rather than arm buys.
@@ -227,6 +243,8 @@ local mavproxy = {
       + k_util.pvcVolumeMount('ground-tlogs', '/mnt/ground-tlogs')
       + k_util.configMapVolumeMount(self.splitScript, '/script'),
 
+    splitDeployment: splitDeploymentFor(config.splitService, config.splitPort, '/mnt/ground-tlogs'),
+
     tcpService: {
       apiVersion: 'v1',
       kind: 'Service',
@@ -245,6 +263,70 @@ local mavproxy = {
           name: 'mavlink-tcp',
           port: config.tcpPort,
           targetPort: config.tcpPort,
+          protocol: 'TCP',
+        }],
+      },
+    },
+
+    // ---- the mLRS link: RTCM up, telemetry down ------------------------------------------
+    // Not hostNetwork: nothing arrives by broadcast here, so it is an ordinary pod pinned to
+    // acebase for the device. Privileged for the host device node, as the ntrip pod is for
+    // /dev/gnss. --default-modules=ntrip as above, so no param module and no parameter fetch.
+    // --streamrate=-1: send no REQUEST_DATA_STREAM; the FC's MAV4 rates are pinned in
+    // mlrs-link.param and MAV4_OPTIONS ignores stream requests anyway.
+    local mlrsLabels = { app: config.mlrsName },
+    mlrsDeployment:
+      kDeployment.new(config.mlrsName, replicas=1, containers=[
+        kContainer.new(config.mlrsName, config.image)
+        + kContainer.withImagePullPolicy('Always')
+        + kContainer.withPortsMixin([
+          kPort.newNamed(config.mlrsTcpPort, 'mavlink-tcp'),
+        ])
+        + kContainer.withEnvMixin(ntripEnv)
+        + kContainer.withArgs([
+          std.format('--master=%s,%s', [config.mlrsDevice, config.mlrsBaud]),
+          std.format('--out=tcpin:0.0.0.0:%s', config.mlrsTcpPort),
+          std.format('--out=udpout:%s.%s.svc:%s', [config.mlrsSplitService, config.namespace, config.mlrsSplitPort]),
+          std.format('--source-system=%s', config.sourceSystem),
+          std.format('--source-component=%s', config.sourceComponent),
+          '--default-modules=ntrip',
+          '--streamrate=-1',
+          '--daemon',
+          '--nowait',
+        ])
+        + kContainer.securityContext.withPrivileged(true)
+        + execProbe(readinessProbe)
+        + readinessProbe.withFailureThreshold(3),
+      ], podLabels=mlrsLabels)
+      + kDeployment.spec.selector.withMatchLabels(mlrsLabels)
+      + kDeployment.spec.strategy.withType('Recreate')
+      + kDeployment.spec.template.spec.withNodeSelector({ 'kubernetes.io/hostname': config.nodeHostname })
+      + kDeployment.spec.template.spec.withTolerationsMixin([gnssToleration])
+      + k_util.hostVolumeMount('mlrs', config.mlrsDevice, config.mlrsDevice),
+
+    // Its own tlog-split, writing under mlrs/: both links cut at the same disarm, so the two
+    // streams would otherwise produce files with the same names in the same directory.
+    mlrsSplitService: splitServiceFor(config.mlrsSplitService, config.mlrsSplitPort),
+    mlrsSplitDeployment: splitDeploymentFor(config.mlrsSplitService, config.mlrsSplitPort, '/mnt/ground-tlogs/mlrs'),
+
+    mlrsTcpService: {
+      apiVersion: 'v1',
+      kind: 'Service',
+      metadata: {
+        name: 'mavproxy-mlrs-tcp',
+        annotations: {
+          'external-dns.alpha.kubernetes.io/hostname': config.mlrsTcpHostname,
+        },
+        labels: mlrsLabels,
+      },
+      spec: {
+        type: 'LoadBalancer',
+        externalTrafficPolicy: 'Local',
+        selector: mlrsLabels,
+        ports: [{
+          name: 'mavlink-tcp',
+          port: config.mlrsTcpPort,
+          targetPort: config.mlrsTcpPort,
           protocol: 'TCP',
         }],
       },
