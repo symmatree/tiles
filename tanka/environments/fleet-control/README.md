@@ -279,6 +279,26 @@ A failed converge or a missed `ready` means the fleet is not in the state the tr
 Retrying against a device that is mid-reboot produces a trial whose conditions nobody knows,
 which is worse than no trial.
 
+## Setting the coordinator's RTC
+
+The coordinator has no network time: chrony's references are its DS3234 and the chip's 1 Hz,
+and coord-rtc-feed corrects the chip from the FC's GPS time. With no fix to take time from,
+`set-coordinator-rtc` sets the chip from this cluster's clock:
+
+    kubectl create -n fleet-control -f - <<'EOF'
+    apiVersion: argoproj.io/v1alpha1
+    kind: Workflow
+    metadata: {generateName: set-coordinator-rtc-}
+    spec: {workflowTemplateRef: {name: set-coordinator-rtc}}
+    EOF
+
+Its one step is
+[`harness/set_rtc.py`](https://github.com/symmatree/coordinator/blob/main/harness/set_rtc.py)
+(`set-rtc` in the service's image), and what it does and checks is documented there. In
+short, it stops the coordinator, refuses a chip that reads all zeros, sets the clock and
+then the chip, reboots, and fails if the coordinator comes back more than a second off. It
+mounts the fleet key because the chip has no API verb.
+
 ## Auth
 
 None. On-network only, like the other private-address services here. If it is ever wanted
