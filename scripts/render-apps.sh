@@ -19,6 +19,17 @@ set -euo pipefail
 
 cluster="${1:?cluster_name is required}"
 outdir="${2:?outdir is required}"
+
+# yq must be mikefarah's (Go). The unrelated Python "yq" is a jq wrapper that takes
+# the same name, rejects the flags used below and cannot run these expressions.
+# Check it here rather than letting it surface as an empty render: the two differ in
+# no way the queries themselves report.
+if ! yq --version 2>/dev/null | grep -q mikefarah; then
+	echo "yq must be mikefarah's (https://github.com/mikefarah/yq), not the Python jq wrapper" >&2
+	echo "  found: $(command -v yq || echo "no yq on PATH") -- $(yq --version 2>&1 | head -1)" >&2
+	exit 2
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${3:-${SCRIPT_DIR}/..}" && pwd)"
 mkdir -p "${outdir}"
@@ -178,6 +189,20 @@ render_one() {
 	fi
 }
 
+# Read the app list into a variable, not a process substitution: set -e does not
+# reach into one, so a yq failure there would feed the loop an empty list and the
+# script would exit 0 having rendered no children at all -- a clean render diff that
+# proves nothing. Every cluster declares at least one Application, so an empty list
+# is a failure too.
+apps=$(yq -N 'select(.kind == "Application") | .metadata.name' "${outdir}/argocd-applications.yaml" | sort -u) || {
+	echo "could not read the Application list from ${outdir}/argocd-applications.yaml" >&2
+	exit 1
+}
+if [[ -z ${apps} ]]; then
+	echo "no Applications declared for ${cluster} in ${outdir}/argocd-applications.yaml" >&2
+	exit 1
+fi
+
 while IFS= read -r app; do
 	[[ -z ${app} ]] && continue
 	yq "select(.kind == \"Application\" and .metadata.name == \"${app}\")" "${outdir}/argocd-applications.yaml" >"${app_yaml}"
@@ -189,6 +214,6 @@ while IFS= read -r app; do
 		rm -f "${outdir}/${app}.yaml"
 		failed=1
 	fi
-done < <(yq -N 'select(.kind == "Application") | .metadata.name' "${outdir}/argocd-applications.yaml" | sort -u)
+done <<<"${apps}"
 
 exit "${failed}"
