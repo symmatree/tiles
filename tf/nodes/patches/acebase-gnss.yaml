@@ -1,6 +1,12 @@
 # AceBase ZED-F9P on USB (discovered 2026-06-07 via talosctl on acebase):
 #   idVendor=1546 (u-blox AG), idProduct=01a9 (ZED-F9P), driver=cdc_acm, device=ttyACM0
 #
+# RadioMaster Ranger on mLRS, USB-C into acebase (2026-11-02): the module's USB-to-serial
+#   bridge is a Silicon Labs CP2102, idVendor=10c4 idProduct=ea60, driver=cp210x. That ID is
+#   the generic CP2102 one, not specific to the Ranger; it is the only CP210x on this node.
+#   CONFIG_USB_SERIAL_CP210X=m in the Talos 1.14 kernel (siderolabs/pkgs release-1.14,
+#   kernel/build/config-amd64), so it is loaded like cdc_acm.
+#
 # machine.kernel.modules and machine.udev.rules are both deprecated in Talos 1.14;
 # these are the KernelModuleConfig and UdevRulesConfig documents that replace them.
 # KernelModuleConfig is one module per document.
@@ -9,6 +15,11 @@ kind: KernelModuleConfig
 name: cdc_acm
 ---
 apiVersion: v1alpha1
+kind: KernelModuleConfig
+name: cp210x
+---
+apiVersion: v1alpha1
 kind: UdevRulesConfig
 rules:
   - SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a9", SYMLINK+="gnss"
+  - SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="mlrs"
