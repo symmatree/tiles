@@ -47,6 +47,13 @@ Worth knowing, because it looks like it should be. MAVProxy's `--aircraft NAME` 
 startup (`mavproxy.py:1589`) and nothing reopens the handle, so `N` is per *process*, not per
 flight. A pod up for two weeks gets one file, called `flight1`.
 
+## Whose heartbeat
+
+Only the autopilot's. Every component on a MAVLink link sends HEARTBEAT, and a cut follows the
+armed bit, so the script skips heartbeats with `autopilot = MAV_AUTOPILOT_INVALID`. The mLRS Tx
+module (sysid 51, compid 68) sends one a second with the armed bit set; on the mLRS link that
+alternated with the FC's disarmed heartbeat and cut a file every second.
+
 ## Configuration
 
 | env | default | |

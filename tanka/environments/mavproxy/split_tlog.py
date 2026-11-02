@@ -137,6 +137,13 @@ def main() -> int:
             seg.write(msg)
             if msg.get_type() != "HEARTBEAT":
                 continue
+            # Only the autopilot's heartbeat says whether the vehicle is armed. Other
+            # components on the link send heartbeats too: the mLRS Tx module (sysid 51,
+            # compid 68) sends type 0, autopilot MAV_AUTOPILOT_INVALID, base_mode 0x80 -- the
+            # armed bit set -- once a second, which alternated with the FC's disarmed one and
+            # cut a file every second (285 of them, 2026-11-02).
+            if msg.autopilot == mavutil.mavlink.MAV_AUTOPILOT_INVALID:
+                continue
             now_armed = bool(msg.base_mode & ARMED)
             if now_armed and not armed:
                 seg.armed_at = time.time()
