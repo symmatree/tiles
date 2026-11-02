@@ -4,7 +4,7 @@ metadata:
   name: ssh-service
   namespace: "{{ .Release.Namespace }}"
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: "{{ .Values.sshHostname }}"
+    external-dns.kubernetes.io/hostname: "{{ .Values.sshHostname }}"
 spec:
   type: LoadBalancer
   selector:

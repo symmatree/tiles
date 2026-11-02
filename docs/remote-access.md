@@ -206,7 +206,7 @@ Two consequences follow:
 Exposure is one annotation on the oauth2-proxy Ingress:
 
 ```yaml
-external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+external-dns.kubernetes.io/target: lhitw.symmatree.com
 ```
 
 - **With** it: external-dns publishes the host as a CNAME to `lhitw` (the WAN
@@ -214,10 +214,21 @@ external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
 - **Without** it: external-dns publishes the host at the internal ingress VIP --
   reachable on-LAN only. This is the safe, testable-first state.
 
+The prefix is load-bearing, because "without it" and "with it but unreadable"
+are the same state. external-dns reads only the prefix given by
+`--annotation-prefix`, which defaults to `external-dns.kubernetes.io/` since
+v0.22.0; the older `external-dns.alpha.kubernetes.io/` needs
+`--enable-legacy-annotation-prefix`. An annotation on a prefix external-dns is
+not reading does not fail loudly -- it is simply absent from the desired state,
+and the host falls back to the internal ingress VIP. `charts/external-dns`
+carries the legacy flag while the live objects finish moving to the new prefix.
+
 external-dns runs `policy: sync` (not `upsert-only`) specifically so the A ->
 CNAME record-type flip on the WAN cutover succeeds (upsert-only cannot change a
 record's type). It only touches records it owns (txt registry, `txtOwnerId =
-cluster`), so it will not clobber the hand-managed `lhitw` record.
+cluster`), so it will not clobber the hand-managed `lhitw` record. The same
+property makes a disappearing annotation destructive rather than inert: a
+`hostname` annotation external-dns stops reading takes its record with it.
 
 The **test cluster has no front door**: `tf/nodes/prod.tfvars` sets
 `ingress_lb_ip = "10.0.130.1"`, but test leaves `ingress_lb_ip` empty, so neither

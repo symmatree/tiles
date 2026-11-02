@@ -251,7 +251,7 @@ local mavproxy = {
       metadata: {
         name: 'mavproxy-tcp',
         annotations: {
-          'external-dns.alpha.kubernetes.io/hostname': config.tcpHostname,
+          'external-dns.kubernetes.io/hostname': config.tcpHostname,
         },
         labels: podLabels,
       },
@@ -315,7 +315,7 @@ local mavproxy = {
       metadata: {
         name: 'mavproxy-mlrs-tcp',
         annotations: {
-          'external-dns.alpha.kubernetes.io/hostname': config.mlrsTcpHostname,
+          'external-dns.kubernetes.io/hostname': config.mlrsTcpHostname,
         },
         labels: mlrsLabels,
       },

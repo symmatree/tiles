@@ -32,10 +32,10 @@ metadata:
     tiles.symmatree.com/static-lb: "true"
   annotations:
     lbipam.cilium.io/ips: {{ required "homeassistant_tls_lb_ip is required" .Values.homeassistant_tls_lb_ip | quote }}
-    external-dns.alpha.kubernetes.io/hostname: {{ $gt.hostname | quote }}
+    external-dns.kubernetes.io/hostname: {{ $gt.hostname | quote }}
     # Publish as a CNAME to the WAN record, not the pinned LAN address, so the
     # app resolves the same name to the same place on any network.
-    external-dns.alpha.kubernetes.io/target: lhitw.symmatree.com
+    external-dns.kubernetes.io/target: lhitw.symmatree.com
 spec:
   type: LoadBalancer
   selector:
