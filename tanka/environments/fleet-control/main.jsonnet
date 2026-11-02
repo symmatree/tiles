@@ -371,6 +371,57 @@ local fleetControl = {
       },
     },
 
+    // Setting the coordinator's DS3234 from this cluster's clock, for when there is no GPS
+    // fix to take time from. README.md. The step is `set-rtc` in the same image, which is
+    // where what it does and checks is documented.
+    setRtcTemplate: {
+      apiVersion: 'argoproj.io/v1alpha1',
+      kind: 'WorkflowTemplate',
+      metadata: { name: 'set-coordinator-rtc' },
+      spec: {
+        serviceAccountName: fcObj.workflowServiceAccount.metadata.name,
+        entrypoint: 'set-rtc',
+        ttlStrategy: { secondsAfterCompletion: 604800 },
+        templates: [{
+          name: 'set-rtc',
+          // No retryStrategy, as for the bench steps: a second systohc re-phases the 1 Hz
+          // again, and a failure here is a fact about the chip to read, not to retry past.
+          securityContext: { fsGroup: 1000 },
+          volumes: [{
+            name: 'ssh-key',
+            secret: {
+              secretName: fcObj.sshKey.metadata.name,
+              defaultMode: 288,  // 0440
+            },
+          }],
+          container: {
+            image: config.image,
+            // ALWAYS, for the reason on the bench step: the tag floats.
+            imagePullPolicy: 'Always',
+            command: ['/usr/local/bin/set-rtc'],
+            volumeMounts: [{
+              name: 'ssh-key',
+              mountPath: '/secrets/ssh/id',
+              subPath: config.sshKeyField,
+              readOnly: true,
+            }],
+            env: [
+              {
+                name: 'FLEET_URL',
+                value: std.format('http://%s:%d', [config.name, config.port.containerPort]),
+              },
+              { name: 'FLEET_SSH_KEY', value: '/secrets/ssh/id' },
+              { name: 'FLEET_SSH_USER', value: config.sshUser },
+            ],
+            resources: {
+              requests: { cpu: '50m', memory: '64Mi' },
+              limits: { memory: '256Mi' },
+            },
+          },
+        }],
+      },
+    },
+
     // Collecting a flight: one step per thing retrieved, and nothing after them.
     // coordinator#566, and the reasoning is in README.md.
     //
