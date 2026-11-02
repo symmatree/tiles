@@ -40,6 +40,16 @@ external-dns:
     - --google-project=placeholder-project-id
     # Exclude ACME challenge domains (contain underscores, not valid IDNA)
     - --regex-domain-exclusion=^_acme-challenge\.
+    # external-dns v0.22.0 moved the default --annotation-prefix from
+    # external-dns.alpha.kubernetes.io/ to external-dns.kubernetes.io/. Every
+    # annotation in this repo still uses the alpha prefix, so without this flag
+    # they are invisible: the WAN `target` annotations stop applying (published
+    # hosts revert from CNAME lhitw to an A record at the internal ingress VIP,
+    # unreachable from the internet) and `hostname`-only records are deleted
+    # outright under policy: sync. Upstream provides this flag to read both
+    # prefixes during a migration and will remove it later; the annotations move
+    # to the new prefix separately. See docs/remote-access.md.
+    - --enable-legacy-annotation-prefix
   env:
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: /etc/secrets/service-account/credential.json
