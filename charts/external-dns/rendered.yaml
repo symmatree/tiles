@@ -152,6 +152,7 @@ spec:
             - --provider=google
             - "--google-project=placeholder-project-id"
             - "--regex-domain-exclusion=^_acme-challenge\\."
+            - "--enable-legacy-annotation-prefix"
           ports:
             - name: http
               protocol: TCP
