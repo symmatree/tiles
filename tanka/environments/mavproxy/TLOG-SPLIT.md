@@ -62,6 +62,7 @@ alternated with the FC's disarmed heartbeat and cut a file every second.
 | `TLOG_SPLIT_OUT` | `/mnt/ground-tlogs` | where files land |
 | `TLOG_SPLIT_MAX_BYTES` | `536870912` | cut a file no flight closed |
 | `TLOG_SPLIT_MAX_SECONDS` | `21600` | same, by age |
+| `TLOG_SPLIT_FLUSH_S` | `1` | flush at most this often, and when the stream goes quiet, so the open `.part` is a live view |
 
 ## Verified
 
