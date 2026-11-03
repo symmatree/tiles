@@ -47,7 +47,14 @@ local mavproxy = {
     ntripMountpoint: APP.app_settings.ntrip_mountpoint,
     ntripPort: 2101,
     ntripSecret: APP.app_settings.ntrip_caster_auth,
-    sourceSystem: 255,
+    // 254, not 255. The FC's MAV_GCS_SYSID is 255, and only heartbeats, RC overrides and
+    // manual control from that sysid feed its GCS failsafe. These proxies run all the time and
+    // broadcast corrections to whoever listens; they are not an operator in control, so they
+    // do not get to keep that timer alive. Mission Planner, when connected, is 255; otherwise
+    // the ELRS receiver's RC overrides (source sysid 255) are what feed it, so the GCS failsafe
+    // follows the RC link. GPS_RTCM_DATA is applied whatever the sender's sysid (ArduPilot
+    // GCS_Common.cpp), so corrections do not depend on this. coordinator#683.
+    sourceSystem: 254,
     sourceComponent: 190,
 
     // The mLRS link: a RadioMaster Ranger on mLRS, USB-C into acebase, to the RP4TD on the FC's
