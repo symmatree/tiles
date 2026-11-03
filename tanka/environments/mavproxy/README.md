@@ -17,7 +17,7 @@ Prod only (`cluster_name: tiles`); co-located with [ntrip](../ntrip/README.md) o
 | Mission Planner TCP, mLRS link | `mavproxy-mlrs.tiles.symmatree.com:5770` | LoadBalancer + external-dns |
 | NTRIP corrections source | `ntrip.tiles.symmatree.com:2101/ATTIC` | Same caster as [ntrip](../ntrip/README.md) |
 
-Both hostnames resolve to private **10.x** addresses on site LAN. Mission Planner: **TCP**, system ID **254**.
+Both hostnames resolve to private **10.x** addresses on site LAN. Mission Planner: **TCP**, system ID **255** -- the FC's `MAV_GCS_SYSID`, so a connected Mission Planner is what the GCS failsafe tracks.
 
 ## Architecture
 
@@ -26,7 +26,7 @@ Both hostnames resolve to private **10.x** addresses on site LAN. Mission Planne
 - **Tanka:** [`main.jsonnet`](main.jsonnet)
 - **Argo CD:** [`application.helm.yaml`](application.helm.yaml) (prod only)
 
-The ELRS pod uses **hostNetwork** on acebase (privileged namespace, `dedicated=gnss` toleration) so ELRS backpack UDP broadcast on `:14550` reaches the proxy. MAVProxy runs with **`--daemon`** and **`--nowait`** as GCS **sysid 255**. NTRIP is configured via **`$HOME/.mavproxy/mavinit.scr`** written by the container entrypoint. No **liveness** probe -- k8s must not restart this hub.
+The ELRS pod uses **hostNetwork** on acebase (privileged namespace, `dedicated=gnss` toleration) so ELRS backpack UDP broadcast on `:14550` reaches the proxy. MAVProxy runs with **`--daemon`** and **`--nowait`** as **sysid 254**, deliberately not the FC's GCS id (255): both proxies run all the time and broadcast corrections, they are not an operator in control ([coordinator#683](https://github.com/symmatree/coordinator/issues/683)). NTRIP is configured via **`$HOME/.mavproxy/mavinit.scr`** written by the container entrypoint. No **liveness** probe -- k8s must not restart this hub.
 
 The mLRS pod is an ordinary pod pinned to acebase (same toleration), **privileged** for the host
 device node like the ntrip pod's `/dev/gnss`. `/dev/mlrs` is a udev symlink from
