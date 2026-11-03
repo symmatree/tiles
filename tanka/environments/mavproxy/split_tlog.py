@@ -39,6 +39,11 @@ OUT_DIR = Path(os.environ.get("TLOG_SPLIT_OUT", "/mnt/ground-tlogs"))
 # A bench session never disarms, so the cut cannot only be disarm. Bound it.
 MAX_BYTES = int(os.environ.get("TLOG_SPLIT_MAX_BYTES", str(512 * 1024 * 1024)))
 MAX_SECONDS = int(os.environ.get("TLOG_SPLIT_MAX_SECONDS", str(6 * 3600)))
+# Flush at most this often, and whenever the stream goes quiet, so the `.part` on the share
+# is a live view. Unflushed, Python buffers at the file's st_blksize, which on the NFS share
+# is 128 KB -- about two minutes of the mLRS link's ~1 kB/s, so a reader saw the file grow in
+# two-minute jumps. One small NFS write a second is nothing at these rates.
+FLUSH_S = float(os.environ.get("TLOG_SPLIT_FLUSH_S", "1"))
 ARMED = mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
 
 
@@ -58,14 +63,27 @@ class Segment:
         self.armed_at: float | None = None
         self.disarmed_at: float | None = None
         self.bytes = 0
+        self.flushed_at = started
+        self.unflushed = False
         self.path = out_dir / f"{utc(started)}.tlog.part"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.fh = self.path.open("wb")
 
     def write(self, msg) -> None:
         # tlog format: 8-byte big-endian microseconds, then the frame as received.
-        self.fh.write(struct.pack(">Q", int(time.time() * 1e6)) + msg.get_msgbuf())
+        now = time.time()
+        self.fh.write(struct.pack(">Q", int(now * 1e6)) + msg.get_msgbuf())
         self.bytes += len(msg.get_msgbuf()) + 8
+        self.unflushed = True
+        if now - self.flushed_at >= FLUSH_S:
+            self.flush(now)
+
+    def flush(self, now: float) -> None:
+        """Push what is buffered to the share. A no-op when nothing has been written since."""
+        if self.unflushed:
+            self.fh.flush()
+            self.unflushed = False
+        self.flushed_at = now
 
     def close(self, why: str) -> Path | None:
         """Finish the file. An EMPTY one is removed rather than named: nothing arrived, so
@@ -92,9 +110,11 @@ def listen(addr: str) -> socket.socket:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((host, int(port)))
-    # A timeout so the loop wakes to apply the age bound and to notice a shutdown; no
-    # traffic is normal, the vehicle is off most of the time.
-    sock.settimeout(30)
+    # A timeout so the loop wakes to apply the age bound, to notice a shutdown, and to flush
+    # the tail once the stream goes quiet; no traffic is normal, the vehicle is off most of
+    # the time. FLUSH_S, so the last second before a silence lands on the share within one
+    # more second rather than waiting for the next frame.
+    sock.settimeout(FLUSH_S)
     print(f"tlog-split: listening on udp {addr}", flush=True)
     return sock
 
@@ -122,6 +142,7 @@ def main() -> int:
             data, _peer = sock.recvfrom(65535)
         except socket.timeout:
             data = b""          # no traffic is normal: the vehicle is off
+            seg.flush(time.time())
         except Shutdown as why:
             # `seg` is whichever segment is open NOW -- a cut rebinds it, so the close has
             # to happen here where the name is current, not in a caller holding the first.
