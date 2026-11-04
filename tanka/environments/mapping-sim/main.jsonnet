@@ -75,7 +75,7 @@ local cloneScript = |||
 
 local runsMount = [{ name: 'runs', mountPath: '/runs' }];
 
-// ODM, like the rest of the heavy work, belongs on lancer (see the odm environment).
+// Rendering and ODM, like the rest of the heavy work, belong on lancer (see the odm environment).
 local onLancer = {
   nodeSelector: { 'kubernetes.io/hostname': 'lancer' },
   tolerations: [{ key: 'dedicated', operator: 'Equal', value: 'heavy' }],
@@ -113,17 +113,20 @@ local workflowTemplate = {
           [{ name: 'score', template: 'score' }],
         ],
       },
-      {
+      onLancer {
         name: 'render',
         script: {
           image: notebookImage,
           command: ['bash'],
+          // 16 single-threaded render processes, about 430 MB each at full resolution;
+          // render-args comes after --jobs so it can override it.
+          env: [{ name: 'OMP_NUM_THREADS', value: '1' }, { name: 'OPENBLAS_NUM_THREADS', value: '1' }],
           source: cloneScript + |||
             echo "{\"coordinator_sha\": \"$sha\", \"config\": \"{{workflow.parameters.config}}\", \"render_args\": \"{{workflow.parameters.render-args}}\", \"odm_image\": \"%s\"}" > "$run/provenance.json"
             python3 /tmp/coordinator/analysis/mapping_sim/render.py \
-              "/tmp/coordinator/{{workflow.parameters.config}}" "$run" {{workflow.parameters.render-args}}
+              "/tmp/coordinator/{{workflow.parameters.config}}" "$run" --jobs 16 {{workflow.parameters.render-args}}
           ||| % odmImage,
-          resources: { requests: { cpu: '1', memory: '2Gi' }, limits: { memory: '4Gi' } },
+          resources: { requests: { cpu: '16', memory: '10Gi' }, limits: { memory: '16Gi' } },
           volumeMounts: runsMount,
         },
       },
