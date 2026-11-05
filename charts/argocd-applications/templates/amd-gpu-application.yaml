@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: amd-gpu
+spec:
+  project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
+  source:
+    chart: amd-gpu
+    repoURL: https://rocm.github.io/k8s-device-plugin
+    targetRevision: "0.22.0"
+    helm:
+      valuesObject:
+        # node-feature-discovery is its own Application, version-pinned.
+        nfd:
+          enabled: false
+        # Runs the device plugin only on nodes NFD labels with an AMD display
+        # device. lancer's Radeon 8060S is PCI class 0x0380 (display controller,
+        # other), not the chart default 0300.
+        node_selector_enabled: true
+        node_selector:
+          feature.node.kubernetes.io/pci-0380_1002.present: "true"
+          kubernetes.io/arch: amd64
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: amd-gpu
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged

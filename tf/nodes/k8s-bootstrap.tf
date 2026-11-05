@@ -99,6 +99,7 @@ locals {
     "cert-manager-crds"         = "0.2.0"
     "external-snapshotter-crds" = "0.1.0"
     "gateway-api-crds"          = "0.2.0"
+    "nfd-crds"                  = "0.1.0"
     "onepassword-crds"          = "0.2.0"
     "trust-manager-crds"        = "0.2.0"
   }

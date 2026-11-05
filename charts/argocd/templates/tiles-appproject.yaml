@@ -13,6 +13,8 @@ spec:
     - https://grafana-community.github.io/helm-charts
     - https://opensource.zalando.com/postgres-operator/charts/postgres-operator
     - https://opensource.zalando.com/postgres-operator/charts/postgres-operator-ui
+    - https://kubernetes-sigs.github.io/node-feature-discovery/charts
+    - https://rocm.github.io/k8s-device-plugin
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"
