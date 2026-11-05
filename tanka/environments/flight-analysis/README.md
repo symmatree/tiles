@@ -9,7 +9,10 @@ flight on the raconteur NAS. Which notebooks make up the set, and what each read
 
 ## What one run does
 
-1. For every DataFlash log under `/volume2/datasets/flights` -- a `.bin` whose first bytes are the
+A flight is `/volume2/datasets/flights/<platform>/<flight>/`, and only that level is read.
+`<platform>/archive/` holds flights that are kept but no longer run; nothing beneath it is a flight.
+
+1. For every DataFlash log at a flight's root or under its `fc/` -- a `.bin` whose first bytes are the
    DataFlash header, so a firmware image or a fixture with that suffix is named in the log and
    skipped (coordinator#193): `analysis/flight-analysis.ipynb`, rendered `.ipynb` and `.pdf` beside
    the log, and `flight-analysis-<stem>.polisher.json` beside them, one per log. A directory's older

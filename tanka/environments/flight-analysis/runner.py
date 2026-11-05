@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Nightly flight-analysis runner.
 
-Per .bin under /mnt/flights: papermill + nbconvert of the FC-log notebook, rendered .ipynb
-and PDF next to the log, skipped when polisher.json already records this notebook blob and
-this .bin's sha256 (unchanged from the original runner).
+A flight is /mnt/flights/<platform>/<flight>/, and only that level is read, so a flight
+moved under <platform>/archive/ drops out of the run.
+
+Per .bin at a flight's root or under its fc/: papermill + nbconvert of the FC-log notebook,
+rendered .ipynb and PDF next to the log, skipped when polisher.json already records this
+notebook blob and this .bin's sha256 (unchanged from the original runner).
 
 Per flight directory, after that:
   1. extract every <node>_<session>.tar.zst at the flight root into captures/ -- the tar paths
@@ -167,10 +170,16 @@ def process(bin_path: Path, notebook_path: Path, notebook_sha: str) -> None:
 
 # --- the per-flight set -------------------------------------------------------------------
 
-def dataflash_logs(root: Path) -> list:
-    """Every DataFlash log under root, by content; other *.bin are named and left alone."""
+def subdirs(d: Path) -> list:
+    """Directories directly under d; Synology's @eaDir and dot-dirs are not flights."""
+    return sorted(p for p in d.iterdir() if p.is_dir() and not p.name.startswith(("@", ".")))
+
+
+def dataflash_logs(flight: Path) -> list:
+    """The flight's DataFlash logs, at its root or under fc/, by content; other *.bin are
+    named and left alone."""
     out = []
-    for p in sorted(root.rglob("*.bin")):
+    for p in sorted(flight.glob("*.bin")) + sorted((flight / "fc").glob("*.bin")):
         if is_dataflash(p):
             out.append(p)
         else:
@@ -178,15 +187,19 @@ def dataflash_logs(root: Path) -> list:
     return out
 
 
-def flight_dirs() -> list:
-    """Every directory holding a DataFlash log (at its root or under fc/) or a session bundle."""
-    dirs = set()
-    for p in dataflash_logs(FLIGHTS_DIR):
-        dirs.add(p.parent.parent if p.parent.name == "fc" else p.parent)
-    for p in FLIGHTS_DIR.rglob("*.tar.zst"):
-        dirs.add(p.parent)
-    return sorted(d for d in dirs if "captures" not in d.relative_to(FLIGHTS_DIR).parts
-                  and "derived" not in d.relative_to(FLIGHTS_DIR).parts)
+def flights() -> dict:
+    """Every <platform>/<flight>/ holding a DataFlash log or a session bundle, with its logs.
+
+    Only that level is read. Anything deeper is not a flight: rekon10/archive/<flight>/ is
+    where flights go to drop out of the nightly run, and captures/ and derived/ belong to the
+    flight above them."""
+    out = {}
+    for platform in subdirs(FLIGHTS_DIR):
+        for flight in subdirs(platform):
+            logs = dataflash_logs(flight)
+            if logs or any(flight.glob("*.tar.zst")):
+                out[flight] = logs
+    return out
 
 
 def bundle_sha(flight: Path, bundle: Path) -> str:
@@ -375,14 +388,15 @@ def main() -> None:
         print(f"notebook: {rel} blob {nb_shas[rel]}", flush=True)
 
     errors = 0
-    for bin_path in dataflash_logs(FLIGHTS_DIR):
+    found = flights()
+    for bin_path in [b for logs in found.values() for b in logs]:
         try:
             process(bin_path, NOTEBOOK_DIR / NOTEBOOK_REL, nb_shas[NOTEBOOK_REL])
         except Exception as exc:
             print(f"  ERROR {bin_path.name}: {exc}", file=sys.stderr, flush=True)
             errors += 1
 
-    for flight in flight_dirs():
+    for flight in found:
         print(f"flight: {flight.relative_to(FLIGHTS_DIR)}", flush=True)
         try:
             process_flight(flight, nb_shas)
