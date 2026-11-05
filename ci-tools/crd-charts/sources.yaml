@@ -97,6 +97,13 @@ charts:
     urls:
       - https://raw.githubusercontent.com/1Password/onepassword-operator/refs/tags/{ref}/config/crd/bases/onepassword.com_onepassworditems.yaml
 
+  - name: nfd-crds
+    version: 0.1.0
+    ref: v0.20.1
+    description: node-feature-discovery CRDs (NodeFeature, NodeFeatureGroup, NodeFeatureRule)
+    urls:
+      - https://raw.githubusercontent.com/kubernetes-sigs/node-feature-discovery/{ref}/deployment/base/nfd-crds/nfd-api-crds.yaml
+
   # No snapshot controller is installed; the NFS CSI driver still wants the
   # VolumeSnapshot types present. Replace this source if a real snapshot
   # implementation ever lands.
