@@ -27,8 +27,9 @@ local notebookImage = 'ghcr.io/symmatree/tiles/datascience-notebook-ssh:main';
 local odmImage = 'opendronemap/odm:3.6.2';
 local coordinatorRepo = 'https://github.com/symmatree/coordinator.git';
 
-// Every run is a directory under the datasets share's mapping-sim/: render writes images/,
-// geo.txt and truth.json there, ODM uses it as its project, score writes score.json beside them.
+// The datasets share's mapping-sim/, mounted at /data. renders/<render>/ is a rendered capture,
+// written once (images/, geo.txt, truth.json, manifest.json, README.md); runs/<run>/ is one
+// processing of a render: ODM's project, run.json and score.json.
 local runsPv =
   kPersistentVolume.new('mapping-sim-runs')
   + kPersistentVolume.spec.withCapacity({ storage: '2Ti' })
@@ -64,16 +65,14 @@ local workflowRoleBinding =
     + kSubject.withNamespace(namespace),
   ]);
 
+local dataMount = { name: 'data', mountPath: '/data' };
+
 // Clone coordinator at the requested ref into the pod and record which commit that was.
 local cloneScript = |||
   set -euo pipefail
-  run=/runs/{{workflow.parameters.run}}
-  mkdir -p "$run"
-  git clone --quiet --depth 1 --branch '{{workflow.parameters.revision}}' %s /tmp/coordinator
+  git clone --quiet --depth 1 --branch '{{inputs.parameters.revision}}' %s /tmp/coordinator
   sha=$(git -C /tmp/coordinator rev-parse HEAD)
 ||| % coordinatorRepo;
-
-local runsMount = [{ name: 'runs', mountPath: '/runs' }];
 
 // Rendering and ODM, like the rest of the heavy work, belong on lancer (see the odm environment).
 local onLancer = {
@@ -81,88 +80,150 @@ local onLancer = {
   tolerations: [{ key: 'dedicated', operator: 'Equal', value: 'heavy' }],
 };
 
-local workflowTemplate = {
-  apiVersion: 'argoproj.io/v1alpha1',
-  kind: 'WorkflowTemplate',
-  metadata: { name: name },
-  spec: {
-    serviceAccountName: serviceAccount.metadata.name,
-    entrypoint: 'run',
-    ttlStrategy: { secondsAfterCompletion: 604800 },
-    arguments: {
-      parameters: [
-        // Directory under mapping-sim/ on the datasets share. A rerun into an existing
-        // directory overwrites its images and ODM's outputs.
-        { name: 'run' },
-        { name: 'config', value: 'analysis/mapping_sim/configs/as-built.yaml' },
-        // A coordinator branch or tag.
-        { name: 'revision', value: 'main' },
-        // Extra arguments to render.py, e.g. "--scale 0.25 --limit 10".
-        { name: 'render-args', value: '' },
-        // Extra arguments to ODM after the fixed ones below.
-        { name: 'odm-args', value: '' },
-      ],
-    },
-    volumes: [{ name: 'runs', persistentVolumeClaim: { claimName: runsPvc.metadata.name } }],
-    templates: [
+local inputs(names) = { inputs: { parameters: [{ name: n } for n in names] } };
+
+// Writes renders/<render>/ and fails if it already exists: a render is kept as written, since any
+// number of runs may read it. render.py writes its own manifest.json and README.md.
+local renderTemplate = onLancer + inputs(['render', 'config', 'revision', 'render-args']) {
+  name: 'render',
+  script: {
+    image: notebookImage,
+    command: ['bash'],
+    // 16 single-threaded render processes, about 430 MB each at full resolution;
+    // render-args comes after --jobs so it can override it.
+    env: [{ name: 'OMP_NUM_THREADS', value: '1' }, { name: 'OPENBLAS_NUM_THREADS', value: '1' }],
+    source: cloneScript + |||
+      mkdir -p /data/renders
+      mkdir '/data/renders/{{inputs.parameters.render}}'
+      cd /tmp/coordinator
+      python3 analysis/mapping_sim/render.py '{{inputs.parameters.config}}' \
+        '/data/renders/{{inputs.parameters.render}}' --jobs 16 {{inputs.parameters.render-args}}
+    |||,
+    resources: { requests: { cpu: '16', memory: '10Gi' }, limits: { memory: '16Gi' } },
+    volumeMounts: [dataMount],
+  },
+};
+
+// ODM's project is runs/<run>/, with the render's images/ mounted into it read-only so that no
+// run can change a render, and the render's geo.txt as the priors. run.json records what ran.
+local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
+  name: 'odm',
+  // Through bash rather than the image's entrypoint so odm-args can carry several flags.
+  script: {
+    image: odmImage,
+    command: ['bash'],
+    source: |||
+      set -euo pipefail
+      render='/data/renders/{{inputs.parameters.render}}'
+      run='/data/runs/{{inputs.parameters.run}}'
+      python3 - "$render" "$run" <<'EOF'
+      import datetime, hashlib, json, pathlib, sys
+      render, run = map(pathlib.Path, sys.argv[1:])
+      (run / "run.json").write_text(json.dumps({
+          "render": "{{inputs.parameters.render}}",
+          "render_manifest_sha256": hashlib.sha256((render / "manifest.json").read_bytes()).hexdigest(),
+          "odm_image": "%s",
+          "odm_args": "{{inputs.parameters.odm-args}}",
+          "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+      }, indent=1))
+      EOF
+      exec python3 /code/run.py --project-path /data/runs '{{inputs.parameters.run}}' \
+        --geo "$render/geo.txt" \
+        --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16 \
+        {{inputs.parameters.odm-args}}
+    ||| % odmImage,
+    resources: { requests: { cpu: '8', memory: '16Gi' }, limits: { memory: '48Gi' } },
+    volumeMounts: [
+      dataMount,
       {
-        name: 'run',
-        steps: [
-          [{ name: 'render', template: 'render' }],
-          [{ name: 'odm', template: 'odm' }],
-          [{ name: 'score', template: 'score' }],
-        ],
-      },
-      onLancer {
-        name: 'render',
-        script: {
-          image: notebookImage,
-          command: ['bash'],
-          // 16 single-threaded render processes, about 430 MB each at full resolution;
-          // render-args comes after --jobs so it can override it.
-          env: [{ name: 'OMP_NUM_THREADS', value: '1' }, { name: 'OPENBLAS_NUM_THREADS', value: '1' }],
-          source: cloneScript + |||
-            echo "{\"coordinator_sha\": \"$sha\", \"config\": \"{{workflow.parameters.config}}\", \"render_args\": \"{{workflow.parameters.render-args}}\", \"odm_image\": \"%s\"}" > "$run/provenance.json"
-            python3 /tmp/coordinator/analysis/mapping_sim/render.py \
-              "/tmp/coordinator/{{workflow.parameters.config}}" "$run" --jobs 16 {{workflow.parameters.render-args}}
-          ||| % odmImage,
-          resources: { requests: { cpu: '16', memory: '10Gi' }, limits: { memory: '16Gi' } },
-          volumeMounts: runsMount,
-        },
-      },
-      onLancer {
-        name: 'odm',
-        // Through bash rather than the image's entrypoint so odm-args can carry several flags.
-        script: {
-          image: odmImage,
-          command: ['bash'],
-          source: |||
-            set -euo pipefail
-            exec python3 /code/run.py --project-path /runs '{{workflow.parameters.run}}' \
-              --geo '/runs/{{workflow.parameters.run}}/geo.txt' \
-              --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16 \
-              {{workflow.parameters.odm-args}}
-          |||,
-          resources: { requests: { cpu: '8', memory: '16Gi' }, limits: { memory: '48Gi' } },
-          volumeMounts: runsMount,
-        },
-      },
-      {
-        name: 'score',
-        script: {
-          image: notebookImage,
-          command: ['bash'],
-          source: cloneScript + |||
-            python3 /tmp/coordinator/analysis/mapping_sim/score.py \
-              "$run" "$run/opensfm/reconstruction.json" --json "$run/score.json"
-          |||,
-          resources: { requests: { cpu: '500m', memory: '1Gi' }, limits: { memory: '4Gi' } },
-          volumeMounts: runsMount,
-        },
+        name: 'data',
+        subPath: 'renders/{{inputs.parameters.render}}/images',
+        mountPath: '/data/runs/{{inputs.parameters.run}}/images',
+        readOnly: true,
       },
     ],
   },
 };
+
+local scoreTemplate = inputs(['run', 'render', 'revision']) {
+  name: 'score',
+  script: {
+    image: notebookImage,
+    command: ['bash'],
+    source: cloneScript + |||
+      run='/data/runs/{{inputs.parameters.run}}'
+      python3 /tmp/coordinator/analysis/mapping_sim/score.py '/data/renders/{{inputs.parameters.render}}' \
+        "$run/opensfm/reconstruction.json" --json "$run/score.json"
+      python3 - "$run/run.json" "$sha" <<'EOF'
+      import json, pathlib, sys
+      path = pathlib.Path(sys.argv[1])
+      record = json.loads(path.read_text())
+      record["score_coordinator_commit"] = sys.argv[2]
+      path.write_text(json.dumps(record, indent=1))
+      EOF
+    |||,
+    resources: { requests: { cpu: '500m', memory: '1Gi' }, limits: { memory: '4Gi' } },
+    volumeMounts: [dataMount],
+  },
+};
+
+local step(stepName, template, params) = {
+  name: stepName,
+  template: template.name,
+  arguments: { parameters: [{ name: k, value: params[k] } for k in std.objectFields(params)] },
+};
+local p(n) = '{{workflow.parameters.%s}}' % n;
+
+local workflowTemplate(wtName, parameters, steps, templates) = {
+  apiVersion: 'argoproj.io/v1alpha1',
+  kind: 'WorkflowTemplate',
+  metadata: { name: wtName },
+  spec: {
+    serviceAccountName: serviceAccount.metadata.name,
+    entrypoint: 'main',
+    ttlStrategy: { secondsAfterCompletion: 604800 },
+    arguments: { parameters: parameters },
+    volumes: [{ name: 'data', persistentVolumeClaim: { claimName: runsPvc.metadata.name } }],
+    templates: [{ name: 'main', steps: [[s] for s in steps] }] + templates,
+  },
+};
+
+// Parameters shared by the templates below.
+local configParam = { name: 'config', value: 'analysis/mapping_sim/configs/as-built.yaml' };  // path in coordinator
+local revisionParam = { name: 'revision', value: 'main' };  // coordinator branch or tag
+local renderArgsParam = { name: 'render-args', value: '' };  // e.g. "--scale 0.25 --limit 10"
+local odmArgsParam = { name: 'odm-args', value: '' };  // after the fixed ODM flags
+
+// Render only: renders/<render>/.
+local renderWorkflow = workflowTemplate(
+  'mapping-sim-render',
+  [{ name: 'render' }, configParam, revisionParam, renderArgsParam],
+  [step('render', renderTemplate, { render: p('render'), config: p('config'), revision: p('revision'), 'render-args': p('render-args') })],
+  [renderTemplate],
+);
+
+// Process an existing render into runs/<run>/ and score it.
+local processWorkflow = workflowTemplate(
+  'mapping-sim-process',
+  [{ name: 'run' }, { name: 'render' }, revisionParam, odmArgsParam],
+  [
+    step('odm', odmTemplate, { run: p('run'), render: p('render'), 'odm-args': p('odm-args') }),
+    step('score', scoreTemplate, { run: p('run'), render: p('render'), revision: p('revision') }),
+  ],
+  [odmTemplate, scoreTemplate],
+);
+
+// Both, with the render and the run sharing one name.
+local allWorkflow = workflowTemplate(
+  'mapping-sim',
+  [{ name: 'name' }, configParam, revisionParam, renderArgsParam, odmArgsParam],
+  [
+    step('render', renderTemplate, { render: p('name'), config: p('config'), revision: p('revision'), 'render-args': p('render-args') }),
+    step('odm', odmTemplate, { run: p('name'), render: p('name'), 'odm-args': p('odm-args') }),
+    step('score', scoreTemplate, { run: p('name'), render: p('name'), revision: p('revision') }),
+  ],
+  [renderTemplate, odmTemplate, scoreTemplate],
+);
 
 {
   runsPv: runsPv,
@@ -170,5 +231,7 @@ local workflowTemplate = {
   serviceAccount: serviceAccount,
   workflowRole: workflowRole,
   workflowRoleBinding: workflowRoleBinding,
-  workflowTemplate: workflowTemplate,
+  renderWorkflow: renderWorkflow,
+  processWorkflow: processWorkflow,
+  allWorkflow: allWorkflow,
 }
