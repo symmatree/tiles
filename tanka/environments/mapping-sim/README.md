@@ -52,6 +52,16 @@ Steps:
    /data/renders/<render> /data/runs/<run>/opensfm/reconstruction.json --json
    /data/runs/<run>/score.json`, and adds its commit to `run.json`.
 
+On exit, succeeded or not, **resources** ([`resources.py`](resources.py), notebook image) waits
+two minutes for the last cadvisor scrape, queries Mimir for what each of the workflow's pods used,
+and saves it beside that step's output: the render step's in `renders/<render>/resources/`, the
+others' in `runs/<run>/resources/`, as `<workflow>.json` (each query, its window and Mimir's
+response unaltered: every scraped working-set memory and CPU-counter sample, the CPU rate as a
+series, and the memory and CPU requests and limits) and `<workflow>.md` (per step: wall time, peak
+and mean memory against request and limit, peak and mean cores against request, core-hours, and a
+Grafana Explore link to the curves). A render's `manifest.json` lists the files `render.py` wrote,
+so `resources/` is not in it.
+
 ## Submitting
 
 ```bash

@@ -167,6 +167,26 @@ local scoreTemplate = inputs(['run', 'render', 'revision']) {
   },
 };
 
+// The exit handler: whether the steps succeeded or not, save what each pod used, from Mimir, into
+// the folder that step wrote (resources.py). An empty render or run is a folder the workflow does
+// not write.
+local resourcesTemplate = inputs(['render', 'run']) {
+  name: 'resources',
+  script: {
+    image: notebookImage,
+    command: ['python3'],
+    args: [
+      '{{workflow.name}}',
+      '{{workflow.creationTimestamp}}',
+      '{{inputs.parameters.render}}',
+      '{{inputs.parameters.run}}',
+    ],
+    source: importstr 'resources.py',
+    resources: { requests: { cpu: '100m', memory: '256Mi' }, limits: { memory: '1Gi' } },
+    volumeMounts: [dataMount],
+  },
+};
+
 local step(stepName, template, params) = {
   name: stepName,
   template: template.name,
@@ -174,17 +194,22 @@ local step(stepName, template, params) = {
 };
 local p(n) = '{{workflow.parameters.%s}}' % n;
 
-local workflowTemplate(wtName, parameters, steps, templates) = {
+// written: the render and run directories the steps write, '' for neither, for the exit handler.
+local workflowTemplate(wtName, parameters, steps, templates, written) = {
   apiVersion: 'argoproj.io/v1alpha1',
   kind: 'WorkflowTemplate',
   metadata: { name: wtName },
   spec: {
     serviceAccountName: serviceAccount.metadata.name,
     entrypoint: 'main',
+    onExit: 'exit',
     ttlStrategy: { secondsAfterCompletion: 604800 },
     arguments: { parameters: parameters },
     volumes: [{ name: 'data', persistentVolumeClaim: { claimName: runsPvc.metadata.name } }],
-    templates: [{ name: 'main', steps: [[s] for s in steps] }] + templates,
+    templates: [
+      { name: 'main', steps: [[s] for s in steps] },
+      { name: 'exit', steps: [[step('resources', resourcesTemplate, written)]] },
+    ] + templates + [resourcesTemplate],
   },
 };
 
@@ -200,6 +225,7 @@ local renderWorkflow = workflowTemplate(
   [{ name: 'render' }, configParam, revisionParam, renderArgsParam],
   [step('render', renderTemplate, { render: p('render'), config: p('config'), revision: p('revision'), 'render-args': p('render-args') })],
   [renderTemplate],
+  { render: '/data/renders/' + p('render'), run: '' },
 );
 
 // Process an existing render into runs/<run>/ and score it.
@@ -211,6 +237,7 @@ local processWorkflow = workflowTemplate(
     step('score', scoreTemplate, { run: p('run'), render: p('render'), revision: p('revision') }),
   ],
   [odmTemplate, scoreTemplate],
+  { render: '', run: '/data/runs/' + p('run') },
 );
 
 // Both, with the render and the run sharing one name.
@@ -223,6 +250,7 @@ local allWorkflow = workflowTemplate(
     step('score', scoreTemplate, { run: p('name'), render: p('name'), revision: p('revision') }),
   ],
   [renderTemplate, odmTemplate, scoreTemplate],
+  { render: '/data/renders/' + p('name'), run: '/data/runs/' + p('name') },
 );
 
 {
