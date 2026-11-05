@@ -1186,7 +1186,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: "https://grafana-community.github.io/helm-charts"
-      targetRevision: "20.2.1"
+      targetRevision: "20.4.1"
       chart: loki
       helm:
         valueFiles:

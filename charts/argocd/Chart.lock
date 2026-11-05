@@ -1,9 +1,9 @@
 dependencies:
 - name: argo-cd
   repository: https://argoproj.github.io/argo-helm
-  version: 10.11.6
+  version: 10.14.0
 - name: oauth2-proxy
   repository: https://oauth2-proxy.github.io/manifests
   version: 10.7.1
-digest: sha256:5a2e8314c9628c8d1fc166378a8ea37c2dceadbdcf4abc1266ee52286cbdc2ee
-generated: "2026-11-01T01:24:30.302429563Z"
+digest: sha256:396dab9e12887a20cbe3a5189f9592c53b7e8191a1dc45f85d3460b77a075a4d
+generated: "2026-11-05T17:57:38.90073526Z"
