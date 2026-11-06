@@ -124,6 +124,7 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
           "render_manifest_sha256": hashlib.sha256((render / "manifest.json").read_bytes()).hexdigest(),
           "odm_image": "%s",
           "odm_args": "{{inputs.parameters.odm-args}}",
+          "opensfm_rig": (run / "opensfm" / "rig_assignments.json").exists(),
           "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
       }, indent=1))
       EOF
@@ -142,6 +143,22 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
         readOnly: true,
       },
     ],
+  },
+};
+
+// OpenSfM's rig files in runs/<run>/opensfm/ before ODM runs, so it reconstructs the cameras as one
+// rig: a pose per capture, the mounts shared (coordinator's opensfm_rig.py).
+local rigTemplate = inputs(['run', 'render', 'revision']) {
+  name: 'rig',
+  script: {
+    image: notebookImage,
+    command: ['bash'],
+    source: cloneScript + |||
+      python3 /tmp/coordinator/analysis/mapping_sim/opensfm_rig.py '/data/renders/{{inputs.parameters.render}}' \
+        '/data/runs/{{inputs.parameters.run}}/opensfm'
+    |||,
+    resources: { requests: { cpu: '100m', memory: '256Mi' }, limits: { memory: '1Gi' } },
+    volumeMounts: [dataMount],
   },
 };
 
@@ -218,6 +235,10 @@ local configParam = { name: 'config', value: 'analysis/mapping_sim/configs/as-bu
 local revisionParam = { name: 'revision', value: 'main' };  // coordinator branch or tag
 local renderArgsParam = { name: 'render-args', value: '' };  // e.g. "--scale 0.25 --limit 10"
 local odmArgsParam = { name: 'odm-args', value: '' };  // after the fixed ODM flags
+local rigParam = { name: 'rig', value: 'no' };  // 'yes': reconstruct the cameras as one rig
+local rigStep(run, render) =
+  step('rig', rigTemplate, { run: run, render: render, revision: p('revision') })
+  + { when: "'%s' == 'yes'" % p('rig') };
 
 // Render only: renders/<render>/.
 local renderWorkflow = workflowTemplate(
@@ -231,25 +252,27 @@ local renderWorkflow = workflowTemplate(
 // Process an existing render into runs/<run>/ and score it.
 local processWorkflow = workflowTemplate(
   'mapping-sim-process',
-  [{ name: 'run' }, { name: 'render' }, revisionParam, odmArgsParam],
+  [{ name: 'run' }, { name: 'render' }, revisionParam, odmArgsParam, rigParam],
   [
+    rigStep(p('run'), p('render')),
     step('odm', odmTemplate, { run: p('run'), render: p('render'), 'odm-args': p('odm-args') }),
     step('score', scoreTemplate, { run: p('run'), render: p('render'), revision: p('revision') }),
   ],
-  [odmTemplate, scoreTemplate],
+  [rigTemplate, odmTemplate, scoreTemplate],
   { render: '', run: '/data/runs/' + p('run') },
 );
 
 // Both, with the render and the run sharing one name.
 local allWorkflow = workflowTemplate(
   'mapping-sim',
-  [{ name: 'name' }, configParam, revisionParam, renderArgsParam, odmArgsParam],
+  [{ name: 'name' }, configParam, revisionParam, renderArgsParam, odmArgsParam, rigParam],
   [
     step('render', renderTemplate, { render: p('name'), config: p('config'), revision: p('revision'), 'render-args': p('render-args') }),
+    rigStep(p('name'), p('name')),
     step('odm', odmTemplate, { run: p('name'), render: p('name'), 'odm-args': p('odm-args') }),
     step('score', scoreTemplate, { run: p('name'), render: p('name'), revision: p('revision') }),
   ],
-  [renderTemplate, odmTemplate, scoreTemplate],
+  [renderTemplate, rigTemplate, odmTemplate, scoreTemplate],
   { render: '/data/renders/' + p('name'), run: '/data/runs/' + p('name') },
 );
 
