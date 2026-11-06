@@ -1,6 +1,9 @@
 """What a mapping-sim workflow's pods used, queried from Mimir and saved beside their output.
 
-    python3 resources.py <workflow> <created_utc> <render_dir|""> <run_dir|"">
+    WORKFLOW=<workflow> CREATED=<created_utc> RENDER_DIR=<dir|""> RUN_DIR=<dir|""> python3 resources.py
+
+From the environment rather than arguments: Argo runs a script template as command, then args,
+then the script's path, so arguments would land in front of the script.
 
 The workflow's exit handler, so it runs whether the steps succeeded or not. Each pod's step is its
 template name (Argo names pods <workflow>-<template>-<hash>); the render step's series go into the
@@ -13,8 +16,8 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import pathlib
-import sys
 import time
 import urllib.parse
 import urllib.request
@@ -59,7 +62,7 @@ def instant(resp: dict) -> dict[str, float]:
 
 
 def main() -> None:
-    workflow, created, render_dir, run_dir = sys.argv[1:]
+    workflow, created, render_dir, run_dir = (os.environ[k] for k in ("WORKFLOW", "CREATED", "RENDER_DIR", "RUN_DIR"))
     # cadvisor is scraped about once a minute: wait for the last step's final samples to land.
     time.sleep(SCRAPE_WAIT_S)
     start = dt.datetime.fromisoformat(created.replace("Z", "+00:00"))
