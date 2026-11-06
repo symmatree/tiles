@@ -15,9 +15,11 @@ spec:
           enabled: false
         # Runs the device plugin only on nodes NFD labels with an AMD display
         # device. lancer's Radeon 8060S is PCI class 0x0380 (display controller,
-        # other), not the chart default 0300.
+        # other), not the chart default 0300. Helm merges maps, so the default key
+        # is nulled to remove it rather than left as a second required label.
         node_selector_enabled: true
         node_selector:
+          feature.node.kubernetes.io/pci-0300_1002.present: null
           feature.node.kubernetes.io/pci-0380_1002.present: "true"
           kubernetes.io/arch: amd64
   destination:
