@@ -175,11 +175,11 @@ local resourcesTemplate = inputs(['render', 'run']) {
   script: {
     image: notebookImage,
     command: ['python3'],
-    args: [
-      '{{workflow.name}}',
-      '{{workflow.creationTimestamp}}',
-      '{{inputs.parameters.render}}',
-      '{{inputs.parameters.run}}',
+    env: [
+      { name: 'WORKFLOW', value: '{{workflow.name}}' },
+      { name: 'CREATED', value: '{{workflow.creationTimestamp}}' },
+      { name: 'RENDER_DIR', value: '{{inputs.parameters.render}}' },
+      { name: 'RUN_DIR', value: '{{inputs.parameters.run}}' },
     ],
     source: importstr 'resources.py',
     resources: { requests: { cpu: '100m', memory: '256Mi' }, limits: { memory: '1Gi' } },
