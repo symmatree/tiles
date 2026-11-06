@@ -121,6 +121,17 @@ done is a comment saying so, not a retitle around the survivor.
 | A control-plane node is rebooting and the API times out | Expected until it is back. Calls to the control plane in that window fail and add load; start one passive watcher and wait |
 | An etcd member is listed but its applied index has stopped | It does not count for quorum in practice; upgrading another control-plane node then loses quorum |
 | A chained `[ a ] && [ b ]` under `set -e` | Does not stop the script when `a` fails; write stop conditions as `if ...; then exit 1; fi` |
+| A chart dependency bump inside `charts/argocd` (or any Terraform-installed wrapper chart) plans as "No changes" | `helm_release` diffs on its arguments; bump the wrapper chart's own `version` in the same PR |
+| A `valuesObject` map (e.g. a chart's `node_selector`) | Helm merges maps with the chart default instead of replacing them; set an unwanted default key to `null` (amd-gpu: both PCI labels became required, DaemonSet desired 0) |
+| A PR that bumps a `crd-charts` version | `publish-crd-charts` and `nodes-plan-apply` start together; the plan can fail with `not found` before the push lands. Re-run the plan |
+| A controller upgrade (Argo CD, cert-manager, Cilium, ...) | Its CRDs come only from `ci-tools/crd-charts/sources.yaml`, not the chart; bump them first. Before a CRD bump, check live `status.storedVersions` are still served. Gateway API v1.6 TLSRoute serves only `v1`, which crashed the Cilium 1.19 operator until 1.20 landed |
+| Argo shows `ComparisonError ... field not declared in schema` | Argo CD's bundled `k8s.io/api` is older than the cluster's; upgrade Argo CD |
+| A StatefulSet's storage changes (`volumeClaimTemplates`) | Immutable: Argo's sync fails, and auto-sync stops retrying the revision after 5 attempts. `kubectl delete sts --cascade=orphan`, then a sync, then roll pods one at a time |
+| A manual Argo sync via `operation` | Does not inherit `syncPolicy.syncOptions`; pass `CreateNamespace=true,ServerSideApply=true` explicitly. Client-side apply fails on the large Mimir dashboard ConfigMaps (annotation > 256 KiB) |
+| `synology_container_project` (Container Manager on raconteur) | Renders services into compose `content` that is not marked sensitive and is printed in full when an apply fails -- keep secrets in compose `secrets`. An in-place update can fail to build on DSM (email "Cannot build project") while Terraform reports success, leaving the old container; `replace_triggered_by` on a `terraform_data` of the service and cert, plus the password, forces replacement |
+| Mimir's `filesystem` storage backend over NFS | Fails from Mimir 3.2 (objstore writes a `user.thanos.objstore.sha256sum` xattr; raconteur is NFS 4.1, kernel 4.4). Prod Mimir now uses S3 on versitygw on raconteur (`tf/nodes/synology-versitygw.tf`) |
+| `ubuntu-latest` moves | It became 26.04; `wg-quick` then refused a config in `$HOME`. The action writes `/etc/wireguard/wg0.conf` |
+| A Renovate PR's render-diff comment | Truncated at GitHub's comment limit; run `scripts/render-apps-diff.sh` on the branch locally for the full diff |
 | A new `app_of_apps_values` key reaches the Helm release but not the root Application | `charts/argocd-applications-installer/templates/application.yaml` lists the propagated keys by hand; add the key there too, and bump that chart's `version` -- `helm_release` diffs on its arguments, so a template-only edit plans as no changes. Terraform shows no diff for the missing key either and `build.sh` renders children from `values.yaml`, so only the live root app fails (`.Values.X is required` in its ComparisonError) |
 
 ## Reading list
@@ -214,3 +225,19 @@ write-ups carry method, not just outcome:
 - **The Proxmox hosts**: `ssh root@<host IP>` (the hosts are in `~/.ssh/known_hosts`
   by IP, not name; this pod's key is not authorised, the root password is in
   `~/proxmox.txt`). `qm config <vmid>` for a VM's boot order and CD-ROM.
+
+## In flight (2026-11-06)
+
+Snapshot at handoff; check each against the live system before acting.
+
+- **acebase down** since ~2026-11-05 17:00Z: no route to `10.0.128.53`; telemetry flat to 16:58Z, logs stop with no shutdown sequence. Needs someone at the machine; then `talosctl -n acebase dmesg`. mavproxy, mavproxy-mlrs and rtkbase are down with it.
+- **Mimir ruler memory**: ~930 MiB (was 126-143 MB daily max) since the 2026-11-01 22:08Z rollout, against a 128 Mi request; it pushed tiles-wk-1 into memory pressure on 11-02. Cause not established (Mimir 3.2.3, or rule queries now succeeding against long-term storage).
+- **`MimirStrongConsistencyOffsetMissing`**: caused by the ruler's internal evaluation (strong reads, no query-frontend, so no offsets). Seth agreed to drop it; the chart has no per-alert switch. Open choice: a `mimir-mixin` Tanka environment with `alertsToDrop` (and `mimirAlerts: false`), or an Alertmanager route to nothing.
+- **Mimir leftovers**: the NFS mount `mimir-shared-storage` and the `mimir-mimir-data` PV/PVC are unused since #928; 80 partial blocks from the outage should be deleted by the compactor after `compactor_partial_block_deletion_delay: 1d`. tiles-test Mimir still uses the filesystem backend.
+- **versitygw**: why Container Manager failed the in-place build at 2026-11-01 18:40Z is unknown (Container Manager > Log on raconteur).
+- **Grafana** to a `cluster-nfs` PVC (#766): deferred by Seth; needs `/var/lib/grafana` copied (the `grafana-mcp` service account exists only there).
+- **postgres-operator**: `ComparisonError` / `SyncError`, `.configuration.enable_maintenance_windows: field not declared in schema` (chart config vs installed CRD).
+- **static-certs-sync-unifi** job failed on 2026-11-05; not looked at.
+- **flight-analysis** nightly CronJob failing since 2026-10-30 (flight-analysis-guy's).
+- **lancer GPU** (#581): `amd.com/gpu: 1` advertised; no workload has used it yet.
+- **cp-1's etcd secretbox key** was printed into this session's transcript on 2026-10-29; rotating it is Seth's call.
