@@ -47,8 +47,16 @@ RUN git clone "${DOTFILES_REPO}" /tmp/dotfiles-symm \
 COPY fix-permissions /usr/local/bin/fix-permissions
 RUN chmod a+rx /usr/local/bin/fix-permissions
 
-# OpenGL from Python over headless EGL, for coordinator's mapping-sim rasteriser. The base image
-# already has Mesa's EGL and drivers: radeonsi where a pod has /dev/dri, llvmpipe where it does not.
+# OpenGL from Python over headless EGL, for coordinator's mapping-sim rasteriser. Mesa's EGL and
+# drivers: radeonsi where a pod has /dev/dri, llvmpipe where it does not (as in coordinator's CI).
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    --no-install-recommends \
+    libegl-mesa0 \
+    libegl1 \
+    libgl1 \
+    libgl1-mesa-dri \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir moderngl==5.13.0
 
 COPY systemctl3.py /usr/bin/systemctl
