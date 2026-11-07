@@ -1,9 +1,9 @@
 dependencies:
 - name: jupyterhub
   repository: https://hub.jupyter.org/helm-chart
-  version: 4.4.4
+  version: 4.4.5
 - name: oauth2-proxy
   repository: https://oauth2-proxy.github.io/manifests
   version: 10.7.2
-digest: sha256:eabe6ecad831692cbfd77fa339e37cbe349bd83662bc3e70e52493372dbadc5a
-generated: "2026-11-06T14:16:15.585851405Z"
+digest: sha256:f2887317d50ddb52e5d5ec5047ffd022cdfe183cf66fae1b9bca6ac99f3eff88
+generated: "2026-11-07T18:35:23.320464978Z"
