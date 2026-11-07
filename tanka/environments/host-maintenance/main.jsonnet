@@ -25,13 +25,12 @@ local name = 'host-maintenance';
 local namespace = std.parseJson(importstr 'spec.json').spec.namespace;
 
 // One target a night, 01:00 America/New_York, Monday to Friday: each host is updated and
-// rebooted once a week. The host -> node mapping is prod.tfvars' `proxmox_node_name`;
-// nuc-g3p-2 carries only the tiles-test VMs.
+// rebooted once a week. The host -> node mapping is prod.tfvars' `proxmox_node_name`.
 local targets = [
   { day: 1, target: 'nuc-g2p-1', kind: 'pve', nodes: 'tiles-cp-1 tiles-wk-1' },
   { day: 2, target: 'nuc-g2p-2', kind: 'pve', nodes: 'tiles-cp-2 tiles-wk-2' },
   { day: 3, target: 'nuc-g3p-1', kind: 'pve', nodes: 'tiles-cp-3 tiles-wk-3' },
-  { day: 4, target: 'nuc-g3p-2', kind: 'pve', nodes: '' },
+  { day: 4, target: 'nuc-g3p-2', kind: 'pve', nodes: 'tiles-wk-4' },
   { day: 5, target: 'acebase', kind: 'talos', nodes: 'acebase' },
 ];
 
