@@ -224,7 +224,8 @@ spec:
           successThreshold: 1
           periodSeconds: 10
         resources:
-          {}
+          requests:
+            memory: 32Mi
         volumeMounts:
         - mountPath: /etc/oauth2_proxy/oauth2_proxy.cfg
           name: configmain
