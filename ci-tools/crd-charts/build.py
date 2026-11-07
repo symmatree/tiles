@@ -11,6 +11,7 @@ could only ever be created once and would then silently age.
 """
 
 import argparse
+import json
 import pathlib
 import sys
 import urllib.request
@@ -49,6 +50,31 @@ def check_all_crds(url: str, body: bytes) -> int:
     return len(kinds)
 
 
+def strip_descriptions(schema: dict) -> dict:
+    """Drop the `description` annotations from an OpenAPI v3 schema.
+
+    Descriptions are documentation for `kubectl explain`; the apiserver does not
+    use them to validate, prune or default. They are most of the bytes in a large
+    CRD, which is what decides whether one fits in an apiserver request and in
+    Helm's release Secret.
+
+    Walks schema keywords rather than every mapping: under `properties` the keys
+    are field names, and Argo Workflows has fields called `description`.
+    """
+    out = {}
+    for key, value in schema.items():
+        if key == "description":
+            continue
+        if key in ("properties", "patternProperties", "definitions"):
+            value = {name: strip_descriptions(sub) for name, sub in value.items()}
+        elif key in ("allOf", "anyOf", "oneOf"):
+            value = [strip_descriptions(sub) for sub in value]
+        elif key in ("items", "additionalProperties", "not") and isinstance(value, dict):
+            value = strip_descriptions(value)
+        out[key] = value
+    return out
+
+
 def build_chart(chart: dict, out_root: pathlib.Path) -> None:
     name = chart["name"]
     ref = chart["ref"]
@@ -73,6 +99,18 @@ def build_chart(chart: dict, out_root: pathlib.Path) -> None:
         url = template.format(ref=ref)
         body = fetch(url)
         total += check_all_crds(url, body)
+        if chart.get("strip_descriptions"):
+            docs = [doc for doc in yaml.safe_load_all(body) if doc]
+            for doc in docs:
+                for version in doc["spec"]["versions"]:
+                    schema = version["schema"]
+                    schema["openAPIV3Schema"] = strip_descriptions(schema["openAPIV3Schema"])
+            # Compact JSON, which Helm reads as YAML: Helm's release Secret holds
+            # every template file and the rendered manifest, base64-encoded under
+            # gzip, and must fit Kubernetes' 1 MiB Secret limit.
+            body = "\n---\n".join(
+                json.dumps(doc, separators=(",", ":")) for doc in docs
+            ).encode()
         (templates / pathlib.Path(url).name).write_bytes(body)
 
     print(f"{name} {chart['version']} (appVersion {ref}): {total} CRDs")
