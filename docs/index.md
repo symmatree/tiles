@@ -42,7 +42,7 @@ This directory contains documentation for the tiles Kubernetes cluster infrastru
 
 - **[dev-setup.md](dev-setup.md)**: Quick reference for developer setup, including commands to retrieve kubeconfig and talosconfig from 1Password and configure local kubectl and talosctl access to the test cluster.
 
-- **[render-diff.md](render-diff.md)**: The offline two-stage render behind the `render-diff` PR check and the local render-diff-before-commit: the app-of-apps rendered with the real propagated values, then every child Application from the source it names (Tanka CMP, local chart, chart repo), diffed per app against the merge base; where the values come from and what it does not cover.
+- **[render-diff.md](render-diff.md)**: The offline two-stage render behind the `render-diff` PR check: the app-of-apps rendered with the real propagated values, then every child Application from the source it names (Tanka CMP, local chart, chart repo), diffed per app against the merge base; where the values come from and what it does not cover.
 
 - **[ci-principles.md](ci-principles.md)**: CI/CD principles emphasizing assertive (not adaptive) behavior, where conditionals about environment state are errors and tools should either be installed or fail explicitly rather than checking for existence.
 

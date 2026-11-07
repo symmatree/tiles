@@ -47,9 +47,10 @@ turns out larger, stop and re-ask.
 **Work in a git worktree.** `/home/jovyan/tiles` is shared with other sessions;
 anything left dirty there blocks everyone's `git pull`.
 
-**Render-diff before commit.** Anything with a compile step -- Helm charts,
-Tanka -- gets rendered before and after and the whole diff accounted for. See
-[Mechanics](#mechanics).
+**Read the render diff on the PR.** Anything with a compile step -- Helm charts,
+Tanka -- is rendered per app by the `render-diff` workflow; push the PR and
+account for the whole diff there. Locally, `build.sh` regenerates
+`rendered.yaml`. See [Mechanics](#mechanics).
 
 **Build a scratch sandbox rather than shipping a caveat.** "No credentials" is
 not "untestable". A question about how a *construct* behaves usually reproduces
@@ -194,8 +195,8 @@ done is a comment saying so, not a retitle around the survivor.
 - [`build.sh`](../build.sh) and [`scripts/helm-common.bash`](../scripts/helm-common.bash)
   -- how `rendered.yaml` is produced and which flags are applied.
 - [`render-diff.md`](render-diff.md) -- `scripts/render-apps-diff.sh`, the offline
-  render of every Application before and after a change; run it locally before
-  committing anything under `charts/` or `tanka/`.
+  render of every Application before and after a change; the `render-diff`
+  workflow posts it on every PR touching `charts/` or `tanka/`.
 - [`config-propagation.md`](config-propagation.md) -- how values reach a chart
   through the app-of-apps.
 
