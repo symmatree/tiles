@@ -173,8 +173,9 @@ local scoreTemplate = inputs(['run', 'render', 'revision']) {
     command: ['bash'],
     source: cloneScript + |||
       run='/data/runs/{{inputs.parameters.run}}'
+      # OpenSfM's frame, the truth's; ODM puts its UTM copy at reconstruction.json.
       python3 /tmp/coordinator/analysis/mapping_sim/score.py '/data/renders/{{inputs.parameters.render}}' \
-        "$run/opensfm/reconstruction.json" --json "$run/score.json"
+        "$run/opensfm/reconstruction.topocentric.json" --json "$run/score.json"
       python3 - "$run/run.json" "$sha" <<'EOF'
       import json, pathlib, sys
       path = pathlib.Path(sys.argv[1])
