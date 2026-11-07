@@ -34,6 +34,12 @@ loki:
 
 deploymentMode: SingleBinary
 
+# The single replica joins memberlist through this headless Service, so it must
+# resolve before the pod is Ready (the chart default is false).
+memberlist:
+  service:
+    publishNotReadyAddresses: true
+
 monitoring:
   dashboards:
     enabled: false
