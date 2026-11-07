@@ -3,8 +3,8 @@
 `scripts/render-apps-diff.sh` renders every Argo CD Application for both clusters
 twice -- from the merge base and from the working tree -- and diffs the results per
 app. The `render-diff` workflow runs it on every PR that touches `charts/`, `tanka/`
-or the cluster tfvars and posts one comment per cluster. Locally it is the
-render-diff-before-commit step for anything under those paths.
+or the cluster tfvars and posts one comment per cluster; the PR is where a
+change's per-app diff is read.
 
 It needs no cluster, VPN or secret. Everything it reads is in the repo.
 
