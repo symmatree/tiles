@@ -3,6 +3,10 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: fleet-control
+  annotations:
+    # The minimal Argo Workflows CRDs make Argo CD's server-side diff report Synced while
+    # WorkflowTemplate/CronWorkflow changes go unapplied (argoproj/argo-cd#27625).
+    argocd.argoproj.io/compare-options: IncludeMutationWebhook=true
 spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   source:
