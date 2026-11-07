@@ -23,6 +23,7 @@ local name = 'mapping-sim';
 local namespace = std.parseJson(importstr 'spec.json').spec.namespace;
 
 // Analysis code runs in the notebook image (coordinator docs/ci.md), so render and score do too.
+// Pulled on every pod: :main moves, and a node keeps whichever :main it pulled first.
 local notebookImage = 'ghcr.io/symmatree/tiles/datascience-notebook-ssh:main';
 local odmImage = 'opendronemap/odm:3.6.2';
 local coordinatorRepo = 'https://github.com/symmatree/coordinator.git';
@@ -88,6 +89,7 @@ local renderTemplate = onLancer + inputs(['render', 'config', 'revision', 'rende
   name: 'render',
   script: {
     image: notebookImage,
+    imagePullPolicy: 'Always',
     command: ['bash'],
     // 16 single-threaded render processes, about 430 MB each at full resolution;
     // render-args comes after --jobs so it can override it.
@@ -152,6 +154,7 @@ local rigTemplate = inputs(['run', 'render', 'revision']) {
   name: 'rig',
   script: {
     image: notebookImage,
+    imagePullPolicy: 'Always',
     command: ['bash'],
     source: cloneScript + |||
       python3 /tmp/coordinator/analysis/mapping_sim/opensfm_rig.py '/data/renders/{{inputs.parameters.render}}' \
@@ -166,6 +169,7 @@ local scoreTemplate = inputs(['run', 'render', 'revision']) {
   name: 'score',
   script: {
     image: notebookImage,
+    imagePullPolicy: 'Always',
     command: ['bash'],
     source: cloneScript + |||
       run='/data/runs/{{inputs.parameters.run}}'
@@ -191,6 +195,7 @@ local resourcesTemplate = inputs(['render', 'run']) {
   name: 'resources',
   script: {
     image: notebookImage,
+    imagePullPolicy: 'Always',
     command: ['python3'],
     env: [
       { name: 'WORKFLOW', value: '{{workflow.name}}' },
