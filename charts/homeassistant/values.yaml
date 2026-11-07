@@ -22,10 +22,10 @@ homeassistant_tls_port: placeholder
 # gates; the rules are the #593-#604 hardening set documented in
 # docs/remote-access.md. A broken proxy fails closed.
 oauth2-proxy:
-  # p95 over 1d: 25
+  # p95 over 1d: 24.9
   resources:
     requests:
-      memory: 32Mi
+      memory: 25Mi
   # Credentials from 1Password via templates/oauth2-proxy-secret.yaml
   # (OnePasswordItem 'homeassistant-oauth2-proxy'). Vault-item field labels must
   # be exactly client-id / client-secret / cookie-secret (the chart's

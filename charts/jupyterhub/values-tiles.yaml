@@ -23,7 +23,7 @@ jupyterhub:
         value: heavy
 
 oauth2-proxy:
-  # p95 over 1d: 17
+  # p95 over 1d: 17.1
   resources:
     requests:
-      memory: 24Mi
+      memory: 18Mi
