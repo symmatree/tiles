@@ -14,6 +14,11 @@ global:
 mimir:
   structuredConfig:
     multitenancy_enabled: true
+    # A (re)starting ingester resumes from the newest Kafka record instead of replaying
+    # the backlog since its last commit; samples in the skipped range are dropped.
+    ingest_storage:
+      kafka:
+        consume_from_position_at_startup: end
     tenant_federation:
       enabled: true
     limits:
