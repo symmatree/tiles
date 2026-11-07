@@ -88,6 +88,18 @@ virtual_machines = {
     mac_address       = "bc:24:11:d0:72:23"
     ip_address        = "10.0.128.23"
     taint             = ""
+  },
+  # nuc-g3p-2 is the same g3p box as nuc-g3p-1; 13000 MB matches the guest total there
+  # (tiles-cp-3 + tiles-wk-3).
+  "tiles-wk-4" = {
+    type              = "worker"
+    proxmox_node_name = "nuc-g3p-2"
+    vm_id             = 7224
+    cores             = 4
+    ram_mb            = 13000
+    mac_address       = "bc:24:11:d0:72:24"
+    ip_address        = "10.0.128.24"
+    taint             = ""
   }
 }
 alloy_vm_base_id          = 400

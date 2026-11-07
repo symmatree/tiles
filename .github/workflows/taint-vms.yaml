@@ -128,6 +128,7 @@ jobs:
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-1"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-2"].proxmox_virtual_environment_vm.main'
           terraform taint 'module.cluster.module.talos-vm["tiles-wk-3"].proxmox_virtual_environment_vm.main'
+          terraform taint 'module.cluster.module.talos-vm["tiles-wk-4"].proxmox_virtual_environment_vm.main'
           # etcd lived on the VMs being replaced, so it is already gone.
           terraform state rm 'module.cluster.talos_machine_bootstrap.this'
 
