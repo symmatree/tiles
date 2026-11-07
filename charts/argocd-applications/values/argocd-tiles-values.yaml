@@ -25,7 +25,7 @@ argo-cd:
       requests:
         memory: 8Mi
 oauth2-proxy:
-  # p95 over 1d: 24.0
+  # p85 12  p99 28
   resources:
     requests:
-      memory: 25Mi
+      memory: 16Mi
