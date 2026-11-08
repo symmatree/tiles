@@ -44,7 +44,8 @@ budget is how a 10-file estimate became a 33-file reset.
 **An approval covers the scope described when it was given.** If the real scope
 turns out larger, stop and re-ask.
 
-**Work in a git worktree.** `/home/jovyan/tiles` is shared with other sessions;
+**Work in a git worktree.** The main checkout (`/home/jovyan/tiles` in the
+notebook pod, `~/tiles` on Seth's workstation) is shared with other sessions;
 anything left dirty there blocks everyone's `git pull`.
 
 **Read the render diff on the PR.** Anything with a compile step -- Helm charts,
@@ -134,6 +135,14 @@ done is a comment saying so, not a retitle around the survivor.
 | `ubuntu-latest` moves | It became 26.04; `wg-quick` then refused a config in `$HOME`. The action writes `/etc/wireguard/wg0.conf` |
 | A Renovate PR's render-diff comment | Truncated at GitHub's comment limit; run `scripts/render-apps-diff.sh` on the branch locally for the full diff |
 | A new `app_of_apps_values` key reaches the Helm release but not the root Application | `charts/argocd-applications-installer/templates/application.yaml` lists the propagated keys by hand; add the key there too, and bump that chart's `version` -- `helm_release` diffs on its arguments, so a template-only edit plans as no changes. Terraform shows no diff for the missing key either and `build.sh` renders children from `values.yaml`, so only the live root app fails (`.Values.X is required` in its ComparisonError) |
+| Talos's OOM controller kills pods while `MemAvailable` looks fine | It triggers on memory-stall PSI, not free memory, and kills BestEffort pods first. `MemAvailable` counts page cache, and a hot cache is not spare: under pressure, executables and mmapped files are evicted and re-read, IO PSI goes to ~99%, and the node goes NotReady. Read `talosctl cgroups --preset memory` and PSI, not free RAM |
+| A node reboot (or a host reboot) moves its pods | Nothing moves them back -- there is no descheduler -- and requests far below real use mislead the scheduler (mimir-ruler: ~920 MiB working set, 128 Mi request). One reboot can starve the receiving node; on 2026-11-07 that cascaded through wk-1, cp-2, cp-3 and wk-2 |
+| A control-plane node is down | The API VIP (10.0.128.10) is held by one control plane and the load is not balanced, so its load lands on one peer. cp-2 and cp-3 have ~2.9 GB; cp-1 has ~4.9 GB |
+| Argo CD shows `Synced` but the live object is older than git | argoproj/argo-cd#27625: with `ServerSideApply=true` (which turns on server-side diff), a CRD whose schema is `x-kubernetes-map-type: atomic` + `x-kubernetes-preserve-unknown-fields` with no properties has its changed fields reverted to live in the diff. The minimal Argo Workflows CRDs had exactly that shape. Compare the live object to Argo's desired manifests, not to the sync status |
+| Large CRDs through `crd-charts` | The Helm release Secret has the Kubernetes 1 MiB object limit and the API server a 3 MiB request limit. The full Argo Workflows CRDs (2.7-2.9 MB each) fit only with `strip_descriptions: true` (compact JSON, ~420-470 KB each). Applying them on 2026-11-07 timed out etcd and lost the API twice; Helm recorded the release `failed` although every CRD had applied, and revision 5 was marked `deployed` by hand |
+| Mimir queries fail while the ingesters are down | A window ending more than ~13 h ago is answered from long-term storage alone: `endTime=now-14h` |
+| `argocd --core` targets the wrong namespace | It uses the current kube context's namespace; point `KUBECONFIG` at a copy with `namespace: argocd` rather than changing `~/.kube/config` |
+| Loki's compactor fails every run with `err=EOF` | One unreadable index file under `chunks/index/<table>/` blocks compaction of that table indefinitely (`LokiCompactorHasNotSuccessfullyRunCompaction`). loki-0 is distroless, so read the files on raconteur (`/volume2/tiles/loki-data/chunks/index/`). Deleting a table directory, or a tenant directory inside it, makes that day's logs for those tenants unqueryable; their chunks stay on disk |
 
 ## Reading list
 
@@ -225,20 +234,30 @@ write-ups carry method, not just outcome:
   `talosctl` with `~/.talos/tiles.yaml`.
 - **The Proxmox hosts**: `ssh root@<host IP>` (the hosts are in `~/.ssh/known_hosts`
   by IP, not name; this pod's key is not authorised, the root password is in
-  `~/proxmox.txt`). `qm config <vmid>` for a VM's boot order and CD-ROM.
+  `~/proxmox.txt` in the notebook pod). `qm config <vmid>` for a VM's boot order and CD-ROM.
+- **raconteur (the NAS)**: Loki's data is `/volume2/tiles/loki-data`. Seth's
+  workstation has no known host key for it, so `ssh` fails host-key verification.
 
-## In flight (2026-11-06)
+## In flight (2026-11-08)
 
 Snapshot at handoff; check each against the live system before acting.
 
-- **acebase down** since ~2026-11-05 17:00Z: no route to `10.0.128.53`; telemetry flat to 16:58Z, logs stop with no shutdown sequence. Needs someone at the machine; then `talosctl -n acebase dmesg`. mavproxy, mavproxy-mlrs and rtkbase are down with it.
-- **Mimir ruler memory**: ~930 MiB (was 126-143 MB daily max) since the 2026-11-01 22:08Z rollout, against a 128 Mi request; it pushed tiles-wk-1 into memory pressure on 11-02. Cause not established (Mimir 3.2.3, or rule queries now succeeding against long-term storage).
-- **`MimirStrongConsistencyOffsetMissing`**: caused by the ruler's internal evaluation (strong reads, no query-frontend, so no offsets). Seth agreed to drop it; the chart has no per-alert switch. Open choice: a `mimir-mixin` Tanka environment with `alertsToDrop` (and `mimirAlerts: false`), or an Alertmanager route to nothing.
+- **Loki compaction**: no success since ~2026-11-06 14:50Z (`LokiCompactorHasNotSuccessfullyRunCompaction`, critical). Every run fails on table `loki_index_20764` (2026-11-07) with `err=EOF`, about 3 ms in and before any file download is logged. Seth deleted the compacted file `self-monitoring/1794076149556541069-compactor-...-4b33049b.tsdb.gz` (written 2026-11-07 18:29Z, during the wk-2 starvation) and then the whole `loki_index_20764/self-monitoring/` directory at ~14:10Z on 11-08. The 14:13Z run still failed the same way, so the unreadable file is elsewhere in that table and not yet identified. On 11-07 a previous session deleted a zero-length index object in `loki_index_20763` for the same kind of failure.
+- **NodeSystemSaturation on tiles-cp-1**: firing since ~2026-11-07 20:20Z; 15-minute load per core 4.9 at 2026-11-08 14:12Z (cp-2 0.84, cp-3 0.58). Not looked at.
+- **mapping-sim ODM pods**: `mapping-sim-process-{cztbj,ft8v4}-odm-*` OOMKilled and `mapping-sim-process-{dtbzt,w9x4j}-odm-*` Error, 12-17 h old. Not looked at.
+- **Argo Workflows CRDs** are the full v4.1.6 schemas with descriptions stripped (`argo-workflows-crds` 0.5.0, #964), which removes the #27625 trigger for those kinds. The `IncludeMutationWebhook=true` compare-option from #963 is still on fleet-control, host-maintenance and mapping-sim.
+- **Memory sizing**: Seth's stated policy is request = 14-day p85 of working set rounded up to 8Mi, `GOMEMLIMIT` = request, limit = 14-day p95; for large Go processes, read the live heap from their own `/metrics`. Parked by Seth during the 11-07 recovery; only the request rule is written down (`charts/argocd-applications/values/grafana-tiles-values.yaml`).
+- **Mimir ruler memory**: ~920 MiB working set at 2026-11-08 14:12Z against a 128 Mi request (was 126-143 MB daily max before the 2026-11-01 22:08Z rollout). Cause not established.
+- **`MimirStrongConsistencyOffsetMissing`**: still firing. Caused by the ruler's internal evaluation (strong reads, no query-frontend, so no offsets). Seth agreed to drop it; the chart has no per-alert switch. Open choice: a `mimir-mixin` Tanka environment with `alertsToDrop` (and `mimirAlerts: false`), or an Alertmanager route to nothing.
+- **mimir-kafka-0** is on a local-path PVC, so it can only run on tiles-wk-2.
+- **tiles-wk-4** (nuc-g3p-2, 4 cores, 13000 MB, #962) joined 2026-11-07. The stopped tiles-test VMs (7411, 7421) are still declared in `tf/nodes/test.tfvars` on the same host; Seth says there is no tiles-test, and the docs still describe it as live.
+
+Carried from 2026-11-06, not rechecked:
+
 - **Mimir leftovers**: the NFS mount `mimir-shared-storage` and the `mimir-mimir-data` PV/PVC are unused since #928; 80 partial blocks from the outage should be deleted by the compactor after `compactor_partial_block_deletion_delay: 1d`. tiles-test Mimir still uses the filesystem backend.
 - **versitygw**: why Container Manager failed the in-place build at 2026-11-01 18:40Z is unknown (Container Manager > Log on raconteur).
 - **Grafana** to a `cluster-nfs` PVC (#766): deferred by Seth; needs `/var/lib/grafana` copied (the `grafana-mcp` service account exists only there).
-- **postgres-operator**: `ComparisonError` / `SyncError`, `.configuration.enable_maintenance_windows: field not declared in schema` (chart config vs installed CRD).
-- **static-certs-sync-unifi** job failed on 2026-11-05; not looked at.
-- **flight-analysis** nightly CronJob failing since 2026-10-30 (flight-analysis-guy's).
 - **lancer GPU** (#581): `amd.com/gpu: 1` advertised; no workload has used it yet.
-- **cp-1's etcd secretbox key** was printed into this session's transcript on 2026-10-29; rotating it is Seth's call.
+- **cp-1's etcd secretbox key** was printed into a session transcript on 2026-10-29; rotating it is Seth's call.
+
+Resolved since 2026-11-06: acebase is Ready; every Argo CD application is Synced and Healthy (postgres-operator included); `static-certs-sync-unifi` last succeeded 2026-11-08 07:30Z and `flight-analysis` 2026-11-08 04:00Z.
