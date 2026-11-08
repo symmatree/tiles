@@ -242,7 +242,7 @@ write-ups carry method, not just outcome:
 
 Snapshot at handoff; check each against the live system before acting.
 
-- **Loki compaction**: failed every run from ~2026-11-06 14:50Z to 2026-11-08 on table `loki_index_20764` (2026-11-07) with `err=EOF`. Seth deleted the whole `loki_index_20764/` directory on raconteur on 11-08; the 22:53Z run then compacted all 279 tables with no failures, so 2026-11-07's logs are no longer queryable. Still logged every ~30 s afterwards: `index_set.go:308 table-name=loki_index_20764 msg="sync failed, retrying it" err=EOF`, from the index cache in loki-0's `/var/loki` emptyDir (which also holds the WAL).
+- **Loki compaction**: failed every run from ~2026-11-06 14:50Z to 2026-11-08 on table `loki_index_20764` (2026-11-07) with `err=EOF`. Seth deleted the whole `loki_index_20764/` directory on raconteur on 11-08; the 22:53Z run then compacted all 279 tables with no failures, so 2026-11-07's logs are no longer queryable. Still logged every ~30 s afterwards: `index_set.go:308 table-name=loki_index_20764 msg="sync failed, retrying it" err=EOF`, from the index cache in loki-0's `/var/loki` emptyDir.
 - **NodeSystemSaturation on tiles-cp-1**: firing since ~2026-11-07 20:20Z; 15-minute load per core 4.9 at 2026-11-08 14:12Z (cp-2 0.84, cp-3 0.58). Not looked at.
 - **mapping-sim ODM pods**: `mapping-sim-process-{cztbj,ft8v4}-odm-*` OOMKilled and `mapping-sim-process-{dtbzt,w9x4j}-odm-*` Error, 12-17 h old. Not looked at.
 - **Argo Workflows CRDs** are the full v4.1.6 schemas with descriptions stripped (`argo-workflows-crds` 0.5.0, #964), which removes the #27625 trigger for those kinds. The `IncludeMutationWebhook=true` compare-option from #963 is still on fleet-control, host-maintenance and mapping-sim.
