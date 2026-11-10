@@ -13,10 +13,8 @@
 # deletes anything in crds/, so a CRD parked there can only ever be created once.
 #
 # Fields:
-#   name        chart name; becomes oci://ghcr.io/symmatree/tiles/charts/<name>
-#   version     OUR chart version. Bump on any change to ref, urls, or packaging.
-#               This is the version tf/nodes/k8s-bootstrap.tf pins, and the OCI
-#               tag, so it must be a valid tag: no '+' build metadata.
+#   name        chart name; becomes oci://ghcr.io/symmatree/tiles/charts/<name>,
+#               published from main as version 0.0.0-branch-main
 #   ref         upstream tag/branch the URLs pin. Becomes the chart appVersion.
 #   urls        CRD YAML to fetch. '{ref}' is substituted. Every document in
 #               every file must be a CustomResourceDefinition; build.py fails
@@ -24,7 +22,6 @@
 #               that has quietly grown a Namespace or Deployment.
 charts:
   - name: argo-cd-crds
-    version: 0.2.0
     ref: v3.5.6
     description: Argo CD CRDs (Application, ApplicationSet, AppProject)
     urls:
@@ -33,7 +30,6 @@ charts:
       - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/appproject-crd.yaml
 
   - name: argo-workflows-crds
-    version: 0.6.0
     ref: v4.1.6
     description: Argo Workflows CRDs (Workflow, WorkflowTemplate, CronWorkflow, and friends)
     # ALL EIGHT, and that is load-bearing. The controller starts one informer per type and
@@ -63,21 +59,18 @@ charts:
       - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workfloweventbindings.yaml
 
   - name: cert-manager-crds
-    version: 0.2.0
     ref: v1.21.3
     description: cert-manager CRDs (Certificate, Issuer, ClusterIssuer, and friends)
     urls:
       - https://github.com/cert-manager/cert-manager/releases/download/{ref}/cert-manager.crds.yaml
 
   - name: trust-manager-crds
-    version: 0.2.0
     ref: v0.26.0
     description: trust-manager CRDs (Bundle)
     urls:
       - https://raw.githubusercontent.com/cert-manager/trust-manager/{ref}/deploy/crds/trust.cert-manager.io_bundles.yaml
 
   - name: gateway-api-crds
-    version: 0.2.0
     ref: v1.6.1
     description: Gateway API standard-channel CRDs, consumed by Cilium
     # Per-CRD files rather than standard-install.yaml: from v1.6 that bundle also
@@ -96,14 +89,12 @@ charts:
       - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/refs/tags/{ref}/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
 
   - name: onepassword-crds
-    version: 0.2.0
     ref: v1.12.1
     description: 1Password operator CRDs (OnePasswordItem)
     urls:
       - https://raw.githubusercontent.com/1Password/onepassword-operator/refs/tags/{ref}/config/crd/bases/onepassword.com_onepassworditems.yaml
 
   - name: nfd-crds
-    version: 0.1.0
     ref: v0.20.1
     description: node-feature-discovery CRDs (NodeFeature, NodeFeatureGroup, NodeFeatureRule)
     urls:
@@ -113,7 +104,6 @@ charts:
   # VolumeSnapshot types present. Replace this source if a real snapshot
   # implementation ever lands.
   - name: external-snapshotter-crds
-    version: 0.1.0
     ref: release-6.0
     description: VolumeSnapshot CRDs, required by the NFS CSI driver
     urls:
