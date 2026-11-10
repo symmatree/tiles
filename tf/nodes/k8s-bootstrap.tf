@@ -90,19 +90,25 @@ resource "helm_release" "prometheus_operator_crds" {
 # third-party is committed to this repo; the CRD documents land in each chart's
 # templates/, not crds/, so Helm can upgrade them.
 #
-# Versions are duplicated between here and ci-tools/crd-charts/sources.yaml.
-# Consolidating them into one Renovate-readable file is issue #720.
+# Every chart is published from main as the floating version 0.0.0-branch-main,
+# so the version never tells Terraform the content changed. source_hash does:
+# the chart's entry in sources.yaml (upstream ref and URLs) plus build.py, so a
+# release upgrades when, and only when, what builds that chart changes.
 locals {
-  crd_charts = {
-    "argo-cd-crds"              = "0.2.0"
-    "argo-workflows-crds"       = "0.6.0"
-    "cert-manager-crds"         = "0.2.0"
-    "external-snapshotter-crds" = "0.1.0"
-    "gateway-api-crds"          = "0.2.0"
-    "nfd-crds"                  = "0.1.0"
-    "onepassword-crds"          = "0.2.0"
-    "trust-manager-crds"        = "0.2.0"
+  crd_chart_version = "0.0.0-branch-main"
+  crd_sources = {
+    for c in yamldecode(file("${path.module}/../../ci-tools/crd-charts/sources.yaml")).charts : c.name => c
   }
+  crd_charts = toset([
+    "argo-cd-crds",
+    "argo-workflows-crds",
+    "cert-manager-crds",
+    "external-snapshotter-crds",
+    "gateway-api-crds",
+    "nfd-crds",
+    "onepassword-crds",
+    "trust-manager-crds",
+  ])
 }
 
 resource "helm_release" "crds" {
@@ -113,7 +119,15 @@ resource "helm_release" "crds" {
   namespace  = "kube-system"
   repository = "oci://ghcr.io/symmatree/tiles/charts"
   chart      = each.key
-  version    = each.value
+  version    = local.crd_chart_version
+
+  set = [{
+    name = "source_hash"
+    value = sha256(join("\n", [
+      jsonencode(local.crd_sources[each.key]),
+      filesha256("${path.module}/../../ci-tools/crd-charts/build.py"),
+    ]))
+  }]
 
   # These CRDs already exist on both clusters, applied by the kubectl calls this
   # replaces, with no Helm ownership metadata. Adopt rather than fail.
