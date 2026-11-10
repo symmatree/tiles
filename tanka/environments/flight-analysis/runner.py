@@ -52,11 +52,28 @@ IMAGE_DIGEST = os.environ.get("IMAGE_DIGEST", "unknown")
 TIME_SYNC_NB = "analysis/time-sync.ipynb"
 VEHICLE_HEALTH_NB = "analysis/vehicle-health.ipynb"
 LINK_MAP_NB = "analysis/link-map.ipynb"
-# (notebook, what a campod session must contain for it to apply). The match must be non-empty:
-# a power cut leaves the session's files at 0 bytes, and an empty accel file has no samples.
+def nonempty(path: Path) -> bool:
+    return path.stat().st_size > 0
+
+
+def has_accel_batch(path: Path) -> bool:
+    """An accel file holds samples only once a batch row ("t": "b") follows its header line.
+    A power cut can leave it at 0 bytes, and a boot that never captured leaves the header alone."""
+    with open(path) as f:
+        next(f, None)
+        for line in f:
+            try:
+                if json.loads(line).get("t") == "b":
+                    return True
+            except ValueError:
+                continue
+    return False
+
+
+# (notebook, the files a campod session must have, and what makes one of them usable)
 POD_NBS = [
-    ("analysis/vibration-spectrogram.ipynb", "accel-*.jsonl"),
-    ("analysis/image-sharpness-vs-motion.ipynb", "campod-*_*.jpg"),
+    ("analysis/vibration-spectrogram.ipynb", "accel-*.jsonl", has_accel_batch),
+    ("analysis/image-sharpness-vs-motion.ipynb", "campod-*_*.jpg", nonempty),
 ]
 
 
@@ -342,8 +359,8 @@ def process_flight(flight: Path, nb_shas: dict) -> None:
             continue
         bin_obj = next(o for o in bin_objs if o["name"] == fc_bin.name)
         sess_obj = {"name": f"captures/{sess}", "sha256": bsha}
-        for nb_rel, needs in POD_NBS:
-            if not any(p.stat().st_size > 0 for p in sdir.glob(needs)):
+        for nb_rel, needs, usable in POD_NBS:
+            if not any(usable(p) for p in sdir.glob(needs)):
                 continue
             stem = Path(nb_rel).stem
             key = f"{stem}-{node}"
@@ -381,7 +398,7 @@ def main() -> None:
     clone_or_update_notebook_repo()
 
     nb_shas = {}
-    for rel in [NOTEBOOK_REL, TIME_SYNC_NB, VEHICLE_HEALTH_NB, LINK_MAP_NB] + [nb for nb, _ in POD_NBS]:
+    for rel in [NOTEBOOK_REL, TIME_SYNC_NB, VEHICLE_HEALTH_NB, LINK_MAP_NB] + [nb for nb, _, _ in POD_NBS]:
         if not (NOTEBOOK_DIR / rel).exists():
             print(f"notebook not found: {rel} in {NOTEBOOK_REPO}", file=sys.stderr)
             sys.exit(1)
