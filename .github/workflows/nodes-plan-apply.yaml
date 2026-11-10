@@ -45,7 +45,19 @@ concurrency:
   group: ${{ github.repository }}
   cancel-in-progress: false
 jobs:
+  # The CRD charts tf/nodes installs are published from main here, before the
+  # apply, so the apply never pulls a chart main has not built.
+  publish-crd-charts:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-crd-charts.yaml
+
   nodes-plan-apply:
+    needs: publish-crd-charts
+    # Skipped (not a push to main) is fine; a failed or cancelled publish is not.
+    if: ${{ !failure() && !cancelled() }}
     runs-on: "ubuntu-latest"
     permissions:
       contents: "write"
