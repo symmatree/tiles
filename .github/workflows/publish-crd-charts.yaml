@@ -2,6 +2,7 @@ name: publish-crd-charts
 run-name: "Publish CRD charts from ${{ github.ref_name }} by @${{ github.actor }}"
 on:
   workflow_dispatch: {}
+  # A pull request builds and lints the charts and pushes nothing.
   pull_request:
     paths:
       - ci-tools/crd-charts/**
@@ -12,11 +13,8 @@ on:
       - ci-tools/crd-charts/**
       - .github/workflows/publish-crd-charts.yaml
 
-# Charts are versioned in ci-tools/crd-charts/sources.yaml and pinned by
-# tf/nodes/k8s-bootstrap.tf, so publishing on a PR is deliberate: the tag has to
-# exist in GHCR before the Terraform apply that pulls it, and both this workflow
-# and nodes-plan-apply fire on push to main with nothing ordering them. Pushing
-# from the PR closes that gap -- the version is already there at merge time.
+# Charts are published only from main, as the floating version
+# 0.0.0-branch-main (ci-tools/crd-charts/build.py).
 jobs:
   publish-crd-charts:
     name: publish-crd-charts
@@ -47,6 +45,7 @@ jobs:
           ls -l build/packages
 
       - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           helm registry login ghcr.io \
@@ -54,6 +53,7 @@ jobs:
             --password-stdin <<<"${{ github.token }}"
 
       - name: Push charts
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           for package in build/packages/*.tgz; do

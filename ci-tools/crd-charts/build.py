@@ -26,6 +26,9 @@ yaml.SafeLoader.add_constructor(
 
 HERE = pathlib.Path(__file__).resolve().parent
 
+# Every chart is built from main and published under this one floating version.
+VERSION = "0.0.0-branch-main"
+
 
 def fetch(url: str) -> bytes:
     with urllib.request.urlopen(url, timeout=60) as response:
@@ -61,7 +64,7 @@ def build_chart(chart: dict, out_root: pathlib.Path) -> None:
         "name": name,
         "description": chart["description"],
         "type": "application",
-        "version": chart["version"],
+        "version": VERSION,
         "appVersion": ref,
     }
     (chart_dir / "Chart.yaml").write_text(yaml.safe_dump(metadata, sort_keys=False))
@@ -75,7 +78,7 @@ def build_chart(chart: dict, out_root: pathlib.Path) -> None:
         total += check_all_crds(url, body)
         (templates / pathlib.Path(url).name).write_bytes(body)
 
-    print(f"{name} {chart['version']} (appVersion {ref}): {total} CRDs")
+    print(f"{name} {VERSION} (appVersion {ref}): {total} CRDs")
 
 
 def main() -> None:
