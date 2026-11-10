@@ -18,6 +18,14 @@ locals {
       ]
     })
   }
+
+  metal_arm_nodes = {
+    for k, v in var.metal_arm_nodes : k => merge(v, {
+      machine_config_patches = [
+        for p in v.machine_config_patches : file("${path.module}/${p}")
+      ]
+    })
+  }
 }
 
 module "cluster" {
@@ -49,6 +57,7 @@ module "cluster" {
   vms                     = var.virtual_machines
   metal_amd_nodes         = local.metal_amd_nodes
   metal_intel_nodes       = local.metal_intel_nodes
+  metal_arm_nodes         = local.metal_arm_nodes
 
   kubelet_eviction_memory_available = var.kubelet_eviction_memory_available
   nodes_to_iso_ids                  = local.nodes_to_iso_ids
@@ -92,5 +101,6 @@ output "all_node_ips" {
     [for vm in var.virtual_machines : vm.ip_address],
     [for node in var.metal_amd_nodes : node.ip_address],
     [for node in var.metal_intel_nodes : node.ip_address],
+    [for node in var.metal_arm_nodes : node.ip_address],
   )
 }

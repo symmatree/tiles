@@ -30,7 +30,7 @@ Proxmox **VMs** use **`talos_image_factory_schematic.vm`** in the same file: **n
 
 [tf/nodes/cluster.tf](../tf/nodes/cluster.tf) passes VM and metal schematic IDs from `talos-iso.tf` into **`module.cluster`**. [tf/modules/talos-cluster/nodes.tf](../tf/modules/talos-cluster/nodes.tf) turns those IDs into Image Factory **installer** URLs: VMs use `factory.talos.dev/installer/...`; metal workers use **`factory.talos.dev/metal-installer/...`** ([Image Factory](https://docs.siderolabs.com/talos/v1.14/learn-more/image-factory), [talos.md](talos.md) for VM URLs).
 
-`module.talos-amd-metal` is keyed by `metal_amd_nodes`; `module.talos-intel-metal` by `metal_intel_nodes`. Each node gets the install patch for its schematic.
+`module.talos-amd-metal` is keyed by `metal_amd_nodes`; `module.talos-intel-metal` by `metal_intel_nodes`. Each node gets the install patch for its schematic. `module.talos-arm-metal`, keyed by `metal_arm_nodes`, is the Cubie A7S, which has no schematic -- see [Cubie A7S](#cubie-a7s-static-address).
 
 For **every** node (VM or metal), the same patch stack applies the shared [talos-config.yaml](../tf/modules/talos-cluster/talos-config.yaml), the same pod/service CIDRs (`KubeNetworkConfig`), optional kubelet taints, and the control-plane-only patches ([talos-config-controlplane.yaml](../tf/modules/talos-cluster/talos-config-controlplane.yaml) and the Layer2 VIP) **only** when `type = "control"` in tfvars. Bare-metal nodes in this layout are **workers**; the meaningful difference from a VM worker is the single install patch: **`UnattendedInstallConfig` `installer.image`** uses **metal-installer** with the node's metal schematic instead of the VM **installer** with the VM schematic.
 
@@ -155,6 +155,20 @@ A config *apply* is not a *reset*. PKI is preserved across the recreate (both ap
 2. Run **`nodes-plan-apply`** with **apply** for that workspace.
 3. Reboot each metal worker: `talosctl --talosconfig ~/.talos/<cluster>.yaml -n <NODE_IP> reboot`.
 4. Verify: `talosctl -n <NODE_IP> get members` and `kubectl get nodes` show the metal node; any pinned pods (e.g. `ntrip`, `mavproxy`) return to `Running`.
+
+## Cubie A7S (static address)
+
+The Radxa Cubie A7S (Allwinner A733, arm64) runs a Talos image built outside Image Factory, from the kernel, overlay and imager profile in dotfiles-symm `cubie-a7s/`. The image is flashed to the board's microSD card; it carries a META partition, so Talos counts itself installed and never runs an installer. The `installer.image` in its generated config is the stock one and goes unused. An upgrade is a new image and a reflash, not `talosctl upgrade`, whose stock installer has no A733 support.
+
+Its MAC is random on every boot (the board's U-Boot generates it), so a UniFi fixed IP keyed by MAC cannot hold. `metal_arm_nodes` entries therefore have no `mac_address`, and `talos-metal` creates no UniFi client record (and no `local_dns_record`) for them. The address comes from the kernel's `ip=` argument, baked into each board's image:
+
+```text
+net.ifnames=0 ip=<ip>::10.0.0.1:255.255.0.0:<name>:eth0:off:10.0.99.1::10.0.99.1
+```
+
+That is the address, gateway, netmask, hostname, link, no DHCP, DNS and NTP, matching what the UniFi DHCP lease gives the other nodes (`10.0.0.0/16` via `10.0.0.1`, DNS and NTP `10.0.99.1`). The lease also carries the `local.symmatree.com` domain, which `ip=` has no field for. `ip_address` and `name` in tfvars must match the image the card holds, and the address must sit outside the UniFi DHCP pool, since nothing reserves it there. `net.ifnames=0` keeps the link named `eth0` as on every other node.
+
+The hostname comes from the kernel argument rather than DHCP, so the board does not hit the [DHCP-less boot](#node-hostnames-and-dhcp-less-boot) rename. A reset on destroy leaves the BOOT partition and its kernel arguments, so the board returns to maintenance mode on the same address.
 
 ## Physical siting and what it does to the temperature record
 

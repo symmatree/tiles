@@ -108,6 +108,18 @@ variable "metal_intel_nodes" {
   }))
 }
 
+variable "metal_arm_nodes" {
+  description = "List of metal arm64 nodes (Cubie A7S) in the cluster"
+  type = map(object({
+    name                   = string
+    type                   = string
+    ip_address             = string
+    taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
+    machine_config_patches = optional(list(string), [])
+  }))
+}
+
 variable "kubelet_eviction_memory_available" {
   description = "kubelet evictionHard `memory.available` threshold for every node in the cluster -- the free-memory margin the kubelet keeps so it evicts before the kernel OOM-killer fires. null leaves Talos/kubelet defaults (100Mi). Set on resource-tight clusters (prod) to widen the OOM safety margin; leave unset on test."
   type        = string
