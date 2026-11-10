@@ -1,4 +1,9 @@
+# A node with no MAC (the Cubie A7S, whose MAC is random per boot) has no UniFi
+# client record: its address comes from the kernel's ip= argument instead.
+# docs/bare-metal-nodes.md#cubie-a7s-static-address
 resource "unifi_user" "metal_client" {
+  count = var.mac_address == null ? 0 : 1
+
   mac                    = var.mac_address
   name                   = var.name
   note                   = var.description != null ? "${var.description} - ${var.name}" : var.name
@@ -7,6 +12,11 @@ resource "unifi_user" "metal_client" {
   allow_existing         = true
   skip_forget_on_destroy = false
   network_id             = var.unifi_network_id
+}
+
+moved {
+  from = unifi_user.metal_client
+  to   = unifi_user.metal_client[0]
 }
 
 resource "talos_machine_configuration_apply" "this" {

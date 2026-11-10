@@ -14,6 +14,12 @@ locals {
   # (siderolabs/talos 03075319b). lancer's own patch, applied after, overrides it.
   install_disk_selector = { diskSelector = { match = "disk.dev_path == \"/dev/sda\"" } }
 
+  # The Cubie A7S boots a disk image flashed to its microSD card, so Talos counts it
+  # as installed and never runs an installer; the generated config's default
+  # installer image goes unused, and its upgrades are a reflash.
+  # docs/bare-metal-nodes.md#cubie-a7s-static-address
+  metal_arm_install_disk_selector = { diskSelector = { match = "disk.dev_path == \"/dev/mmcblk0\"" } }
+
   # The cluster name comes from the talos_machine_configuration data sources.
   common_patch_yaml = yamlencode({
     apiVersion     = "v1alpha1"
@@ -161,6 +167,43 @@ module "talos-intel-metal" {
       kind         = "UnattendedInstallConfig"
       installer    = { image = local.metal_intel_install_image }
       provisioning = local.install_disk_selector
+    })],
+    each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
+    each.value.taint != "" ? [yamlencode({
+      "apiVersion" = "v1alpha1"
+      "kind"       = "KubeNodeConfig"
+      "taints" = {
+        "dedicated" = "${each.value.taint}:${each.value.taint_effect}"
+      }
+    })] : [],
+    each.value.machine_config_patches
+  )
+
+  # Order the metal (re)apply after the etcd bootstrap, so a rebuild's metal
+  # reboot lands in the *new* cluster rather than the old one.
+  depends_on = [talos_machine_bootstrap.this]
+}
+
+module "talos-arm-metal" {
+  source   = "../talos-metal"
+  for_each = var.metal_arm_nodes
+
+  name                 = each.value.name
+  ip_address           = each.value.ip_address
+  client_configuration = talos_machine_secrets.this.client_configuration
+  machine_configuration = (each.value.type == "control" ?
+    data.talos_machine_configuration.machineconfig_cp.machine_configuration
+  : data.talos_machine_configuration.machineconfig_worker.machine_configuration)
+
+  unifi_network_id = var.unifi_network_id
+  config_patches = concat(
+    [local.base_config_yaml],
+    [local.common_patch_yaml],
+    local.eviction_patches,
+    [yamlencode({
+      apiVersion   = "v1alpha1"
+      kind         = "UnattendedInstallConfig"
+      provisioning = local.metal_arm_install_disk_selector
     })],
     each.value.type == "control" ? [local.controlplane_config_yaml, local.layer2_vip_patch_yaml] : [],
     each.value.taint != "" ? [yamlencode({

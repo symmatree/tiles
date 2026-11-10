@@ -50,6 +50,19 @@ variable "metal_intel_nodes" {
   default = {}
 }
 
+variable "metal_arm_nodes" {
+  description = "Bare-metal arm64 nodes (Cubie A7S). No MAC: the address is static, from the image's kernel arguments."
+  type = map(object({
+    name                   = string
+    type                   = string
+    ip_address             = string
+    taint                  = string
+    taint_effect           = optional(string, "NoSchedule")
+    machine_config_patches = optional(list(string), [])
+  }))
+  default = {}
+}
+
 variable "cluster_name" {
   description = "Talos cluster name"
   type        = string

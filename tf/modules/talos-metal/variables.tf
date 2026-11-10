@@ -10,8 +10,9 @@ variable "name" {
 }
 
 variable "mac_address" {
-  description = "MAC address for the metal node"
+  description = "MAC address for the metal node's UniFi fixed IP; null for a node with a static address"
   type        = string
+  default     = null
 }
 
 variable "ip_address" {
