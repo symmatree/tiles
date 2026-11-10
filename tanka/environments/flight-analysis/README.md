@@ -29,8 +29,8 @@ A flight is `/volume2/datasets/flights/<platform>/<flight>/`, and only that leve
    - **per `.bin`**, `analysis/link-map.ipynb` -> `derived/link-map-<log>.{ipynb,pdf,html,png,json}`,
      fresh while the log, the coordinator's sessions and `ground/backpack-metrics-*.json` are
      unchanged.
-   - **per campod session**, `analysis/vibration-spectrogram.ipynb` when the session has a
-     non-empty `accel-*.jsonl` and `analysis/image-sharpness-vs-motion.ipynb` when it has a
+   - **per campod session**, `analysis/vibration-spectrogram.ipynb` when the session has an
+     `accel-*.jsonl` with at least one sample batch after its header line, and `analysis/image-sharpness-vs-motion.ipynb` when it has a
      non-empty still, each on
      the `.bin` that `derived/time-sync.json` (`pod_session_fc_log`) pairs the session with ->
      `derived/<notebook>-<pod>.{ipynb,pdf}` plus whatever the notebook writes itself. A
