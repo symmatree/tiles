@@ -52,7 +52,8 @@ IMAGE_DIGEST = os.environ.get("IMAGE_DIGEST", "unknown")
 TIME_SYNC_NB = "analysis/time-sync.ipynb"
 VEHICLE_HEALTH_NB = "analysis/vehicle-health.ipynb"
 LINK_MAP_NB = "analysis/link-map.ipynb"
-# (notebook, what a campod session must contain for it to apply)
+# (notebook, what a campod session must contain for it to apply). The match must be non-empty:
+# a power cut leaves the session's files at 0 bytes, and an empty accel file has no samples.
 POD_NBS = [
     ("analysis/vibration-spectrogram.ipynb", "accel-*.jsonl"),
     ("analysis/image-sharpness-vs-motion.ipynb", "campod-*_*.jpg"),
@@ -342,7 +343,7 @@ def process_flight(flight: Path, nb_shas: dict) -> None:
         bin_obj = next(o for o in bin_objs if o["name"] == fc_bin.name)
         sess_obj = {"name": f"captures/{sess}", "sha256": bsha}
         for nb_rel, needs in POD_NBS:
-            if not any(sdir.glob(needs)):
+            if not any(p.stat().st_size > 0 for p in sdir.glob(needs)):
                 continue
             stem = Path(nb_rel).stem
             key = f"{stem}-{node}"
