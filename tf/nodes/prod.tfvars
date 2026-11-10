@@ -170,7 +170,7 @@ metal_arm_nodes = {
   "cubie-1" = {
     name         = "cubie-1"
     type         = "worker"
-    ip_address   = "10.0.128.61"
+    ip_address   = "10.0.128.14"
     taint        = "arm64"
     taint_effect = "NoSchedule"
   }
