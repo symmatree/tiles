@@ -22,12 +22,6 @@
 #               every file must be a CustomResourceDefinition; build.py fails
 #               otherwise, which is what catches a 404 body or an upstream file
 #               that has quietly grown a Namespace or Deployment.
-#   strip_descriptions
-#               optional; true drops the schema `description` annotations, which
-#               only feed `kubectl explain`, and writes the CRDs as compact JSON.
-#               For CRDs too large to install otherwise: the apiserver caps a
-#               request at 3 MiB, and Helm's release Secret (every template plus
-#               the rendered manifest) at the 1 MiB Secret limit.
 charts:
   - name: argo-cd-crds
     version: 0.2.0
@@ -39,7 +33,7 @@ charts:
       - https://raw.githubusercontent.com/argoproj/argo-cd/refs/tags/{ref}/manifests/crds/appproject-crd.yaml
 
   - name: argo-workflows-crds
-    version: 0.5.0
+    version: 0.6.0
     ref: v4.1.6
     description: Argo Workflows CRDs (Workflow, WorkflowTemplate, CronWorkflow, and friends)
     # ALL EIGHT, and that is load-bearing. The controller starts one informer per type and
@@ -48,22 +42,25 @@ charts:
     # every 40s, never touched a submitted workflow, and reported itself healthy and 1/1.
     # List against the upstream directory, not against the types you think are used --
     # workflowtaskresults is written by the executor, so nothing here references it.
-    # full, with descriptions stripped. The full schemas let the apiserver validate and
-    # prune Workflow specs, and give Argo CD's server-side diff the field structure it
-    # needs: against the minimal variant's atomic, property-less spec it reports Synced
-    # for changes it never applies (argoproj/argo-cd#27625). Unstripped, the full
-    # argoproj.io_workflows.yaml is 2838656 bytes and the install fails with
-    # "Request entity too large: limit is 3145728".
-    strip_descriptions: true
+    # minimal, not full. Unmodified, the full argoproj.io_workflows.yaml is 2838656 bytes
+    # and the install fails with "Request entity too large: limit is 3145728". With its
+    # descriptions stripped it installs (chart 0.5.0), but every kube-apiserver holds the
+    # schemas in memory: on the 2.9 GB control planes that was about 300-400 MiB more per
+    # apiserver, enough that a routine host-maintenance drain pushed cp-2 and cp-3 into
+    # the Talos OOM controller and etcd lost its leader.
+    # The minimal variant drops the OpenAPI schema, so the apiserver does not validate
+    # Workflow specs -- a malformed one is accepted and fails when it runs -- and Argo CD's
+    # server-side diff can report Synced for WorkflowTemplate/CronWorkflow changes it never
+    # applied (argoproj/argo-cd#27625).
     urls:
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflows.yaml
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflowtemplates.yaml
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_clusterworkflowtemplates.yaml
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_cronworkflows.yaml
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflowtaskresults.yaml
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflowtasksets.yaml
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workflowartifactgctasks.yaml
-      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/full/argoproj.io_workfloweventbindings.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflows.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowtemplates.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_clusterworkflowtemplates.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_cronworkflows.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowtaskresults.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowtasksets.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workflowartifactgctasks.yaml
+      - https://raw.githubusercontent.com/argoproj/argo-workflows/refs/tags/{ref}/manifests/base/crds/minimal/argoproj.io_workfloweventbindings.yaml
 
   - name: cert-manager-crds
     version: 0.2.0
