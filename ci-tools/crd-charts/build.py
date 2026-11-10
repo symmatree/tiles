@@ -26,7 +26,8 @@ yaml.SafeLoader.add_constructor(
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-# Every chart is built from main and published under this one floating version.
+# Every chart is built from main and published under this one floating version;
+# tf/nodes/k8s-bootstrap.tf tells content apart by a hash of its sources.yaml entry.
 VERSION = "0.0.0-branch-main"
 
 
