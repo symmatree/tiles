@@ -47,7 +47,10 @@ Steps:
 1. **render** (notebook image, lancer) -- clones coordinator at `revision` and runs
    `render.py <config> /data/renders/<render> --jobs 16 <render-args>`.
 2. **odm** (`opendronemap/odm:3.6.2`, lancer) -- writes `run.json`, then `run.py --project-path
-   /data/runs <run> --geo /data/renders/<render>/geo.txt ...`.
+   /data/runs <run> --geo /data/renders/<render>/geo.txt ...`. OpenMVS densifies by tiles:
+   `DensifyPointCloud` is wrapped so that ODM's single-pass call exits 137 at once, which sends ODM
+   to its tiled path (depth maps with `--fusion-mode 1`, then sub-scenes fused one at a time), and
+   each sub-scene's fusion gets `--crop-to-roi 0`.
 3. **score** (notebook image) -- clones coordinator at `revision`, `score.py
    /data/renders/<render> /data/runs/<run>/opensfm/reconstruction.json --json
    /data/runs/<run>/score.json`, and adds its commit to `run.json`.
