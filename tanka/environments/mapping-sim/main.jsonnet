@@ -118,6 +118,26 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
       set -euo pipefail
       render='/data/renders/{{inputs.parameters.render}}'
       run='/data/runs/{{inputs.parameters.run}}'
+      # OpenMVS densifies by tiles. ODM 3.6.2 (stages/openmvs.py) first runs DensifyPointCloud on
+      # scene.mvs in one pass, which estimates and fuses every depth map in one process, and goes to
+      # its tiled path when that exits 137. The wrapper answers that call with 137 at once; the
+      # tiled path's calls (--fusion-mode 1 estimates the depth maps, --sub-scene-area splits the
+      # scene, one fusion per scene_NNNN.mvs) run as ODM makes them, except that each sub-scene's
+      # fusion keeps every point it fuses: cropped to its ROI, every sub-scene kept none
+      # (mapping-sim-tiled-rqf8h).
+      bin=/code/SuperBuild/install/bin
+      mv "$bin/DensifyPointCloud" "$bin/DensifyPointCloud.real"
+      cat > "$bin/DensifyPointCloud" <<'WRAP'
+      #!/bin/bash
+      args=" $* "
+      case "$args" in
+        *" --fusion-mode 1 "*|*" --sub-scene-area "*|*" --filter-point-cloud "*) ;;
+        *"/scene_"[0-9]*) exec "$0.real" "$@" --crop-to-roi 0;;
+        *"/scene.mvs"*) echo "DensifyPointCloud wrapper: exit 137 in place of the single pass"; exit 137;;
+      esac
+      exec "$0.real" "$@"
+      WRAP
+      chmod +x "$bin/DensifyPointCloud"
       python3 - "$render" "$run" <<'EOF'
       import datetime, hashlib, json, pathlib, sys
       render, run = map(pathlib.Path, sys.argv[1:])
@@ -135,7 +155,8 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
         --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16 \
         {{inputs.parameters.odm-args}}
     ||| % odmImage,
-    resources: { requests: { cpu: '8', memory: '16Gi' }, limits: { memory: '48Gi' } },
+    // Tiled fusion of the 1272-image flown render peaked at 38.9 GiB sampled (mapping-sim-tiled-qqxdn).
+    resources: { requests: { cpu: '8', memory: '16Gi' }, limits: { memory: '56Gi' } },
     volumeMounts: [
       dataMount,
       {
