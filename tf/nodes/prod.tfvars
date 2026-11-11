@@ -164,15 +164,12 @@ metal_intel_nodes = {
 # reservation: the image's kernel arguments carry the address, gateway, DNS, NTP and
 # hostname (docs/bare-metal-nodes.md#cubie-a7s-static-address), and ip_address here
 # must match the image the card was flashed with.
-# Tainted arm64: 7 of the 56 workload images not pinned to a node publish no arm64
-# build (2026-11-10). Every DaemonSet's images do, and they tolerate all taints.
 metal_arm_nodes = {
   "cubie-1" = {
-    name         = "cubie-1"
-    type         = "worker"
-    ip_address   = "10.0.128.14"
-    taint        = "arm64"
-    taint_effect = "NoSchedule"
+    name       = "cubie-1"
+    type       = "control"
+    ip_address = "10.0.128.14"
+    taint      = ""
   }
 }
 
