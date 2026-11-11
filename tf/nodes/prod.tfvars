@@ -49,16 +49,6 @@ virtual_machines = {
     ip_address        = "10.0.128.12"
     taint             = ""
   },
-  "tiles-cp-3" = {
-    type              = "control"
-    proxmox_node_name = "nuc-g3p-1"
-    vm_id             = 7213
-    cores             = 1
-    ram_mb            = 3000
-    mac_address       = "bc:24:11:d0:72:13"
-    ip_address        = "10.0.128.13"
-    taint             = ""
-  },
   "tiles-wk-1" = {
     type              = "worker"
     proxmox_node_name = "nuc-g2p-1"

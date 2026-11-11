@@ -29,7 +29,7 @@ local namespace = std.parseJson(importstr 'spec.json').spec.namespace;
 local targets = [
   { day: 1, target: 'nuc-g2p-1', kind: 'pve', nodes: 'tiles-cp-1 tiles-wk-1' },
   { day: 2, target: 'nuc-g2p-2', kind: 'pve', nodes: 'tiles-cp-2 tiles-wk-2' },
-  { day: 3, target: 'nuc-g3p-1', kind: 'pve', nodes: 'tiles-cp-3 tiles-wk-3' },
+  { day: 3, target: 'nuc-g3p-1', kind: 'pve', nodes: 'tiles-wk-3' },
   { day: 4, target: 'nuc-g3p-2', kind: 'pve', nodes: 'tiles-wk-4' },
   { day: 5, target: 'acebase', kind: 'talos', nodes: 'acebase' },
 ];
