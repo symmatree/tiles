@@ -8,7 +8,7 @@ America/New_York:
 |---|---|---|---|
 | Mon | nuc-g2p-1 | Proxmox host | tiles-cp-1, tiles-wk-1 |
 | Tue | nuc-g2p-2 | Proxmox host | tiles-cp-2, tiles-wk-2 |
-| Wed | nuc-g3p-1 | Proxmox host | tiles-cp-3, tiles-wk-3 |
+| Wed | nuc-g3p-1 | Proxmox host | tiles-wk-3 |
 | Thu | nuc-g3p-2 | Proxmox host | tiles-wk-4 |
 | Fri | acebase | Talos, bare metal | acebase |
 
