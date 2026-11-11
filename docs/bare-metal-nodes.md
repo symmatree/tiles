@@ -32,7 +32,7 @@ Proxmox **VMs** use **`talos_image_factory_schematic.vm`** in the same file: **n
 
 `module.talos-amd-metal` is keyed by `metal_amd_nodes`; `module.talos-intel-metal` by `metal_intel_nodes`. Each node gets the install patch for its schematic. `module.talos-arm-metal`, keyed by `metal_arm_nodes`, is the Cubie A7S, which has no schematic -- see [Cubie A7S](#cubie-a7s-static-address).
 
-For **every** node (VM or metal), the same patch stack applies the shared [talos-config.yaml](../tf/modules/talos-cluster/talos-config.yaml), the same pod/service CIDRs (`KubeNetworkConfig`), optional kubelet taints, and the control-plane-only patches ([talos-config-controlplane.yaml](../tf/modules/talos-cluster/talos-config-controlplane.yaml) and the Layer2 VIP) **only** when `type = "control"` in tfvars. Bare-metal nodes in this layout are **workers**; the meaningful difference from a VM worker is the single install patch: **`UnattendedInstallConfig` `installer.image`** uses **metal-installer** with the node's metal schematic instead of the VM **installer** with the VM schematic.
+For **every** node (VM or metal), the same patch stack applies the shared [talos-config.yaml](../tf/modules/talos-cluster/talos-config.yaml), the same pod/service CIDRs (`KubeNetworkConfig`), optional kubelet taints, and the control-plane-only patches ([talos-config-controlplane.yaml](../tf/modules/talos-cluster/talos-config-controlplane.yaml) and the Layer2 VIP) **only** when `type = "control"` in tfvars. The amd and intel metal nodes are **workers**; the meaningful difference from a VM worker is the single install patch: **`UnattendedInstallConfig` `installer.image`** uses **metal-installer** with the node's metal schematic instead of the VM **installer** with the VM schematic.
 
 ### Metal module behavior
 
@@ -158,7 +158,7 @@ A config *apply* is not a *reset*. PKI is preserved across the recreate (both ap
 
 ## Cubie A7S (static address)
 
-The Radxa Cubie A7S (Allwinner A733, arm64) runs a Talos image built outside Image Factory, from the kernel, overlay and imager profile in dotfiles-symm `cubie-a7s/`. The image is flashed to the board's microSD card; it carries a META partition, so Talos counts itself installed and never runs an installer. The `installer.image` in its generated config is the stock one and goes unused. An upgrade is a new image and a reflash, not `talosctl upgrade`, whose stock installer has no A733 support.
+The Radxa Cubie A7S (Allwinner A733, arm64) runs a Talos image built outside Image Factory, from the kernel, overlay and imager profile in dotfiles-symm `cubie-a7s/`. The image is flashed to the board's microSD card; it carries a META partition, so Talos counts itself installed and never runs an installer. The `installer.image` in its generated config is the stock one and goes unused. An upgrade is a new image and a reflash, not `talosctl upgrade`, whose stock installer has no A733 support. `cubie-1` is a control-plane node (an etcd member and a talosconfig endpoint, carrying the Layer2 VIP patch like the `tiles-cp-*` VMs).
 
 Its MAC is random on every boot (the board's U-Boot generates it), so a UniFi fixed IP keyed by MAC cannot hold. `metal_arm_nodes` entries therefore have no `mac_address`, and `talos-metal` creates no UniFi client record (and no `local_dns_record`) for them. The address comes from the kernel's `ip=` argument, baked into each board's image:
 

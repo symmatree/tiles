@@ -1,7 +1,12 @@
 resource "talos_machine_secrets" "this" {}
 
 locals {
-  control_ips  = [for _, vm in var.vms : vm.ip_address if vm.type == "control"]
+  control_ips = concat(
+    [for _, vm in var.vms : vm.ip_address if vm.type == "control"],
+    [for _, n in var.metal_amd_nodes : n.ip_address if n.type == "control"],
+    [for _, n in var.metal_intel_nodes : n.ip_address if n.type == "control"],
+    [for _, n in var.metal_arm_nodes : n.ip_address if n.type == "control"],
+  )
   bootstrap_ip = local.control_ips[0]
   # Git ref Argo CD tracks for this cluster.
   target_revision = var.cluster_name == "tiles" ? "prod" : "test"
