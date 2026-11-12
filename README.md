@@ -20,7 +20,7 @@ If the documentation changes upstream, you may need to update the `fables/` subm
 Each cluster uses `/18` allocation (64 /24s). Pods use `/20` with `node-cidr-mask-size: 24`, providing 256 hosts per node and supporting up to 16 nodes maximum.
 
 * **Tiles cluster (10.0.128.0/18)**:
-  * 10.0.128.0/24: VMs + VIP (VIP: 10.0.128.10)
+  * 10.0.128.0/24: nodes (VMs and bare metal) + VIP (VIP: 10.0.128.10)
   * 10.0.129.0/24: External IPs (Cilium IPAM handles IPAM for LoadBalancers, which are also advertised via L2 announcements)
   * 10.0.136.0/21: Services (10.0.136.0 - 10.0.143.255)
   * 10.0.144.0/20: Pods (10.0.144.0 - 10.0.159.255, ipv4NativeRoutingCIDR) with `node-cidr-mask-size: 24`
