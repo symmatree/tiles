@@ -22,10 +22,17 @@ The NAS `datasets` share's `mapping-sim/`, mounted at `/data`, the same split as
   `images/` mounted into it read-only and the render's `geo.txt` as the priors, plus `run.json`
   (render name, SHA-256 of its manifest, ODM image and arguments, start time, the coordinator
   commit that scored it) and `score.json`.
+- `inputs/` -- files that runs' `odm-args` name, such as a `--boundary` GeoJSON.
 
 Any number of runs can read one render. ODM 3.6.2 writes into `images/` only for video frame
 extraction and sky or background masks (`--sky-removal`, `--bg-removal`), which the read-only
 mount does not allow.
+
+A run of flown images (`mapping-sim-imageset`) has no render: the share's `imagesets/` is mounted
+read-only at `/imagesets`, and `runs/<run>/images/` holds a relative link to each image it uses,
+named `<imageset directory>-<file>` (`2026-02-21-grid-DJI_0820.JPG`), which resolves wherever the
+datasets share is mounted whole. Its `run.json` has each image's source and SHA-256 in place of a
+render.
 
 ## WorkflowTemplates
 
@@ -34,13 +41,15 @@ mount does not allow.
 | `mapping-sim-render` | `render`, `config`, `revision`, `render-args` | render into `renders/<render>/` |
 | `mapping-sim-process` | `run`, `render`, `revision`, `odm-args` | ODM to the end of OpenSfM in `runs/<run>/`, then score |
 | `mapping-sim` | `name`, `config`, `revision`, `render-args`, `odm-args` | both, render and run both called `<name>` |
+| `mapping-sim-imageset` | `run`, `images`, `odm-args` | ODM to the end of OpenSfM in `runs/<run>/` on flown images, positions from their EXIF; no score |
 
 | parameter | default | |
 |---|---|---|
 | `config` | `analysis/mapping_sim/configs/as-built.yaml` | path in the coordinator repo |
 | `revision` | `main` | coordinator branch or tag, for render and score |
 | `render-args` | empty | after `--jobs 16`, e.g. `--scale 0.25 --limit 10` |
-| `odm-args` | empty | after `--geo ... --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16` |
+| `odm-args` | empty | after `--geo ... --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16`; for `mapping-sim-imageset`, after `--end-with opensfm --max-concurrency 16` |
+| `images` | | globs under `imagesets/`, space-separated, e.g. `bond_ave/2026-02-21-grid/*.JPG`; one that matches nothing fails the step |
 
 Steps:
 
@@ -74,4 +83,9 @@ argo submit -n mapping-sim --from workflowtemplate/mapping-sim \
 argo submit -n mapping-sim --from workflowtemplate/mapping-sim-process \
   -p render=as-built-20261105-1200 -p run=as-built-20261105-1200-min-features-20000 \
   -p odm-args='--min-num-features 20000'
+
+argo submit -n mapping-sim --from workflowtemplate/mapping-sim-imageset \
+  -p run=bond-2026-02-21-house-2-odm362 \
+  -p images='bond_ave/2026-02-21-grid/*.JPG bond_ave/2026-02-21-orbit/*.JPG bond_ave/2026-02-21-house-close-orbit/*.JPG' \
+  -p odm-args='--boundary /data/inputs/bond-2026-02-21-house-2-boundary.geojson --feature-quality ultra --min-num-features 30000'
 ```
