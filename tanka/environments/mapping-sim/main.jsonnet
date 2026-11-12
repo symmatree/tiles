@@ -46,6 +46,23 @@ local runsPvc =
   + kPersistentVolumeClaim.spec.withVolumeName(runsPv.metadata.name)
   + kPersistentVolumeClaim.spec.withStorageClassName('');
 
+// The datasets share's imagesets/, read-only: flown captures that a run can take its images from.
+local imagesetsPv =
+  kPersistentVolume.new('mapping-sim-imagesets')
+  + kPersistentVolume.spec.withCapacity({ storage: '2Ti' })
+  + kPersistentVolume.spec.withAccessModes(['ReadOnlyMany'])
+  + kPersistentVolume.spec.withPersistentVolumeReclaimPolicy('Retain')
+  + kPersistentVolume.spec.nfs.withServer(APP.app_settings.nfs_server)
+  + kPersistentVolume.spec.nfs.withPath(APP.app_settings.datasets_nfs_path + '/imagesets')
+  + kPersistentVolume.spec.nfs.withReadOnly(true);
+
+local imagesetsPvc =
+  kPersistentVolumeClaim.new('mapping-sim-imagesets')
+  + kPersistentVolumeClaim.spec.withAccessModes(['ReadOnlyMany'])
+  + kPersistentVolumeClaim.spec.resources.withRequests({ storage: '2Ti' })
+  + kPersistentVolumeClaim.spec.withVolumeName(imagesetsPv.metadata.name)
+  + kPersistentVolumeClaim.spec.withStorageClassName('');
+
 // The account the workflow's pods run as: Argo's executor writes a workflowtaskresult per step.
 local serviceAccount = kServiceAccount.new(name);
 
@@ -106,6 +123,31 @@ local renderTemplate = onLancer + inputs(['render', 'config', 'revision', 'rende
   },
 };
 
+// OpenMVS densifies by tiles. ODM 3.6.2 (stages/openmvs.py) first runs DensifyPointCloud on
+// scene.mvs in one pass, which estimates and fuses every depth map in one process, and goes to its
+// tiled path when that exits 137. The wrapper answers that call with 137 at once; the tiled path's
+// calls (--fusion-mode 1 estimates the depth maps, --sub-scene-area splits the scene, one fusion
+// per scene_NNNN.mvs) run as ODM makes them, except that each sub-scene's fusion keeps every point
+// it fuses: cropped to its ROI, every sub-scene kept none (mapping-sim-tiled-rqf8h).
+local densifyWrapper = |||
+  bin=/code/SuperBuild/install/bin
+  mv "$bin/DensifyPointCloud" "$bin/DensifyPointCloud.real"
+  cat > "$bin/DensifyPointCloud" <<'WRAP'
+  #!/bin/bash
+  args=" $* "
+  case "$args" in
+    *" --fusion-mode 1 "*|*" --sub-scene-area "*|*" --filter-point-cloud "*) ;;
+    *"/scene_"[0-9]*) exec "$0.real" "$@" --crop-to-roi 0;;
+    *"/scene.mvs"*) echo "DensifyPointCloud wrapper: exit 137 in place of the single pass"; exit 137;;
+  esac
+  exec "$0.real" "$@"
+  WRAP
+  chmod +x "$bin/DensifyPointCloud"
+|||;
+
+// Tiled fusion of the 1272-image flown render peaked at 38.9 GiB sampled (mapping-sim-tiled-qqxdn).
+local odmResources = { requests: { cpu: '8', memory: '16Gi' }, limits: { memory: '56Gi' } };
+
 // ODM's project is runs/<run>/, with the render's images/ mounted into it read-only so that no
 // run can change a render, and the render's geo.txt as the priors. run.json records what ran.
 local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
@@ -118,26 +160,7 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
       set -euo pipefail
       render='/data/renders/{{inputs.parameters.render}}'
       run='/data/runs/{{inputs.parameters.run}}'
-      # OpenMVS densifies by tiles. ODM 3.6.2 (stages/openmvs.py) first runs DensifyPointCloud on
-      # scene.mvs in one pass, which estimates and fuses every depth map in one process, and goes to
-      # its tiled path when that exits 137. The wrapper answers that call with 137 at once; the
-      # tiled path's calls (--fusion-mode 1 estimates the depth maps, --sub-scene-area splits the
-      # scene, one fusion per scene_NNNN.mvs) run as ODM makes them, except that each sub-scene's
-      # fusion keeps every point it fuses: cropped to its ROI, every sub-scene kept none
-      # (mapping-sim-tiled-rqf8h).
-      bin=/code/SuperBuild/install/bin
-      mv "$bin/DensifyPointCloud" "$bin/DensifyPointCloud.real"
-      cat > "$bin/DensifyPointCloud" <<'WRAP'
-      #!/bin/bash
-      args=" $* "
-      case "$args" in
-        *" --fusion-mode 1 "*|*" --sub-scene-area "*|*" --filter-point-cloud "*) ;;
-        *"/scene_"[0-9]*) exec "$0.real" "$@" --crop-to-roi 0;;
-        *"/scene.mvs"*) echo "DensifyPointCloud wrapper: exit 137 in place of the single pass"; exit 137;;
-      esac
-      exec "$0.real" "$@"
-      WRAP
-      chmod +x "$bin/DensifyPointCloud"
+    ||| + densifyWrapper + |||
       python3 - "$render" "$run" <<'EOF'
       import datetime, hashlib, json, pathlib, sys
       render, run = map(pathlib.Path, sys.argv[1:])
@@ -155,8 +178,7 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
         --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16 \
         {{inputs.parameters.odm-args}}
     ||| % odmImage,
-    // Tiled fusion of the 1272-image flown render peaked at 38.9 GiB sampled (mapping-sim-tiled-qqxdn).
-    resources: { requests: { cpu: '8', memory: '16Gi' }, limits: { memory: '56Gi' } },
+    resources: odmResources,
     volumeMounts: [
       dataMount,
       {
@@ -166,6 +188,63 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
         readOnly: true,
       },
     ],
+  },
+};
+
+// imagesets/ at /imagesets, beside mapping-sim/ at /data as the two sit on the datasets share, so
+// the links in runs/<run>/images/ (../../../../imagesets/...) resolve both here and wherever the
+// datasets share is mounted whole.
+local imagesetsMount = { name: 'imagesets', mountPath: '/imagesets', readOnly: true };
+
+// ODM on flown images: runs/<run>/images/ holds a link to each file the images globs match, named
+// <imageset directory>-<file> since files in different imagesets can share a name. Positions come
+// from the images' EXIF; there are no priors and no truth, so no score. run.json records each
+// image's source and SHA-256.
+local odmImagesetTemplate = onLancer + inputs(['run', 'images', 'odm-args']) {
+  name: 'odm',
+  script: {
+    image: odmImage,
+    command: ['bash'],
+    source: |||
+      set -euo pipefail
+      run='/data/runs/{{inputs.parameters.run}}'
+      mkdir -p "$run/images"
+      set -f
+      patterns=({{inputs.parameters.images}})
+      set +f
+      shopt -s nullglob
+      for pattern in "${patterns[@]}"; do
+        files=(/imagesets/$pattern)
+        if [ ${#files[@]} -eq 0 ]; then echo "no images match $pattern"; exit 1; fi
+        for f in "${files[@]}"; do
+          ln -sfn "../../../..$f" "$run/images/$(basename "$(dirname "$f")")-$(basename "$f")"
+        done
+      done
+    ||| + densifyWrapper + |||
+      python3 - "$run" <<'EOF'
+      import datetime, hashlib, json, os, pathlib, sys
+      run = pathlib.Path(sys.argv[1])
+      images = {}
+      for link in sorted((run / "images").iterdir()):
+          digest = hashlib.sha256()
+          with open(link, "rb") as f:
+              for block in iter(lambda: f.read(1 << 20), b""):
+                  digest.update(block)
+          images[link.name] = {"source": os.readlink(link), "sha256": digest.hexdigest()}
+      (run / "run.json").write_text(json.dumps({
+          "images_globs": "{{inputs.parameters.images}}",
+          "images": images,
+          "odm_image": "%s",
+          "odm_args": "{{inputs.parameters.odm-args}}",
+          "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+      }, indent=1))
+      EOF
+      exec python3 /code/run.py --project-path /data/runs '{{inputs.parameters.run}}' \
+        --end-with opensfm --max-concurrency 16 \
+        {{inputs.parameters.odm-args}}
+    ||| % odmImage,
+    resources: odmResources,
+    volumeMounts: [dataMount, imagesetsMount],
   },
 };
 
@@ -238,8 +317,11 @@ local step(stepName, template, params) = {
 };
 local p(n) = '{{workflow.parameters.%s}}' % n;
 
+local dataVolume = { name: 'data', persistentVolumeClaim: { claimName: runsPvc.metadata.name } };
+local imagesetsVolume = { name: 'imagesets', persistentVolumeClaim: { claimName: imagesetsPvc.metadata.name, readOnly: true } };
+
 // written: the render and run directories the steps write, '' for neither, for the exit handler.
-local workflowTemplate(wtName, parameters, steps, templates, written) = {
+local workflowTemplate(wtName, parameters, steps, templates, written, volumes=[dataVolume]) = {
   apiVersion: 'argoproj.io/v1alpha1',
   kind: 'WorkflowTemplate',
   metadata: { name: wtName },
@@ -249,7 +331,7 @@ local workflowTemplate(wtName, parameters, steps, templates, written) = {
     onExit: 'exit',
     ttlStrategy: { secondsAfterCompletion: 604800 },
     arguments: { parameters: parameters },
-    volumes: [{ name: 'data', persistentVolumeClaim: { claimName: runsPvc.metadata.name } }],
+    volumes: volumes,
     templates: [
       { name: 'main', steps: [[s] for s in steps] },
       { name: 'exit', steps: [[step('resources', resourcesTemplate, written)]] },
@@ -303,13 +385,26 @@ local allWorkflow = workflowTemplate(
   { render: '/data/renders/' + p('name'), run: '/data/runs/' + p('name') },
 );
 
+// Flown images from imagesets/ into runs/<run>/. images: globs under imagesets/, space-separated.
+local imagesetWorkflow = workflowTemplate(
+  'mapping-sim-imageset',
+  [{ name: 'run' }, { name: 'images' }, odmArgsParam],
+  [step('odm', odmImagesetTemplate, { run: p('run'), images: p('images'), 'odm-args': p('odm-args') })],
+  [odmImagesetTemplate],
+  { render: '', run: '/data/runs/' + p('run') },
+  [dataVolume, imagesetsVolume],
+);
+
 {
   runsPv: runsPv,
   runsPvc: runsPvc,
+  imagesetsPv: imagesetsPv,
+  imagesetsPvc: imagesetsPvc,
   serviceAccount: serviceAccount,
   workflowRole: workflowRole,
   workflowRoleBinding: workflowRoleBinding,
   renderWorkflow: renderWorkflow,
   processWorkflow: processWorkflow,
   allWorkflow: allWorkflow,
+  imagesetWorkflow: imagesetWorkflow,
 }
