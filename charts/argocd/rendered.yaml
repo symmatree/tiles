@@ -4,7 +4,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -32,7 +32,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -76,7 +76,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -101,7 +101,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: dex-server
@@ -140,7 +140,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis
@@ -183,7 +183,7 @@ metadata:
   name: argocd-application-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -200,7 +200,7 @@ metadata:
   name: argocd-applicationset-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-applicationset-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: applicationset-controller
@@ -217,7 +217,7 @@ metadata:
   name: argocd-repo-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -234,7 +234,7 @@ metadata:
   name: argocd-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -251,7 +251,7 @@ metadata:
   name: argocd-dex-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: dex-server
@@ -266,7 +266,7 @@ kind: ServiceAccount
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -284,7 +284,7 @@ metadata:
   name: argocd-secret
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-secret
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -301,7 +301,7 @@ metadata:
   name: argocd-cm
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-cm
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -457,7 +457,7 @@ metadata:
   name: argocd-cmd-params-cm
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-cmd-params-cm
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -500,7 +500,7 @@ metadata:
   name: argocd-gpg-keys-cm
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-gpg-keys-cm
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/managed-by: Helm
@@ -515,7 +515,7 @@ metadata:
   name: argocd-rbac-cm
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-rbac-cm
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -536,7 +536,7 @@ metadata:
   name: argocd-ssh-known-hosts-cm
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-ssh-known-hosts-cm
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/managed-by: Helm
@@ -571,7 +571,7 @@ metadata:
   name: argocd-tls-certs-cm
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-tls-certs-cm
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/managed-by: Helm
@@ -586,7 +586,7 @@ metadata:
   name: argocd-redis-health-configmap
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis
@@ -628,7 +628,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -647,7 +647,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -729,7 +729,7 @@ kind: ClusterRole
 metadata:
   name: argocd-application-controller
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -755,7 +755,7 @@ kind: ClusterRole
 metadata:
   name: argocd-server
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -829,7 +829,7 @@ kind: ClusterRoleBinding
 metadata:
   name: argocd-application-controller
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -852,7 +852,7 @@ kind: ClusterRoleBinding
 metadata:
   name: argocd-server
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -876,7 +876,7 @@ metadata:
   name: argocd-application-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -931,7 +931,7 @@ metadata:
   name: argocd-applicationset-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-applicationset-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: applicationset-controller
@@ -1036,7 +1036,7 @@ metadata:
   name: argocd-repo-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -1053,7 +1053,7 @@ metadata:
   name: argocd-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -1110,7 +1110,7 @@ metadata:
   name: argocd-dex-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: dex-server
@@ -1136,7 +1136,7 @@ metadata:
   name: argocd-application-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -1160,7 +1160,7 @@ metadata:
   name: argocd-applicationset-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-applicationset-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: applicationset-controller
@@ -1184,7 +1184,7 @@ metadata:
   name: argocd-repo-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -1208,7 +1208,7 @@ metadata:
   name: argocd-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -1232,7 +1232,7 @@ metadata:
   name: argocd-dex-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: dex-server
@@ -1256,7 +1256,7 @@ metadata:
   name: argocd-application-controller-metrics
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-metrics
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -1282,7 +1282,7 @@ metadata:
   name: argocd-application-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -1303,7 +1303,7 @@ metadata:
   name: argocd-applicationset-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-applicationset-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: applicationset-controller
@@ -1328,7 +1328,7 @@ metadata:
   name: argocd-repo-server-metrics
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server-metrics
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -1352,7 +1352,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -1379,7 +1379,7 @@ metadata:
   name: argocd-server-metrics
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server-metrics
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -1405,7 +1405,7 @@ metadata:
   name: argocd-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -1437,7 +1437,7 @@ metadata:
   name: argocd-dex-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: dex-server
@@ -1470,7 +1470,7 @@ metadata:
   name: argocd-redis
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis
@@ -1493,7 +1493,7 @@ kind: Service
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -1527,7 +1527,7 @@ metadata:
   name: argocd-applicationset-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-applicationset-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: applicationset-controller
@@ -1546,14 +1546,16 @@ spec:
       annotations:
         checksum/cmd-params: b4c835fcfe7bd54a1d649b550c05b742378c5331c28aa8306e66d17e764163e2
       labels:
-        helm.sh/chart: argo-cd-10.14.0
-        app.kubernetes.io/name: argocd-applicationset-controller
-        app.kubernetes.io/instance: argocd
         app.kubernetes.io/component: applicationset-controller
+        app.kubernetes.io/instance: argocd
         app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-applicationset-controller
         app.kubernetes.io/part-of: argocd
-        app.kubernetes.io/version: "v3.6.1"
+        app.kubernetes.io/version: v3.6.1
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       terminationGracePeriodSeconds: 30
       serviceAccountName: argocd-applicationset-controller
       automountServiceAccountToken: true
@@ -1865,7 +1867,7 @@ metadata:
   name: argocd-repo-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -1885,14 +1887,16 @@ spec:
         checksum/cmd-params: b4c835fcfe7bd54a1d649b550c05b742378c5331c28aa8306e66d17e764163e2
         checksum/cm: 05cf9f7dc908750066a971d4227975388cdac39d736221dc639643c22756da9c
       labels:
-        helm.sh/chart: argo-cd-10.14.0
-        app.kubernetes.io/name: argocd-repo-server
-        app.kubernetes.io/instance: argocd
         app.kubernetes.io/component: repo-server
+        app.kubernetes.io/instance: argocd
         app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-repo-server
         app.kubernetes.io/part-of: argocd
-        app.kubernetes.io/version: "v3.6.1"
+        app.kubernetes.io/version: v3.6.1
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       terminationGracePeriodSeconds: 30
       serviceAccountName: argocd-repo-server
       automountServiceAccountToken: true
@@ -2367,7 +2371,7 @@ metadata:
   name: argocd-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -2387,14 +2391,16 @@ spec:
         checksum/cmd-params: b4c835fcfe7bd54a1d649b550c05b742378c5331c28aa8306e66d17e764163e2
         checksum/cm: 05cf9f7dc908750066a971d4227975388cdac39d736221dc639643c22756da9c
       labels:
-        helm.sh/chart: argo-cd-10.14.0
-        app.kubernetes.io/name: argocd-server
-        app.kubernetes.io/instance: argocd
         app.kubernetes.io/component: server
+        app.kubernetes.io/instance: argocd
         app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-server
         app.kubernetes.io/part-of: argocd
-        app.kubernetes.io/version: "v3.6.1"
+        app.kubernetes.io/version: v3.6.1
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       terminationGracePeriodSeconds: 30
       serviceAccountName: argocd-server
       automountServiceAccountToken: true
@@ -2874,7 +2880,7 @@ metadata:
   name: argocd-dex-server
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: dex-server
@@ -2894,14 +2900,16 @@ spec:
         checksum/cmd-params: b4c835fcfe7bd54a1d649b550c05b742378c5331c28aa8306e66d17e764163e2
         checksum/cm: 05cf9f7dc908750066a971d4227975388cdac39d736221dc639643c22756da9c
       labels:
-        helm.sh/chart: argo-cd-10.14.0
-        app.kubernetes.io/name: argocd-dex-server
-        app.kubernetes.io/instance: argocd
         app.kubernetes.io/component: dex-server
+        app.kubernetes.io/instance: argocd
         app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-dex-server
         app.kubernetes.io/part-of: argocd
-        app.kubernetes.io/version: "v3.6.1"
+        app.kubernetes.io/version: v3.6.1
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       terminationGracePeriodSeconds: 30
       serviceAccountName: argocd-dex-server
       automountServiceAccountToken: true
@@ -3030,7 +3038,7 @@ metadata:
   name: argocd-redis
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis
@@ -3046,13 +3054,12 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: argo-cd-10.14.0
-        app.kubernetes.io/name: argocd-redis
-        app.kubernetes.io/instance: argocd
         app.kubernetes.io/component: redis
+        app.kubernetes.io/instance: argocd
         app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-redis
         app.kubernetes.io/part-of: argocd
-        app.kubernetes.io/version: "v3.6.1"
+        app.kubernetes.io/version: v3.6.1
     spec:
       securityContext:
         runAsNonRoot: true
@@ -3118,7 +3125,7 @@ kind: Deployment
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -3138,13 +3145,13 @@ spec:
     metadata:
       annotations:
         checksum/config: 9c1ecd9f0889c5271728298190b5b9b1104baac2492387267c860173bb7765e8
-        checksum/config-emails: 71099d8aa7f7bf4d658235197e51c7019fde322e818519ad3d90cd57e939a5ea
+        checksum/config-emails: d6c10954873e5a03cd96a6d7a6462cf10fd1f22592bb1aa19e3a6fd6ea1c1f73
         checksum/secret: 9eb46bbdefd5cf844a2c4965b1241a7177addaa7c07789e7873ccda6b0104111
         checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
       labels:
         app: oauth2-proxy        
-        helm.sh/chart: oauth2-proxy-10.7.2
+        helm.sh/chart: oauth2-proxy-10.7.4
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: authentication-proxy
         app.kubernetes.io/part-of: oauth2-proxy
@@ -3252,7 +3259,7 @@ metadata:
   name: argocd-application-controller
   namespace: argocd
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -3273,14 +3280,16 @@ spec:
         checksum/cmd-params: b4c835fcfe7bd54a1d649b550c05b742378c5331c28aa8306e66d17e764163e2
         checksum/cm: 05cf9f7dc908750066a971d4227975388cdac39d736221dc639643c22756da9c
       labels:
-        helm.sh/chart: argo-cd-10.14.0
-        app.kubernetes.io/name: argocd-application-controller
-        app.kubernetes.io/instance: argocd
         app.kubernetes.io/component: application-controller
+        app.kubernetes.io/instance: argocd
         app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-application-controller
         app.kubernetes.io/part-of: argocd
-        app.kubernetes.io/version: "v3.6.1"
+        app.kubernetes.io/version: v3.6.1
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       terminationGracePeriodSeconds: 30
       serviceAccountName: argocd-application-controller
       automountServiceAccountToken: true
@@ -3713,7 +3722,7 @@ kind: Ingress
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -3833,7 +3842,7 @@ metadata:
   name: argocd-application-controller
   namespace: "argocd"
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-application-controller
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: application-controller
@@ -3863,7 +3872,7 @@ metadata:
   name: argocd-repo-server
   namespace: "argocd"
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-repo-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: repo-server
@@ -3893,7 +3902,7 @@ metadata:
   name: argocd-server
   namespace: "argocd"
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: server
@@ -3923,7 +3932,7 @@ metadata:
   name: argocd-dex-server
   namespace: "argocd"
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-dex-server
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: dex-server
@@ -3956,7 +3965,7 @@ metadata:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis-secret-init
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis-secret-init
@@ -3973,7 +3982,7 @@ metadata:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis-secret-init
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis-secret-init
@@ -4007,7 +4016,7 @@ metadata:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis-secret-init
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis-secret-init
@@ -4036,7 +4045,7 @@ metadata:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
   labels:
-    helm.sh/chart: argo-cd-10.14.0
+    helm.sh/chart: argo-cd-10.18.0
     app.kubernetes.io/name: argocd-redis-secret-init
     app.kubernetes.io/instance: argocd
     app.kubernetes.io/component: redis-secret-init
@@ -4048,7 +4057,7 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: argo-cd-10.14.0
+        helm.sh/chart: argo-cd-10.18.0
         app.kubernetes.io/name: argocd-redis-secret-init
         app.kubernetes.io/instance: argocd
         app.kubernetes.io/component: redis-secret-init
@@ -4075,6 +4084,9 @@ spec:
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       restartPolicy: OnFailure
       affinity:
         podAntiAffinity:
