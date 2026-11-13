@@ -6,7 +6,7 @@ spec:
   project: '{{ required ".Values.cluster_name is required" .Values.cluster_name }}'
   sources:
     - repoURL: "https://grafana-community.github.io/helm-charts"
-      targetRevision: "21.0.0"
+      targetRevision: "21.2.3"
       chart: loki
       helm:
         valueFiles:

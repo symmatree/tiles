@@ -5,7 +5,7 @@ kind: ServiceAccount
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -22,7 +22,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -41,7 +41,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -62,7 +62,7 @@ kind: Service
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -122,7 +122,7 @@ kind: Deployment
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
@@ -142,13 +142,13 @@ spec:
     metadata:
       annotations:
         checksum/config: 9c1ecd9f0889c5271728298190b5b9b1104baac2492387267c860173bb7765e8
-        checksum/config-emails: f7decafd7ce09e2a041a3d18835a05548c4a6fa263d99a726b41b21726080c32
+        checksum/config-emails: 3bf131816ed4210f073551d2d97832bc0fd949b1f0f24d6836c1e72d718bead1
         checksum/secret: 9eb46bbdefd5cf844a2c4965b1241a7177addaa7c07789e7873ccda6b0104111
         checksum/google-secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         checksum/redis-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
       labels:
         app: oauth2-proxy        
-        helm.sh/chart: oauth2-proxy-10.7.2
+        helm.sh/chart: oauth2-proxy-10.7.4
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: authentication-proxy
         app.kubernetes.io/part-of: oauth2-proxy
@@ -395,7 +395,7 @@ kind: Ingress
 metadata:
   labels:
     app: oauth2-proxy    
-    helm.sh/chart: oauth2-proxy-10.7.2
+    helm.sh/chart: oauth2-proxy-10.7.4
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: authentication-proxy
     app.kubernetes.io/part-of: oauth2-proxy
