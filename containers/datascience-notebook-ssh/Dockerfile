@@ -59,6 +59,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir moderngl==5.13.0
 
+# OpenCV without its GUI libraries: feature matching and pose solving (solvePnPRansac) against
+# reconstructions from ODM.
+RUN pip install --no-cache-dir opencv-python-headless==4.11.0.86
+
 COPY systemctl3.py /usr/bin/systemctl
 COPY sshd_config /etc/ssh/sshd_config
 RUN rm -fv /etc/ssh/sshd_not_to_be_run
