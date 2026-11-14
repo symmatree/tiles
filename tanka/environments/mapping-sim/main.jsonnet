@@ -173,10 +173,35 @@ local odmTemplate = onLancer + inputs(['run', 'render', 'odm-args']) {
           "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
       }, indent=1))
       EOF
-      exec python3 /code/run.py --project-path /data/runs '{{inputs.parameters.run}}' \
-        --geo "$render/geo.txt" \
-        --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16 \
-        {{inputs.parameters.odm-args}}
+      odm() {
+        python3 /code/run.py --project-path /data/runs '{{inputs.parameters.run}}' \
+          --geo "$render/geo.txt" \
+          --camera-lens fisheye_opencv --end-with opensfm --max-concurrency 16 \
+          {{inputs.parameters.odm-args}}
+      }
+      # With a rig, ODM's export_geocoords cannot set a rig shot's pose ("Cannot set an immutable
+      # pose"). ODM stops after reconstruct when split_merge_stop_at_reconstruction.txt is in
+      # opensfm/; each shot in reconstruction.json carries its solved world pose, so without the
+      # rig sections it loads as plain shots with the same poses. The rig solution is kept as
+      # reconstruction.rig.json, and the second ODM run carries on from the stripped file.
+      if [ -f "$run/opensfm/rig_assignments.json" ]; then
+        touch "$run/opensfm/split_merge_stop_at_reconstruction.txt"
+        odm
+        python3 - "$run/opensfm" <<'EOF'
+      import json, pathlib, sys
+      opensfm = pathlib.Path(sys.argv[1])
+      path = opensfm / "reconstruction.json"
+      reconstructions = json.loads(path.read_text())
+      if any("rig_instances" in r for r in reconstructions):
+          (opensfm / "reconstruction.rig.json").write_text(path.read_text())
+          for r in reconstructions:
+              r.pop("rig_cameras", None)
+              r.pop("rig_instances", None)
+          path.write_text(json.dumps(reconstructions))
+      EOF
+        rm "$run/opensfm/split_merge_stop_at_reconstruction.txt"
+      fi
+      odm
     ||| % odmImage,
     resources: odmResources,
     volumeMounts: [
