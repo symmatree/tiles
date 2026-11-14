@@ -21,6 +21,7 @@ libMonResources.new(
       // signal there; NodeMemoryMajorPagesFaults still covers these hosts. See #787 and
       // docs/proxmox-monitoring.md for the host_role label.
       NodeMemoryHighUtilization: 'host_role!="proxmox"',
+      NodeDiskIOSaturation: 'instance!="raconteur"',
     },
   },
 )
