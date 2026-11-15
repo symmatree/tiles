@@ -189,7 +189,16 @@ spec:
               spec:
                 route:
                   receiver: apprise
+                  routes:
+                    # Fires continuously with our in-process ruler; see docs/mimir.md.
+                    - receiver: drop
+                      matchers:
+                        - name: alertname
+                          value: MimirStrongConsistencyOffsetMissing
+                          matchType: "="
                 receivers:
+                  # No integrations: alerts routed here are not delivered.
+                  - name: drop
                   - name: apprise
                     webhookConfigs:
                       # alert-forward sidecar shares the mimir-alertmanager pod,

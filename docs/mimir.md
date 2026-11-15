@@ -158,6 +158,14 @@ Operationally:
   single point of failure for ingest.
 - `KAFKA_OPTS=-Dkafka.logs.dir=/tmp/kafka-logs/` redirects Kafka's own logs to a
   writable path.
+- The ruler evaluates rules with its own querier (the `ruler:` config has no
+  `query_frontend.address`), so it reads the ingesters directly. No strongly
+  consistent request reaches the ingesters with a Kafka offset; the query-frontend
+  sends none, and each ingester fetches the latest offset itself. The mixin alert
+  `MimirStrongConsistencyOffsetMissing` expects the query-frontend to supply
+  offsets and so fires continuously; the `apprise-catchall` AlertmanagerConfig in
+  [`alloy-application.yaml`](../charts/argocd-applications/templates/alloy-application.yaml)
+  routes it to `drop`, a receiver with no integrations.
 
 ## Storage
 
