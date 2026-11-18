@@ -34,13 +34,13 @@ RUN apt-get update \
 # pinned default below is only a fallback for local/manual `buildah bud` runs
 # that do not pass --build-arg; keep it roughly current. See symmatree/tiles#607.
 ARG DOTFILES_REPO=https://github.com/symmatree/dotfiles-symm.git
-ARG DOTFILES_REF=bded044ada2225e27a204794a0bfa9e628818461
+ARG DOTFILES_REF=008f68b1e66826d6c73fff232def43a239a045ee
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 # Fix linuxbrew permissions because we're running as root.
 RUN git clone "${DOTFILES_REPO}" /tmp/dotfiles-symm \
     && git -C /tmp/dotfiles-symm checkout --quiet "${DOTFILES_REF}" \
     && ansible-playbook -v /tmp/dotfiles-symm/ubuntu-zsh/install-tools.ansible.yaml \
-       -i localhost, --connection=local \
+    -i localhost, --connection=local \
     && rm -rf /tmp/dotfiles-symm /var/lib/apt/lists/* \
     && chown -R 1024:100 /home/linuxbrew
 
