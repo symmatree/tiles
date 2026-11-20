@@ -80,7 +80,7 @@ Each upgrade is different; read the release notes of every version crossed. The 
 talosctl -n <node> upgrade --image <install image>
 ```
 
-Then confirm before the next node: `Ready`, `osImage` at the new version, not cordoned, and `talosctl -n tiles-cp-1,tiles-cp-2,10.0.128.14 etcd status` showing three members, no learners, no errors, and each member's applied index equal to its raft index.
+Then confirm before the next node: `Ready`, `osImage` at the new version, not cordoned, and `talosctl -n tiles-cp-1,tiles-cp-2,10.0.128.14,10.0.128.15,10.0.128.16 etcd status` showing five members, no learners, no errors, and each member's applied index equal to its raft index.
 
 - **Drain.** `talosctl upgrade` drains with `Force`, so pods with no controller are deleted, not rescheduled -- including JupyterHub singleuser servers (and any session running in one) on that node.
 - **Mimir.** `pod-eviction-mimir.grafana.com` is served by `mimir-rollout-operator`; if the drain evicts the operator, the drain's other Mimir evictions fail on the webhook and the upgrade aborts before installing. Re-run once the operator is `Running` elsewhere.

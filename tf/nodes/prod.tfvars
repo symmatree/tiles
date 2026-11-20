@@ -152,13 +152,25 @@ metal_intel_nodes = {
 # Radxa Cubie A7S (Allwinner A733, 8 GB, microSD). Kernel, overlay and image build:
 # dotfiles-symm cubie-a7s/. Its MAC is random per boot, so there is no UniFi
 # reservation: the image's kernel arguments carry the address, gateway, DNS, NTP and
-# hostname (docs/bare-metal-nodes.md#cubie-a7s-static-address), and ip_address here
-# must match the image the card was flashed with.
+# hostname (docs/bare-metal-nodes.md#cubie-a7s-static-address), and name and
+# ip_address here must match the image the card was flashed with.
 metal_arm_nodes = {
   "cubie-1" = {
     name       = "cubie-1"
     type       = "control"
     ip_address = "10.0.128.14"
+    taint      = ""
+  }
+  "marino" = {
+    name       = "marino"
+    type       = "control"
+    ip_address = "10.0.128.15"
+    taint      = ""
+  }
+  "montana" = {
+    name       = "montana"
+    type       = "control"
+    ip_address = "10.0.128.16"
     taint      = ""
   }
 }
