@@ -1,0 +1,4 @@
+{
+  "autoMemoryDirectory": "~/roles/renovate/memory",
+  "enabledMcpjsonServers": ["github", "grafana-tiles", "talos-tiles"]
+}
