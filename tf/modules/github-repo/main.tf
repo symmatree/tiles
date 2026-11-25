@@ -49,15 +49,16 @@ resource "github_repository" "this" {
   has_wiki     = false
   has_projects = false
 
-  # Rebase only. A merge commit's subject ("Merge pull request #67 from
-  # symmatree/fix/...") says nothing about the change, and a squash rewrites the
-  # branch's commits into one. Rebasing a branch that is already at the head of
-  # main lands exactly the commits that CI tested.
-  allow_merge_commit  = false
-  allow_squash_merge  = false
-  allow_rebase_merge  = true
-  allow_auto_merge    = true
-  allow_update_branch = true
+  # Merge commits only. The branch's commits land on main unchanged, so git
+  # sees a merged branch as merged; rebase and squash both write new commits.
+  # The merge commit takes the PR's title and description.
+  allow_merge_commit   = true
+  allow_squash_merge   = false
+  allow_rebase_merge   = false
+  merge_commit_title   = "PR_TITLE"
+  merge_commit_message = "PR_BODY"
+  allow_auto_merge     = true
+  allow_update_branch  = true
 
   delete_branch_on_merge = true
   vulnerability_alerts   = true
@@ -92,15 +93,14 @@ resource "github_repository_ruleset" "main" {
   }
 
   rules {
-    creation                = true
-    deletion                = true
-    non_fast_forward        = true
-    required_linear_history = true
+    creation         = true
+    deletion         = true
+    non_fast_forward = true
 
     pull_request {
       # Solo repositories: the gate is CI, not a second pair of eyes.
       required_approving_review_count = 0
-      allowed_merge_methods           = ["rebase"]
+      allowed_merge_methods           = ["merge"]
     }
 
     dynamic "required_status_checks" {
