@@ -49,9 +49,18 @@ a box there makes the next run act on it.
   `charts/argocd-applications/templates/`.
 
 For both chart managers a `postUpgradeTasks` entry fetches every chart's dependencies
-(`ci-tools/helm-add-repos.sh`, `ci-tools/helm-update-all.sh`) and runs `./build.sh`,
-committing the regenerated `charts/*/rendered.yaml`. The commands are allowed by
-`RENOVATE_ALLOWED_COMMANDS` in the workflow.
+(`ci-tools/helm-add-repos.sh`, `helm repo update`, `ci-tools/helm-update-all.sh`) and
+runs `./build.sh`, committing the regenerated `charts/*/rendered.yaml`. The commands are
+allowed by `RENOVATE_ALLOWED_COMMANDS` in the workflow. Renovate's own `Chart.lock`
+update reads a fresh repository index, but `helm-update-all.sh` reads the restored helm
+cache with `--skip-refresh`, so without the `helm repo update` a chart released after
+that day's cache was saved fails `build.sh`.
+
+A failed post-upgrade task is an artifact error. While the newest release in the branch
+is under two hours old, Renovate does not open the PR with the error; it aborts the
+whole repository run with `Lock file error - aborting` (`result: lockfile-error`), which
+leaves the workflow green, opens no PRs and does not update the Dependency Dashboard.
+The cause is only in a debug log.
 
 `charts/argocd` and `charts/cilium` are installed by Terraform (`tf/nodes`) from their
 local paths, and `helm_release` upgrades only when the chart version changes, so
@@ -93,13 +102,31 @@ PR workflows (a `GITHUB_TOKEN` push would not).
 
 ## Running locally
 
-Renovate needs a Node matching `npm view renovate engines.node`. Against a working tree, with no writes anywhere:
+Renovate needs a Node matching `npm view renovate engines.node`; `npx -p node@24`
+supplies one when the installed Node is older. Against a working tree, with no writes
+anywhere:
 
 ```bash
 git add -A   # the local platform only sees tracked files, renovate.json5 included
 RENOVATE_PLATFORM=local RENOVATE_DRY_RUN=full \
   GITHUB_COM_TOKEN=$(gh auth token) LOG_LEVEL=debug \
-  npx --yes renovate
+  npx --yes -p node@24 -p renovate renovate
 ```
 
-The debug log's `branch` fields are the PRs a real run would open.
+The local platform extracts dependencies and looks up updates but processes no
+branches, so its debug log lists the available updates and does not run
+`postUpgradeTasks`. To run those, dry-run against the repository on GitHub, still with
+no writes. Renovate reads the config from the branch named by
+`RENOVATE_BASE_BRANCH_PATTERNS`, so a pushed branch's `renovate.json5` can be tried
+before it merges:
+
+```bash
+RENOVATE_PLATFORM=github RENOVATE_REPOSITORIES=symmatree/tiles \
+  RENOVATE_BASE_BRANCH_PATTERNS='["<branch>"]' RENOVATE_USE_BASE_BRANCH_CONFIG=replace \
+  RENOVATE_DRY_RUN=full RENOVATE_ONBOARDING=false RENOVATE_REQUIRE_CONFIG=required \
+  RENOVATE_ALLOWED_COMMANDS='<as in the workflow>' \
+  RENOVATE_TOKEN=$(gh auth token) LOG_LEVEL=debug \
+  npx --yes -p node@24 -p renovate renovate
+```
+
+`helm-add-repos.sh` needs `yq`.
