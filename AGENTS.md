@@ -1,8 +1,7 @@
 # AGENTS.md -- operating rules for this repo
 
-Conduct rules for agents are in [`CLAUDE.md`](CLAUDE.md), whose canonical copy
-lives in the `fables` repo. This file is the repo-specific operational layer:
-the procedures you must follow rather than reconstruct.
+The procedures for this repo, to follow rather than reconstruct. Conduct is in
+`agents/conduct.md` in dotfiles-symm; see [`CLAUDE.md`](CLAUDE.md).
 
 **Read the procedure before you run it.** Every item below is written down
 somewhere in this repo. Reading the script and assembling an equivalent command
