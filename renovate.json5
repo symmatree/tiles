@@ -21,10 +21,13 @@
     {
       // CI requires charts/*/rendered.yaml to match build.sh. build.sh renders every
       // chart, so first fetch the dependencies of all of them, as helm-setup does.
+      // helm-update-all.sh skips the index refresh and the helm cache can predate
+      // the release being updated to, so refresh the index first.
       matchManagers: ["helmv3", "argocd"],
       postUpgradeTasks: {
         commands: [
           "ci-tools/helm-add-repos.sh",
+          "helm repo update",
           "ci-tools/helm-update-all.sh",
           "./build.sh",
         ],
