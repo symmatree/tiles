@@ -8,7 +8,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: "4.6.1"
+      targetRevision: "4.6.2"
       chart: k8s-monitoring
       helm:
         valueFiles:
@@ -1236,7 +1236,7 @@ spec:
   project: 'placeholder'
   sources:
     - repoURL: "https://grafana-community.github.io/helm-charts"
-      targetRevision: "21.4.3"
+      targetRevision: "21.6.2"
       chart: loki
       helm:
         valueFiles:

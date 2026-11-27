@@ -8,6 +8,14 @@ somewhere in this repo. Reading the script and assembling an equivalent command
 yourself is how you end up with output that does not match CI, or with a step
 skipped that the script would have done.
 
+## Branches and merging
+
+PRs merge with a merge commit; rebase and squash are off
+([`tf/modules/github-repo`](tf/modules/github-repo/main.tf), applied from
+`tf/bootstrap`). A merged branch's commits are on `main` unchanged, so `git branch
+-d` and `git log main..branch` show it as merged. Update a stale PR branch by merging
+`origin/main` into it and pushing normally.
+
 ## Regenerating `rendered.yaml`
 
 `charts/*/rendered.yaml` is committed Helm output and the `build-test` job
