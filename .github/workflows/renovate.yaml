@@ -14,7 +14,7 @@ jobs:
     runs-on: "ubuntu-latest"
     env:
       # renovate: datasource=npm depName=renovate
-      RENOVATE_VERSION: "44.264.1"
+      RENOVATE_VERSION: "45.3.2"
     permissions:
       contents: read # actions/checkout, for the local helm-setup action
     steps:
