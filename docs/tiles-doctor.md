@@ -112,7 +112,6 @@ done is a comment saying so, not a retitle around the survivor.
 | Argo deploys from the `test`/`prod` tags, not `main` | A merge is not a deploy; check the tag, then the live object |
 | `rendered.yaml` is committed Helm output that CI compares byte-for-byte | Regenerate with the CI-pinned helm version; `build.sh` stops at the first chart with missing deps |
 | Grafana, Mimir and the alerting all run on the cluster they monitor | During an incident the instrument may be the thing that is down |
-| `CLAUDE.md` links to `philosophy/guiding-principles.md`, which is not in this repo | It lives in the fables repo: `~/facts/fables/philosophy/guiding-principles.md` |
 | A terraform plan shows `(known after apply)` instead of your new value | Anything downstream of an unknown (a schematic ID) cannot appear in the plan; read the branch, not the plan, to confirm an input landed |
 | The Talos **Terraform provider** vendors its own `pkg/machinery` | That copy, not `talos_version`, fixes which config document kinds parse and what `kubernetes_version` defaults to. See [talos.md](talos.md) |
 | A Loki query on an unindexed label scans zero bytes and returns nothing | Identical to "logged nothing". `pod` is structured metadata: ``{ns="x"} \| pod=`y` `` works, `{ns="x", pod="y"}` silently does not. See [notebooks.md](notebooks.md) |
@@ -148,10 +147,8 @@ done is a comment saying so, not a retitle around the survivor.
 
 ### Start here
 
-- [`CLAUDE.md`](../CLAUDE.md) -- conduct rules for agents, distilled from real
-  corrections. Read before acting, not after.
-- `~/facts/fables/philosophy/guiding-principles.md` -- the reasoning behind
-  several of those rules.
+- `agents/conduct.md` in dotfiles-symm (`~/.claude/CLAUDE.md`) -- conduct rules
+  for agents, distilled from real corrections. Read before acting, not after.
 - [`notebooks.md`](notebooks.md) -- the analysis-notebook pattern: assumption
   gate, capture-then-analyse, agent-readable stats. Also the clearest worked
   example in the repo of a doc that dates its factual claims.
