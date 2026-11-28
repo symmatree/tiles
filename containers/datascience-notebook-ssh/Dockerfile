@@ -36,6 +36,9 @@ RUN apt-get update \
 ARG DOTFILES_REPO=https://github.com/symmatree/dotfiles-symm.git
 ARG DOTFILES_REF=008f68b1e66826d6c73fff232def43a239a045ee
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+# dotfiles-symm links its commands (role) into ~/.local/bin in the persistent home;
+# the notebook's bash has no startup file that adds it.
+ENV PATH=/home/jovyan/.local/bin:${PATH}
 # Fix linuxbrew permissions because we're running as root.
 RUN git clone "${DOTFILES_REPO}" /tmp/dotfiles-symm \
     && git -C /tmp/dotfiles-symm checkout --quiet "${DOTFILES_REF}" \
